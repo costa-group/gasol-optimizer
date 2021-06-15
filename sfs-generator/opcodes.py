@@ -90,6 +90,7 @@ opcodes = {
     "STATEROOT": [0xfb, 1, 1],
     "TXEXECGAS": [0xfc, 0, 1],
     "CALLSTATIC": [0xfd, 7, 1],
+    "KECCAK256": [0x20, 2, 1],
     "INVALID": [0xfe, 0, 0],  # Not an opcode use to cause an exception
     "SUICIDE": [0xff, 1, 0],
     "ASSIGNINMUTABLE": [0x00,2,0], #Yul opcode
@@ -196,56 +197,6 @@ def get_opcode(opcode):
             return [hex(0x90 + i), i + 2, i + 2]
     raise ValueError('Bad Opcode ' + opcode)
 
-
-
-def get_ins_cost(opcode,params=None):
-    if opcode in Wzero:
-        return GCOST["Gzero"]
-    elif opcode in Wbase:
-        return GCOST["Gbase"]
-    elif opcode in Wverylow or opcode.startswith("PUSH") or opcode.startswith("DUP") or opcode.startswith("SWAP"):
-        return GCOST["Gverylow"]
-    elif opcode in Wlow:
-        return GCOST["Glow"]
-    elif opcode in Wmid:
-        return GCOST["Gmid"]
-    elif opcode in Whigh:
-        return GCOST["Ghigh"]
-    elif opcode in Wext:
-        return GCOST["Gextcode"]
-    elif opcode in Wextcodehash:
-        return GCOST["Gextcodehash"]
-    elif opcode == "EXP":
-        return 60#GCOST["Gexp"]
-    elif opcode == "SLOAD":
-        return GCOST["Gsload"]
-    elif opcode == "JUMPDEST":
-        return GCOST["Gjumpdest"]
-    elif opcode == "SHA3":
-        return GCOST["Gsha3"]
-    elif opcode == "CREATE":
-        return GCOST["Gcreate"]
-    elif opcode in ("CALL", "CALLCODE","DELEGATECALL","STATICCALL"):
-        return GCOST["Gcall"]
-    elif opcode in ("LOG0", "LOG1", "LOG2", "LOG3", "LOG4"):
-        num_topics = int(opcode[3:])
-        return GCOST["Glog"] + num_topics * GCOST["Glogtopic"]
-    elif opcode in ("CALLDATACOPY", "CODECOPY","RETURNDATACOPY"):
-        return GCOST["Gverylow"]
-    elif opcode == "BALANCE":
-        return GCOST["Gbalance"]
-    elif opcode == "BLOCKHASH":
-        return GCOST["Gblockhash"]
-    elif opcode == "SSTORE":
-        return 5000
-    elif opcode == "CRATE2":
-        return GCOST["Gcreate"]
-    else:
-        print ("NO ESTAA: "+str(opcode))
-        print (opcode)
-        return 0
-    return 0
-
 def get_syrup_cost(opcode,params=None):
     if opcode in Wzero:
         return GCOST["Gzero"]
@@ -288,5 +239,7 @@ def get_syrup_cost(opcode,params=None):
         return GCOST["Gsha3"]
     elif opcode == "SSTORE":
         return 5000
+    elif opcode == "KECCAK256":
+        return GCOST["Gsha3"]
     return 0
     
