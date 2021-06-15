@@ -5,7 +5,7 @@ import  opcodes
 import os
 import math
 from timeit import default_timer as dtimer
-from global_params import syrup_path, costabs_path, tmp_path
+from global_params import syrup_path, costabs_path, tmp_path, costabs_folder
 
 global visited
 visited = []
@@ -1200,6 +1200,7 @@ def compute_binary(expression,level):
         exp_str = str(funct)+" "+str(vals[0])+" "+str(vals[1])+","+str(level)
         exp_str_comm = str(funct)+" "+str(vals[1])+" "+str(vals[0])+","+str(level)
         #print (exp_str)
+        print("[RULE]: Evaluate expression "+str(expression))
         val = evaluate_expression(funct,vals[0],vals[1])
         #print (val)
         
@@ -1211,12 +1212,10 @@ def compute_binary(expression,level):
         saved_push+=2
         if exp_str not in already_considered:    
             if (funct in ["+","*","and","or","xor","eq"]) and (exp_str_comm not in already_considered):
-                print("[RULE]: Evaluate expression "+str(expression))
                 discount_op+=2
                 #print ("YEEEES")
             elif funct not in ["+","*","and","or","xor","eq"]:
                 discount_op+=2
-                print("[RULE]: Evaluate expression "+str(expression))
                 #print ("YEEEES")
 
         already_considered.append(exp_str)
@@ -2522,7 +2521,7 @@ def translate_subblock(rule,instrs,sstack,tstack,sstack_idx,idx,next_block):
     if instr!=[]:
 #        max_stack_size = max_idx_used(instr)
         get_s_counter(sstack,tstack)
-        print("SUBBLOCK "+str(rule.get_rule_name())+" "+str(idx))
+        
         generate_encoding(instr,tstack,sstack)
         build_userdef_instructions()
         #print (user_defins)
@@ -2705,13 +2704,12 @@ def translate_last_subblock(rule,block,sstack,sstack_idx,idx,isolated):
                 tstack = generate_vars_target_stack(num_guard,instructions[-1],opcodes)[::-1]
         else:
             
-            tstack = generate_target_stack_idx(sstack_idx+1,opcodes)[::-1]
+            tstack = generate_target_stack_idx(len(sstack),opcodes)[::-1]
         get_s_counter(sstack,tstack)
         # print ("GENERATING ENCONDING")
         # print (instructions)
         # print (tstack)
         # print (sstack)
-        print("SUBBLOCK "+str(rule.get_rule_name())+" "+str(idx))
         generate_encoding(instructions,tstack,sstack)
     
         build_userdef_instructions()
@@ -4540,7 +4538,7 @@ def get_evm_block(instructions):
         str_b = str_b+op_val+num
     blocks[b] = str_b
 
-    if "costabs" not in os.listdir(tmp_path):
+    if costabs_folder not in os.listdir(tmp_path):
         os.mkdir(costabs_path)
     if "blocks" not in os.listdir(costabs_path):
         os.mkdir(syrup_path)

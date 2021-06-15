@@ -1,7 +1,9 @@
 #Pablo Gordillo
+import re
 
 from rbr_rule import RBRRule
 import opcodes as opcodes
+from basicblock import Tree
 from utils import getKey, orderRBR, getLevel, store_times
 import os
 # import saco
@@ -12,11 +14,11 @@ from graph_scc import get_entry_scc
 import traceback
 
 from syrup_optimization import smt_translate_isolate
+from global_params import costabs_path, tmp_path, costabs_folder
 
 
-
-costabs_path = "/tmp/gasol/" 
-tmp_path = "/tmp/"
+# costabs_path = "/tmp/costabs/" 
+# tmp_path = "/tmp/"
 
 '''
 It initialize the globals variables. 
@@ -507,7 +509,11 @@ def translateOpcodes20(opcode, index_variables):
         v2, updated_variables = get_consume_variable(updated_variables)
         v3, updated_variables = get_new_variable(updated_variables)
         instr = v3+" = sha3("+ v1+", "+v2+")"
-
+    if opcode == "KECCAK256":
+        v1, updated_variables = get_consume_variable(index_variables)
+        v2, updated_variables = get_consume_variable(updated_variables)
+        v3, updated_variables = get_new_variable(updated_variables)
+        instr = v3+" = keccak256("+ v1+", "+v2+")"
     else:
         instr = "Error opcodes20: "+opcode
         updated_variables = index_variables
@@ -1283,7 +1289,8 @@ def compile_instr(rule,evm_opcode,variables,list_jumps,cond,state_vars):
 
 
 def isYulInstruction(opcode):
-    if opcode.find("TAG") ==-1 and opcode.find("#") ==-1 and opcode.find("$")==-1:
+    if opcode.find("tag") == -1 and opcode.find("#") == -1 and opcode.find("$") == -1 \
+            and opcode.find("data") == -1 and opcode.find("DEPLOY") == -1:
         return False
     else:
         return True
@@ -1549,7 +1556,7 @@ for each smart contract.
 -executions refers to the number of smart contract that has been translated. int.
 '''
 def write_rbr(rule,block_id,cname = None):
-    if "costabs" not in os.listdir(tmp_path):
+    if costabs_folder not in os.listdir(tmp_path):
         os.mkdir(costabs_path)
 
     if block_id !=-1:
@@ -1709,7 +1716,7 @@ def write_info_lines(rbr,source_map,contract_name):
                             f.write("solidityline(" + str(rule.get_rule_name()) + "," + str(cont_rbr) + "," + str(nLine) + "," + str(nLineCom)  + "," + str(nLineFin) + ").  " + " % " + str(offset) + " " + str(inst) + "	\n")  
 
                         except:
-                           continue;
+                           continue
 
                         if 'nop'in inst:
                             offset = offset + get_inc_offset(inst)
