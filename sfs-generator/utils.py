@@ -17,7 +17,7 @@ from functools import reduce
 #from z3.z3util import get_vars
 
 from dot_tree import Tree, build_tree
-from global_params import costabs_path, tmp_path
+from global_params import costabs_path, tmp_path, costabs_folder
 # costabs_path = "/tmp/costabs/"
 # tmp_path = "/tmp/"
 
@@ -386,7 +386,7 @@ def process_hashes(solidity_file,solidity_version):
 
 def write_cfg(it,vertices,name = False,cloned = False):
     vert = sorted(vertices.values(), key = getKey)
-    if "costabs" not in os.listdir(tmp_path):
+    if costabs_folder not in os.listdir(tmp_path):
         os.mkdir(costabs_path)
 
     if not cloned:
@@ -422,7 +422,7 @@ def write_cfg(it,vertices,name = False,cloned = False):
 def cfg_dot(it,block_input,name = False,cloned = False):
     vert = sorted(block_input.values(), key = getKey)
 
-    if "costabs" not in os.listdir(tmp_path):
+    if costabs_folder not in os.listdir(tmp_path):
         os.mkdir(costabs_path)
     
     if not cloned:
