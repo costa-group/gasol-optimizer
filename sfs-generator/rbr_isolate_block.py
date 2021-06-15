@@ -2,7 +2,6 @@
 
 from rbr_rule import RBRRule
 import opcodes as opcodes
-from basicblock import Tree
 from utils import getKey, orderRBR, getLevel, store_times
 import os
 # import saco
@@ -13,11 +12,11 @@ from graph_scc import get_entry_scc
 import traceback
 
 from syrup_optimization import smt_translate_isolate
-from global_params import costabs_path, tmp_path
 
 
-# costabs_path = "/tmp/costabs/" 
-# tmp_path = "/tmp/"
+
+costabs_path = "/tmp/gasol/" 
+tmp_path = "/tmp/"
 
 '''
 It initialize the globals variables. 
