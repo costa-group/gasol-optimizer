@@ -933,6 +933,18 @@ def get_involved_vars(instr,var):
 
 
         funct = "push[$]"
+
+
+    elif instr.startswith("pushdata("):
+        instr_new = instr.strip("\n")
+        pos = instr_new.find("pushdata(")
+        arg0 = instr[pos+9:-1]
+        var0 = arg0.strip()
+        var_list.append(var0)
+
+
+        funct = "pushdata"
+
         
     else:
         var_list.append(instr)
@@ -1599,6 +1611,9 @@ def generate_userdefname(u_var,funct,args,arity):
     elif funct.find("push[$]")!=-1:
         instr_name = "PUSH[$]"
 
+    elif funct.find("pushdata")!=-1:
+        instr_name = "PUSHDATA"
+
         
     #TODO: Add more opcodes
     
@@ -1606,7 +1621,7 @@ def generate_userdefname(u_var,funct,args,arity):
         defined = check_inputs(instr_name,args)
     else:
         defined = -1
-        if instr_name not in ["PUSHTAG","PUSH#[$]","PUSH[$]"]:
+        if instr_name not in ["PUSHTAG","PUSH#[$]","PUSH[$]","PUSHDATA"]:
             already_defined_userdef.append(instr_name)
             
     if defined == -1:
@@ -1629,11 +1644,11 @@ def generate_userdefname(u_var,funct,args,arity):
         obj["id"] = name
         obj["opcode"] = process_opcode(str(opcodes.get_opcode(instr_name)[0]))
         obj["disasm"] = instr_name
-        obj["inpt_sk"] = [] if arity==0 or instr_name in ["PUSHTAG","PUSH#[$]","PUSH[$]"] else args_aux
+        obj["inpt_sk"] = [] if arity==0 or instr_name in ["PUSHTAG","PUSH#[$]","PUSH[$]","PUSHDATA"] else args_aux
         obj["outpt_sk"] = [u_var]
         obj["gas"] = opcodes.get_ins_cost(instr_name)
         obj["commutative"] = True if instr_name in commutative_bytecodes else False
-        if instr_name in ["PUSHTAG","PUSH#[$]","PUSH[$]"]:
+        if instr_name in ["PUSHTAG","PUSH#[$]","PUSH[$]","PUSHDATA"]:
             obj["value"] = args_aux
         user_def_counter[instr_name]=idx+1
 
