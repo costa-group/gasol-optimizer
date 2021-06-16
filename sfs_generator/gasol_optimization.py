@@ -4,7 +4,7 @@ import math
 from timeit import default_timer as dtimer
 
 from rbr_rule import RBRRule
-from utils import is_integer,all_integers,all_symbolic, find_sublist
+from utils import is_integer,all_integers, find_sublist
 import  opcodes 
 from global_params import json_path, gasol_path, tmp_path, gasol_folder
 
@@ -2316,7 +2316,7 @@ def compute_max_program_len(opcodes, num_guard,block = None):
     return len(new_opcodes)
     
 
-def smt_translate_block(rule,name,storage):
+def smt_translate_block(rule,name):
     global s_counter
     global max_instr_size
     global int_not0
@@ -2327,8 +2327,8 @@ def smt_translate_block(rule,name,storage):
     init_globals()
     sfs_contracts = {}
     
-    if storage:
-        add_storage2split()
+
+    add_storage2split()
     
     blocks_json_dict = {}
     
