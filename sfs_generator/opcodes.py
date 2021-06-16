@@ -90,7 +90,7 @@ opcodes = {
     "STATEROOT": [0xfb, 1, 1],
     "TXEXECGAS": [0xfc, 0, 1],
     "CALLSTATIC": [0xfd, 7, 1],
-    "KECCAK256": [0x20, 2, 1],
+    "KECCAK256": [0x20, 2, 1], #For evm it is representes as SHA3, for solc as KECCAK256
     "INVALID": [0xfe, 0, 0],  # Not an opcode use to cause an exception
     "SUICIDE": [0xff, 1, 0],
     "ASSIGNINMUTABLE": [0x00,2,0], #Yul opcode
@@ -197,7 +197,7 @@ def get_opcode(opcode):
             return [hex(0x90 + i), i + 2, i + 2]
     raise ValueError('Bad Opcode ' + opcode)
 
-def get_syrup_cost(opcode,params=None):
+def get_ins_cost(opcode,params=None):
     if opcode in Wzero:
         return GCOST["Gzero"]
     elif opcode in Wbase:
