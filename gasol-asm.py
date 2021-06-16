@@ -6,10 +6,10 @@ import sys
 import shutil
 import pandas as pd
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))+"/smt_encoding")
-sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))+"/sfs_generator")
-sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))+"/solution_generation")
-sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))+"/verification")
+sys.path.append(os.path.dirname(os.path.realpath(__file__))+"/smt_encoding")
+sys.path.append(os.path.dirname(os.path.realpath(__file__))+"/sfs_generator/")
+sys.path.append(os.path.dirname(os.path.realpath(__file__))+"/solution_generation")
+sys.path.append(os.path.dirname(os.path.realpath(__file__))+"/verification")
 
 from parser_asm import parse_asm
 import ir_block
@@ -86,8 +86,8 @@ def optimize_block(bytecodes, stack_size, cname, block_id, preffix=""):
     block_data = {"instructions": block_ins, "input": stack_size}
 
     #TODO: añadir nuevas instrucciones
-    exit_code = rbr_isolate_block.evm2rbr_compiler(contract_name=cname, syrup=True,
-                                                   block=block_data, sto=True, block_id=block_id)
+    exit_code = ir_block.evm2rbr_compiler(contract_name=cname,
+                                                   block=block_data, block_id=block_id)
     #TODO llamar a optimización
 
     sfs_dict = get_sfs_dict()
