@@ -1,14 +1,18 @@
-from rbr_rule import RBRRule
 import json
-from utils import is_integer,all_integers,all_symbolic, find_sublist
-import  opcodes
 import os
 import math
 from timeit import default_timer as dtimer
-from global_params import syrup_path, costabs_path, tmp_path, costabs_folder
 
-global visited
-visited = []
+from rbr_rule import RBRRule
+from utils import is_integer,all_integers,all_symbolic, find_sublist
+import  opcodes
+from global_params import syrup_path, costabs_path, tmp_path, gasol_folder
+
+gasol_path = "/tmp/gasol/" 
+tmp_path = "/tmp/"
+gasol_folder = "gasol"
+json_path = "/tmp/gasol/jsons"
+
 
 terminate_block = ["ASSERTFAIL","RETURN","REVERT","SUICIDE","STOP"]
 
@@ -95,33 +99,6 @@ def init_globals():
 
     global already_considered
     already_considered = []
-
-    global sstore_seq
-    sstore_seq = []
-
-    global sstore_vars
-    sstore_vars = {}
-
-    global sstore_v_counter
-    sstore_v_counter = 0
-
-    #it stores when the sloads are executed
-    global sload_relative_pos
-    sload_relative_pos = {}
-
-    global mstore_seq
-    mstore_seq = []
-
-    global mstore_vars
-    mstore_vars = {}
-
-    global mstore_v_counter
-    mstore_v_counter = 0
-
-    #it stores when the sloads are executed
-    global mload_relative_pos
-    mload_relative_pos = {}
-
     
 def add_storage2split():
     global split_block
@@ -337,94 +314,12 @@ def search_for_value_aux(var, instructions,source_stack,level,evaluate = True):
         
             s_dict[var] = u_var
 
-#We need to store the order in which the load instructions are
-#executed in order to stablish an order with the storage instructions.
-def relative_pos_load(funct,exp,u_var):
-    global sload_relative_pos
-    global mload_relative_pos
-
-    if funct == "sload":
-        pos = len(sload_relative_pos)
-        sload_relative_pos.insert(0,u_var)
-
-    if funct == "mload":
-        pos = len(mload_relative_pos)
-        mload_relative_pos.insert(0,u_var)
-
-
-            
-def generate_sstore_mstore(store_ins,instructions,source_stack):
-    level = 0
-    new_vars, funct = get_involved_vars(store_ins,"")
-
-    values = {}
-    for v in new_vars:
-
-        search_for_value_aux(v,instructions,source_stack,level)
-    
-        values[v] = s_dict[v]
-
-    exp_join = rebuild_expression(new_vars,funct,values,level)
-
-    #print("LLEGO AQUI SSTORE")
-    #print(exp_join)
-
-    return exp_join[1],exp_join[2]
-
-def generate_sload_mload(load_ins,instructions,source_stack):
-
-    level = 0
-    new_vars, funct = get_involved_vars(load_ins,"")
-    
-        
-    in_sourcestack = contained_in_source_stack(new_vars[0],instructions,source_stack)
-    
-    if in_sourcestack or is_integer(new_vars[0])!=-1:
-        if is_integer(new_vars[0])!=-1:
-            val = int(new_vars[0])
-        else:
-            val = new_vars[0]
-            #update_unary_func(funct,var,new_vars[0])
-
-        elem = ((new_vars[0],func),1)
-        new_uvar, defined = is_already_defined(elem)
-        return new_uvar,elem
-            
-    else:
-        if new_vars[0] not in zero_ary:
-            search_for_value_aux(new_vars[0],instructions,source_stack,level)
-            val = s_dict[new_vars[0]]
-        else:
-            val = new_vars[0]
-        #update_unary_func(funct,var,val)
-
-        elem = ((val,funct),1)
-        new_uvar, defined = is_already_defined(elem)
-        return new_uvar,elem
-
-
-
 def is_already_defined(elem):
     for u_var in u_dict.keys():
         if elem == u_dict[u_var]:
             return u_var, True
 
     return -1, False
-
-def is_already_defined_storage(elem,location):
-
-    if location == "storage":
-        for var in sstore_vars.keys():
-            if elem == sstore_vars[var]:
-                return var, True
-
-    elif location == "memory":
-        for var in mstore_vars.keys():
-            if elem == mstore_vars[var]:
-                return var, True
-
-    return -1, False
-
 
 def compute_len(number):
     bin_number = bin(number)
@@ -553,31 +448,6 @@ def get_involved_vars(instr,var):
         var_list.append(var0)
 
         funct = "sload"
-
-
-    elif instr.find("sstore(")!=-1:
-        instr_new = instr.strip("\n")
-        pos = instr_new.find("sstore(")
-        arg01 = instr[pos+7:-1]
-        var01 = arg01.split(",")
-        var0 = var01[0].strip()
-        var1 = var01[1].strip()
-        var_list.append(var0)
-        var_list.append(var1)
-
-        funct = "sstore"
-
-    elif instr.find("mstore(")!=-1:
-        instr_new = instr.strip("\n")
-        pos = instr_new.find("mstore(")
-        arg01 = instr[pos+7:-1]
-        var01 = arg01.split(",")
-        var0 = var01[0].strip()
-        var1 = var01[1].strip()
-        var_list.append(var0)
-        var_list.append(var1)
-
-        funct = "mstore"
         
     elif instr.find("timestamp")!=-1:
         var_list.append("timestamp")
@@ -1289,23 +1159,6 @@ def create_new_uvar():
 
     return var
 
-def create_new_sstorevar():
-    global sstore_v_counter
-
-    var =  "sto"+str(sstore_v_counter)
-    sstore_v_counter+=1
-
-    return var
-
-def create_new_mstorevar():
-    global mstore_v_counter
-
-    var =  "mem"+str(mstore_v_counter)
-    mstore_v_counter+=1
-
-    return var
-
-
 
 def create_new_svar():
     global s_counter
@@ -1400,89 +1253,7 @@ def generate_encoding(instructions,variables,source_stack):
     for v in variables:
         s_dict = {}
         search_for_value(v,instructions_reverse, source_stack)
-        variable_content[v] = s_dict[v]
-
-    # print (" A VEEEER")
-    # print (variable_content)
-    # print (u_dict)
-    # print ("///////////////////////")
-
-
-    # sloads_aux = sload_relative_pos
-    # sload_relative_pos = {}
-
-    if not split_sto:
-        #print("VEAMOS QUE TAL PATA")
-        generate_storage_info(instructions,source_stack)
-    
-
-def generate_storage_info(instructions,source_stack):
-    global sstore_seq
-    global mstore_seq
-    global sstore_vars
-    global mmstore_vars
-    global sload_relative_pos
-    global mload_relative_pos
-    
-    #print("SLOADS")
-    #print(sload_relative_pos)
-
-    for x in range(0,len(instructions)):
-        s_dict = {}
-
-        if instructions[x].find("sstore")!=-1:
-            exp = generate_sstore_mstore(instructions[x],instructions[x-1::-1],source_stack)
-            #print("ESTO GUARDO EN SSTORE")
-            #print(exp)
-            sstore_seq.append(exp)
-                
-        # elif instructions[x].find("sload")!=-1:
-        #     last_sload = sloads_aux[0]
-        #     sloads_aux = sloads_aux[1::]
-            
-        elif instructions[x].find("mstore")!=-1:
-            exp = generate_sstore_mstore(instructions[x],instructions[x-1::-1],source_stack)
-            #print("ESTO GUARDO EN MSTORE")
-            #print(exp)
-            mstore_seq.append(exp)
-
-    last_sload = ""
-    sstores = list(sstore_seq)
-    last_mload = ""
-    mstores = list(mstore_seq)
-
-    storage_order = []
-    memory_order = []
-    
-    for x in range(0,len(instructions)):
-        if instructions[x].find("sload")!=-1:
-            exp,r = generate_sload_mload(instructions[x],instructions[x-1::-1],source_stack)
-            last_sload = exp
-            #print("MIRA UN SLOAD")
-            #print(exp)
-            storage_order.append(r)
-            
-        elif instructions[x].find("sstore")!=-1 and last_sload != "" and sload_relative_pos.get(last_sload,[])==[]:
-            sload_relative_pos[last_sload]=sstores.pop(0)
-            storage_order.append(sload_relative_pos[last_sload])
-            
-        elif instructions[x].find("mload")!=-1:
-            exp,r = generate_sload_mload(instructions[x],instructions[x-1::-1],source_stack)
-            last_mload = exp
-            #print("MIRA UN MLOAD")
-            #print(exp)
-            memory_order.append(r)
-            
-        elif instructions[x].find("mstore")!=-1 and last_mload != "" and mload_relative_pos.get(last_mload,[])==[]:
-            mload_relative_pos[last_mload]=mstores.pop(0)
-            memory_order.append(mload_relative_pos[last_mload])
-            
-    #print("FINAL SSTORE:")
-    #print(sstore_seq)
-    #print("FINAL SLOAD:")
-    #print(sload_relative_pos)
-    #print("STORAGE ORDER:")
-    #print(storage_order)
+        variable_content[v] = s_dict[v]    
         
 def generate_source_stack_variables(idx):
     ss_list = []
@@ -1574,64 +1345,6 @@ def compute_max_idx(max_ss,ss):
     idx_top = int(top_s[2:-1])
 
     return idx_top
-
-
-def generate_sstore_info(sstore_elem):
-    global user_def_counter
-    global sstore_v_counter
-
-    obj = {}
-    idx  = user_def_counter.get("SSTORE",0)
-
-    instr_name = "SSTORE"
-    name = "SSTORE"+"_"+str(idx)
-
-    
-    
-    obj["id"] = name
-    obj["opcode"] = process_opcode(str(opcodes.get_opcode(instr_name)[0]))
-    obj["disasm"] = instr_name
-    obj["inpt_sk"] = [sstore_elem[0][0],sstore_elem[0][1]]
-    obj["sto_state"] = ["sto"+str(sstore_v_counter-1)] if sstore_v_counter != 0 else []
-
-    out_var = create_new_sstorevar()
-    obj["out_sto"] = [out_var]
-    
-    obj["gas"] = opcodes.get_ins_cost(instr_name)
-    obj["commutative"] = False
-    user_def_counter["SSTORE"]=idx+1
-
-    return obj
-
-def generate_sstore_info(sstore_elem):
-    global user_def_counter
-    global mstore_v_counter
-
-    obj = {}
-    idx  = user_def_counter.get("MSTORE",0)
-
-    instr_name = "MSTORE"
-    name = "MSTORE"+"_"+str(idx)
-
-    
-    
-    obj["id"] = name
-    obj["opcode"] = process_opcode(str(opcodes.get_opcode(instr_name)[0]))
-    obj["disasm"] = instr_name
-    obj["inpt_sk"] = [sstore_elem[0][0],sstore_elem[0][1]]
-    obj["mem_state"] = ["mem"+str(mstore_v_counter-1)] if mstore_v_counter != 0 else []
-
-    out_var = create_new_mstorevar()
-    obj["out_mem"] = [out_var]
-    
-    obj["gas"] = opcodes.get_ins_cost(instr_name)
-    obj["commutative"] = False
-    user_def_counter["MSTORE"]=idx+1
-
-    return obj
-
-
-    
     
 def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None):
     global max_instr_size
@@ -1726,21 +1439,6 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None):
     #print ("DISCOUNT")
     #print (discount_op)
 
-
-    #Adding sstore seq
-    sto_objs = []
-    for sto in sstore_seq:
-        # print("opopopopopopopoppppo")
-        # print(sto)
-        x = generate_sstore_info(sto)
-        sto_objs.append(x)
-        # print("STO")
-        # print(x)
-
-    mem_objs = []
-    for mem in mstore_seq:
-        x = generate_mstore_info(sto)
-        mem_objs.append(x)
         
     #json_dict["init_progr_len"] = max_instr_size-(num_pops-len(not_used))-discount_op
     #json_dict["max_progr_len"] = max_instr_size-discount_op
@@ -2889,26 +2587,6 @@ def translate_terminal_block(rule):
     blocks = split_terminal_block(rule)
     generate_terminal_subblocks(rule,blocks)
 
-def is_visited(rule):
-    global visited
-
-    id_rule = rule.get_Id()
-    if str(id_rule).find("_")!=-1:
-        num = str(id_rule).split("_")[0]
-        if num in visited:
-            return True
-        else:
-            visited.append(num)
-            return False
-    else:
-        # print(" a ver")
-        # print(visited)
-        # print(id_rule)
-        if str(id_rule) in visited:
-            return True
-        else:
-            visited.append(str(id_rule))
-            return False
         
 def write_instruction_block(rule_name,opcodes,subblock = None):
     if subblock != None:
@@ -2996,134 +2674,7 @@ def compute_max_program_len(opcodes, num_guard,block = None):
     return len(new_opcodes)
     
 
-def smt_translate(rules,sname,contract_name,storage):
-    global s_counter
-    global max_instr_size
-    global original_opcodes
-    global gas_t
-    global compute_gast
-    global int_not0
-    global source_name
-    global blocks_json_dict
-    global saved_push
-    global gas_saved_op
-    global visited
-    global cname
-    global sfs_contracts
-    
-    visited = []
-    init_globals()
-    
-    if storage:
-        add_storage2split()
-
-    
-    blocks_json_dict = {}
-    
-    gas_t = 0
-    saved_push = 0
-    gas_saved_op = 0
-    begin = dtimer()
-
-    info_deploy = []
-    
-    int_not0 = [-1+2**256]#map(lambda x: -1+2**x, range(8,264,8))
-
-    source_name =  sname
-    if contract_name!= None:
-        cname = contract_name
-    gas_check = 0
-    
-    for rlist in rules:
-        
-        for rule in rlist:
-            
-            # blocks = [197,1335,1347,4852,4913,4998,5006,5013,5022,5029,5037,5043,"7377_11","7400_11",5126,5206,"7377_17","7400_17",5289,"7377_18","7400_18",5379,5386,5409,"7377_12","7400_12",5439,"7377_13","7400_13",5617,"7377_14","7400_14",5707,"7377_15","7400_15",5797,"7377_16","7400_16",5887,5894,5972,"7410_2","7427_2",6054,"7377_10","7400_10",6203,1410]
-            # print "LEN"
-            # print len(blocks)
-            
-            # if rule.get_Id() in blocks and rule.get_type()=="block":
-            #     opcodes = get_opcodes(rule)
-            #     print rule.get_Id()
-            #     g = get_cost(opcodes)
-            #     print "GAS: "+str(g)
-            #     gas_t+=g
-
-            compute_gast = True
-            original_opcodes = []
-
-            if rule.get_type() == "block":
-                opcodes = get_opcodes(rule)
-                gas_check+= get_cost(opcodes)
-            
-            if rule.get_type() == "block" and not rule.get_isTerminal():
-                if not is_visited(rule):
-                    init_globals()
-                    
-                    instructions = filter_opcodes(rule)
-                    
-                    if instructions!=[] and instructions[-1].find("call(block2(")!=-1:
-                        break
-                    opcodes = get_opcodes(rule)
-
-
-                    #print(costabs_path)
-                    #print(source_name)
-                    #print(rule.get_rule_name())
-                    #print(str(len(opcodes)))
-                    print(str(len(list(filter(lambda x: x.find("nop(PUSH")!=-1,opcodes)))))
-                    info = "INFO DEPLOY "+costabs_path+"ethir_OK_"+source_name+"_blocks_"+rule.get_rule_name()+" LENGTH="+str(len(opcodes))+" PUSH="+str(len(list(filter(lambda x: x.find("nop(PUSH")!=-1,opcodes))))
-                    info_deploy.append(info)
-
-                    original_opcodes = opcodes
-                    #print ("-*-*-*-*-*-*-*-*-*-*-*")
-
-                    res = is_optimizable(opcodes,instructions)
-                    
-                    if res:
-                        if rule.get_rule_name() == "block2":
-                            print("EEEEEEEEEEEEEEEE")
-                        translate_block(rule,instructions,opcodes)
-                        
-                                      
-                    else: #we need to split the blocks into subblocks
-                        if  len(list(filter(lambda x: x.find("nop(SSTORE)")!=-1,opcodes)))>=2:
-                            r, new_instructions = opt_sstore_sstore(rule)
-                            #r= False
-                            #new_instructions = []
-                        else:
-                            r = False
-                            new_instructions = []
-
-                        
-                        subblocks = split_blocks(rule,r,new_instructions)
-                        generate_subblocks(rule,subblocks)
-
-                        # subblocks = split_blocks(rule)
-                        # generate_subblocks(rule,subblocks)
-                    
-            elif rule.get_type() == "block" and rule.get_isTerminal():
-                if not is_visited(rule):
-                    info = "INFO DEPLOY "+costabs_path+"ethir_OK_"+source_name+"_blocks_"+rule.get_rule_name()+" LENGTH="+str(len(opcodes))+" PUSH="+str(len(list(filter(lambda x: x.find("nop(PUSH")!=-1,opcodes))))
-                    info_deploy.append(info)
-                    init_globals()
-                    opcodes = get_opcodes(rule)
-                    original_opcodes = opcodes
-                    translate_terminal_block(rule)
-
-    print ("GAS TOTAL: "+str(gas_t))
-    print ("CHECK: "+str(gas_check))
-    print ("GAS TRANSFORM: "+str(saved_push*3+gas_saved_op))
-    print("GAS SAVED BY PUSH:"+str(saved_push*3))
-
-    # for f in info_deploy:
-    #     print f
-    sfs_contracts[cname] = blocks_json_dict
-    end = dtimer()
-    print("Blocks Generation SYRUP: "+str(end-begin)+"s")
-
-
-def smt_translate_isolate(rule,name,storage):
+def smt_translate_block(rule,name,storage):
     global s_counter
     global max_instr_size
     global int_not0
@@ -3131,7 +2682,6 @@ def smt_translate_isolate(rule,name,storage):
     global blocks_json_dict
     global sfs_contracts
     
-    visited = []
     init_globals()
     sfs_contracts = {}
     
@@ -3159,17 +2709,14 @@ def smt_translate_isolate(rule,name,storage):
     info_deploy.append(info)
     
     if "nop(SLOAD)" in opcodes and "nop(SSTORE)" in opcodes:
-        # x = opt_sload_sstore(rule,instructions,opcodes)
         x = (False,"")
     else:
         x = (False,"")
         
     print ("-*-*-*-*-*-*-*-*-*-*-*")
 
-    #print("ENTRO AQUI PABLO")
     res = is_optimizable(opcodes,instructions)
     if res and not x[0]:
-        #print ("no")
         translate_block(rule,instructions,opcodes,True)
 
     else: #we need to split the blocks into subblocks
@@ -3180,7 +2727,6 @@ def smt_translate_isolate(rule,name,storage):
             new_instructions = []
 
         subblocks = split_blocks(rule,r,new_instructions)
-        # print(subblocks)
         generate_subblocks(rule,subblocks,True)
 
     end = dtimer()
@@ -4352,70 +3898,6 @@ def opt_sload_sstore(rule,instructions,opcodes):
     generate_encoding(instructions,variables,source_stack)
     return False,""
     
-    # source_stack_idx = get_stack_variables(rule)
-    # source_stack = generate_source_stack_variables(source_stack_idx)
-    
-    # variables = generate_target_stack_idx(source_stack_idx,opcodes)[::-1]
-
-    # if variables == [] and source_stack == []:
-    #     return True, "empty"
-    
-    # sstore_instr = filter(lambda x: x.find("sstore(")!=-1,instructions)
-    # sstore1_idx = int(sstore_instr[0].split(",")[0][9:-1])
-    # tstack1 = map(lambda x: "s("+str(x)+")",range(sstore1_idx,-1,-1))
-
-    # s_counter = get_s_counter(source_stack,tstack1)
-    # i = 0
-    # instr1 = []
-    # while(instructions[i]!=sstore_instr[0] and i <len(instructions)):
-    #     instr1.append(instructions[i])
-    #     i+=1
-
-    # print source_stack
-    # print instr1
-    
-    # generate_encoding(instr1,tstack1,source_stack)
-    # build_userdef_instructions()
-    # cont1 = dict(variable_content)
-
-    # user_def_vars = source_stack
-    # for u in user_defins:
-    #     out = u["outpt_sk"]
-    #     inv = u["inpt_sk"]
-    #     varsall = out+inv
-    #     for v in varsall:
-    #         if str(v).startswith("s(") and v not in user_def_vars:
-    #             user_def_vars.append(v)
-    # newt = []
-    # for t in tstack1:
-    #     newt.append(variable_content[t])
-                
-    # udef,tnew=apply_all_simp_rules(user_defins,user_def_vars,newt)
-                
-    # val1 = tnew[len(tnew)-sstore1_idx]
-    # val2 = tnew[len(tnew)-sstore1_idx-1]
-
-    # u = filter(lambda x: x["disasm"]=="SLOAD",udef)
-
-    
-    
-    # for sload in u:
-    #     print "FINAL"
-    #     if sload["outpt_sk"]==[val1] and sload["inpt_sk"]==[int(val2)]:
-    #         j = 0
-    #         instructions_end = instructions[:i]#+[
-    #         while(j<len(instructions) and instructions[j].find("sload")!=-1):
-    #             instructions_end.append(instructions[j])
-    #             j+=1
-    #             #TODO: finish
-            
-    #         return True,
-    
-    # return False,""
-
-
-
-
 def opt_sstore_sstore(rule):
     global s_counter
     
@@ -4538,7 +4020,7 @@ def get_evm_block(instructions):
         str_b = str_b+op_val+num
     blocks[b] = str_b
 
-    if costabs_folder not in os.listdir(tmp_path):
+    if gasol_folder not in os.listdir(tmp_path):
         os.mkdir(costabs_path)
     if "blocks" not in os.listdir(costabs_path):
         os.mkdir(syrup_path)
@@ -4548,85 +4030,9 @@ def get_evm_block(instructions):
         f = open(bl_path+"/block_"+str(b)+".bl","w")
         f.write(blocks[b])
         f.close()
-
-
-# def correct_pops_jsons(json):
-#     if json 
         
 def get_sfs_dict():
     return sfs_contracts
-
-
-#For updating sloads and mload variables
-def replace_uvar_load_instrs(old_uvar, new_uvar):
-    global variable_content
-
-    for v in variable_content:
-        if variable_content[v] == old_uvar:
-            variable_content[v] = new_uvar
-
-    for u in u_dict:
-        if u == old_uvar:
-            del u_dict[u]
-
-
-def infer_independence(instructions,resource):
-    for i in xrange(len(instructions)):
-        suc = []
-        ins = instructions[i]
-        for rest_ins in instructions[i:]:
-            r = are_independent(ins,rest_ins,suc)
-            if not r:
-                suc.append(rest_ins)
-
-        if suc == []:
-            resource[ins] = suc
-
-
-'''If A = INSTRUCTION_A(x,_) and B = INSTRUCTION_B(y,_) A and B are
-independent if: 
-
-- x and y are numeric and x!=y
-
- - if x and y are simbolyc and A and B are the same instruction they
-are independent if there are not a new instruction C =
-INSTRUCTION_C(z,_) such that z == x
-
-- if they are simbolic, in order to be sound they are dependent (it
-  can be improve with a flow analysis)
-
-The instructions are of the form 
-
-'''         
-def are_independent(instructionA, instructionB, dependences):
-    argA = instructionA[0][0]
-    argB = instructionB[0][0]
-
-    insA = instructionA[0][-1]
-    insB = instructionB[0][-1]
-
-
-    if argA == argB:
-        if insA != insB:
-            return False
-        else:
-            pred = list(filter(lambda x: x[0][-1]!=insA and x[0][0] == argA,dependences))
-            
-            return True if len(pred) == 0 else False
-        
-    
-    else: # if we are here, they are different.
-        if all_symbolic([argA,argB]):
-            return False
-
-        else:
-            return True
-    #         s1 = variable_content[argA]
-    #         s2 = variable_content[argB]
-            
-    #     else:
-    #         return True    
-            
 
 def is_identity_map(source_stack,target_stack):
 
