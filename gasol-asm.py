@@ -8,8 +8,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))+"/s
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))+"/verification")
 
 from parser_asm import parse_asm
-import rbr_isolate_block
-from syrup_optimization import get_sfs_dict
+import ir_block
+from gasol_optimization import get_sfs_dict
 from python_syrup import execute_syrup_backend
 sys.path.append(os.path.dirname(os.path.realpath(__file__))+"/../syrup_full_execution.py")
 from solver_output_generation import obtain_solver_output
@@ -190,7 +190,7 @@ def optimize_asm(file_name):
 
 if __name__ == '__main__':
     clean_dir()
-    ap = argparse.ArgumentParser(description='Backend of gasol tool')
+    ap = argparse.ArgumentParser(description='Backend of GASOL tool')
     ap.add_argument('json_path', help='Path to json file that contains the asm')
     args = ap.parse_args()
     optimize_asm(args.json_path)
