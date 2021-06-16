@@ -19,28 +19,28 @@ sys.path.append(os.path.dirname(os.path.realpath(__file__))+"/../syrup_full_exec
 from solver_output_generation import obtain_solver_output
 from disasm_generation import generate_info_from_solution, generate_disasm_sol
 from solver_solution_verify import check_solver_output_is_correct
-from global_params import json_path, gasol_path, tmp_path, gasol_folder
+from global_params import gasol_path, tmp_path, gasol_folder
 
 
 def clean_dir():
     ext = ["rbr", "csv", "sol", "bl", "disasm", "json"]
-    if costabs_folder in os.listdir(tmp_path):
-        for elem in os.listdir(costabs_path):
+    if gasol_folder in os.listdir(tmp_path):
+        for elem in os.listdir(gasol_path):
             last = elem.split(".")[-1]
             if last in ext:
-                os.remove(costabs_path+elem)
+                os.remove(gasol_path+elem)
 
-        if "jsons" in os.listdir(costabs_path):
-            shutil.rmtree(costabs_path + "jsons")
+        if "jsons" in os.listdir(gasol_path):
+            shutil.rmtree(gasol_path + "jsons")
 
-        if "disasms" in os.listdir(costabs_path):
-            shutil.rmtree(costabs_path + "disasms")
+        if "disasms" in os.listdir(gasol_path):
+            shutil.rmtree(gasol_path + "disasms")
 
-        if "smt_encoding" in os.listdir(costabs_path):
-            shutil.rmtree(costabs_path + "smt_encoding")
+        if "smt_encoding" in os.listdir(gasol_path):
+            shutil.rmtree(gasol_path + "smt_encoding")
 
-        if "solutions" in os.listdir(costabs_path):
-            shutil.rmtree(costabs_path + "solutions")
+        if "solutions" in os.listdir(gasol_path):
+            shutil.rmtree(gasol_path + "solutions")
 
 
 
