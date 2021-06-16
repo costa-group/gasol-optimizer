@@ -5,7 +5,7 @@ import traceback
 from timeit import default_timer as dtimer
 
 from rbr_rule import RBRRule
-from gasol_optimization import smt_translate_isolate
+from gasol_optimization import smt_translate_block
 from global_params import gasol_path, tmp_path, gasol_folder
 
 
@@ -534,7 +534,7 @@ generates variables depending on the bytecode and returns the
 corresponding translated instruction and the variables's index
 updated. It also updated the corresponding global variables.
 '''
-def translateOpcodes50(opcode, value, index_variables,block,state_names):
+def translateOpcodes50(opcode, value, index_variables,block):
     global pc_cont
     
     if opcode == "POP":        
@@ -900,7 +900,7 @@ They are remove when displaying.
 -nop is True when generating nop annotations with the opcode. False otherwise.
 -index_variables refers to the top stack index. int.
 '''
-def compile_instr(rule,evm_opcode,variables,list_jumps,cond,state_vars):
+def compile_instr(rule,evm_opcode,variables,list_jumps,cond):
     opcode = evm_opcode.split(" ")
     opcode_name = opcode[0]
     opcode_rest = ""
@@ -924,7 +924,7 @@ def compile_instr(rule,evm_opcode,variables,list_jumps,cond,state_vars):
         value, index_variables = translateOpcodes40(opcode_name,variables,rule.get_Id())
         rule.add_instr(value)
     elif opcode_name in opcodes50:
-        value, index_variables = translateOpcodes50(opcode_name, opcode_rest, variables,rule.get_Id(),state_vars)
+        value, index_variables = translateOpcodes50(opcode_name, opcode_rest, variables,rule.get_Id())
         if type(value) is list:
             for ins in value:
                 rule.add_instr(ins)
@@ -1055,7 +1055,7 @@ def evm2rbr_compiler(contract_name = None,block = None, block_id = -1):
         ethir_time = end-begin
         print("Build RBR: "+str(ethir_time)+"s")
                
-        smt_translate_isolate(rule,contract_name,sto)
+        smt_translate_block(rule,contract_name)
                 
         return 0
         
