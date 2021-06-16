@@ -872,7 +872,7 @@ def translateYulOpcodes(opcode, value, index_variables):
 
     elif opcode == "PUSHDEPLOYADDRESS":
         v1,updated_variables = get_new_variable(index_variables)
-        instr = v1+" = pushdeplyaddress"
+        instr = v1+" = pushdeployaddress"
 
     else:
         v1,updated_variables = get_new_variable(index_variables)
