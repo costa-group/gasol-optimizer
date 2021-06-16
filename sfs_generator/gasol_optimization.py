@@ -705,9 +705,11 @@ def get_involved_vars(instr,var):
         var_list.append(var1)
 
         funct = "sar"
+        
+    elif instr.find("pushdeployaddress")!=-1:
+        var_list.append("pushdeployaddress")
+        funct =  "pushdeployaddress"
 
-        
-        
     elif instr.find("address")!=-1:
         var_list.append("address")
         funct =  "address"
@@ -747,11 +749,6 @@ def get_involved_vars(instr,var):
         var_list.append("origin")
         funct =  "origin"
 
-    elif instr.find("pushdeployaddress")!=-1:
-        var_list.append("pushdeployaddress")
-        funct =  "pushdeployaddress"
-
-        
     elif instr.find("caller")!=-1:
         var_list.append("caller")
         funct =  "caller"
