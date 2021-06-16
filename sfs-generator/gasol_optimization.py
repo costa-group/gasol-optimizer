@@ -5,13 +5,9 @@ from timeit import default_timer as dtimer
 
 from rbr_rule import RBRRule
 from utils import is_integer,all_integers,all_symbolic, find_sublist
-import  opcodes
-from global_params import syrup_path, costabs_path, tmp_path, gasol_folder
+import  opcodes 
+from global_params import json_path, gasol_path, tmp_path, gasol_folder
 
-gasol_path = "/tmp/gasol/" 
-tmp_path = "/tmp/"
-gasol_folder = "gasol"
-json_path = "/tmp/gasol/jsons"
 
 
 terminate_block = ["ASSERTFAIL","RETURN","REVERT","SUICIDE","STOP"]
@@ -1459,15 +1455,15 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None):
     else:
         block_nm = block_name
 
-    if "jsons" not in os.listdir(costabs_path):
-        os.mkdir(syrup_path)
+    if "jsons" not in os.listdir(gasol_path):
+        os.mkdir(json_path)
 
-    # if block_nm not in os.listdir(syrup_path):
-    #     os.mkdir(syrup_path+"/"+block_nm)
+    # if block_nm not in os.listdir(json_path):
+    #     os.mkdir(json_path+"/"+block_nm)
 
     blocks_json_dict[block_nm] = json_dict
     
-    with open(syrup_path+"/"+source_name+"_"+cname+"_"+block_nm+"_input.json","w") as json_file:
+    with open(json_path+"/"+source_name+"_"+cname+"_"+block_nm+"_input.json","w") as json_file:
         json.dump(json_dict,json_file)
 
 
@@ -2596,10 +2592,10 @@ def write_instruction_block(rule_name,opcodes,subblock = None):
 
     op = list(map(lambda x: x[4:-1],opcodes))
     
-    if "disasms" not in os.listdir(costabs_path):
-        os.mkdir(costabs_path+"/disasms")
+    if "disasms" not in os.listdir(gasol_path):
+        os.mkdir(gasol_path+"/disasms")
     
-    byte_file =  open(costabs_path+"/disasms/"+source_name+"_"+cname+"_"+block_nm+".disasm","w")
+    byte_file =  open(gasol_path+"/disasms/"+source_name+"_"+cname+"_"+block_nm+".disasm","w")
     for e in op:
         byte_file.write(e+"\n")
     byte_file.close()
@@ -2705,7 +2701,7 @@ def smt_translate_block(rule,name,storage):
     
     opcodes = get_opcodes(rule)
 
-    info = "INFO DEPLOY "+costabs_path+"ethir_OK_"+source_name+"_blocks_"+rule.get_rule_name()+" LENGTH="+str(len(opcodes))+" PUSH="+str(len(list(filter(lambda x: x.find("nop(PUSH")!=-1,opcodes))))
+    info = "INFO DEPLOY "+gasol_path+"ethir_OK_"+source_name+"_blocks_"+rule.get_rule_name()+" LENGTH="+str(len(opcodes))+" PUSH="+str(len(list(filter(lambda x: x.find("nop(PUSH")!=-1,opcodes))))
     info_deploy.append(info)
     
     if "nop(SLOAD)" in opcodes and "nop(SSTORE)" in opcodes:
@@ -3991,46 +3987,7 @@ def update_tstack_userdef(old_var, new_var,tstack, user_def_instrs):
         if old_var in inp_st:
             i = inp_st.index(old_var)
             instr["inpt_sk"][i] = new_var
-    
-        
-def get_evm_block(instructions):
-
-    str_b = ""
-
-    instructions = vertices[b].get_instructions()
-    str_b = ""
-    for i in instructions:
-        i_aux = i.split()[0]
-        c = get_opcode(i_aux)
-        # print c
-        hex_val = str(c[0])
-        if hex_val.startswith("0x"):
-            op_val = hex_val[2:]
-               
-        else:
-            op_val = hex(int(hex_val))[2:]
-
-            if (int(op_val,16)<12):
-                op_val = "0"+str(op_val)
-                    
-        if i.startswith("PUSH"):
-            num = i.split()[1][2:]
-        else:
-            num = ""
-        str_b = str_b+op_val+num
-    blocks[b] = str_b
-
-    if gasol_folder not in os.listdir(tmp_path):
-        os.mkdir(costabs_path)
-    if "blocks" not in os.listdir(costabs_path):
-        os.mkdir(syrup_path)
-    for b in blocks:
-        bl_path = syrup_path+"/block"+str(b)
-        os.mkdir(bl_path)
-        f = open(bl_path+"/block_"+str(b)+".bl","w")
-        f.write(blocks[b])
-        f.close()
-        
+            
 def get_sfs_dict():
     return sfs_contracts
 
