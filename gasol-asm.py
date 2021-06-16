@@ -2,8 +2,9 @@
 import argparse
 import os
 import sys
-sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))+"/backend")
-sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))+"/ethir")
+import pandas as pd
+sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))+"/smt_encoding")
+sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))+"/sfs_generator")
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))+"/solution_generation")
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))+"/verification")
 
@@ -15,8 +16,40 @@ sys.path.append(os.path.dirname(os.path.realpath(__file__))+"/../syrup_full_exec
 from solver_output_generation import obtain_solver_output
 from disasm_generation import generate_info_from_solution, generate_disasm_sol
 from solver_solution_verify import check_solver_output_is_correct
-from oyente_ethir import clean_dir
-import pandas as pd
+from global_params import json_path, gasol_path, tmp_path, gasol_folder
+
+
+def clean_dir():
+    ext = ["rbr","csv","log","sol","bl","disasm","json"]
+    if "gasol" in os.listdir(tmp_path):
+        for elem in os.listdir(gasol_path):
+            last = elem.split(".")[-1]
+            if last in ext:
+                os.remove(gasol_path+elem)
+
+
+        if "jsons" in os.listdir(gasol_path):
+            for e in os.listdir(json_path):
+                os.remove(json_path+"/"+e)
+            os.rmdir(json_path)
+
+        if "disasms" in os.listdir(gasol_path):
+            for e in os.listdir(gasol_path+"/disasms"):
+                os.remove(gasol_path+"/disasms/"+e)
+            os.rmdir(gasol_path+"/disasms")
+
+        if "smt_encoding" in os.listdir(gasol_path):
+            for e in os.listdir(gasol_path+"/smt_encoding"):
+                os.remove(gasol_path+"/smt_encoding/"+e)
+            os.rmdir(gasol_path+"/smt_encoding")
+
+        if "solutions" in os.listdir(gasol_path):
+            for e in os.listdir(gasol_path+"/solutions"):
+                os.remove(gasol_path+"/solutions/"+e)
+            os.rmdir(gasol_path+"/solutions")
+
+
+
 
 def isYulInstruction(opcode):
     if opcode.find("tag") ==-1 and opcode.find("#") ==-1 and opcode.find("$") ==-1 \
