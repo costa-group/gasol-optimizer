@@ -156,15 +156,6 @@ def optimize_asm_block(block, contract_name, init=False):
 
     return total_current_cost, total_optimized_cost, optimized_blocks, total_current_length, total_optimized_length
 
-        # Found solution does not improve the previous one, so we return the same block
-        # print(total_gas, current_cost)
-        #if total_gas >= current_cost:
-        #    return block
-        # TODO: generate new block from instruction output + pushed_output
-        #else:
-        #    print("LLEGUE!")
-        #    return block
-
 
 def optimize_asm(file_name):
     asm = parse_asm(file_name)
@@ -211,6 +202,10 @@ def optimize_asm(file_name):
 
     df = pd.DataFrame(csv_statistics, columns=['contract_name', 'saved_gas', 'old_cost', 'optimized_cost',
                                                'old_length', 'optimized_length', 'saved_length', 'optimized_blocks'])
+
+    if "solutions" not in os.listdir(gasol_path):
+        os.mkdir(gasol_path+"solutions")
+
     csv_file = "/tmp/gasol/solutions/statistics.csv"
     df.to_csv(csv_file)
 
