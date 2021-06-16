@@ -1,8 +1,11 @@
 #!/usr/bin/python3
+
 import argparse
 import os
 import sys
+import shutil
 import pandas as pd
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))+"/smt_encoding")
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))+"/sfs_generator")
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))+"/solution_generation")
@@ -20,33 +23,24 @@ from global_params import json_path, gasol_path, tmp_path, gasol_folder
 
 
 def clean_dir():
-    ext = ["rbr","csv","log","sol","bl","disasm","json"]
-    if "gasol" in os.listdir(tmp_path):
-        for elem in os.listdir(gasol_path):
+    ext = ["rbr", "csv", "sol", "bl", "disasm", "json"]
+    if costabs_folder in os.listdir(tmp_path):
+        for elem in os.listdir(costabs_path):
             last = elem.split(".")[-1]
             if last in ext:
-                os.remove(gasol_path+elem)
+                os.remove(costabs_path+elem)
 
+        if "jsons" in os.listdir(costabs_path):
+            shutil.rmtree(costabs_path + "jsons")
 
-        if "jsons" in os.listdir(gasol_path):
-            for e in os.listdir(json_path):
-                os.remove(json_path+"/"+e)
-            os.rmdir(json_path)
+        if "disasms" in os.listdir(costabs_path):
+            shutil.rmtree(costabs_path + "disasms")
 
-        if "disasms" in os.listdir(gasol_path):
-            for e in os.listdir(gasol_path+"/disasms"):
-                os.remove(gasol_path+"/disasms/"+e)
-            os.rmdir(gasol_path+"/disasms")
+        if "smt_encoding" in os.listdir(costabs_path):
+            shutil.rmtree(costabs_path + "smt_encoding")
 
-        if "smt_encoding" in os.listdir(gasol_path):
-            for e in os.listdir(gasol_path+"/smt_encoding"):
-                os.remove(gasol_path+"/smt_encoding/"+e)
-            os.rmdir(gasol_path+"/smt_encoding")
-
-        if "solutions" in os.listdir(gasol_path):
-            for e in os.listdir(gasol_path+"/solutions"):
-                os.remove(gasol_path+"/solutions/"+e)
-            os.rmdir(gasol_path+"/solutions")
+        if "solutions" in os.listdir(costabs_path):
+            shutil.rmtree(costabs_path + "solutions")
 
 
 
