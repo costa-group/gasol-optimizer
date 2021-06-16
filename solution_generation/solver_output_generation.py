@@ -7,7 +7,7 @@ def init():
     project_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
     global tmp_costabs
-    tmp_costabs = "/tmp/costabs/"
+    tmp_costabs = "/tmp/gasol/"
 
     global encoding_path
     encoding_path = tmp_costabs + "smt_encoding/"
