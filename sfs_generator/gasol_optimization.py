@@ -17,7 +17,7 @@ split_block = ["LOG0","LOG1","LOG2","LOG3","LOG4","CALLDATACOPY","CODECOPY","EXT
 
 pre_defined_functions = ["PUSH","POP","SWAP","DUP"]
 
-zero_ary = ["origin","caller","callvalue","address","number","gasprice","difficulty","coinbase","timestamp","codesize","gaslimit","gas","calldatasize","returndatasize","msize","selfbalance","chainid"]
+zero_ary = ["origin","caller","callvalue","address","number","gasprice","difficulty","coinbase","timestamp","codesize","gaslimit","gas","calldatasize","returndatasize","msize","selfbalance","chainid","pushdeployaddress"]
 
 commutative_bytecodes = ["ADD","MUL","EQ","AND","OR","XOR"]
 
@@ -747,6 +747,11 @@ def get_involved_vars(instr,var):
         var_list.append("origin")
         funct =  "origin"
 
+    elif instr.find("pushdeployaddress")!=-1:
+        var_list.append("pushdeployaddress")
+        funct =  "pushdeployaddress"
+
+        
     elif instr.find("caller")!=-1:
         var_list.append("caller")
         funct =  "caller"
@@ -1443,6 +1448,9 @@ def generate_userdefname(u_var,funct,args,arity):
 
     elif funct.find("origin")!=-1:
         instr_name = "ORIGIN"
+
+    elif funct.find("pushdeployaddress")!=-1:
+        instr_name = "PUSHDEPLOYADDRESS"
 
     elif funct.find("xor") !=-1:
         instr_name = "XOR"
