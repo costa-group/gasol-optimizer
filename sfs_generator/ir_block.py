@@ -892,8 +892,6 @@ def translateYulOpcodes(opcode, value, index_variables):
             
         elif opcode == "PUSHDATA":
             instr = v1+" = pushdata(" + str(dec_value)+")"
-
-
         
     return instr, updated_variables
 
@@ -975,7 +973,7 @@ def compile_instr(rule,evm_opcode,variables,list_jumps,cond):
 
 def isYulInstruction(opcode):
     if opcode.find("tag") == -1 and opcode.find("#") == -1 and opcode.find("$") == -1 \
-            and opcode.find("data") == -1 and opcode.find("DEPLOY") == -1:
+            and opcode.find("DATA") == -1 and opcode.find("DEPLOY") == -1:
         return False
     else:
         return True
