@@ -75,9 +75,12 @@ def optimize_block(bytecodes, stack_size, cname, block_id, preffix=""):
             elif op.startswith("PUSH") and op.find("[$]")!=-1:
                 op = "PUSH[$]"+" 0x"+b.getValue()
 
-            elif op.startswith("PUSH"):
+            elif op.startswith("PUSH") and op.find("data")!=-1:
+                op = "PUSHDATA"+" 0x"+b.getValue()
+                
+            elif op.startswith("PUSH") and op.find("DEPLOYADDRESS") !=-1:
                 # Fixme: add ALL PUSH variants: PUSH data, PUSH DEPLOYADDRESS
-                op = "PUSHTAG" + " 0x" + b.getValue()
+                op = "PUSHDEPLOYADDRESS"
 
         instructions.append(op)
         
