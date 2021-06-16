@@ -316,71 +316,6 @@ def is_already_defined(elem):
             return u_var, True
 
     return -1, False
-
-def compute_len(number):
-    bin_number = bin(number)
-    len_number = len(bin_number)-2
-
-    if len_number <=8:
-        return 8
-    elif len_number > 8 and len_number <=16:
-        return 16
-    elif len_number > 16 and len_number <=24:
-        return 24
-    elif len_number > 24 and len_number <=32:
-        return 32
-    elif len_number > 32 and len_number <=40:
-        return 40
-    elif len_number > 40 and len_number <=48:
-        return 48
-    elif len_number > 48 and len_number <=56:
-        return 56
-    elif len_number > 56 and len_number <=64:
-        return 64
-    elif len_number > 64 and len_number <=72:
-        return 72
-    elif len_number > 72 and len_number <=80:
-        return 80
-    elif len_number > 80 and len_number <=88:
-        return 88
-    elif len_number > 96 and len_number <=104:
-        return 104
-    elif len_number > 104 and len_number <=112:
-        return 112
-    elif len_number > 112 and len_number <=120:
-        return 120
-    elif len_number > 120 and len_number <=128:
-        return 128
-    elif len_number > 128 and len_number <=136:
-        return 136
-    elif len_number > 136 and len_number <=144:
-        return 144
-    elif len_number > 144 and len_number <=152:
-        return 152
-    elif len_number > 152 and len_number <=160:
-        return 160
-    elif len_number > 160 and len_number <=168:
-        return 168
-    elif len_number > 176 and len_number <=184:
-        return 184
-    elif len_number > 184 and len_number <=192:
-        return 192
-    elif len_number > 192 and len_number <=200:
-        return 200
-    elif len_number > 200 and len_number <=208:
-        return 208
-    elif len_number > 208 and len_number <=216:
-        return 216
-    elif len_number > 216 and len_number <=224:
-        return 224
-    elif len_number > 224 and len_number <=232:
-        return 232
-    elif len_number > 232 and len_number <=240:
-        return 240
-    elif len_number > 240 and len_number <=248:
-        return 248
-    else:
-        return 256
     
 def update_unary_func(func,var,val):
     global s_dict
@@ -391,7 +326,6 @@ def update_unary_func(func,var,val):
 
         if is_integer(val)!=-1 and (func=="not" or func=="iszero"):
             if func == "not":
-                num_len=compute_len(int(val))
                 val_end = ~(int(val))+2**256
                 gas_saved_op+=3
                 
@@ -696,8 +630,6 @@ def get_involved_vars(instr,var):
 
     elif instr.find("-")!=-1:
         instr_new = instr.strip("\n")
-        # pos = instr_new.find("=")
-        # args = instr[pos+1:].strip()
         var01 = instr_new.split("-")
         var0 = var01[0].strip()
         var1 = var01[1].strip()
@@ -719,8 +651,6 @@ def get_involved_vars(instr,var):
 
     elif instr.find("^")!=-1:
         instr_new = instr.strip("\n")
-        # pos = instr_new.find("=")
-        # args = instr[pos+1:].strip()
         var01 = instr_new.split("^")
         var0 = var01[0].strip()
         var1 = var01[1].strip()
@@ -731,8 +661,6 @@ def get_involved_vars(instr,var):
 
     elif instr.find("%")!=-1:
         instr_new = instr.strip("\n")
-        # pos = instr_new.find("=")
-        # args = instr[pos+1:].strip()
         var01 = instr_new.split("%")
         var0 = var01[0].strip()
         var1 = var01[1].strip()
@@ -1000,7 +928,6 @@ def get_involved_vars(instr,var):
 
 
         funct = "push[$]"
-
         
     else:
         var_list.append(instr)
@@ -1039,6 +966,7 @@ def evaluate_expression(funct,val0,val1):
         return (val1*(2**val0)) % (2**256)
     elif funct == "sar":
         return math.floor(val1/(2**val0))
+
 def evaluate_expression_ter(funct,val0,val1,val2):
     if funct == "+":
         aux = val0+val1
@@ -1062,13 +990,11 @@ def compute_binary(expression,level):
     r, vals = all_integers([v0,v1])
 
     if r and funct in ["+","-","*","/","^","and","or","xor","%","eq","gt","lt","shl","shr","sar"]:
-        #print ("COMPUTE")
+
         exp_str = str(funct)+" "+str(vals[0])+" "+str(vals[1])+","+str(level)
         exp_str_comm = str(funct)+" "+str(vals[1])+" "+str(vals[0])+","+str(level)
-        #print (exp_str)
-        print("[RULE]: Evaluate expression "+str(expression))
+
         val = evaluate_expression(funct,vals[0],vals[1])
-        #print (val)
         
         if funct in ["*","/","%"]:
             gas_saved_op+=5
@@ -1076,13 +1002,15 @@ def compute_binary(expression,level):
             gas_saved_op+=3
 
         saved_push+=2
-        if exp_str not in already_considered:    
+        if exp_str not in already_considered:
             if (funct in ["+","*","and","or","xor","eq"]) and (exp_str_comm not in already_considered):
                 discount_op+=2
-                #print ("YEEEES")
+                print("[RULE]: Evaluate expression "+str(expression))
+
             elif funct not in ["+","*","and","or","xor","eq"]:
                 discount_op+=2
-                #print ("YEEEES")
+                print("[RULE]: Evaluate expression "+str(expression))
+
 
         already_considered.append(exp_str)
         
@@ -1143,7 +1071,6 @@ def rebuild_expression(vars_input,funct,values,level,evaluate = True):
         variables.append(funct)
         expression = tuple(variables)
         r = False
-        #print(expression)
         arity = len(vars_input)
     return r, expression, arity
 
@@ -1164,70 +1091,7 @@ def create_new_svar():
 
     return var
 
-#Here instructions = instrs+nops
-def get_encoding_init_block(instructions,source_stack):
-    global s_dict
-    global u_dict
-
-    old_sdict = dict(s_dict)
-    old_u_dict = dict(u_dict)
-
-    i = 0
-    opcodes = []
-    push_values = []
-    
-    # print("MIRA")
-    # print(instructions)
-
-    while(i<len(instructions)):
-        if instructions[i].startswith("nop("):
-            instr = instructions[i][4:-1].strip()
-            if instr.startswith("DUP") or instr.startswith("SWAP") or instr.startswith("PUSH") or instr.startswith("POP"):
-                opcodes.append(instr)
-                if instr.startswith("PUSH"):
-                    value = instructions[i-1].split("=")[-1].strip()
-                    push_values.append(value)
-            else:
-                #non-interpreted function
-                var = instructions[i-1].split("=")[0].strip()
-
-                instructions_without_nop = list(filter(lambda x: not x.startswith("nop("), instructions[:i]))
-                instructions_reverse = instructions_without_nop[::-1]
-                # print("EMPIEZO EL NUEVO")  
-                search_for_value(var,instructions_reverse, source_stack, False)
-                opcodes.append((s_dict[var],u_dict[s_dict[var]]))
-                # print(u_dict[s_dict[var]])
-        i+=1
-
-
-    new_opcodes = []
-    init_user_def = []
-    for i in range(len(opcodes)):
-        
-        if isinstance(opcodes[i],tuple):
-            instruction = opcodes[i]
-
-            u_var = instruction[0]
-            args_exp = instruction[1][0]
-            arity_exp = instruction[1][1]
-
-            user_def = build_initblock_userdef(u_var,args_exp,arity_exp)
-            init_user_def+=user_def
-            for e in user_def:
-                new_opcodes.append(e["id"])
-        else:
-            new_opcodes.append(opcodes[i])
-
-    # new_opcodes = evaluate_constants(new_opcodes,init_user_def)
-            
-    init_info = {}
-    init_info["opcodes_seq"] = new_opcodes
-    init_info["non_inter"] = init_user_def
-    init_info["push_vals"] = list(map(lambda x: int(x),push_values))
-
-    return init_info
   
-
 def simplify_constants(opcodes_seq,user_def):
     for u in user_def:
         inpt = u["inpt_sk"]
@@ -1240,9 +1104,6 @@ def generate_encoding(instructions,variables,source_stack):
     global u_dict
     global variable_content
 
-    # print("*************************************")
-    # print(instructions)
-    # print(variables)
     instructions_reverse = instructions[::-1]
     u_dict = {}
     variable_content = {}
@@ -1310,9 +1171,6 @@ def recompute_vars_set(sstack,tstack,userdef):
     for user_ins in userdef:
         output_vars = user_ins["outpt_sk"]
         input_vars = user_ins["inpt_sk"]
-        #print (output_vars)
-        #print (input_vars)
-        #print (tstack)
         potential_vars = output_vars+input_vars+tstack
         for v in potential_vars:
             if str(v).startswith("s(") and v not in vars_list:
@@ -1346,12 +1204,6 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None):
     global max_instr_size
     global num_pops
     global blocks_json_dict
-
-
-    #print ("AQUIIIIIIIIIIIIIII")
-    #print (block_name)
-    #print (ss)
-    #print (ts)
     
     max_ss_idx = compute_max_idx(max_ss_idx1,ss)
     
@@ -1375,14 +1227,9 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None):
             new_ts.append(new_v)
 
     for user_ins in user_defins:
-        #print (user_ins)
         new_inpt_sk = []
 
         for v in user_ins["inpt_sk"]:
-            #print (v)
-            #print (new_v)
-            #print (max_ss_idx)
-            #print (new_ss)
             new_v = compute_reverse_svar(v,max_ss_idx)
             new_inpt_sk.append(new_v)
 
@@ -1392,18 +1239,13 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None):
 
     vars_list = compute_vars_set(new_ss,new_ts)
 
-    #print ("COMPRUEBAAAA")
-    #print (user_defins)
    
     new_user_defins,new_ts = apply_all_simp_rules(user_defins,vars_list,new_ts)
-    # print("A VEEEER")
-    # print(block_name)
     apply_all_comparison(new_user_defins,new_ts)
     
     vars_list = recompute_vars_set(new_ss,new_ts,new_user_defins)
     
     total_inpt_vars = []
-    #print (new_user_defins)
     
     for user_ins in new_user_defins:
         for v in user_ins["inpt_sk"]:
@@ -1421,10 +1263,6 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None):
 
 
     not_used = get_not_used_stack_variables(new_ss,new_ts,total_inpt_vars)
-    #print (block_name)
-    #print (not_used)
-
-
 
     num = check_all_pops(new_ss, new_ts, user_defins)
 
@@ -1432,12 +1270,6 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None):
         max_instr_size = num
         num_pops = num
 
-    #print ("DISCOUNT")
-    #print (discount_op)
-
-        
-    #json_dict["init_progr_len"] = max_instr_size-(num_pops-len(not_used))-discount_op
-    #json_dict["max_progr_len"] = max_instr_size-discount_op
     json_dict["init_progr_len"] = max_instr_size-discount_op
     json_dict["max_progr_len"] = max_instr_size
     json_dict["max_sk_sz"] = max_sk_sz_idx-len(remove_vars)
@@ -1446,8 +1278,6 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None):
     json_dict["tgt_ws"] = new_ts
     json_dict["user_instrs"] = new_user_defins
     json_dict["current_cost"] = gas
-    #json_dict["init_info"] = opcodes_seq
-    #append user_instrs
 
 
     if subblock != None:
@@ -1457,9 +1287,6 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None):
 
     if "jsons" not in os.listdir(gasol_path):
         os.mkdir(json_path)
-
-    # if block_nm not in os.listdir(json_path):
-    #     os.mkdir(json_path+"/"+block_nm)
 
     blocks_json_dict[block_nm] = json_dict
     
@@ -1485,7 +1312,6 @@ def optimized_json(inpt_vars,ss,ts,remove_vars):
 
     
     while(i>0 and not end):
-        #print ("OPTIMIZEMOS")
         same_pos = ss[-1] == ts[-1]
         involved = ts[-1] in inpt_vars
         dups = ts[-1] in ts[:-1]
@@ -1499,59 +1325,6 @@ def optimized_json(inpt_vars,ss,ts,remove_vars):
         else:
             end = True
         i-=1
-
-
-
-def build_initblock_userdef(u_var,args_exp,arity_exp):
-    if arity_exp ==0 or arity_exp == 1:
-        funct = args_exp[1]
-        args = args_exp[0]
-
-        is_new, obj = generate_userdefname(u_var,funct,[args],arity_exp)
-        
-        return [obj]
-            
-    elif arity_exp == 2:
-        funct = args_exp[2]
-        args = [args_exp[0],args_exp[1]]
-        is_new, obj = generate_userdefname(u_var,funct,args,arity_exp)
-        return [obj]
-    
-    elif arity_exp == 3:
-        funct = args_exp[3]
-
-        if funct == "+" or funct == "*":
-            
-            new_uvar = create_new_svar()
-            args01 = [args_exp[0],args_exp[1]]
-            is_new, obj = generate_userdefname(new_uvar,funct,args01,arity_exp)
-            
-            funct = "%"
-            if not is_new:
-                u_var_aux = obj["outpt_sk"][0]
-            else:
-                u_var_aux = new_uvar
-                
-            args = [u_var_aux,args_exp[2]]
-
-            is_new, obj1 = generate_userdefname(u_var,funct,args,arity_exp)
-            
-            return [obj, obj1]
-        else:
-
-            args = [args_exp[0],args_exp[1],args_exp[2]]
-            is_new, obj = generate_userdefname(u_var,funct,args,arity_exp)
-            
-            return [obj]
-    else:
-        funct = args_exp[-1]
-        args = []
-        for v in args_exp[:-1]:
-            args.append(v)
-            
-        is_new, obj = generate_userdefname(u_var,funct,args,arity_exp)
-
-        return [obj]
 
 def build_userdef_instructions():
     global user_defins
@@ -1572,9 +1345,6 @@ def build_userdef_instructions():
 
             
             if not is_new and funct not in ["gas","timestamp","returndatasize"]:
-                #print ("NO ES NUEVO")
-                #print (funct)
-                #print (obj)
                 modified_svariable(u_var, obj["outpt_sk"][0])
 
             else:
@@ -1586,9 +1356,6 @@ def build_userdef_instructions():
             is_new, obj = generate_userdefname(u_var,funct,args,arity_exp)
 
             if not is_new:
-                #print ("NO ES NUEVO")
-                #print (funct)
-                #print (obj)
                 modified_svariable(u_var, obj["outpt_sk"][0])
 
             else:
@@ -1644,13 +1411,11 @@ def build_userdef_instructions():
             is_new, obj = generate_userdefname(u_var,funct,args,arity_exp)
 
             if not is_new:
-                #print ("NO ES NUEVO")
-                #print (funct)
-                #print (obj)
                 modified_svariable(u_var, obj["outpt_sk"][0])
 
             else:
                 user_defins.append(obj)
+                
 def generate_userdefname(u_var,funct,args,arity):
     global user_def_counter
     global already_defined_userdef
@@ -1890,24 +1655,18 @@ def modified_svariable(old_uvar, new_uvar):
     global s_dict
     global u_dict
 
-    # print(user_defins)
-    # print (old_uvar)
-    # print (new_uvar)
 
-    # print(u_dict)
     for s_var in s_dict.keys():
-        #print(s_dict[s_var])
         if str(s_dict[s_var]).find(old_uvar)!=-1:
             s_dict[s_var] = new_uvar
 
     for u_var in u_dict.keys():
-        pos = old_uvar in u_dict[u_var][0]#.find(old_uvar)
+        pos = old_uvar in u_dict[u_var][0]
         if pos:
             elems = list(u_dict[u_var][0])
             pos_var = elems.index(old_uvar)
             elems[pos_var] = new_uvar
             new_val = (tuple(elems),u_dict[u_var][1])
-            #print(new_val)
             u_dict[u_var] = new_val
     
 def check_inputs(instr_name,args_aux):
@@ -1928,9 +1687,6 @@ def check_inputs(instr_name,args_aux):
                 if ((input_variables[0] == args[1]) and (input_variables[1] == args[0])) or ((input_variables[0] == args[0]) and (input_variables[1] == args[1])):
                     return elem
                 
-                # x = filter(lambda x: not (x in input_variables),args)
-                # if x == []:
-                #     return elem
             else:
                 i = 0
                 equals = True
@@ -1942,8 +1698,7 @@ def check_inputs(instr_name,args_aux):
 
                 if equals:
                     return elem
-                # else:
-                #     return -1
+
     return -1
 
 
@@ -1989,17 +1744,12 @@ def get_max_stackindex_set(instructions):
 def is_optimizable(opcode_instructions,instructions):
     ins_aux = list(map(lambda x: x.strip()[4:-1], opcode_instructions))
     ins = list(filter(lambda x: x in split_block or x in terminate_block, ins_aux))
-    #print ("OPTIMIZAR")
-    #print (instructions)
-    #print (opcode_instructions)
-    #print (ins_aux)
-    #print (ins)
 
     if ins_aux != [] and list(filter(lambda x: x.find("POP")==-1, ins_aux)) == []:
         return True
     
     if ins == []:
-        #print(instructions[:-1])
+
         return True if (instructions[:-1]!=[] or len(instructions)==1) else False
     else:
         return False
@@ -2016,7 +1766,6 @@ def translate_block(rule,instructions,opcodes,isolated=False):
     if not isolated: 
         if "nop(JUMPI)" in opcodes:
             guards_op = get_jumpi_opcodes(rule)
-            #print "hola"
             num_guard = get_numguard_variables(guards_op)
         else:
             guards_op = []
@@ -2038,7 +1787,6 @@ def translate_block(rule,instructions,opcodes,isolated=False):
         num_pops = len(pops)
         x = list(filter(lambda x: (x.find("POP")==-1) and (x.find("JUMPDEST")==-1) and (x.find("JUMP")==-1)and(x.find("JUMPI")==-1),opcodes))
         if x == [] and num_pops >0:
-            #print ("ESTOY AQUII")
 
             t_vars_idx = source_stack_idx-num_pops
             seq = range(0,t_vars_idx)
@@ -2067,7 +1815,6 @@ def translate_block(rule,instructions,opcodes,isolated=False):
     print ("Target Stack")
     print (t_vars)
 
-    #print (source_stack_idx)
     source_stack = generate_source_stack_variables(source_stack_idx)
     get_s_counter(source_stack,t_vars)
     print ("GENERATING ENCONDING")
@@ -2076,26 +1823,16 @@ def translate_block(rule,instructions,opcodes,isolated=False):
     generate_encoding(instructions,t_vars,source_stack)
     
     build_userdef_instructions()
-    # print (user_defins)
-    # print("POR AQUI")
     gas = get_block_cost(opcodes,len(guards_op))
     max_stack_size = max_idx_used(instructions,t_vars)
     
     if  gas!=0 and not is_identity_map(source_stack,t_vars):
         gas_t+=get_cost(original_opcodes)
-        #print ("AQUI")
-        #print (gas_t)
         
         new_opcodes = compute_opcodes2write(opcodes,num_guard)
 
-        # print("NUEVOS")
-        # print(new_opcodes)
-        # print(rule.get_instructions())
         index, fin = find_sublist(rule.get_instructions(),new_opcodes)
-        # print(index)
-        # print(fin)
 
-        # init_info = get_encoding_init_block(rule.get_instructions()[index:fin+1],source_stack)
         init_info = {}
         generate_json(rule.get_rule_name(),source_stack,t_vars,source_stack_idx-1,gas, init_info)
         write_instruction_block(rule.get_rule_name(),new_opcodes)
@@ -2124,26 +1861,18 @@ def generate_subblocks(rule,list_subblocks,isolated = False):
 
     source_stack_idx-=1
     i = 0
-    #print ("COMIENZO")
+
     while(i < len(list_subblocks)-1):
-        #print ("BLOQUE NUEVO")
+
         init_globals()
         block = list_subblocks[i]
-        #print (block)
-        #print (source_stack)
-        #print (user_defins)
         nop_instr = block[-1]
         last_instr = block[-2]
 
-        #print ("OPCODES: "+rule.get_rule_name())
-        #print (nop_instr)
         ts_idx = compute_target_stack_subblock(last_instr,nop_instr)
 
         seq = range(ts_idx,-1,-1)
         target_stack = list(map(lambda x: "s("+str(x)+")",seq))
-
-        #print (target_stack)
-        #translate block
 
         new_nexts = translate_subblock(rule,block,source_stack,target_stack,source_stack_idx,i,list_subblocks[i+1])
 
@@ -2151,43 +1880,27 @@ def generate_subblocks(rule,list_subblocks,isolated = False):
         #We update the source stack for the new block
             source_stack, source_stack_idx = get_new_source_stack(last_instr,nop_instr,ts_idx)
         else:
-            # print("**")
-            # print(rule.get_rule_name())
-            # print(new_nexts)
             new_block = new_nexts[0]
-            #print(new_block)
+
             new_idxstack= new_nexts[1] #it returns the last index of sstore
-            #print(new_idxstack)
+
             list_subblocks[i+1] = new_block
             source_stack_idx = new_idxstack
             seq = range(source_stack_idx-1,-1,-1)
             source_stack = list(map(lambda x: "s("+str(x)+")",seq))
-            # print(source_stack)
-            # print (block)
-            # print (new_block)
-            # print("xxxxxxxxxxxxxxxxxx")
             
         i+=1
 
     instrs = list_subblocks[-1]
-    #print ("FINAL")
-    #print (instrs)
-    #print (source_stack)
+
     if source_stack == []:
         source_stack_idx = -1
+
     block = instrs[2:]
-    # print("BLOCK")
-    # print(block)
-    # print(source_stack)
-    # print(source_stack_idx)
-    # print(i)
     if block != []:
-        #print ("VAMOS A VER")
-        #print (source_stack_idx)
         translate_last_subblock(rule,block,source_stack,source_stack_idx,i,isolated)
-    #print ("**************")
+
     if compute_gast:
-        #print ("AQUI")
         gas_t+=get_cost(original_opcodes)
 
     
@@ -2213,31 +1926,21 @@ def translate_subblock(rule,instrs,sstack,tstack,sstack_idx,idx,next_block):
     num_pops = len(pops)
 
     if instr!=[]:
-#        max_stack_size = max_idx_used(instr)
         get_s_counter(sstack,tstack)
         
         generate_encoding(instr,tstack,sstack)
         build_userdef_instructions()
-        #print (user_defins)
-        #print ("**********")
         gas = get_block_cost(opcodes,0)
         max_stack_size = max_idx_used(instructions,tstack)
         if max_stack_size!=0 and gas !=0 and not is_identity_map(sstack,tstack):
             compute_gast = True
-            #print ("VEEENGA")
             new_tstack,new_nexts = optimize_splitpop_block(tstack,sstack,next_block,opcodes)
             if new_nexts != []:
-                # print("GOGOGO")
-                # print(new_nexts)
-                # print(rule.get_rule_name())
                 pops2remove = new_nexts[2]
                 gas = gas+2*pops2remove
                 max_instr_size+=pops2remove
-            #print (tstack,new_tstack)
 
             new_opcodes = compute_opcodes2write(opcodes,0)
-            # index, fin = find_sublist(instructions,new_opcodes)
-            # init_info = get_encoding_init_block(instructions[index:fin+1],sstack)
             init_info = {}
             generate_json(rule.get_rule_name(),sstack,new_tstack,sstack_idx,gas,init_info,subblock=idx)
             write_instruction_block(rule.get_rule_name(),new_opcodes,subblock=idx)
@@ -2248,13 +1951,6 @@ def translate_subblock(rule,instrs,sstack,tstack,sstack_idx,idx,next_block):
             
 
 def optimize_splitpop_block(tstack,source_stack,next_block,opcodes):
-
-    # print("OPTIMIZE SPLITPOP")
-    # print ("EMPIEZA")
-    # print (tstack)
-    # print (source_stack)
-    # print (next_block)
-    # print (opcodes)
     
     i = 0
     target_stack = compute_target_stack(tstack)
@@ -2273,37 +1969,19 @@ def optimize_splitpop_block(tstack,source_stack,next_block,opcodes):
         return tstack,[]
     else:
         if split_opcode == "nop(SSTORE)" or split_opcode == "nop(MSTORE)":
-            #print ("VAYA VAYA")
             split_stack = target_stack[:2]
             rest_stack = target_stack[2:]
-            #print (split_stack)
-            #print (rest_stack)
             finished = False
             init_i = i
-            #print ("EMPIEZA BLOQUE")
-            #print (init_i)
             while(i>0 and rest_stack !=[] and not finished):
                 val = rest_stack.pop(0)
-                #print (val)
+
                 if val in source_stack and val not in split_stack:
                     finished = True
-                    #print (val)
                     rest_stack = [val]+rest_stack
                 else:
                     i-=1
-                # if val in split_stack:
-                #     i-=1
-                # elif val not in split_stack and val in source_stack:
-                #     finished = True
-                #     print val
-                #     rest_stack = [val]+rest_stack
-            
-            
-            #print ("POPS TO REMOVE")
-            #print (i)
 
-            #print (rest_stack)
-            #print (source_stack)
             todelete= True
             source_copy = list(source_stack)
             while i > 0 and todelete and (source_copy != []) and (rest_stack !=[]):
@@ -2315,16 +1993,13 @@ def optimize_splitpop_block(tstack,source_stack,next_block,opcodes):
                     todelete = False
           
             pops2remove = init_i-i
-            #print (pops2remove)
+
 
             new_next_block,new_next_stack = modify_next_block(next_block,pops2remove)
-            #print (new_next_block)
+
             
             end_target_stack = tstack[:2]+tstack[2+pops2remove:]#split_stack+rest_stack
-            #print ("MIRAAAA")
-            #print (end_target_stack)
-            #print (next_block)
-            #print (new_next_stack)
+
             return end_target_stack,(new_next_block,new_next_stack,pops2remove)
         else:
           return tstack,[]
@@ -2332,14 +2007,14 @@ def optimize_splitpop_block(tstack,source_stack,next_block,opcodes):
 
 def modify_next_block(next_block,pops2remove):
     split_instr = next_block[0]
-    #print (split_instr)
+
     name = split_instr.split("(")[0]
-    #print (split_instr.split(",")[0][9:-1])
+
     idx1 = int(split_instr.split(",")[0][9:-1]) #sstore(
     idx2 = int(split_instr.split(",")[1][2:-2])
 
     new_name = name+"(s("+str(idx1-pops2remove)+"),s("+str(idx2-pops2remove)+"))"
-    #print (pops2remove*2)
+
     new_nextblock = [new_name,next_block[1]]+next_block[2+pops2remove*2:]
     return new_nextblock,idx2-pops2remove
     
@@ -2355,7 +2030,7 @@ def translate_last_subblock(rule,block,sstack,sstack_idx,idx,isolated):
     if not isolated:
         if "nop(JUMPI)" in block:
             guards_op = get_jumpi_opcodes(rule)
-            #print "hola"
+
             num_guard = get_numguard_variables(guards_op)
         else:
             guards_op = []
@@ -2367,7 +2042,6 @@ def translate_last_subblock(rule,block,sstack,sstack_idx,idx,isolated):
     rbr_ins_aux = list(filter(lambda x: x.find("nop(")==-1, block))
     instructions = list(filter(lambda x: x!="" and x.find("skip")==-1, rbr_ins_aux))
 
-    #max_stack_size = max_idx_used(instructions)
     
     opcodes = list(filter(lambda x: x.find("nop(")!=-1,block))
     max_instr_size = compute_max_program_len(opcodes, num_guard)
@@ -2375,18 +2049,12 @@ def translate_last_subblock(rule,block,sstack,sstack_idx,idx,isolated):
 
         pops = list(filter(lambda x: x.find("nop(POP)")!=-1,opcodes))
         num_pops = len(pops)
-
-        #print ("OPCODES: "+rule.get_rule_name())
-        #print (opcodes)
         
         if not isolated:
 
             x = list(filter(lambda x: (x.find("POP")==-1) and (x.find("JUMPDEST")==-1) and (x.find("JUMP")==-1)and(x.find("JUMPI")==-1),opcodes))
 
             if x == [] and num_pops >0:
-                # print ("ESTOY AQUII")
-                # print (sstack_idx)
-                # print (num_pops)
                 t_vars_idx = sstack_idx-num_pops+1
                 if t_vars_idx == sstack_idx and num_pops>0:
                     t_vars_idx-=1
@@ -2400,36 +2068,19 @@ def translate_last_subblock(rule,block,sstack,sstack_idx,idx,isolated):
             
             tstack = generate_target_stack_idx(len(sstack),opcodes)[::-1]
         get_s_counter(sstack,tstack)
-        # print ("GENERATING ENCONDING")
-        # print (instructions)
-        # print (tstack)
-        # print (sstack)
         generate_encoding(instructions,tstack,sstack)
     
         build_userdef_instructions()
-        #print (user_defins)
         gas = get_block_cost(opcodes,len(guards_op))
         max_stack_size = max_idx_used(instructions,tstack)
         if gas!=0 and not is_identity_map(sstack,tstack):
             compute_gast = True
-            #print ("MIRA")
-            #print (sstack_idx)
-            #print (sstack)
             new_opcodes = compute_opcodes2write(opcodes,num_guard)
-            # index, fin = find_sublist(block,new_opcodes)
-            # init_info = get_encoding_init_block(block[index:fin+1],sstack)
             init_info = {}
-            # print("NEW OPCODES")
-            # print(new_opcodes)
-            # print(sstack)
-            # print(tstack)
-            # print(sstack_idx)
             generate_json(rule.get_rule_name(),sstack,tstack,sstack_idx,gas,init_info,subblock=idx)
             write_instruction_block(rule.get_rule_name(),new_opcodes,subblock=idx)
     
 def get_new_source_stack(instr,nop_instr,idx):
-    #print (instr)
-    #print (nop_instr)
     
     if instr.find("=")!=-1:
         ins = instr.strip()
@@ -2468,7 +2119,7 @@ def compute_target_stack_subblock(instr, nop):
     else:
         instr_aux = instr.strip()
         pos_open_br = instr_aux.find("(")
-        #pos_close_br = instr_aux[::-1].find(")")
+
 
         variables = instr_aux[pos_open_br+1:-1].split(",")
         vars_aux = list(map(lambda x: int(x[2:-1]), variables))
@@ -2544,14 +2195,11 @@ def generate_terminal_subblocks(rule,list_subblocks):
 
     source_stack_idx-=1
     i = 0
-    #print ("COMIENZO")
+
     while(i < len(list_subblocks)-1):
         init_globals()
         block = list_subblocks[i]
         
-        #print (block)
-        #print (source_stack)
-        #print (user_defins)
         nop_instr = block[-1]
         last_instr = block[-2]
         ts_idx = compute_target_stack_subblock(last_instr,nop_instr)
@@ -2559,13 +2207,11 @@ def generate_terminal_subblocks(rule,list_subblocks):
         seq = range(ts_idx,-1,-1)
         target_stack = list(map(lambda x: "s("+str(x)+")",seq))
         
-        #print (target_stack)
-        #translate block
 
         new_nexts = translate_subblock(rule,block,source_stack,target_stack,source_stack_idx,i,list_subblocks[i+1])
 
         if new_nexts == []:
-            #We update the source stack for the new block
+
             source_stack, source_stack_idx = get_new_source_stack(last_instr,nop_instr,ts_idx)
         else:
             new_block = new_nexts[0]
@@ -2704,23 +2350,14 @@ def smt_translate_block(rule,name,storage):
     info = "INFO DEPLOY "+gasol_path+"ethir_OK_"+source_name+"_blocks_"+rule.get_rule_name()+" LENGTH="+str(len(opcodes))+" PUSH="+str(len(list(filter(lambda x: x.find("nop(PUSH")!=-1,opcodes))))
     info_deploy.append(info)
     
-    if "nop(SLOAD)" in opcodes and "nop(SSTORE)" in opcodes:
-        x = (False,"")
-    else:
-        x = (False,"")
-        
-    print ("-*-*-*-*-*-*-*-*-*-*-*")
 
     res = is_optimizable(opcodes,instructions)
-    if res and not x[0]:
+    if res:
         translate_block(rule,instructions,opcodes,True)
 
     else: #we need to split the blocks into subblocks
-        if  len(list(filter(lambda x: x.find("nop(SSTORE)")!=-1,opcodes)))>=2:
-            r, new_instructions = opt_sstore_sstore(rule)
-        else:
-            r = False
-            new_instructions = []
+        r = False
+        new_instructions = []
 
         subblocks = split_blocks(rule,r,new_instructions)
         generate_subblocks(rule,subblocks,True)
@@ -2961,7 +2598,6 @@ def apply_transform(instr):
         inp_vars = instr["inpt_sk"]
         r, val = all_integers(inp_vars)
         if r:
-            num_len=compute_len(val[0])
             val_end = ~(int(val[0]))+2**256
 
             saved_push+=1
@@ -3014,22 +2650,15 @@ def apply_transform_rules(user_def_instrs,list_vars,tstack):
     target_stack = tstack
     modified = False
     for instr in user_def_instrs:
-        #print ("------------IT-------------")
-        #print (instr)
+
         if instr["disasm"] in ["AND","OR","XOR","ADD","SUB","MUL","DIV","EXP","EQ","GT","LT","NOT","ISZERO"]:
-            #print ("AQUIIIII")
-            #print (instr)
             r = apply_transform(instr)
-            #print (r)
+
             if r!=-1:
                 print("[RULE]: Simplification rule type 1: "+str(instr))
                 
                 replace_var_userdef(instr["outpt_sk"][0],r,user_def_instrs)
-                #print ("***********")
-                #print (user_def_instrs)
-                #print (target_stack)
                 target_stack = replace_var(instr["outpt_sk"][0],r,target_stack)
-                #print (target_stack)
                 delete_from_listvars(instr["outpt_sk"][0],list_vars)
                 to_delete.append(instr)
                 modified = True
@@ -3040,8 +2669,7 @@ def apply_transform_rules(user_def_instrs,list_vars,tstack):
         if instr not in to_delete:
             new_user_def.append(instr)
 
-    #print ("MIRA")
-    #print (new_user_def)
+
     return modified, new_user_def, target_stack, 
 
 def replace_var_userdef(out_var,value,user_def):
@@ -3050,7 +2678,6 @@ def replace_var_userdef(out_var,value,user_def):
         inpt = instr["inpt_sk"]
         if out_var in inpt:
             idx = inpt.index(out_var)
-            #print (inpt)
             part1 = inpt[:idx]
             part2 = inpt[idx+1:]
             part1.append(value)
@@ -3863,14 +3490,9 @@ def apply_comparation_rules(user_def_instrs,tstack):
     modified = False
 
     for instr in user_def_instrs:
-        #print ("--------IT COMP--------")
-        #print (instr)
         
         r, d_instr = apply_cond_transformation(instr,user_def_instrs,tstack)
-        # print ("VEAMOS VEAMOS")
-        # print (r)
-        # print (d_instr)
-        # print(user_def_instrs)
+
         if r:
             print("[RULE]: Simplification rule type 2: "+str(instr))
             print("[RULE]: Delete rules: "+str(d_instr))
@@ -3879,102 +3501,7 @@ def apply_comparation_rules(user_def_instrs,tstack):
                 idx = user_def_instrs.index(b)
                 user_def_instrs.pop(idx)
     return modified
-               
-def opt_sload_sstore(rule,instructions,opcodes):
-
-
-    source_stack_idx = get_stack_variables(rule)
-    source_stack = generate_source_stack_variables(source_stack_idx)
-    
-    variables = generate_target_stack_idx(source_stack_idx,opcodes)[::-1]
-
-    if variables == [] and source_stack == []:
-        return True, "empty"
-    
-    generate_encoding(instructions,variables,source_stack)
-    return False,""
-    
-def opt_sstore_sstore(rule):
-    global s_counter
-    
-    source_stack_idx = get_stack_variables(rule)
-    source_stack = generate_source_stack_variables(source_stack_idx)
-
-    opcodes = get_opcodes(rule)
-    
-    variables = generate_target_stack_idx(source_stack_idx,opcodes)[::-1]
-
-    instructions = rule.get_instructions()
-
-    #print ("VEAMOS")
-    #print (instructions)
-    #print (variables)
-    #print (source_stack)
-
-    sstore_instr = list(filter(lambda x: x.find("sstore(")!=-1,instructions))
-
-    sstore1_idx = int(sstore_instr[0].split(",")[0][9:-1])
-    sstore2_idx = int(sstore_instr[1].split(",")[0][9:-1])
-
-    
-    tstack1 = list(map(lambda x: "s("+str(x)+")",range(sstore1_idx,-1,-1)))
-    tstack2 = list(map(lambda x: "s("+str(x)+")",range(sstore2_idx,-1,-1)))
-
-    instr1 = []
-    i = 0
-
-    s_counter = get_s_counter(source_stack,tstack1)
-    
-    while(instructions[i]!=sstore_instr[0] and i <len(instructions)):
-        instr1.append(instructions[i])
-        i+=1
-    try:
-        generate_encoding(instr1,tstack1,source_stack)
-    except:
-        return False, []
-
-    #print ("UOOOOO")
-    cont1 = dict(variable_content)
-    #print (cont1)
-    
-    instr2 = instructions[i+2:]
-
-    s_counter = get_s_counter(source_stack,tstack2)
-    
-    try:
-        generate_encoding(instructions,tstack2,source_stack)
-    except:
-        return False,[]
-        
-    cont2 = dict(variable_content)
-
-    #print ("AQUI")
-    #print (cont1)
-    #print (cont2)
-
-    if cont1 == cont2:
-        idxop = instructions.index("nop(SSTORE)")
-        
-        instr_end = instructions[:idxop-1]+instructions[idxop+1:]
-        #print ("OPTIMIZO SSTORE")
-        return True, instr_end
-    else:
-        val1ss1 = cont1["s("+str(sstore1_idx)+")"]
-        val2ss1 = cont1["s("+str(sstore1_idx-1)+")"]
-
-        val1ss2 = cont2["s("+str(sstore2_idx)+")"]
-        val2ss2 = cont2["s("+str(sstore2_idx-1)+")"]
-
-        if val1ss1 == val1ss2 and val2ss1 == val2ss2:
-            idxop = instructions.index("nop(SSTORE)")
-            instr_end = instructions[:idxop-1]+instructions[idxop+1:]
-            #print ("OPTIMIZO SSTORE")
-            return True, instr_end
-        else:
-            return False,[]
-
-
-
+                   
 def update_tstack_userdef(old_var, new_var,tstack, user_def_instrs):
     i = 0
     while(i<len(tstack)):
