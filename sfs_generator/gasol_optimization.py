@@ -1945,6 +1945,8 @@ def translate_subblock(rule,instrs,sstack,tstack,sstack_idx,idx,next_block):
     pops = list(filter(lambda x: x.find("nop(POP)")!=-1,opcodes))
     num_pops = len(pops)
 
+    new_nexts = []
+    
     if instr!=[]:
         get_s_counter(sstack,tstack)
         
@@ -1964,6 +1966,7 @@ def translate_subblock(rule,instrs,sstack,tstack,sstack_idx,idx,next_block):
             init_info = {}
             generate_json(rule.get_rule_name(),sstack,new_tstack,sstack_idx,gas,init_info,subblock=idx)
             write_instruction_block(rule.get_rule_name(),new_opcodes,subblock=idx)
+            
         return new_nexts
     else:
         return []
