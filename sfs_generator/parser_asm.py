@@ -71,15 +71,23 @@ def build_asm_contract(cname,cinfo):
         
     data = cinfo[".data"]
 
-    print("*****************")
     
     for elem in data:
-        aux_data = data[elem][".auxdata"]
-        asm_c.setAux(elem,aux_data)
 
-        code = data[elem][".code"]
-        run_bytecode = buildBlocks(cname,code)
-        asm_c.setRunCode(elem,run_bytecode)
+        if not isinstance(data[elem],str):
+            aux_data = data[elem][".auxdata"]
+            asm_c.setAux(elem,aux_data)
+
+            code = data[elem][".code"]
+            run_bytecode = buildBlocks(cname,code)
+            asm_c.setRunCode(elem,run_bytecode)
+
+            data1 = data[elem].get(".data",None)
+            if data1 != None:
+                asm_c.setAuxData(elem,data1)
+            
+        else:
+            asm_c.setData(elem, data[elem])
         
     return asm_c
 
@@ -95,11 +103,11 @@ def parse_asm(file_name):
     
     contracts = data["contracts"]
 
-    print(contracts.keys())
-    
+
     for c in contracts:
         if contracts[c].get("asm",None) is None:
             continue
+
         asm_c = build_asm_contract(c,contracts[c]["asm"])
         asm_json.addContracts(asm_c)
 

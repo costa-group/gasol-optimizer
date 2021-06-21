@@ -6,12 +6,13 @@ class AsmContract():
         self.cname = cname
         self.code = []
         self.data = {}
+        self.data_addresses = {}
         
     def setAux(self,dataId,aux):
         if not self.data.get(dataId,False):
             self.data[dataId] = {}
             self.data[dataId]["aux"] = aux
-
+            
         else:
             self.data[dataId]["aux"] = aux
 
@@ -22,6 +23,18 @@ class AsmContract():
 
         else:
             self.data[dataId]["code"] = blocks
+
+    def setAuxData(self,dataId,data):
+        if not self.data.get(dataId,False):
+            self.data[dataId]["data"] = {}
+            self.data[dataId]["data"] = data
+
+        else:
+            self.data[dataId]["data"] = data
+
+    def setData(self,dataId,data):
+        if not self.data_addresses.get(dataId,False):
+            self.data_addresses[dataId] = data
             
     def getInitCode(self):
         return self.code
