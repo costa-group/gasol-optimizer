@@ -95,9 +95,10 @@ def parse_asm(file_name):
     
     contracts = data["contracts"]
 
+    print(contracts.keys())
     
     for c in contracts:
-        if contracts[c]["asm"] is None:
+        if contracts[c].get("asm",None) is None:
             continue
         asm_c = build_asm_contract(c,contracts[c]["asm"])
         asm_json.addContracts(asm_c)
