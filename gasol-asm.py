@@ -4,7 +4,6 @@ import argparse
 import os
 import sys
 import shutil
-import pandas as pd
 
 sys.path.append(os.path.dirname(os.path.realpath(__file__))+"/smt_encoding")
 sys.path.append(os.path.dirname(os.path.realpath(__file__))+"/sfs_generator/")
@@ -91,7 +90,6 @@ def optimize_block(bytecodes, stack_size, cname, block_id, preffix=""):
     #TODO: añadir nuevas instrucciones
     exit_code = ir_block.evm2rbr_compiler(contract_name=cname,
                                                    block=block_data, block_id=block_id)
-    #TODO llamar a optimización
 
     sfs_dict = get_sfs_dict()
 
@@ -163,6 +161,9 @@ def optimize_asm_block(block, contract_name, init=False):
 def optimize_asm(file_name):
     asm = parse_asm(file_name)
     csv_statistics = []
+
+    csv_out = ["contract_name, saved_gas, old_cost, optimized_cost,old_length, optimized_length, saved_length, optimized_blocks"]
+
     for c in asm.getContracts():
 
         current_dict = {}
@@ -193,24 +194,33 @@ def optimize_asm(file_name):
                 current_length += tuple_cost[3]
                 optimized_length += tuple_cost[4]
 
-        current_dict['old_cost'] = current_cost
-        current_dict['optimized_cost'] = optimized_cost
-        current_dict['contract_name'] = contract_name
-        current_dict['optimized_blocks'] = optimized_blocks
-        current_dict['saved_gas'] = current_cost - optimized_cost
-        current_dict['old_length'] = current_length
-        current_dict['optimized_length'] = optimized_length
-        current_dict['saved_length'] = current_length - optimized_length
-        csv_statistics.append(current_dict)
+        saved_gas = current_cost - optimized_cost
+        saved_length = current_length - optimized_length
+                
+        new_line = [contract_name,str(saved_gas),str(current_cost),str(optimized_cost),str(current_length),str(optimized_length),str(saved_length),str(optimized_blocks)]
+        csv_out.append(",".join(new_line))
+        # current_dict['old_cost'] = current_cost
+        # current_dict['optimized_cost'] = optimized_cost
+        # current_dict['contract_name'] = contract_name
+        # current_dict['optimized_blocks'] = optimized_blocks
+        # current_dict['saved_gas'] = current_cost - optimized_cost
+        # current_dict['old_length'] = current_length
+        # current_dict['optimized_length'] = optimized_length
+        # current_dict['saved_length'] = current_length - optimized_length
+        # csv_statistics.append(current_dict)
 
-    df = pd.DataFrame(csv_statistics, columns=['contract_name', 'saved_gas', 'old_cost', 'optimized_cost',
-                                               'old_length', 'optimized_length', 'saved_length', 'optimized_blocks'])
+        
+        
+    # df = pd.DataFrame(csv_statistics, columns=['contract_name', 'saved_gas', 'old_cost', 'optimized_cost',
+    #                                            'old_length', 'optimized_length', 'saved_length', 'optimized_blocks'])
 
     if "solutions" not in os.listdir(gasol_path):
         os.mkdir(gasol_path+"solutions")
 
     csv_file = "/tmp/gasol/solutions/statistics.csv"
-    df.to_csv(csv_file)
+    with open(csv_file,'w') as f:
+        f.write("\n".join(csv_out))
+    # df.to_csv(csv_file)
 
 
 if __name__ == '__main__':
