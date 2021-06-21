@@ -93,7 +93,7 @@ opcodes = {
     "KECCAK256": [0x20, 2, 1], #For evm it is representes as SHA3, for solc as KECCAK256
     "INVALID": [0xfe, 0, 0],  # Not an opcode use to cause an exception
     "SUICIDE": [0xff, 1, 0],
-    "ASSIGNINMUTABLE": [0x00,2,0], #Yul opcode
+    "ASSIGNIMMUTABLE": [0x00,2,0], #Yul opcode
     "PUSHTAG": [0x00,0,1], #Yul opcode
     "PUSH#[$]": [0x00,0,1], #Yul opcode
     "PUSH[$]": [0x00,0,1], #Yul opcode
