@@ -129,24 +129,34 @@ def generate_disasm_sol(contract_name, block_name, solver_output):
     pathlib.Path(tmp_costabs+"solutions/" + contract_name + "/total_gas/").mkdir(parents=True, exist_ok=True)
 
 
+    opcode_list = []
+    evm_list = []
+    
     with open(opcodes_final_solution, 'w') as opcodes_file:
         for position, opcode in opcode_sol.items():
             push_match = re.match(re.compile('PUSH([0-9]+)'), instr_sol[position])
             if push_match:
-                opcodes_file.write(opcode + hex(int(pushed_values_decimal[position]))[2:])
+                val2write = opcode + hex(int(pushed_values_decimal[position]))[2:]
+                opcodes_file.write(val2write)
+                evm_list.append(val2write)
             else:
                 opcodes_file.write(opcode)
+                evm_list.append(opcode)
+                
     with open(instruction_final_solution, 'w') as instruction_file:
         for position, instr in instr_sol.items():
             if re.match(re.compile('PUSH'), instr):
-                instruction_file.write(instr + " " + pushed_values_decimal[position] + " ")
+                val2write = instr + " " + pushed_values_decimal[position] + " "
+                instruction_file.write(val2write)
+                opcode_list.append(val2write)
             else:
                 instruction_file.write(instr + " ")
-
+                opcode_list.append(instr + " ")
+                
     with open(gas_final_solution, 'w') as gas_file:
         gas_file.write(str(total_gas))
 
-
+    return opcode_list
 
 if __name__ == "__main__":
 
