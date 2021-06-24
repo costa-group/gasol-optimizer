@@ -8,7 +8,7 @@ from encoding_files import initialize_dir_and_streams, write_encoding
 from smtlib_utils import set_logic, check_sat
 import re
 
-costabs_path = "/tmp/costabs/"
+costabs_path = "/tmp/gasol/"
 
 
 def parse_data(json_path, var_initial_idx=0):
