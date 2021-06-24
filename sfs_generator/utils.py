@@ -1,3 +1,4 @@
+import opcodes
 
 def toInt(a):
     elem = a.split("_")
@@ -109,3 +110,28 @@ def find_sublist(search_list, pattern):
     else:
         init = init-1
     return init,fin
+
+''' 
+Given a sequence of evm instructions as a list, it returns the
+minimum number of elements that needs to be located in the stack in
+orde to execute the sequence 
+'''
+
+def compute_stack_size(evm_instructions):
+    current_stack = 0
+    init_stack = 0
+    
+    for op in evm_instructions:
+        opcode_info = opcodes.get_opcode(op)
+
+        consumed_elements = opcode_info[1]
+        produced_elements = opcode_info[2]
+            
+        if consumed_elements > current_stack:
+            diff = consumed_elements - current_stack
+            init_stack +=diff
+            current_stack = current_stack+diff-consumed_elements+produced_elements
+        else:
+            current_stack = current_stack-consumed_elements+produced_elements
+
+    return init_stack

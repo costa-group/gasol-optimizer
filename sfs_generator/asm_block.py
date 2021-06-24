@@ -1,9 +1,6 @@
 #!/usr/bin/env python3
 
-import sys
-import os
-sys.path.append(os.path.dirname(os.path.realpath(__file__))+"/../ethir")
-import opcodes
+import utils
 
 class AsmBlock():
     
@@ -45,19 +42,9 @@ class AsmBlock():
         init_stack = self.source_stack
         current_stack = 0
 
-        for i in self.instructions:
-            op = i.getDisasm()
-            opcode_info = opcodes.get_opcode(op)
-
-            consumed_elements = opcode_info[1]
-            produced_elements = opcode_info[2]
-            
-            if consumed_elements > current_stack:
-                diff = consumed_elements - current_stack
-                init_stack +=diff
-                current_stack = current_stack+diff-consumed_elements+produced_elements
-            else:
-                current_stack = current_stack-consumed_elements+produced_elements
+        evm_instructions = map(lambda x: x.getDisasm(),self.instructions)
+        
+        init_stack = utils.compute_stack_size(evm_instructions)
 
         self.source_stack = init_stack
             
