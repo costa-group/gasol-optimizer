@@ -4,6 +4,12 @@ GASOL
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://github.com/costa-group/gasol-optimizer/blob/main/LICENSE)
 ![version](https://img.shields.io/badge/version-0.1-green)
 
+GASOL is a generic framework that optimizes smart contracts by means
+of optimizing basic blocks (sequences of EVM instructions). GASOL
+tries to find, for each basic block, a sequence of EVM instructions
+that produces the same stack as the original block, but consume a smaller amount of gas.
+
+
 ## Installation (Ubuntu)
 GASOL is implemented in Python and runs Python3. It does not need any additional library to be executed. In order to get it installed, run one of the following commands:
 
@@ -29,7 +35,7 @@ where asmjson_filename is the name of the file where the asm json is stored. A s
 
 The optimized version of each block is stored in the directory /tmp/gasol/solutions. There you are going to find a directory for each of the contracts contained in the analyzed Solidity file. Each of these directories has a folder called disasm with the optimized assembly version of the blocks.
 
-For instance, to execute GASOl on the smart contract stored in the solidity file examples/solidity/0x363c421901B7BDCa0f2a17dA03948D676bE350E4.sol run the following commands:
+For instance, to execute GASOL on the smart contract stored in the solidity file examples/solidity/0x363c421901B7BDCa0f2a17dA03948D676bE350E4.sol run the following commands:
 ```
 solc --combined-json asm examples/solidity/0x363c421901B7BDCa0f2a17dA03948D676bE350E4.sol 1> 0x363c421901B7BDCa0f2a17dA03948D676bE350E4.json_solc
 ./gasol-asm.py 0x363c421901B7BDCa0f2a17dA03948D676bE350E4.json_solc
