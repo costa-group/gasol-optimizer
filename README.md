@@ -1,7 +1,8 @@
 
 GASOL
 =====
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://github.com/costa-group/gasol-optimizer/blob/main/LICENSE)
+![version](https://img.shields.io/badge/version-0.1-green)
 
 ## Installation (Ubuntu)
 GASOL is implemented in Python and runs Python3. It does not need any additional library to be executed. In order to get it installed, run one of the following commands:
