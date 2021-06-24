@@ -5,7 +5,7 @@ import json
 
 def init():
     global costabs_path
-    costabs_path = "/tmp/costabs/"
+    costabs_path = "/tmp/gasol/"
 
     global encoding_name
     encoding_name = "encoding.smt2"
