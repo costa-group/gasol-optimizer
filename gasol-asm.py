@@ -14,7 +14,6 @@ from parser_asm import parse_asm
 import ir_block
 from gasol_optimization import get_sfs_dict
 from python_syrup import execute_syrup_backend
-sys.path.append(os.path.dirname(os.path.realpath(__file__))+"/../syrup_full_execution.py")
 from solver_output_generation import obtain_solver_output
 from disasm_generation import generate_info_from_solution, generate_disasm_sol
 from solver_solution_verify import check_solver_output_is_correct
@@ -115,6 +114,8 @@ def optimize_block(bytecodes, stack_size, cname, block_id, preffix=""):
 
     return block_solutions
 
+def optimize_asm_block(instructions, cname, prefix=""):
+    pass
 
 # Given an asm_block and its contract name, returns the asm block after the optimization
 def optimize_asm_block(block, contract_name, init=False):
@@ -227,5 +228,11 @@ if __name__ == '__main__':
     clean_dir()
     ap = argparse.ArgumentParser(description='Backend of GASOL tool')
     ap.add_argument('json_path', help='Path to json file that contains the asm')
+    ap.add_argument("-bl", "--block", help ="Enable analysis of a single asm block", action = "store_true")
     args = ap.parse_args()
-    optimize_asm(args.json_path)
+
+    if not args.block:
+        optimize_asm(args.json_path)
+
+    else:
+        pass
