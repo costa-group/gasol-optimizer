@@ -135,3 +135,16 @@ def compute_stack_size(evm_instructions):
             current_stack = current_stack-consumed_elements+produced_elements
 
     return init_stack
+
+
+'''
+Function that identifies the PUSH opcodes used in the yul translation that are not real evm opcodes.
+(PUSH tag, PUSHDEPLOYADDRESS, PUSH data...)
+'''
+def isYulInstruction(opcode):
+    if opcode.find("tag") ==-1 and opcode.find("#") ==-1 and opcode.find("$") ==-1 \
+            and opcode.find("data") ==-1 and opcode.find("DEPLOY") ==-1:
+        return False
+    else:
+        return True
+
