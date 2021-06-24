@@ -18,7 +18,7 @@ from solver_output_generation import obtain_solver_output
 from disasm_generation import generate_info_from_solution, generate_disasm_sol
 from solver_solution_verify import check_solver_output_is_correct
 from global_params import gasol_path, tmp_path, gasol_folder
-
+from utils import isYulInstruction, compute_stack_size
 
 def clean_dir():
     ext = ["rbr", "csv", "sol", "bl", "disasm", "json"]
@@ -39,16 +39,6 @@ def clean_dir():
 
         if "solutions" in os.listdir(gasol_path):
             shutil.rmtree(gasol_path + "solutions")
-
-
-
-
-def isYulInstruction(opcode):
-    if opcode.find("tag") ==-1 and opcode.find("#") ==-1 and opcode.find("$") ==-1 \
-            and opcode.find("data") ==-1 and opcode.find("DEPLOY") ==-1:
-        return False
-    else:
-        return True
 
 
 # Given the sequence of bytecodes, the initial stack size, the contract name and the
@@ -81,7 +71,10 @@ def optimize_block(bytecodes, stack_size, cname, block_id, preffix=""):
                 op = "PUSHDEPLOYADDRESS"
 
         instructions.append(op)
-        
+
+    return optimize_instructions(instructions,stack_size,cname,block_id,preffix)
+
+def optimize_instructions(instructions,stack_size,cname,block_id,preffix):
     block_ins = list(filter(lambda x: x not in ["JUMP","JUMPI","JUMPDEST","tag","INVALID"], instructions))
 
     block_data = {"instructions": block_ins, "input": stack_size}
@@ -112,10 +105,7 @@ def optimize_block(bytecodes, stack_size, cname, block_id, preffix=""):
         solver_output = obtain_solver_output(block_name, "oms", 10)
         block_solutions.append((solver_output, block_name, current_cost, current_size))
 
-    return block_solutions
-
-def optimize_asm_block(instructions, cname, prefix=""):
-    pass
+    return block_solutions    
 
 # Given an asm_block and its contract name, returns the asm block after the optimization
 def optimize_asm_block(block, contract_name, init=False):
@@ -210,29 +200,88 @@ def optimize_asm(file_name):
         # current_dict['saved_length'] = current_length - optimized_length
         # csv_statistics.append(current_dict)
 
-        
-        
-    # df = pd.DataFrame(csv_statistics, columns=['contract_name', 'saved_gas', 'old_cost', 'optimized_cost',
-    #                                            'old_length', 'optimized_length', 'saved_length', 'optimized_blocks'])
-
     if "solutions" not in os.listdir(gasol_path):
         os.mkdir(gasol_path+"solutions")
 
     csv_file = "/tmp/gasol/solutions/statistics.csv"
     with open(csv_file,'w') as f:
         f.write("\n".join(csv_out))
-    # df.to_csv(csv_file)
 
 
+
+
+def optimize_isolated_asm_block(block_name):
+
+    with open(block_name,"r") as f:        
+        instructions = f.readline().strip()
+    f.close()
+    
+    opcodes = []
+
+    ops = instructions.split(" ")
+    i = 0
+    #it builds the list of opcodes
+  
+    while(i<len(ops)):
+        op = ops[i]
+        if not op.startswith("PUSH"):
+            opcodes.append(op.strip())
+        else:
+           
+            if  not isYulInstruction(op):
+                val = ops[i+1]
+                op = op+" 0x"+val if not val.startswith("0x") else op+" "+val
+                i=i+1
+            elif op.startswith("PUSH") and op.find("DEPLOYADDRESS") !=-1:
+                op = "PUSHDEPLOYADDRESS"
+            else:
+                t = ops[i+1]
+                val = ops[i+2]
+                
+                if op.startswith("PUSH") and t.find("tag")!=-1:
+                    op = "PUSHTAG"+" 0x"+val if not val.startswith("0x") else "PUSHTAG "+val
+
+                elif op.startswith("PUSH") and t.find("#[$]")!=-1:
+                    op = "PUSH#[$]"+" 0x"+val if not val.startswith("0x") else "PUSH#[$] "+val
+                    
+                elif op.startswith("PUSH") and t.find("[$]")!=-1:
+                    op = "PUSH[$]"+" 0x"+val if not val.startswith("0x") else "PUSH[$] "+val
+
+                elif op.startswith("PUSH") and t.find("data")!=-1:
+                    op = "PUSHDATA"+" 0x"+val if not val.startswith("0x") else "PUSHDATA "+val
+
+                i+=2
+            opcodes.append(op)
+
+        i+=1
+
+    stack_size = compute_stack_size(opcodes)
+    contract_name = block_name.split('/')[-1]
+    for solver_output, block_name, current_cost, current_length \
+        in optimize_instructions(opcodes,stack_size,contract_name,0,""):
+
+        # We weren't able to find a solution using the solver, so we just update the gas consumption
+        if check_solver_output_is_correct(solver_output):
+            instruction_output, _, pushed_output, total_gas = generate_info_from_solution(contract_name, "block0", solver_output)
+            sol = generate_disasm_sol(contract_name, block_name, solver_output)
+            print("OPTIMIZED BLOCK: "+str(sol))
+
+        else:
+            print("The solver hast not been able to find a better solution")
+
+
+
+    
 if __name__ == '__main__':
     clean_dir()
     ap = argparse.ArgumentParser(description='Backend of GASOL tool')
-    ap.add_argument('json_path', help='Path to json file that contains the asm')
+    ap.add_argument('input_path', help='Path to input file that contains the asm')
     ap.add_argument("-bl", "--block", help ="Enable analysis of a single asm block", action = "store_true")
     args = ap.parse_args()
 
     if not args.block:
-        optimize_asm(args.json_path)
+        optimize_asm(args.input_path)
 
     else:
-        pass
+        optimize_isolated_asm_block(args.input_path)
+
