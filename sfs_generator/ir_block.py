@@ -1059,7 +1059,7 @@ def evm2rbr_compiler(contract_name = None,block = None, block_id = -1):
         
         end = dtimer()
         ethir_time = end-begin
-        print("Build RBR: "+str(ethir_time)+"s")
+        #print("Build RBR: "+str(ethir_time)+"s")
                
         smt_translate_block(rule,contract_name)
                 
