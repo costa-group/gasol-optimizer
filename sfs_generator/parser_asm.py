@@ -114,7 +114,3 @@ def parse_asm(file_name):
 
     return asm_json
         
-if __name__ == '__main__':
-
-    file_name = "salida"
-    parse_asm(file_name)
