@@ -2,24 +2,18 @@ import os
 import shlex
 import subprocess
 
-def init():
-    global project_path
-    project_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
-    global tmp_costabs
-    tmp_costabs = "/tmp/gasol/"
+project_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
-    global encoding_path
-    encoding_path = tmp_costabs + "smt_encoding/"
+gasol_path = "/tmp/gasol/"
 
-    global z3_exec
-    z3_exec = project_path + "/bin/z3"
+encoding_path = gasol_path + "smt_encoding/"
 
-    global bclt_exec
-    bclt_exec = project_path + "/bin/barcelogic"
+z3_exec = project_path + "/bin/z3"
 
-    global oms_exec
-    oms_exec = project_path + "/bin/optimathsat"
+bclt_exec = project_path + "/bin/barcelogic"
+
+oms_exec = project_path + "/bin/optimathsat"
 
 
 def run_command(cmd):
@@ -55,5 +49,4 @@ def generate_solution(block_name, solver, tout):
 
 
 def obtain_solver_output(block_name, solver, tout):
-    init()
     return generate_solution(block_name, solver, tout)
