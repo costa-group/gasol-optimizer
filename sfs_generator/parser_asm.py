@@ -51,8 +51,8 @@ def buildBlocks(cname,instr_list):
         bytecodes.append(block)
         block.compute_stack_size()
         
-    for i in bytecodes:
-        print(i)
+    # for i in bytecodes:
+    #     print(i)
 
     return bytecodes
 
