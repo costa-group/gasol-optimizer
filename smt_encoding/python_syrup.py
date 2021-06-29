@@ -7,6 +7,8 @@ import argparse
 from encoding_files import initialize_dir_and_streams, write_encoding
 from smtlib_utils import set_logic, check_sat
 import re
+from encoding_utils import generate_disasm_map, generate_costs_ordered_dict, generate_stack_theta, generate_instr_map, \
+    generate_uninterpreted_theta
 
 costabs_path = "/tmp/gasol/"
 
@@ -118,6 +120,18 @@ def execute_syrup_backend_combined(json_files, previous_solution_dict, contract_
 
     write_encoding(check_sat())
     es.close()
+
+
+# Given the max stack size (bs) and the user instructions directly from the json, generates three dicts:
+# one for the conversion of
+def generate_theta_dict_from_sequence(bs, usr_instr):
+    theta_stack = generate_stack_theta(bs)
+    theta_comm, theta_non_comm = generate_uninterpreted_theta(usr_instr, len(theta_stack))
+    theta_dict = dict(theta_stack, **theta_comm, **theta_non_comm)
+    instr_map = generate_instr_map(usr_instr, theta_stack, theta_comm, theta_non_comm)
+    disasm_map = generate_disasm_map(usr_instr, theta_dict)
+    costs_map = generate_costs_ordered_dict(bs, usr_instr, theta_dict)
+    return instr_map, disasm_map, costs_map
 
 
 if __name__ == "__main__":

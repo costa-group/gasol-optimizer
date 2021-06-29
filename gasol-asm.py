@@ -15,7 +15,7 @@ import ir_block
 from gasol_optimization import get_sfs_dict
 from python_syrup import execute_syrup_backend
 from solver_output_generation import obtain_solver_output
-from disasm_generation import generate_info_from_solution, generate_disasm_sol
+from disasm_generation import generate_info_from_solution, generate_disasm_sol_from_output, read_initial_dicts_from_files
 from solver_solution_verify import check_solver_output_is_correct
 from global_params import gasol_path, tmp_path, gasol_folder
 from utils import isYulInstruction, compute_stack_size
@@ -133,9 +133,12 @@ def optimize_asm_block(block, contract_name, timeout, init=False):
             total_optimized_length += current_length
             continue
 
-        instruction_output, _, pushed_output, total_gas = generate_info_from_solution(contract_name, block_name, solver_output)
+        opcodes_theta_dict, instruction_theta_dict, gas_theta_dict = read_initial_dicts_from_files(contract_name, block_name)
+        instruction_output, _, pushed_output, total_gas = \
+            generate_info_from_solution(solver_output, opcodes_theta_dict, instruction_theta_dict, gas_theta_dict)
 
-        generate_disasm_sol(contract_name, block_name, solver_output)
+        generate_disasm_sol_from_output(contract_name, solver_output,
+                                        opcodes_theta_dict, instruction_theta_dict, gas_theta_dict)
 
         total_current_cost += current_cost
         total_optimized_cost += min(current_cost, total_gas)
@@ -262,8 +265,13 @@ def optimize_isolated_asm_block(block_name, timeout=10):
 
         # We weren't able to find a solution using the solver, so we just update the gas consumption
         if check_solver_output_is_correct(solver_output):
-            instruction_output, _, pushed_output, total_gas = generate_info_from_solution(contract_name, "block0", solver_output)
-            sol = generate_disasm_sol(contract_name, block_name, solver_output)
+            opcodes_theta_dict, instruction_theta_dict, gas_theta_dict = read_initial_dicts_from_files(contract_name,
+                                                                                                       "block0")
+            instruction_output, _, pushed_output, total_gas = \
+                generate_info_from_solution(solver_output, opcodes_theta_dict, instruction_theta_dict, gas_theta_dict)
+
+            sol = generate_disasm_sol_from_output(contract_name, solver_output,
+                                                  opcodes_theta_dict, instruction_theta_dict, gas_theta_dict)
             print("OPTIMIZED BLOCK: "+str(sol))
 
         else:
