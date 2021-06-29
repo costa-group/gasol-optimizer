@@ -62,7 +62,7 @@ def initialize_flags_and_additional_info(args_i, current_cost, instr_seq, previo
 
 
 # Executes the smt encoding generator from the main script
-def execute_syrup_backend(args_i,json_file = None, previous_solution_dict = None, block_name = None):
+def execute_syrup_backend(args_i,json_file = None, previous_solution_dict = None, block_name = None, timeout=10):
     path = costabs_path
     # Args_i is None if the function is called from syrup-asm. In this case
     # we assume by default oms, and json_file already contains the sfs dict
@@ -82,6 +82,8 @@ def execute_syrup_backend(args_i,json_file = None, previous_solution_dict = None
     b0, bs, user_instr, variables, initial_stack, final_stack, current_cost, instr_seq = parse_data(json_path)
 
     flags, additional_info = initialize_flags_and_additional_info(args_i, current_cost, instr_seq, previous_solution_dict)
+
+    additional_info['tout'] = timeout
 
     generate_smtlib_encoding(b0, bs, user_instr, variables, initial_stack, final_stack, flags, additional_info)
 
