@@ -17,10 +17,10 @@ def buildAsmBytecode(instruction):
     return asm_bytecode
 
 
-def buildBlocks(cname,instr_list):
+def buildBlocks(cname,instr_list, is_init_code):
     bytecodes = []
 
-    block = AsmBlock(cname,0)
+    block = AsmBlock(cname,0, is_init_code)
     blockId = 1
 
     i = 0
@@ -33,14 +33,14 @@ def buildBlocks(cname,instr_list):
             block.compute_stack_size()
             bytecodes.append(block)
             last = instr_name
-            block = AsmBlock(cname,blockId)
+            block = AsmBlock(cname,blockId, is_init_code)
             blockId+=1
         elif instr_name == "tag":
             if last not in ["JUMP","JUMPI","STOP","RETURN","REVERT","INVALID"]:
                 block.compute_stack_size()
                 bytecodes.append(block)
                 last = ""
-                block = AsmBlock(cname,blockId)
+                block = AsmBlock(cname,blockId, is_init_code)
                 blockId+=1
             block.addInstructions(asm_bytecode)
         else:
@@ -65,7 +65,7 @@ def build_asm_contract(cname,cinfo):
 
     initCode = cinfo[".code"]
 
-    init_bytecode = buildBlocks(cname, initCode)
+    init_bytecode = buildBlocks(cname, initCode, True)
     
     asm_c.setInitCode(init_bytecode)
         
@@ -79,11 +79,11 @@ def build_asm_contract(cname,cinfo):
             asm_c.setAux(elem,aux_data)
 
             code = data[elem][".code"]
-            run_bytecode = buildBlocks(cname,code)
+            run_bytecode = buildBlocks(cname,code, False)
             asm_c.setRunCode(elem,run_bytecode)
 
             data1 = data[elem].get(".data",None)
-            if data1 != None:
+            if data1 is not None:
                 asm_c.setAuxData(elem,data1)
             
         else:

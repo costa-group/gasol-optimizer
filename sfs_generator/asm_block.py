@@ -4,12 +4,13 @@ import utils
 
 class AsmBlock():
     
-    def __init__(self, cname, identifier):
+    def __init__(self, cname, identifier, is_init_block):
         self.contract_name = cname
         self.identifier = identifier
         self.instructions = []
         #minimum size of the source stack
         self.source_stack = 0
+        self.is_init_block = is_init_block
 
     def getContractName(self):
         return self.contract_name
@@ -38,10 +39,13 @@ class AsmBlock():
     def setSourceStack(self, val):
         self.source_stack = val
 
-    def compute_stack_size(self):
-        init_stack = self.source_stack
-        current_stack = 0
+    def get_is_init_block(self):
+        return self.is_init_block
 
+    def set_is_init_block(self, val):
+        self.is_init_block = val
+
+    def compute_stack_size(self):
         evm_instructions = map(lambda x: x.getDisasm(),self.instructions)
         
         init_stack = utils.compute_stack_size(evm_instructions)
