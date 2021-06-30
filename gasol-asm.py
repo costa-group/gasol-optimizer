@@ -79,7 +79,11 @@ def optimize_instructions(instructions,stack_size,cname,block_id, timeout, is_in
 
     block_data = {"instructions": block_ins, "input": stack_size}
 
-    #TODO: añadir nuevas instrucciones
+    if is_initial_block:
+        preffix = "initial_"
+    else:
+        preffix = ""
+        
     exit_code = ir_block.evm2rbr_compiler(contract_name=cname,
                                                    block=block_data, block_id=block_id,preffix = preffix)
 
