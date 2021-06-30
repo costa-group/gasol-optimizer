@@ -43,11 +43,8 @@ def clean_dir():
             shutil.rmtree(gasol_path + "solutions")
 
 
-# Given the sequence of bytecodes, the initial stack size, the contract name and the
-# block id, returns the output given by the solver, the name given to that block and current gas associated
-# to that sequence.
-def optimize_block(bytecodes, stack_size, cname, block_id, timeout=10, is_initial_block=False):
-
+# It modifies the name of the push opcodes of yul to integrate them in a single string
+def preprocess_instructions(bytecodes):
     instructions = []
     for b in bytecodes:
         op = b.getDisasm()
@@ -74,9 +71,13 @@ def optimize_block(bytecodes, stack_size, cname, block_id, timeout=10, is_initia
 
         instructions.append(op)
 
-    return optimize_instructions(instructions,stack_size,cname,block_id, timeout, is_initial_block)
 
-def optimize_instructions(instructions,stack_size,cname,block_id, timeout, is_initial_block):
+    return instructions
+    
+# Given the sequence of bytecodes, the initial stack size, the contract name and the
+# block id, returns the output given by the solver, the name given to that block and current gas associated
+# to that sequence.
+def optimize_block(instructions,stack_size,cname,block_id, timeout, is_initial_block= False):
     block_ins = list(filter(lambda x: x not in ["JUMP","JUMPI","JUMPDEST","tag","INVALID"], instructions))
 
     block_data = {"instructions": block_ins, "input": stack_size}
@@ -113,6 +114,25 @@ def optimize_instructions(instructions,stack_size,cname,block_id, timeout, is_in
 
     return block_solutions    
 
+
+def compute_original_sfs_without_simplifications(instructions,stack_size,cname,block_id,timeout,is_initial_block):
+    block_ins = list(filter(lambda x: x not in ["JUMP","JUMPI","JUMPDEST","tag","INVALID"], instructions))
+
+    block_data = {"instructions": block_ins, "input": stack_size}
+
+    if is_initial_block:
+        prefix = "initial_"
+    else:
+        prefix = ""
+        
+    exit_code = ir_block.evm2rbr_compiler(contract_name=cname,
+                                                   block=block_data, block_id=block_id,preffix = prefix,simplification = False)
+
+    sfs_dict = get_sfs_dict()
+
+    return sfs_dict
+
+
 # Given an asm_block and its contract name, returns the asm block after the optimization
 def optimize_asm_block(block, contract_name, timeout):
     bytecodes = block.getInstructions()
@@ -126,8 +146,11 @@ def optimize_asm_block(block, contract_name, timeout):
 
     log_dicts = {}
 
+    
+    instructions = preprocess_instructions(bytecodes)
+    
     for solver_output, block_name, current_cost, current_length \
-            in optimize_block(bytecodes, stack_size, contract_name, block_id, timeout, is_init_block):
+            in optimize_block(instructions, stack_size, contract_name, block_id, timeout, is_init_block):
 
         # We weren't able to find a solution using the solver, so we just update the gas consumption
         if not check_solver_output_is_correct(solver_output):
@@ -137,7 +160,7 @@ def optimize_asm_block(block, contract_name, timeout):
             total_optimized_length += current_length
 
             # TODO: generate sfs without optimizations and solution dict
-
+            sfs_original = compute_original_sfs_without_simplifications(instructions, stack_size, contract_name, block_id, timeout, is_init_block)
             continue
 
         # If it is a block in the initial code, then we add prefix "initial_"
@@ -284,7 +307,7 @@ def optimize_isolated_asm_block(block_name, timeout=10):
     stack_size = compute_stack_size(opcodes)
     contract_name = block_name.split('/')[-1]
     for solver_output, block_name, current_cost, current_length \
-        in optimize_instructions(opcodes,stack_size,contract_name,0, timeout, False):
+        in optimize_block(opcodes,stack_size,contract_name,0, timeout, False):
 
         # We weren't able to find a solution using the solver, so we just update the gas consumption
         if check_solver_output_is_correct(solver_output):
