@@ -1773,8 +1773,7 @@ def is_optimizable(opcode_instructions,instructions):
     else:
         return False
 
-#TODO
-def translate_block(rule,instructions,opcodes,isolated=False):
+def translate_block(rule,instructions,opcodes,isolated,preffix):
     global max_instr_size
     global max_stack_size
     global num_pops
@@ -1853,7 +1852,7 @@ def translate_block(rule,instructions,opcodes,isolated=False):
         index, fin = find_sublist(rule.get_instructions(),new_opcodes)
 
         init_info = {}
-        generate_json(rule.get_rule_name(),source_stack,t_vars,source_stack_idx-1,gas, init_info)
+        generate_json(preffix+rule.get_rule_name(),source_stack,t_vars,source_stack_idx-1,gas, init_info)
         write_instruction_block(rule.get_rule_name(),new_opcodes)
 
 
@@ -1872,7 +1871,7 @@ def compute_opcodes2write(opcodes,num_guard):
 
     return new_opcodes
         
-def generate_subblocks(rule,list_subblocks,isolated = False):
+def generate_subblocks(rule,list_subblocks,isolated,preffix):
     global gas_t
     
     source_stack_idx = get_stack_variables(rule)
@@ -1893,7 +1892,7 @@ def generate_subblocks(rule,list_subblocks,isolated = False):
         seq = range(ts_idx,-1,-1)
         target_stack = list(map(lambda x: "s("+str(x)+")",seq))
 
-        new_nexts = translate_subblock(rule,block,source_stack,target_stack,source_stack_idx,i,list_subblocks[i+1])
+        new_nexts = translate_subblock(rule,block,source_stack,target_stack,source_stack_idx,i,list_subblocks[i+1],preffix)
 
         if new_nexts == []:
         #We update the source stack for the new block
@@ -1917,13 +1916,13 @@ def generate_subblocks(rule,list_subblocks,isolated = False):
 
     block = instrs[2:]
     if block != []:
-        translate_last_subblock(rule,block,source_stack,source_stack_idx,i,isolated)
+        translate_last_subblock(rule,block,source_stack,source_stack_idx,i,isolated,preffix)
 
     if compute_gast:
         gas_t+=get_cost(original_opcodes)
 
     
-def translate_subblock(rule,instrs,sstack,tstack,sstack_idx,idx,next_block):
+def translate_subblock(rule,instrs,sstack,tstack,sstack_idx,idx,next_block,preffix):
     global max_instr_size
     global max_stack_size
     global num_pops
@@ -1963,7 +1962,7 @@ def translate_subblock(rule,instrs,sstack,tstack,sstack_idx,idx,next_block):
 
             new_opcodes = compute_opcodes2write(opcodes,0)
             init_info = {}
-            generate_json(rule.get_rule_name(),sstack,new_tstack,sstack_idx,gas,init_info,subblock=idx)
+            generate_json(preffix+rule.get_rule_name(),sstack,new_tstack,sstack_idx,gas,init_info,subblock=idx)
             write_instruction_block(rule.get_rule_name(),new_opcodes,subblock=idx)
             
         return new_nexts
@@ -2041,7 +2040,7 @@ def modify_next_block(next_block,pops2remove):
     return new_nextblock,idx2-pops2remove
     
     
-def translate_last_subblock(rule,block,sstack,sstack_idx,idx,isolated):
+def translate_last_subblock(rule,block,sstack,sstack_idx,idx,isolated,preffix):
     global max_instr_size
     global max_stack_size
     global num_pops
@@ -2099,7 +2098,7 @@ def translate_last_subblock(rule,block,sstack,sstack_idx,idx,isolated):
             compute_gast = True
             new_opcodes = compute_opcodes2write(opcodes,num_guard)
             init_info = {}
-            generate_json(rule.get_rule_name(),sstack,tstack,sstack_idx,gas,init_info,subblock=idx)
+            generate_json(preffix+rule.get_rule_name(),sstack,tstack,sstack_idx,gas,init_info,subblock=idx)
             write_instruction_block(rule.get_rule_name(),new_opcodes,subblock=idx)
     
 def get_new_source_stack(instr,nop_instr,idx):
@@ -2338,7 +2337,7 @@ def compute_max_program_len(opcodes, num_guard,block = None):
     return len(new_opcodes)
     
 
-def smt_translate_block(rule,name):
+def smt_translate_block(rule,name,preffix):
     global s_counter
     global max_instr_size
     global int_not0
@@ -2375,14 +2374,14 @@ def smt_translate_block(rule,name):
 
     res = is_optimizable(opcodes,instructions)
     if res:
-        translate_block(rule,instructions,opcodes,True)
+        translate_block(rule,instructions,opcodes,True,preffix)
 
     else: #we need to split the blocks into subblocks
         r = False
         new_instructions = []
 
         subblocks = split_blocks(rule,r,new_instructions)
-        generate_subblocks(rule,subblocks,True)
+        generate_subblocks(rule,subblocks,True,preffix)
 
     end = dtimer()
     # for f in info_deploy:
