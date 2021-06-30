@@ -9,7 +9,7 @@ class AsmJSON():
         self.contracts = []
         
     def getVersion(self):
-        return solc_version
+        return self.solc_version
 
     def setVersion(self,v):
         self.solc_version = v
