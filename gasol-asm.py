@@ -102,9 +102,6 @@ def optimize_instructions(instructions,stack_size,cname,block_id, timeout, is_in
         current_cost = sfs_block['current_cost']
         current_size = sfs_block['max_progr_len']
 
-        block_name = block_name
-        # If it belongs to the initial code, then we add prefix initial so no confusion can be derive
-
         execute_syrup_backend(None, sfs_block, block_name=block_name, timeout=timeout)
 
         # At this point, solution is a string that contains the output directly
