@@ -7,6 +7,8 @@ import argparse
 from encoding_files import initialize_dir_and_streams, write_encoding
 from smtlib_utils import set_logic, check_sat
 import re
+from encoding_utils import generate_disasm_map, generate_costs_ordered_dict, generate_stack_theta, generate_instr_map, \
+    generate_uninterpreted_theta
 
 costabs_path = "/tmp/gasol/"
 
@@ -62,7 +64,7 @@ def initialize_flags_and_additional_info(args_i, current_cost, instr_seq, previo
 
 
 # Executes the smt encoding generator from the main script
-def execute_syrup_backend(args_i,json_file = None, previous_solution_dict = None, block_name = None):
+def execute_syrup_backend(args_i,json_file = None, previous_solution_dict = None, block_name = None, timeout=10):
     path = costabs_path
     # Args_i is None if the function is called from syrup-asm. In this case
     # we assume by default oms, and json_file already contains the sfs dict
@@ -82,6 +84,8 @@ def execute_syrup_backend(args_i,json_file = None, previous_solution_dict = None
     b0, bs, user_instr, variables, initial_stack, final_stack, current_cost, instr_seq = parse_data(json_path)
 
     flags, additional_info = initialize_flags_and_additional_info(args_i, current_cost, instr_seq, previous_solution_dict)
+
+    additional_info['tout'] = timeout
 
     generate_smtlib_encoding(b0, bs, user_instr, variables, initial_stack, final_stack, flags, additional_info)
 
@@ -116,6 +120,18 @@ def execute_syrup_backend_combined(json_files, previous_solution_dict, contract_
 
     write_encoding(check_sat())
     es.close()
+
+
+# Given the max stack size (bs) and the user instructions directly from the json, generates three dicts:
+# one for the conversion of
+def generate_theta_dict_from_sequence(bs, usr_instr):
+    theta_stack = generate_stack_theta(bs)
+    theta_comm, theta_non_comm = generate_uninterpreted_theta(usr_instr, len(theta_stack))
+    theta_dict = dict(theta_stack, **theta_comm, **theta_non_comm)
+    instr_map = generate_instr_map(usr_instr, theta_stack, theta_comm, theta_non_comm)
+    disasm_map = generate_disasm_map(usr_instr, theta_dict)
+    costs_map = generate_costs_ordered_dict(bs, usr_instr, theta_dict)
+    return instr_map, disasm_map, costs_map
 
 
 if __name__ == "__main__":
