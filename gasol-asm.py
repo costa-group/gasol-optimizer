@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import argparse
+import json
 import os
 import sys
 import shutil
@@ -16,9 +17,10 @@ from gasol_optimization import get_sfs_dict
 from python_syrup import execute_syrup_backend
 from solver_output_generation import obtain_solver_output
 from disasm_generation import generate_info_from_solution, generate_disasm_sol_from_output, read_initial_dicts_from_files
-from solver_solution_verify import check_solver_output_is_correct
+from solver_solution_verify import check_solver_output_is_correct, generate_solution_dict
 from global_params import gasol_path, tmp_path, gasol_folder
 from utils import isYulInstruction, compute_stack_size
+
 
 def clean_dir():
     ext = ["rbr", "csv", "sol", "bl", "disasm", "json"]
@@ -80,12 +82,12 @@ def optimize_instructions(instructions,stack_size,cname,block_id, timeout, is_in
     block_data = {"instructions": block_ins, "input": stack_size}
 
     if is_initial_block:
-        preffix = "initial_"
+        prefix = "initial_"
     else:
-        preffix = ""
+        prefix = ""
         
     exit_code = ir_block.evm2rbr_compiler(contract_name=cname,
-                                                   block=block_data, block_id=block_id,preffix = preffix)
+                                                   block=block_data, block_id=block_id,preffix = prefix)
 
     sfs_dict = get_sfs_dict()
 
@@ -122,6 +124,8 @@ def optimize_asm_block(block, contract_name, timeout):
     total_current_length, total_optimized_length = 0,0
     optimized_blocks = []
 
+    log_dicts = {}
+
     for solver_output, block_name, current_cost, current_length \
             in optimize_block(bytecodes, stack_size, contract_name, block_id, timeout, is_init_block):
 
@@ -131,6 +135,9 @@ def optimize_asm_block(block, contract_name, timeout):
             total_optimized_cost += current_cost
             total_current_length += current_length
             total_optimized_length += current_length
+
+            # TODO: generate sfs without optimizations and solution dict
+
             continue
 
         # If it is a block in the initial code, then we add prefix "initial_"
@@ -153,7 +160,9 @@ def optimize_asm_block(block, contract_name, timeout):
         if current_cost > total_gas:
             optimized_blocks.append(block_name)
 
-    return total_current_cost, total_optimized_cost, optimized_blocks, total_current_length, total_optimized_length
+        log_dicts[contract_name + '_' + block_name] = generate_solution_dict(solver_output)
+
+    return total_current_cost, total_optimized_cost, optimized_blocks, total_current_length, total_optimized_length, log_dicts
 
 
 def optimize_asm(file_name, timeout=10):
@@ -184,6 +193,7 @@ def optimize_asm(file_name, timeout=10):
             optimized_blocks.extend(tuple_cost[2])
             current_length += tuple_cost[3]
             optimized_length += tuple_cost[4]
+            log_dicts.update(tuple_cost[5])
 
         print("\nAnalyzing Runtime Code of: "+contract_name)
         print("-----------------------------------------\n")
@@ -196,6 +206,7 @@ def optimize_asm(file_name, timeout=10):
                 optimized_blocks.extend(tuple_cost[2])
                 current_length += tuple_cost[3]
                 optimized_length += tuple_cost[4]
+                log_dicts.update(tuple_cost[5])
 
         saved_gas = current_cost - optimized_cost
         saved_length = current_length - optimized_length
@@ -216,11 +227,13 @@ def optimize_asm(file_name, timeout=10):
     if "solutions" not in os.listdir(gasol_path):
         os.mkdir(gasol_path+"solutions")
 
-    csv_file = "/tmp/gasol/solutions/statistics.csv"
+    csv_file = gasol_path + "solutions/statistics.csv"
     with open(csv_file,'w') as f:
         f.write("\n".join(csv_out))
 
-
+    log_file = gasol_path + "solutions/log.json"
+    with open(log_file, "w") as log_f:
+        json.dump(log_dicts, log_f)
 
 
 def optimize_isolated_asm_block(block_name, timeout=10):
