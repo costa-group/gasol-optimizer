@@ -81,7 +81,7 @@ def optimize_instructions(instructions,stack_size,cname,block_id,preffix):
 
     #TODO: añadir nuevas instrucciones
     exit_code = ir_block.evm2rbr_compiler(contract_name=cname,
-                                                   block=block_data, block_id=block_id)
+                                                   block=block_data, block_id=block_id,preffix = preffix)
 
     sfs_dict = get_sfs_dict()
 
@@ -97,7 +97,7 @@ def optimize_instructions(instructions,stack_size,cname,block_id,preffix):
 
         current_cost = sfs_block['current_cost']
         current_size = sfs_block['max_progr_len']
-        block_name = preffix + block_name
+        block_name = block_name
         execute_syrup_backend(None, sfs_block, block_name=block_name)
 
         # At this point, solution is a string that contains the output directly
@@ -167,6 +167,8 @@ def optimize_asm(file_name):
         contract_name = (c.getContractName().split("/")[-1]).split(":")[-1]
         init_code = c.getInitCode()
 
+        print("\nAnalyzing Init Code of: "+contract_name)
+        print("-----------------------------------------\n")
         for block in init_code:
             tuple_cost = optimize_asm_block(block, contract_name, True)
             current_cost += tuple_cost[0]
@@ -175,6 +177,8 @@ def optimize_asm(file_name):
             current_length += tuple_cost[3]
             optimized_length += tuple_cost[4]
 
+        print("\nAnalyzing Runtime Code of: "+contract_name)
+        print("-----------------------------------------\n")
         for identifier in c.getDataIds():
             blocks = c.getRunCodeOf(identifier)
             for block in blocks:
