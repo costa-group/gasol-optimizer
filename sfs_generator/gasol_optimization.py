@@ -1018,11 +1018,11 @@ def compute_binary(expression,level):
         if exp_str not in already_considered:
             if (funct in ["+","*","and","or","xor","eq"]) and (exp_str_comm not in already_considered):
                 discount_op+=2
-                #print("[RULE]: Evaluate expression "+str(expression))
+                # print("[RULE]: Evaluate expression "+str(expression))
 
             elif funct not in ["+","*","and","or","xor","eq"]:
                 discount_op+=2
-                #print("[RULE]: Evaluate expression "+str(expression))
+                # print("[RULE]: Evaluate expression "+str(expression))
 
 
         already_considered.append(exp_str)
@@ -1112,7 +1112,7 @@ def simplify_constants(opcodes_seq,user_def):
         if r:
             result = evaluate(elems)
             
-def generate_encoding(instructions,variables,source_stack):
+def generate_encoding(instructions,variables,source_stack,simplification=True):
     global s_dict
     global u_dict
     global variable_content
@@ -1122,7 +1122,7 @@ def generate_encoding(instructions,variables,source_stack):
     variable_content = {}
     for v in variables:
         s_dict = {}
-        search_for_value(v,instructions_reverse, source_stack)
+        search_for_value(v,instructions_reverse, source_stack,simplification)
         variable_content[v] = s_dict[v]    
         
 def generate_source_stack_variables(idx):
@@ -1213,7 +1213,7 @@ def compute_max_idx(max_ss,ss):
 
     return idx_top
     
-def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None):
+def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,simplification = True):
     global max_instr_size
     global num_pops
     global blocks_json_dict
@@ -1252,10 +1252,12 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None):
 
     vars_list = compute_vars_set(new_ss,new_ts)
 
-   
-    new_user_defins,new_ts = apply_all_simp_rules(user_defins,vars_list,new_ts)
-    apply_all_comparison(new_user_defins,new_ts)
-    
+    if simplification:
+        new_user_defins,new_ts = apply_all_simp_rules(user_defins,vars_list,new_ts)
+        apply_all_comparison(new_user_defins,new_ts)
+    else:
+        new_user_defins = user_defins
+       
     vars_list = recompute_vars_set(new_ss,new_ts,new_user_defins)
     
     total_inpt_vars = []
@@ -1298,13 +1300,15 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None):
     else:
         block_nm = block_name
 
-    if "jsons" not in os.listdir(gasol_path):
-        os.mkdir(json_path)
-
     blocks_json_dict[block_nm] = json_dict
-    
-    with open(json_path+"/"+source_name+"_"+cname+"_"+block_nm+"_input.json","w") as json_file:
-        json.dump(json_dict,json_file)
+
+
+    if simplification:
+        if "jsons" not in os.listdir(gasol_path):
+            os.mkdir(json_path)
+
+        with open(json_path+"/"+source_name+"_"+cname+"_"+block_nm+"_input.json","w") as json_file:
+            json.dump(json_dict,json_file)
 
 
 def get_not_used_stack_variables(new_ss,new_ts,total_inpt_vars):
@@ -1773,7 +1777,7 @@ def is_optimizable(opcode_instructions,instructions):
     else:
         return False
 
-def translate_block(rule,instructions,opcodes,isolated,preffix):
+def translate_block(rule,instructions,opcodes,isolated,preffix,simp):
     global max_instr_size
     global max_stack_size
     global num_pops
@@ -1838,7 +1842,7 @@ def translate_block(rule,instructions,opcodes,isolated,preffix):
     #print ("GENERATING ENCONDING")
 
 
-    generate_encoding(instructions,t_vars,source_stack)
+    generate_encoding(instructions,t_vars,source_stack,simp)
     
     build_userdef_instructions()
     gas = get_block_cost(opcodes,len(guards_op))
@@ -1852,8 +1856,9 @@ def translate_block(rule,instructions,opcodes,isolated,preffix):
         index, fin = find_sublist(rule.get_instructions(),new_opcodes)
 
         init_info = {}
-        generate_json(preffix+rule.get_rule_name(),source_stack,t_vars,source_stack_idx-1,gas, init_info)
-        write_instruction_block(rule.get_rule_name(),new_opcodes)
+        generate_json(preffix+rule.get_rule_name(),source_stack,t_vars,source_stack_idx-1,gas, init_info,simplification = simp)
+        if simp:
+            write_instruction_block(rule.get_rule_name(),new_opcodes)
 
 
 def compute_opcodes2write(opcodes,num_guard):
@@ -1871,7 +1876,7 @@ def compute_opcodes2write(opcodes,num_guard):
 
     return new_opcodes
         
-def generate_subblocks(rule,list_subblocks,isolated,preffix):
+def generate_subblocks(rule,list_subblocks,isolated,preffix,simplification):
     global gas_t
     
     source_stack_idx = get_stack_variables(rule)
@@ -1892,7 +1897,7 @@ def generate_subblocks(rule,list_subblocks,isolated,preffix):
         seq = range(ts_idx,-1,-1)
         target_stack = list(map(lambda x: "s("+str(x)+")",seq))
 
-        new_nexts = translate_subblock(rule,block,source_stack,target_stack,source_stack_idx,i,list_subblocks[i+1],preffix)
+        new_nexts = translate_subblock(rule,block,source_stack,target_stack,source_stack_idx,i,list_subblocks[i+1],preffix,simplification)
 
         if new_nexts == []:
         #We update the source stack for the new block
@@ -1916,13 +1921,13 @@ def generate_subblocks(rule,list_subblocks,isolated,preffix):
 
     block = instrs[2:]
     if block != []:
-        translate_last_subblock(rule,block,source_stack,source_stack_idx,i,isolated,preffix)
+        translate_last_subblock(rule,block,source_stack,source_stack_idx,i,isolated,preffix,simplification)
 
     if compute_gast:
         gas_t+=get_cost(original_opcodes)
 
     
-def translate_subblock(rule,instrs,sstack,tstack,sstack_idx,idx,next_block,preffix):
+def translate_subblock(rule,instrs,sstack,tstack,sstack_idx,idx,next_block,preffix,simp):
     global max_instr_size
     global max_stack_size
     global num_pops
@@ -1948,7 +1953,7 @@ def translate_subblock(rule,instrs,sstack,tstack,sstack_idx,idx,next_block,preff
     if instr!=[]:
         get_s_counter(sstack,tstack)
         
-        generate_encoding(instr,tstack,sstack)
+        generate_encoding(instr,tstack,sstack,simp)
         build_userdef_instructions()
         gas = get_block_cost(opcodes,0)
         max_stack_size = max_idx_used(instructions,tstack)
@@ -1962,8 +1967,9 @@ def translate_subblock(rule,instrs,sstack,tstack,sstack_idx,idx,next_block,preff
 
             new_opcodes = compute_opcodes2write(opcodes,0)
             init_info = {}
-            generate_json(preffix+rule.get_rule_name(),sstack,new_tstack,sstack_idx,gas,init_info,subblock=idx)
-            write_instruction_block(rule.get_rule_name(),new_opcodes,subblock=idx)
+            generate_json(preffix+rule.get_rule_name(),sstack,new_tstack,sstack_idx,gas,init_info,subblock=idx,simplification = simp)
+            if simp:
+                write_instruction_block(rule.get_rule_name(),new_opcodes,subblock=idx)
             
         return new_nexts
     else:
@@ -2040,7 +2046,7 @@ def modify_next_block(next_block,pops2remove):
     return new_nextblock,idx2-pops2remove
     
     
-def translate_last_subblock(rule,block,sstack,sstack_idx,idx,isolated,preffix):
+def translate_last_subblock(rule,block,sstack,sstack_idx,idx,isolated,preffix,simp):
     global max_instr_size
     global max_stack_size
     global num_pops
@@ -2089,7 +2095,7 @@ def translate_last_subblock(rule,block,sstack,sstack_idx,idx,isolated,preffix):
             
             tstack = generate_target_stack_idx(len(sstack),opcodes)[::-1]
         get_s_counter(sstack,tstack)
-        generate_encoding(instructions,tstack,sstack)
+        generate_encoding(instructions,tstack,sstack,simp)
     
         build_userdef_instructions()
         gas = get_block_cost(opcodes,len(guards_op))
@@ -2098,8 +2104,9 @@ def translate_last_subblock(rule,block,sstack,sstack_idx,idx,isolated,preffix):
             compute_gast = True
             new_opcodes = compute_opcodes2write(opcodes,num_guard)
             init_info = {}
-            generate_json(preffix+rule.get_rule_name(),sstack,tstack,sstack_idx,gas,init_info,subblock=idx)
-            write_instruction_block(rule.get_rule_name(),new_opcodes,subblock=idx)
+            generate_json(preffix+rule.get_rule_name(),sstack,tstack,sstack_idx,gas,init_info,subblock=idx,simplification = simp)
+            if simp:
+                write_instruction_block(rule.get_rule_name(),new_opcodes,subblock=idx)
     
 def get_new_source_stack(instr,nop_instr,idx):
     
@@ -2337,7 +2344,7 @@ def compute_max_program_len(opcodes, num_guard,block = None):
     return len(new_opcodes)
     
 
-def smt_translate_block(rule,name,preffix):
+def smt_translate_block(rule,name,preffix,simplification=True):
     global s_counter
     global max_instr_size
     global int_not0
@@ -2374,14 +2381,14 @@ def smt_translate_block(rule,name,preffix):
 
     res = is_optimizable(opcodes,instructions)
     if res:
-        translate_block(rule,instructions,opcodes,True,preffix)
+        translate_block(rule,instructions,opcodes,True,preffix,simplification)
 
     else: #we need to split the blocks into subblocks
         r = False
         new_instructions = []
 
         subblocks = split_blocks(rule,r,new_instructions)
-        generate_subblocks(rule,subblocks,True,preffix)
+        generate_subblocks(rule,subblocks,True,preffix,simplification)
 
     end = dtimer()
     # for f in info_deploy:
@@ -2676,7 +2683,7 @@ def apply_transform_rules(user_def_instrs,list_vars,tstack):
             r = apply_transform(instr)
 
             if r!=-1:
-                #print("[RULE]: Simplification rule type 1: "+str(instr))
+                # print("[RULE]: Simplification rule type 1: "+str(instr))
                 
                 replace_var_userdef(instr["outpt_sk"][0],r,user_def_instrs)
                 target_stack = replace_var(instr["outpt_sk"][0],r,target_stack)
@@ -3515,8 +3522,8 @@ def apply_comparation_rules(user_def_instrs,tstack):
         r, d_instr = apply_cond_transformation(instr,user_def_instrs,tstack)
 
         if r:
-            #print("[RULE]: Simplification rule type 2: "+str(instr))
-            #print("[RULE]: Delete rules: "+str(d_instr))
+            # print("[RULE]: Simplification rule type 2: "+str(instr))
+            # print("[RULE]: Delete rules: "+str(d_instr))
             modified = True
             for b in d_instr:
                 idx = user_def_instrs.index(b)
