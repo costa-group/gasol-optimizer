@@ -234,7 +234,7 @@ def get_encoding_init_block(instructions,source_stack):
             instr = instructions[i][4:-1].strip()
             if instr.startswith("DUP") or instr.startswith("SWAP") or instr.startswith("PUSH") or instr.startswith("POP"):
                 opcodes.append(instr)
-                if instr.startswith("PUSH"):
+                if instr.startswith("PUSH") and instr.find("DEPLOYADDRESS") == -1:
                     value = instructions[i-1].split("=")[-1].strip()
                     push_values.append(value)
             else:
