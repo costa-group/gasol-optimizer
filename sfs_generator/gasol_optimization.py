@@ -229,6 +229,7 @@ def get_encoding_init_block(instructions,source_stack):
     # print("MIRA")
     # print(instructions)
 
+    print(instructions)
     while(i<len(instructions)):
         if instructions[i].startswith("nop("):
             instr = instructions[i][4:-1].strip()
@@ -238,6 +239,7 @@ def get_encoding_init_block(instructions,source_stack):
                     value = instructions[i-1].split("=")[-1].strip()
                     push_values.append(value)
             else:
+                print(instructions[i])
                 #non-interpreted function
                 var = instructions[i-1].split("=")[0].strip()
 
@@ -245,6 +247,8 @@ def get_encoding_init_block(instructions,source_stack):
                 instructions_reverse = instructions_without_nop[::-1]
                 # print("EMPIEZO EL NUEVO")  
                 search_for_value(var,instructions_reverse, source_stack, False)
+                print(s_dict)
+                print(u_dict)
                 opcodes.append((s_dict[var],u_dict[s_dict[var]]))
                 # print(u_dict[s_dict[var]])
         i+=1
@@ -269,7 +273,7 @@ def get_encoding_init_block(instructions,source_stack):
             new_opcodes.append(opcodes[i])
 
     # new_opcodes = evaluate_constants(new_opcodes,init_user_def)
-            
+    
     init_info = {}
     init_info["opcodes_seq"] = new_opcodes
     init_info["non_inter"] = init_user_def
@@ -331,7 +335,7 @@ def search_for_value_aux(var, instructions,source_stack,level,evaluate = True):
                 val = int(new_vars[0])
             else:
                 val = new_vars[0]
-            update_unary_func(funct,var,new_vars[0])
+            update_unary_func(funct,var,new_vars[0],evaluate)
             
         else:
             if new_vars[0] not in zero_ary:
@@ -339,7 +343,7 @@ def search_for_value_aux(var, instructions,source_stack,level,evaluate = True):
                 val = s_dict[new_vars[0]]
             else:
                 val = new_vars[0]
-            update_unary_func(funct,var,val)
+            update_unary_func(funct,var,val,evaluate)
             
     else:
     
@@ -381,12 +385,12 @@ def is_already_defined(elem):
 
     return -1, False
     
-def update_unary_func(func,var,val):
+def update_unary_func(func,var,val,evaluate):
     global s_dict
     global u_dict
     global gas_saved_op    
     
-    if func != "":
+    if func != "" and evaluate:
 
         if is_integer(val)!=-1 and (func=="not" or func=="iszero"):
             if func == "not":
