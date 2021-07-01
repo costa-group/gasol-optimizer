@@ -14,9 +14,10 @@ sys.path.append(os.path.dirname(os.path.realpath(__file__))+"/verification")
 from parser_asm import parse_asm
 import ir_block
 from gasol_optimization import get_sfs_dict
-from python_syrup import execute_syrup_backend
+from python_syrup import execute_syrup_backend, generate_theta_dict_from_sequence
 from solver_output_generation import obtain_solver_output
-from disasm_generation import generate_info_from_solution, generate_disasm_sol_from_output, read_initial_dicts_from_files
+from disasm_generation import generate_info_from_solution, generate_disasm_sol_from_output, \
+    read_initial_dicts_from_files, generate_disasm_sol_from_log_block
 from solver_solution_verify import check_solver_output_is_correct, generate_solution_dict
 from global_params import gasol_path, tmp_path, gasol_folder
 from utils import isYulInstruction, compute_stack_size
@@ -73,12 +74,10 @@ def preprocess_instructions(bytecodes):
 
 
     return instructions
-    
-# Given the sequence of bytecodes, the initial stack size, the contract name and the
-# block id, returns the output given by the solver, the name given to that block and current gas associated
-# to that sequence.
-def optimize_block(instructions,stack_size,cname,block_id, timeout, is_initial_block= False):
-    block_ins = list(filter(lambda x: x not in ["JUMP","JUMPI","JUMPDEST","tag","INVALID"], instructions))
+
+
+def compute_original_sfs_with_simplifications(instructions, stack_size, cname, block_id, is_initial_block):
+    block_ins = list(filter(lambda x: x not in ["JUMP", "JUMPI", "JUMPDEST", "tag", "INVALID"], instructions))
 
     block_data = {"instructions": block_ins, "input": stack_size}
 
@@ -86,11 +85,21 @@ def optimize_block(instructions,stack_size,cname,block_id, timeout, is_initial_b
         prefix = "initial_"
     else:
         prefix = ""
-        
-    exit_code = ir_block.evm2rbr_compiler(contract_name=cname,
-                                                   block=block_data, block_id=block_id,preffix = prefix)
+
+    exit_code = ir_block.evm2rbr_compiler(contract_name=cname, block=block_data, block_id=block_id,
+                                          preffix=prefix, simplification=False)
 
     sfs_dict = get_sfs_dict()
+
+    return sfs_dict
+
+
+# Given the sequence of bytecodes, the initial stack size, the contract name and the
+# block id, returns the output given by the solver, the name given to that block and current gas associated
+# to that sequence.
+def optimize_block(instructions,stack_size,cname,block_id, timeout, is_initial_block= False):
+
+    sfs_dict = compute_original_sfs_with_simplifications(instructions, stack_size, cname, block_id, is_initial_block)
 
     # No optimization is made if sfs_dict['syrup_contract'] == {}
     if sfs_dict['syrup_contract'] == {}:
@@ -189,9 +198,50 @@ def optimize_asm_block(block, contract_name, timeout):
         if current_cost > total_gas:
             optimized_blocks.append(block_name)
 
-        log_dicts[contract_name + '_' + block_name] = generate_solution_dict(solver_output)
+        # Add 0 as first element to indicate block found has been optimized
+        log_dicts[contract_name + '_' + block_name] = [0, *generate_solution_dict(solver_output)]
 
     return total_current_cost, total_optimized_cost, optimized_blocks, total_current_length, total_optimized_length, log_dicts
+
+# Given the log file loaded in json format, current block and the contract name, generates the solution from the block.
+def optimize_asm_block_from_log(block, contract_name, log_json):
+    bytecodes = block.getInstructions()
+    stack_size = block.getSourceStack()
+    block_id = block.getBlockId()
+    is_init_block = block.get_is_init_block()
+
+    instructions = preprocess_instructions(bytecodes)
+
+    # Dict that contains a SFS per sub-block without applying rule simplifications. Useful for rebuilding
+    # solutions when no solution has been found.
+    sfs_original = compute_original_sfs_without_simplifications(instructions, stack_size, contract_name, block_id,
+                                                                is_init_block)['syrup_contract']
+
+    sfs_dict = compute_original_sfs_with_simplifications(instructions, stack_size,
+                                                         contract_name, block_id, is_init_block)['syrup_contract']
+
+    # We need to inspect all sub-blocks in the sfs dict.
+    for block_id in sfs_dict:
+
+        log_json_id = contract_name + "_" + block_id
+
+        if log_json_id not in log_json:
+            continue
+
+        # First element determines whether it comes from an optimized solution or not
+        comes_from_initial = log_json[log_json_id][0]
+        instr_sequence = log_json[log_json_id][1:]
+
+        if comes_from_initial == 0:
+            sfs_block = sfs_dict[block_id]
+        else:
+            sfs_block = sfs_original[block_id]
+
+        bs = sfs_block['max_sk_sz']
+        user_instr = sfs_block['user_instrs']
+        instruction_theta_dict, opcodes_theta_dict, gas_theta_dict = generate_theta_dict_from_sequence(bs, user_instr)
+        generate_disasm_sol_from_log_block(contract_name, block_id, instr_sequence,
+                                        opcodes_theta_dict, instruction_theta_dict, gas_theta_dict)
 
 
 def optimize_asm(file_name, timeout=10):
@@ -260,9 +310,30 @@ def optimize_asm(file_name, timeout=10):
     with open(csv_file,'w') as f:
         f.write("\n".join(csv_out))
 
-    log_file = gasol_path + "solutions/log.json"
+    log_file = gasol_path + "log.log"
     with open(log_file, "w") as log_f:
         json.dump(log_dicts, log_f)
+
+
+def optimize_asm_from_log(file_name, json_log):
+    asm = parse_asm(file_name)
+
+    for c in asm.getContracts():
+
+        contract_name = (c.getContractName().split("/")[-1]).split(":")[-1]
+        init_code = c.getInitCode()
+
+        print("\nAnalyzing Init Code of: " + contract_name)
+        print("-----------------------------------------\n")
+        for block in init_code:
+            optimize_asm_block_from_log(block, contract_name, json_log)
+
+        print("\nAnalyzing Runtime Code of: " + contract_name)
+        print("-----------------------------------------\n")
+        for identifier in c.getDataIds():
+            blocks = c.getRunCodeOf(identifier)
+            for block in blocks:
+                optimize_asm_block_from_log(block, contract_name, json_log)
 
 
 def optimize_isolated_asm_block(block_name, timeout=10):
@@ -339,10 +410,15 @@ if __name__ == '__main__':
     ap.add_argument("-bl", "--block", help ="Enable analysis of a single asm block", action = "store_true")
     ap.add_argument("-tout", metavar='timeout', action='store', type=int,
                     help="Timeout in seconds. By default, set to 10s per block.", default=10)
+    ap.add_argument("-optimize-gasol-from-log-file", dest='log_path', action='store', metavar="log_file",
+                        help="Generates the same optimized bytecode than the one associated to the log file")
 
     args = ap.parse_args()
-
-    if not args.block:
+    if args.log_path is not None:
+        with open(args.log_path) as path:
+            log_dict = json.load(path)
+            optimize_asm_from_log(args.input_path, log_dict)
+    elif not args.block:
         optimize_asm(args.input_path, args.tout)
     else:
         optimize_isolated_asm_block(args.input_path, args.tout)

@@ -136,7 +136,7 @@ def generate_info_from_solution(solver_output, opcodes_theta_dict, instruction_t
 
 def generate_disasm_sol_from_output(contract_name, solver_output,
                                     opcodes_theta_dict, instruction_theta_dict, gas_theta_dict):
-
+    init()
     instr_sol, opcode_sol, pushed_values_decimal, total_gas = \
         generate_info_from_solution(solver_output, opcodes_theta_dict, instruction_theta_dict, gas_theta_dict)
 
@@ -161,7 +161,7 @@ def generate_disasm_sol_from_output(contract_name, solver_output,
                 
     with open(instruction_final_solution, 'w') as instruction_file:
         for position, instr in instr_sol.items():
-            if re.match(re.compile('PUSH'), instr):
+            if re.match(re.compile('PUSH([0-9]+)'), instr):
                 val2write = instr + " " + pushed_values_decimal[position] + " "
                 instruction_file.write(val2write)
                 opcode_list.append(val2write)
@@ -189,7 +189,8 @@ def generate_info_from_sequence(instr_sequence, opcodes_theta_dict,
         # If sequence_elem > 0, then the sequence element represents a theta value.
         if sequence_elem > 0:
             # Nops are excluded. theta(NOP) = 2
-            if sequence_elem == '2':
+            sequence_elem = sequence_elem
+            if sequence_elem == 2:
                 break
             instr_sol[instruction_position] = instruction_theta_dict[sequence_elem]
             opcode_sol[instruction_position] = opcodes_theta_dict[sequence_elem]
@@ -198,7 +199,8 @@ def generate_info_from_sequence(instr_sequence, opcodes_theta_dict,
         else:
             instr_sol[instruction_position] = "PUSH"
             opcode_sol[instruction_position] = "60"
-            pushed_values_decimal[instruction_position] = sequence_elem
+            pushed_values_decimal[instruction_position] = -sequence_elem
+            total_gas += 3
 
     instr_sol, opcode_sol, pushed_values_decimal = generate_ordered_structures(instr_sol, opcode_sol,
                                                                                pushed_values_decimal)
@@ -206,8 +208,10 @@ def generate_info_from_sequence(instr_sequence, opcodes_theta_dict,
 
 
 # Given a sequence of instructions and the corresponding dicts, writes the final solution in the corresponding folders.
-def generate_disasm_sol_from_log_block(contract_name, instr_sequence,
+def generate_disasm_sol_from_log_block(contract_name, block_name, instr_sequence,
                                        opcodes_theta_dict, instruction_theta_dict, gas_theta_dict):
+    init()
+    generate_file_names(contract_name, block_name)
     instr_sol, opcode_sol, pushed_values_decimal, total_gas = \
         generate_info_from_sequence(instr_sequence, opcodes_theta_dict, instruction_theta_dict, gas_theta_dict)
 
@@ -231,8 +235,8 @@ def generate_disasm_sol_from_log_block(contract_name, instr_sequence,
 
     with open(instruction_final_solution, 'w') as instruction_file:
         for position, instr in instr_sol.items():
-            if re.match(re.compile('PUSH'), instr):
-                val2write = instr + " " + pushed_values_decimal[position] + " "
+            if re.match(re.compile('PUSH([0-9]+)'), instr):
+                val2write = instr + " " + str(pushed_values_decimal[position]) + " "
                 instruction_file.write(val2write)
                 opcode_list.append(val2write)
             else:
