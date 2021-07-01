@@ -214,6 +214,71 @@ def contained_in_source_stack(v,instructions,source_stack):
 
     return contained
 
+
+def get_encoding_init_block(instructions,source_stack):
+    global s_dict
+    global u_dict
+
+    old_sdict = dict(s_dict)
+    old_u_dict = dict(u_dict)
+
+    i = 0
+    opcodes = []
+    push_values = []
+    
+    # print("MIRA")
+    # print(instructions)
+
+    while(i<len(instructions)):
+        if instructions[i].startswith("nop("):
+            instr = instructions[i][4:-1].strip()
+            if instr.startswith("DUP") or instr.startswith("SWAP") or instr.startswith("PUSH") or instr.startswith("POP"):
+                opcodes.append(instr)
+                if instr.startswith("PUSH"):
+                    value = instructions[i-1].split("=")[-1].strip()
+                    push_values.append(value)
+            else:
+                #non-interpreted function
+                var = instructions[i-1].split("=")[0].strip()
+
+                instructions_without_nop = list(filter(lambda x: not x.startswith("nop("), instructions[:i]))
+                instructions_reverse = instructions_without_nop[::-1]
+                # print("EMPIEZO EL NUEVO")  
+                search_for_value(var,instructions_reverse, source_stack, False)
+                opcodes.append((s_dict[var],u_dict[s_dict[var]]))
+                # print(u_dict[s_dict[var]])
+        i+=1
+
+
+    new_opcodes = []
+    init_user_def = []
+    for i in range(len(opcodes)):
+        
+        if isinstance(opcodes[i],tuple):
+            instruction = opcodes[i]
+
+            u_var = instruction[0]
+            args_exp = instruction[1][0]
+            arity_exp = instruction[1][1]
+
+            user_def = build_initblock_userdef(u_var,args_exp,arity_exp)
+            init_user_def+=user_def
+            for e in user_def:
+                new_opcodes.append(e["id"])
+        else:
+            new_opcodes.append(opcodes[i])
+
+    # new_opcodes = evaluate_constants(new_opcodes,init_user_def)
+            
+    init_info = {}
+    init_info["opcodes_seq"] = new_opcodes
+    init_info["non_inter"] = init_user_def
+    init_info["push_vals"] = list(map(lambda x: int(x),push_values))
+
+    return init_info
+
+
+
 def search_for_value(var, instructions,source_stack,evaluate = True):
     global s_counter
     global s_dict
@@ -1293,7 +1358,8 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     json_dict["tgt_ws"] = new_ts
     json_dict["user_instrs"] = new_user_defins
     json_dict["current_cost"] = gas
-
+    if not simplification:
+        json_dict["init_info"] = opcodes_seq
 
     if subblock != None:
         block_nm = block_name+"."+str(subblock)
@@ -1853,9 +1919,11 @@ def translate_block(rule,instructions,opcodes,isolated,preffix,simp):
         
         new_opcodes = compute_opcodes2write(opcodes,num_guard)
 
-        index, fin = find_sublist(rule.get_instructions(),new_opcodes)
-
-        init_info = {}
+        if not simp:
+            index, fin = find_sublist(rule.get_instructions(),new_opcodes)
+            init_info = get_encoding_init_block(rule.get_instructions()[index:fin+1],source_stack)
+        else:
+            init_info = {}
         generate_json(preffix+rule.get_rule_name(),source_stack,t_vars,source_stack_idx-1,gas, init_info,simplification = simp)
         if simp:
             write_instruction_block(rule.get_rule_name(),new_opcodes)
@@ -1966,7 +2034,11 @@ def translate_subblock(rule,instrs,sstack,tstack,sstack_idx,idx,next_block,preff
                 max_instr_size+=pops2remove
 
             new_opcodes = compute_opcodes2write(opcodes,0)
-            init_info = {}
+            if not simp:
+                index, fin = find_sublist(instructions,new_opcodes)
+                init_info = get_encoding_init_block(instructions[index:fin+1],sstack)
+            else:
+                init_info = {}
             generate_json(preffix+rule.get_rule_name(),sstack,new_tstack,sstack_idx,gas,init_info,subblock=idx,simplification = simp)
             if simp:
                 write_instruction_block(rule.get_rule_name(),new_opcodes,subblock=idx)
@@ -2103,7 +2175,11 @@ def translate_last_subblock(rule,block,sstack,sstack_idx,idx,isolated,preffix,si
         if gas!=0 and not is_identity_map(sstack,tstack):
             compute_gast = True
             new_opcodes = compute_opcodes2write(opcodes,num_guard)
-            init_info = {}
+            if not simp:
+                index, fin = find_sublist(block,new_opcodes)
+                init_info = get_encoding_init_block(block[index:fin+1],sstack)
+            else:
+                init_info = {}
             generate_json(preffix+rule.get_rule_name(),sstack,tstack,sstack_idx,gas,init_info,subblock=idx,simplification = simp)
             if simp:
                 write_instruction_block(rule.get_rule_name(),new_opcodes,subblock=idx)
