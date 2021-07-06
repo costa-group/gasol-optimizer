@@ -229,7 +229,7 @@ def get_encoding_init_block(instructions,source_stack):
     # print("MIRA")
     # print(instructions)
 
-    print(instructions)
+    # print(instructions)
     while(i<len(instructions)):
         if instructions[i].startswith("nop("):
             instr = instructions[i][4:-1].strip()
@@ -237,9 +237,15 @@ def get_encoding_init_block(instructions,source_stack):
                 opcodes.append(instr)
                 if instr.startswith("PUSH") and instr.find("DEPLOYADDRESS") == -1:
                     value = instructions[i-1].split("=")[-1].strip()
-                    push_values.append(value)
+                    if value.find("pushtag")!=-1 or value.find("push#[$]")!=-1 or value.find("push[$]")!=-1 or value.find("pushdata")!=-1:
+                        pos = value.find("(")
+                        int_val = value[pos+1:-1]
+                        # print(int_val)
+                        push_values.append(int_val)
+                    else:
+                        push_values.append(value)
             else:
-                print(instructions[i])
+                # print(instructions[i])
                 #non-interpreted function
                 var = instructions[i-1].split("=")[0].strip()
 
@@ -247,8 +253,8 @@ def get_encoding_init_block(instructions,source_stack):
                 instructions_reverse = instructions_without_nop[::-1]
                 # print("EMPIEZO EL NUEVO")  
                 search_for_value(var,instructions_reverse, source_stack, False)
-                print(s_dict)
-                print(u_dict)
+                # print(s_dict)
+                # print(u_dict)
                 opcodes.append((s_dict[var],u_dict[s_dict[var]]))
                 # print(u_dict[s_dict[var]])
         i+=1
@@ -289,9 +295,9 @@ def search_for_value(var, instructions,source_stack,evaluate = True):
 
     search_for_value_aux(var,instructions,source_stack,0,evaluate)
 
-    # print s_dict
-    # print u_dict
-    # print "???????????????????????????"
+    # print(s_dict)
+    # print(u_dict)
+    # print("???????????????????????????")
     
 def search_for_value_aux(var, instructions,source_stack,level,evaluate = True):
     global s_counter
@@ -303,9 +309,9 @@ def search_for_value_aux(var, instructions,source_stack,level,evaluate = True):
     found = False
     vars_instr = " "
 
-    ##print ("BUSCANDOOO")
-    ##print (var)
-    ##print (instructions)
+    # print ("BUSCANDOOO")
+    # print (var)
+    # print (instructions)
     
     while(i<len(instructions) and not(found)):
 
@@ -390,9 +396,9 @@ def update_unary_func(func,var,val,evaluate):
     global u_dict
     global gas_saved_op    
     
-    if func != "" and evaluate:
+    if func != "":
 
-        if is_integer(val)!=-1 and (func=="not" or func=="iszero"):
+        if is_integer(val)!=-1 and (func=="not" or func=="iszero") and evaluate:
             if func == "not":
                 val_end = ~(int(val))+2**256
                 gas_saved_op+=3
@@ -467,6 +473,19 @@ def get_involved_vars(instr,var):
 
         funct = "sha3"
 
+    elif instr.find("keccak256(",0)!=-1:
+        instr_new = instr.strip("\n")
+        pos = instr_new.find("keccak256(")
+        arg01 = instr[pos+10:-1]
+        var01 = arg01.split(",")
+        var0 = var01[0].strip()
+        var1 = var01[1].strip()
+        var_list.append(var0)
+        var_list.append(var1)
+
+        funct = "keccak256"
+
+        
     elif instr.find("signextend(",0)!=-1:
         instr_new = instr.strip("\n")
         pos = instr_new.find("signextend(")
@@ -975,7 +994,6 @@ def get_involved_vars(instr,var):
         var0 = arg0.strip()
         var_list.append(var0)
 
-
         funct = "pushtag"
 
 
@@ -986,7 +1004,6 @@ def get_involved_vars(instr,var):
         var0 = arg0.strip()
         var_list.append(var0)
 
-
         funct = "push#[$]"
 
     elif instr.startswith("push[$]("):
@@ -995,7 +1012,6 @@ def get_involved_vars(instr,var):
         arg0 = instr[pos+8:-1]
         var0 = arg0.strip()
         var_list.append(var0)
-
 
         funct = "push[$]"
 
@@ -1006,7 +1022,6 @@ def get_involved_vars(instr,var):
         arg0 = instr[pos+9:-1]
         var0 = arg0.strip()
         var_list.append(var0)
-
 
         funct = "pushdata"
 
@@ -1413,6 +1428,58 @@ def optimized_json(inpt_vars,ss,ts,remove_vars):
             end = True
         i-=1
 
+def build_initblock_userdef(u_var,args_exp,arity_exp):
+    if arity_exp ==0 or arity_exp == 1:
+        funct = args_exp[1]
+        args = args_exp[0]
+
+        is_new, obj = generate_userdefname(u_var,funct,[args],arity_exp)
+        
+        return [obj]
+            
+    elif arity_exp == 2:
+        funct = args_exp[2]
+        args = [args_exp[0],args_exp[1]]
+        is_new, obj = generate_userdefname(u_var,funct,args,arity_exp)
+        return [obj]
+    
+    elif arity_exp == 3:
+        funct = args_exp[3]
+
+        if funct == "+" or funct == "*":
+            
+            new_uvar = create_new_svar()
+            args01 = [args_exp[0],args_exp[1]]
+            is_new, obj = generate_userdefname(new_uvar,funct,args01,arity_exp)
+            
+            funct = "%"
+            if not is_new:
+                u_var_aux = obj["outpt_sk"][0]
+            else:
+                u_var_aux = new_uvar
+                
+            args = [u_var_aux,args_exp[2]]
+
+            is_new, obj1 = generate_userdefname(u_var,funct,args,arity_exp)
+            
+            return [obj, obj1]
+        else:
+
+            args = [args_exp[0],args_exp[1],args_exp[2]]
+            is_new, obj = generate_userdefname(u_var,funct,args,arity_exp)
+            
+            return [obj]
+    else:
+        funct = args_exp[-1]
+        args = []
+        for v in args_exp[:-1]:
+            args.append(v)
+            
+        is_new, obj = generate_userdefname(u_var,funct,args,arity_exp)
+
+        return [obj]
+
+        
 def build_userdef_instructions():
     global user_defins
     global already_defined_userdef
@@ -1649,6 +1716,10 @@ def generate_userdefname(u_var,funct,args,arity):
     elif funct.find("sha3")!=-1:
         instr_name = "SHA3"
 
+    elif funct.find("keccak256")!=-1:
+        instr_name = "KECCAK256"
+
+        
     elif funct.find("gas")!=-1:
         instr_name = "GAS"
 
@@ -1794,7 +1865,6 @@ def check_inputs(instr_name,args_aux):
 
     return -1
 
-
 def split_blocks(rule,opt = False,new_instr = []):
     blocks = []
     
@@ -1810,7 +1880,7 @@ def split_blocks(rule,opt = False,new_instr = []):
         if ins.startswith("nop("):
             nop = ins[4:-1]
             
-            if nop in split_block:
+            if nop in split_block or nop in terminate_block:
                 prev = ins_block[-2]
                 blocks.append(ins_block)
                 ins_block = [prev,ins]
