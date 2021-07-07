@@ -234,7 +234,6 @@ def get_encoding_init_block(instructions,source_stack):
         if instructions[i].startswith("nop("):
             instr = instructions[i][4:-1].strip()
             if instr.startswith("DUP") or instr.startswith("SWAP") or instr.startswith("PUSH") or instr.startswith("POP"):
-                opcodes.append(instr)
                 if instr.startswith("PUSH") and instr.find("DEPLOYADDRESS") == -1:
                     value = instructions[i-1].split("=")[-1].strip()
                     if value.find("pushtag")!=-1 or value.find("push#[$]")!=-1 or value.find("push[$]")!=-1 or value.find("pushdata")!=-1:
@@ -242,10 +241,32 @@ def get_encoding_init_block(instructions,source_stack):
                         int_val = value[pos+1:-1]
                         # print(int_val)
                         push_values.append(int_val)
+
+                        var = instructions[i-1].split("=")[0].strip()
+                        instructions_without_nop = list(filter(lambda x: not x.startswith("nop("), instructions[:i]))
+                        instructions_reverse = instructions_without_nop[::-1]
+                        # print("EMPIEZO EL NUEVO")  
+                        search_for_value(var,instructions_reverse, source_stack, False)
+                        # print(s_dict)
+                        # print(u_dict)
+                        opcodes.append((s_dict[var],u_dict[s_dict[var]]))
                     else:
-                        push_values.append(value)
+                        opcodes.append(instr)
+                        push_values.append(value) #normal push
+                elif instr.startswith("PUSH") and instr.find("DEPLOYADDRESS") !=-1:
+                    var = instructions[i-1].split("=")[0].strip()
+
+                    instructions_without_nop = list(filter(lambda x: not x.startswith("nop("), instructions[:i]))
+                    instructions_reverse = instructions_without_nop[::-1]
+                    # print("EMPIEZO EL NUEVO")  
+                    search_for_value(var,instructions_reverse, source_stack, False)
+                    # print(s_dict)
+                    # print(u_dict)
+                    opcodes.append((s_dict[var],u_dict[s_dict[var]]))
+
+                else: #DUP SWAP POP
+                    opcodes.append(instr)
             else:
-                # print(instructions[i])
                 #non-interpreted function
                 var = instructions[i-1].split("=")[0].strip()
 
@@ -259,11 +280,13 @@ def get_encoding_init_block(instructions,source_stack):
                 # print(u_dict[s_dict[var]])
         i+=1
 
-
+    # print("ANTES")
+    # print(instructions)
+    # print(opcodes)
+        
     new_opcodes = []
     init_user_def = []
     for i in range(len(opcodes)):
-        
         if isinstance(opcodes[i],tuple):
             instruction = opcodes[i]
 
@@ -271,6 +294,9 @@ def get_encoding_init_block(instructions,source_stack):
             args_exp = instruction[1][0]
             arity_exp = instruction[1][1]
 
+            # print(user_def_counter)
+            # print(already_defined_userdef)
+            
             user_def = build_initblock_userdef(u_var,args_exp,arity_exp)
             init_user_def+=user_def
             for e in user_def:
@@ -279,7 +305,11 @@ def get_encoding_init_block(instructions,source_stack):
             new_opcodes.append(opcodes[i])
 
     # new_opcodes = evaluate_constants(new_opcodes,init_user_def)
-    
+
+    # print(instructions)
+    # print(new_opcodes)
+
+    # print("*************")
     init_info = {}
     init_info["opcodes_seq"] = new_opcodes
     init_info["non_inter"] = init_user_def
@@ -1102,11 +1132,11 @@ def compute_binary(expression,level):
         if exp_str not in already_considered:
             if (funct in ["+","*","and","or","xor","eq"]) and (exp_str_comm not in already_considered):
                 discount_op+=2
-                # print("[RULE]: Evaluate expression "+str(expression))
+                print("[RULE]: Evaluate expression "+str(expression))
 
             elif funct not in ["+","*","and","or","xor","eq"]:
                 discount_op+=2
-                # print("[RULE]: Evaluate expression "+str(expression))
+                print("[RULE]: Evaluate expression "+str(expression))
 
 
         already_considered.append(exp_str)
@@ -1433,7 +1463,14 @@ def build_initblock_userdef(u_var,args_exp,arity_exp):
         funct = args_exp[1]
         args = args_exp[0]
 
+        # print(u_var)
+        # print(funct)
+        # print(args)
+        # print(arity_exp)
         is_new, obj = generate_userdefname(u_var,funct,[args],arity_exp)
+
+        # print("*/*/*/*//*/*/*/*/*/**/")
+        # print(obj)
         
         return [obj]
             
@@ -1573,6 +1610,10 @@ def build_userdef_instructions():
 def generate_userdefname(u_var,funct,args,arity):
     global user_def_counter
     global already_defined_userdef
+
+    # print("A VER A VER")
+    # print(funct)
+    # print(user_def_counter)
     
     if funct.find("+") != -1:
         instr_name = "ADD"
@@ -1762,8 +1803,8 @@ def generate_userdefname(u_var,funct,args,arity):
         defined = check_inputs(instr_name,args)
     else:
         defined = -1
-        if instr_name not in ["PUSHTAG","PUSH#[$]","PUSH[$]","PUSHDATA"]:
-            already_defined_userdef.append(instr_name)
+        # if instr_name not in ["PUSHTAG","PUSH#[$]","PUSH[$]","PUSHDATA"]:
+        already_defined_userdef.append(instr_name)
             
     if defined == -1:
         obj = {}
@@ -1834,7 +1875,7 @@ def modified_svariable(old_uvar, new_uvar):
             u_dict[u_var] = new_val
     
 def check_inputs(instr_name,args_aux):
-
+    
     args = []
     for a in args_aux:
         if is_integer(a) !=-1:
@@ -1845,7 +1886,7 @@ def check_inputs(instr_name,args_aux):
     
     for elem in user_defins:
         name = elem["disasm"]
-        if name == instr_name:
+        if name == instr_name and name not in ["PUSHTAG","PUSH#[$]","PUSH[$]","PUSHDATA"]:
             input_variables = elem["inpt_sk"]
             if instr_name in commutative_bytecodes:
                 if ((input_variables[0] == args[1]) and (input_variables[1] == args[0])) or ((input_variables[0] == args[0]) and (input_variables[1] == args[1])):
@@ -1863,6 +1904,20 @@ def check_inputs(instr_name,args_aux):
                 if equals:
                     return elem
 
+        elif name == instr_name and name in ["PUSHTAG","PUSH#[$]","PUSH[$]","PUSHDATA"]:
+            input_variables = elem["value"]
+            i = 0
+            equals = True
+            while (i <len(input_variables) and equals):
+                    
+                if args[i] !=input_variables[i]:
+                    equals = False
+                i+=1
+
+            if equals:
+                return elem
+
+            
     return -1
 
 def split_blocks(rule,opt = False,new_instr = []):
@@ -2519,8 +2574,6 @@ def smt_translate_block(rule,name,preffix,simplification=True):
     
     begin = dtimer()
     
-    init_globals()
-    
     instructions = filter_opcodes(rule)
     
     opcodes = get_opcodes(rule)
@@ -2545,6 +2598,8 @@ def smt_translate_block(rule,name,preffix,simplification=True):
     #     print f
     sfs_contracts["syrup_contract"] = blocks_json_dict
     end = dtimer()
+
+    print("RULES  : "+str(gas_saved_op))
     #print("Blocks Generation SYRUP: "+str(end-begin)+"s")
 
 def apply_transform(instr):
@@ -2833,7 +2888,7 @@ def apply_transform_rules(user_def_instrs,list_vars,tstack):
             r = apply_transform(instr)
 
             if r!=-1:
-                # print("[RULE]: Simplification rule type 1: "+str(instr))
+                print("[RULE]: Simplification rule type 1: "+str(instr))
                 
                 replace_var_userdef(instr["outpt_sk"][0],r,user_def_instrs)
                 target_stack = replace_var(instr["outpt_sk"][0],r,target_stack)
@@ -3672,7 +3727,7 @@ def apply_comparation_rules(user_def_instrs,tstack):
         r, d_instr = apply_cond_transformation(instr,user_def_instrs,tstack)
 
         if r:
-            # print("[RULE]: Simplification rule type 2: "+str(instr))
+            print("[RULE]: Simplification rule type 2: "+str(instr))
             # print("[RULE]: Delete rules: "+str(d_instr))
             modified = True
             for b in d_instr:
