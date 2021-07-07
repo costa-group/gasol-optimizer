@@ -9,11 +9,12 @@ from smtlib_utils import set_logic, check_sat
 import re
 from encoding_utils import generate_disasm_map, generate_costs_ordered_dict, generate_stack_theta, generate_instr_map, \
     generate_uninterpreted_theta
+import copy
 
 costabs_path = "/tmp/gasol/"
 
 
-def parse_data(json_path, var_initial_idx=0):
+def parse_data(json_path, var_initial_idx=0, with_simplifications=True):
     # We can pass either the path to a json file, or
     # directly the dict that contains the SFS.
     if type(json_path) == str:
@@ -22,24 +23,44 @@ def parse_data(json_path, var_initial_idx=0):
     else:
         data = json_path
 
-    # Note that b0 can be either max_progr_len
-    # or init_progr_len
-    # b0 = data['max_progr_len']
-    b0 = data['init_progr_len']
-
     bs = data['max_sk_sz']
-    user_instr = data['user_instrs']
+
+    # If simplifications have been applied, then we retrieve field "user_instrs". Otherwise,
+    # field "non_inter" is retrieved.
+    if with_simplifications:
+        user_instr = data['user_instrs']
+
+        # Note that b0 can be either max_progr_len
+        # or init_progr_len
+        # b0 = data['max_progr_len']
+        b0 = data['init_progr_len']
+
+    else:
+        user_instr = data['init_info']['non_inter']
+        # If no simplifications were made, we take the max_progr_len instead to ensure there is
+        # no problem with index.
+        b0 = data['max_progr_len']
+
+    # To avoid errors, we copy user instr to generate a new one
+    new_user_instr = []
 
     for instr in user_instr:
-        instr['outpt_sk'] = list(map(lambda x: add_bars_and_index_to_string(x, var_initial_idx), instr['outpt_sk']))
-        instr['inpt_sk'] = list(map(lambda x: add_bars_and_index_to_string(x, var_initial_idx), instr['inpt_sk']))
+        new_instr = copy.deepcopy(instr)
+        new_instr['outpt_sk'] = list(map(lambda x: add_bars_and_index_to_string(x, var_initial_idx), instr['outpt_sk']))
+        new_instr['inpt_sk'] = list(map(lambda x: add_bars_and_index_to_string(x, var_initial_idx), instr['inpt_sk']))
+
+        if len(list(filter(lambda x: x == "|s(2676)|", new_instr['outpt_sk']))) > 0:
+            print(instr, new_instr, data['vars'])
+
+        new_user_instr.append(new_instr)
 
     initial_stack = list(map(lambda x: add_bars_and_index_to_string(x, var_initial_idx), data['src_ws']))
     final_stack = list(map(lambda x: add_bars_and_index_to_string(x, var_initial_idx), data['tgt_ws']))
     variables = list(map(lambda x: add_bars_and_index_to_string(x, var_initial_idx), data['vars']))
+
     current_cost = data['current_cost']
     instr_seq = data.get('disasm_seq', [])
-    return b0, bs, user_instr, variables, initial_stack, final_stack, current_cost, instr_seq
+    return b0, bs, new_user_instr, variables, initial_stack, final_stack, current_cost, instr_seq
 
 
 def initialize_flags_and_additional_info(args_i, current_cost, instr_seq, previous_solution_dict):
@@ -92,7 +113,7 @@ def execute_syrup_backend(args_i,json_file = None, previous_solution_dict = None
     es.close()
 
 
-def execute_syrup_backend_combined(json_files, previous_solution_dict, contract_name, solver):
+def execute_syrup_backend_combined(sfs_dict, instr_sequence_dict, block_optimized_dict, contract_name, solver):
     next_empty_idx = 0
     # Stores the number of previous stack variables to ensures there's no collision
     next_var_idx = 0
@@ -101,15 +122,18 @@ def execute_syrup_backend_combined(json_files, previous_solution_dict, contract_
 
     write_encoding(set_logic('QF_LIA'))
 
-    for json_path in json_files:
-        json_name = json_path.split("/")[-1].rstrip(".json")
+    for block in sfs_dict:
 
-        # Blocks that aren't contained in the log_dict haven't been optimized, thus we skip them.
-        log_dict = previous_solution_dict.get(json_name, -1)
-        if log_dict == -1:
-            continue
-        b0, bs, user_instr, variables, initial_stack, final_stack, current_cost, instr_seq = parse_data(json_path,
-                                                                                                        next_var_idx)
+        sfs_block = sfs_dict[block]
+
+        log_dict = instr_sequence_dict[block]
+        is_optimized = block_optimized_dict[block]
+
+        print(block)
+
+        b0, bs, user_instr, variables, initial_stack, final_stack, current_cost, instr_seq = parse_data(sfs_block,
+                                                                                                        next_var_idx,
+                                                                                                        is_optimized)
         generate_smtlib_encoding_appending(b0, bs, user_instr, variables, initial_stack, final_stack,
                                            log_dict, next_empty_idx)
         next_empty_idx += b0 + 1

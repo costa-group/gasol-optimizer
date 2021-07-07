@@ -14,7 +14,7 @@ sys.path.append(os.path.dirname(os.path.realpath(__file__))+"/verification")
 from parser_asm import parse_asm
 import ir_block
 from gasol_optimization import get_sfs_dict
-from python_syrup import execute_syrup_backend, generate_theta_dict_from_sequence
+from python_syrup import execute_syrup_backend, generate_theta_dict_from_sequence, execute_syrup_backend_combined
 from solver_output_generation import obtain_solver_output
 from disasm_generation import generate_info_from_solution, generate_disasm_sol_from_output, \
     read_initial_dicts_from_files, generate_disasm_sol_from_log_block, obtain_log_representation_from_solution
@@ -178,7 +178,7 @@ def optimize_asm_block(block, contract_name, timeout):
 
             bs = sfs_block['max_sk_sz']
             user_instr = sfs_block['init_info']['non_inter']
-
+            print(solver_output)
             theta_dict, instruction_theta_dict, opcodes_theta_dict, gas_theta_dict = generate_theta_dict_from_sequence(bs, user_instr)
 
             instr_sequence = obtain_log_representation_from_solution(opcodes, push_values, theta_dict)
@@ -218,8 +218,10 @@ def optimize_asm_block(block, contract_name, timeout):
 
     return total_current_cost, total_optimized_cost, optimized_blocks, total_current_length, total_optimized_length, log_dicts
 
-# Given the log file loaded in json format, current block and the contract name, generates the solution from the block.
-def optimize_asm_block_from_log(block, contract_name, log_json):
+# Given the log file loaded in json format, current block and the contract name, generates three dicts: one that
+# contains the sfs from each block, the second one contains the sequence of instructions and
+# the third one determines whether block has been optimized or not.
+def generate_sfs_dicts_from_log(block, contract_name, json_log):
     bytecodes = block.getInstructions()
     stack_size = block.getSourceStack()
     block_id = block.getBlockId()
@@ -235,26 +237,68 @@ def optimize_asm_block_from_log(block, contract_name, log_json):
     sfs_dict = compute_original_sfs_with_simplifications(instructions, stack_size,
                                                          contract_name, block_id, is_init_block)['syrup_contract']
 
+    # Contains sfs blocks considered to check the SMT problem. Therefore, a block is added from
+    # sfs_original iff solver could not find an optimized solution, and from sfs_dict otherwise.
+    sfs_final = {}
+
+    # Dict that contains whether each block was optimized or not
+    block_optimized = {}
+
+    # Dict that contains all instr sequences
+    instr_sequence_dict = {}
+
     # We need to inspect all sub-blocks in the sfs dict.
     for block_id in sfs_dict:
 
         log_json_id = contract_name + "_" + block_id
 
-        if log_json_id not in log_json:
-            continue
+        if log_json_id not in json_log:
+            raise ValueError("Block " + log_json_id + " not found in log")
 
         # First element determines whether it comes from an optimized solution or not
-        comes_from_initial = log_json[log_json_id][0]
-        instr_sequence = log_json[log_json_id][1:]
+        comes_from_initial = json_log[log_json_id][0]
+        instr_sequence = json_log[log_json_id][1:]
 
         if comes_from_initial == 0:
             sfs_block = sfs_dict[block_id]
-            user_instr = sfs_block['user_instrs']
+            block_optimized[log_json_id] = True
         else:
             sfs_block = sfs_original[block_id]
+            block_optimized[log_json_id] = False
+
+        sfs_final[log_json_id] = sfs_block
+        instr_sequence_dict[log_json_id] = instr_sequence
+
+    return sfs_final, instr_sequence_dict, block_optimized
+
+
+# Verify information derived from log file is correct
+def check_log_file_is_correct(sfs_dict, instr_sequence_dict, block_optimized_dict):
+    execute_syrup_backend_combined(sfs_dict, instr_sequence_dict, block_optimized_dict, "verify", "oms")
+
+    solver_output = obtain_solver_output("verify", "oms", 0)
+
+    return check_solver_output_is_correct(solver_output)
+
+
+
+# Given a dict with the sfs from each block and another dict that contains whether previous block was optimized or not,
+# generates the corresponding solution. All comprobations are assumed to have been done previously
+def optimize_asm_block_from_log(sfs_dict, instr_sequence_dict, block_optimized_dict):
+    for block_id in sfs_dict:
+
+        # By naming convention, contract name always correspond to first string concatenated with "_"
+        contract_name = block_id.split("_")[0]
+
+        sfs_block = sfs_dict[block_id]
+
+        if block_optimized_dict[block_id]:
+            user_instr = sfs_block['user_instrs']
+        else:
             user_instr = sfs_block['init_info']['non_inter']
 
         bs = sfs_block['max_sk_sz']
+        instr_sequence = instr_sequence_dict[block_id]
         _, instruction_theta_dict, opcodes_theta_dict, gas_theta_dict = generate_theta_dict_from_sequence(bs, user_instr)
         generate_disasm_sol_from_log_block(contract_name, block_id, instr_sequence,
                                         opcodes_theta_dict, instruction_theta_dict, gas_theta_dict)
@@ -334,6 +378,10 @@ def optimize_asm(file_name, timeout=10):
 def optimize_asm_from_log(file_name, json_log):
     asm = parse_asm(file_name)
 
+    # Blocks from all contracts are checked together. Thus, we first will obtain the needed
+    # information from each block
+    sfs_dict, instr_sequence_dict, block_optimized = {}, {}, {}
+
     for c in asm.getContracts():
 
         contract_name = (c.getContractName().split("/")[-1]).split(":")[-1]
@@ -342,14 +390,29 @@ def optimize_asm_from_log(file_name, json_log):
         print("\nAnalyzing Init Code of: " + contract_name)
         print("-----------------------------------------\n")
         for block in init_code:
-            optimize_asm_block_from_log(block, contract_name, json_log)
+            sfs_final_block, instr_sequence_dict_block, block_optimized_block = generate_sfs_dicts_from_log(block, contract_name, json_log)
+            sfs_dict.update(sfs_final_block)
+            instr_sequence_dict.update(instr_sequence_dict_block)
+            block_optimized.update(block_optimized_block)
 
         print("\nAnalyzing Runtime Code of: " + contract_name)
         print("-----------------------------------------\n")
         for identifier in c.getDataIds():
             blocks = c.getRunCodeOf(identifier)
             for block in blocks:
-                optimize_asm_block_from_log(block, contract_name, json_log)
+                sfs_final_block, instr_sequence_dict_block, \
+                    block_optimized_block = generate_sfs_dicts_from_log(block, contract_name, json_log)
+
+                sfs_dict.update(sfs_final_block)
+                instr_sequence_dict.update(instr_sequence_dict_block)
+                block_optimized.update(block_optimized_block)
+
+    correct = check_log_file_is_correct(sfs_dict, instr_sequence_dict, block_optimized)
+    if correct:
+        optimize_asm_block_from_log(sfs_dict, instr_sequence_dict, block_optimized)
+        print("Solution generated from log file has been verified correctly")
+    else:
+        print("Log file does not contain a valid solution")
 
 
 def optimize_isolated_asm_block(block_name, timeout=10):
