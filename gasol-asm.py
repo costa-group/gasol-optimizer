@@ -189,6 +189,8 @@ def optimize_asm_block(block, contract_name, timeout):
             total_current_length += current_length
             total_optimized_length += current_length
 
+            log_dicts[contract_name + '_' + block_name] = [1, *instr_sequence]
+
             continue
 
         # If it is a block in the initial code, then we add prefix "initial_"
@@ -247,11 +249,12 @@ def optimize_asm_block_from_log(block, contract_name, log_json):
 
         if comes_from_initial == 0:
             sfs_block = sfs_dict[block_id]
+            user_instr = sfs_block['user_instrs']
         else:
             sfs_block = sfs_original[block_id]
+            user_instr = sfs_block['init_info']['non_inter']
 
         bs = sfs_block['max_sk_sz']
-        user_instr = sfs_block['user_instrs']
         _, instruction_theta_dict, opcodes_theta_dict, gas_theta_dict = generate_theta_dict_from_sequence(bs, user_instr)
         generate_disasm_sol_from_log_block(contract_name, block_id, instr_sequence,
                                         opcodes_theta_dict, instruction_theta_dict, gas_theta_dict)
