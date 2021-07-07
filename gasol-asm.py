@@ -87,7 +87,7 @@ def compute_original_sfs_with_simplifications(instructions, stack_size, cname, b
         prefix = ""
 
     exit_code = ir_block.evm2rbr_compiler(contract_name=cname, block=block_data, block_id=block_id,
-                                          preffix=prefix, simplification=False)
+                                          preffix=prefix, simplification=True)
 
     sfs_dict = get_sfs_dict()
 
