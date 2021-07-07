@@ -17,7 +17,7 @@ from gasol_optimization import get_sfs_dict
 from python_syrup import execute_syrup_backend, generate_theta_dict_from_sequence
 from solver_output_generation import obtain_solver_output
 from disasm_generation import generate_info_from_solution, generate_disasm_sol_from_output, \
-    read_initial_dicts_from_files, generate_disasm_sol_from_log_block
+    read_initial_dicts_from_files, generate_disasm_sol_from_log_block, obtain_log_representation_from_solution
 from solver_solution_verify import check_solver_output_is_correct, generate_solution_dict
 from global_params import gasol_path, tmp_path, gasol_folder
 from utils import isYulInstruction, compute_stack_size
@@ -138,7 +138,7 @@ def compute_original_sfs_without_simplifications(instructions,stack_size,cname,b
                                           preffix = prefix,simplification = False)
 
     sfs_dict = get_sfs_dict()
-
+    print(sfs_dict)
     return sfs_dict
 
 
@@ -158,24 +158,37 @@ def optimize_asm_block(block, contract_name, timeout):
     
     instructions = preprocess_instructions(bytecodes)
 
-    # Dict that contains a SFS per sub-block without applying rule simplifications. Useful for rebuilding
-    # solutions when no solution has been found.
-    sfs_original = compute_original_sfs_without_simplifications(instructions, stack_size, contract_name, block_id,
-                                                                is_init_block)
+    sfs_original = None
     
     for solver_output, block_name, current_cost, current_length \
             in optimize_block(instructions, stack_size, contract_name, block_id, timeout, is_init_block):
 
         # We weren't able to find a solution using the solver, so we just update the gas consumption
         if not check_solver_output_is_correct(solver_output):
-            sfs_block = sfs_original['syrup_contract'][block_name]
 
+            if sfs_original is None:
+                # Dict that contains a SFS per sub-block without applying rule simplifications. Useful for rebuilding
+                # solutions when no solution has been found.
+                sfs_original = compute_original_sfs_without_simplifications(instructions, stack_size, contract_name,
+                                                                            block_id, is_init_block)
+
+            sfs_block = sfs_original['syrup_contract'][block_name]
+            opcodes = sfs_block['init_info']['opcodes_seq']
+            push_values = sfs_block['init_info']['push_vals']
+
+            bs = sfs_block['max_sk_sz']
+            user_instr = sfs_block['init_info']['non_inter']
+
+            theta_dict, instruction_theta_dict, opcodes_theta_dict, gas_theta_dict = generate_theta_dict_from_sequence(bs, user_instr)
+
+            instr_sequence = obtain_log_representation_from_solution(opcodes, push_values, theta_dict)
+            generate_disasm_sol_from_log_block(contract_name, block_name, instr_sequence,
+                                               opcodes_theta_dict, instruction_theta_dict, gas_theta_dict)
             total_current_cost += current_cost
             total_optimized_cost += current_cost
             total_current_length += current_length
             total_optimized_length += current_length
 
-            # TODO: generate sfs without optimizations and solution dict
             continue
 
         # If it is a block in the initial code, then we add prefix "initial_"
@@ -239,7 +252,7 @@ def optimize_asm_block_from_log(block, contract_name, log_json):
 
         bs = sfs_block['max_sk_sz']
         user_instr = sfs_block['user_instrs']
-        instruction_theta_dict, opcodes_theta_dict, gas_theta_dict = generate_theta_dict_from_sequence(bs, user_instr)
+        _, instruction_theta_dict, opcodes_theta_dict, gas_theta_dict = generate_theta_dict_from_sequence(bs, user_instr)
         generate_disasm_sol_from_log_block(contract_name, block_id, instr_sequence,
                                         opcodes_theta_dict, instruction_theta_dict, gas_theta_dict)
 
@@ -310,7 +323,7 @@ def optimize_asm(file_name, timeout=10):
     with open(csv_file,'w') as f:
         f.write("\n".join(csv_out))
 
-    log_file = gasol_path + "log.log"
+    log_file = gasol_path + "verification.log"
     with open(log_file, "w") as log_f:
         json.dump(log_dicts, log_f)
 
