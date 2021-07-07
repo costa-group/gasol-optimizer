@@ -207,6 +207,21 @@ def generate_info_from_sequence(instr_sequence, opcodes_theta_dict,
     return instr_sol, opcode_sol, pushed_values_decimal, total_gas
 
 
+# Generates a sequence of instructions following the convention used in this module.
+# This sequence is generated from the sequence of instruction, pushed values, and the theta dict.
+def obtain_log_representation_from_solution(opcodes, pushed_values, theta_dict):
+    i, j = 0,0
+    instr_seq = []
+    while i < len(opcodes):
+        if opcodes[i] == "PUSH":
+            instr_seq.append(-pushed_values[j])
+            j += 1
+        else:
+            instr_seq.append(theta_dict[opcodes[i]])
+        i += 1
+    return instr_seq
+
+
 # Given a sequence of instructions and the corresponding dicts, writes the final solution in the corresponding folders.
 def generate_disasm_sol_from_log_block(contract_name, block_name, instr_sequence,
                                        opcodes_theta_dict, instruction_theta_dict, gas_theta_dict):

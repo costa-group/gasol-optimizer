@@ -122,8 +122,10 @@ def execute_syrup_backend_combined(json_files, previous_solution_dict, contract_
     es.close()
 
 
-# Given the max stack size (bs) and the user instructions directly from the json, generates three dicts:
-# one for the conversion of
+# Given the max stack size (bs) and the user instructions directly from the json, generates four dicts:
+# one for the conversion of an opcode id to the corresponding theta value, other for the disasm associated
+# to the theta value, another for the bytecode associated to the theta value, and finally, the cost of each
+# opcode associated to a theta value.
 def generate_theta_dict_from_sequence(bs, usr_instr):
     theta_stack = generate_stack_theta(bs)
     theta_comm, theta_non_comm = generate_uninterpreted_theta(usr_instr, len(theta_stack))
@@ -131,7 +133,7 @@ def generate_theta_dict_from_sequence(bs, usr_instr):
     instr_map = generate_instr_map(usr_instr, theta_stack, theta_comm, theta_non_comm)
     disasm_map = generate_disasm_map(usr_instr, theta_dict)
     costs_map = generate_costs_ordered_dict(bs, usr_instr, theta_dict)
-    return instr_map, disasm_map, costs_map
+    return theta_dict, instr_map, disasm_map, costs_map
 
 
 if __name__ == "__main__":
