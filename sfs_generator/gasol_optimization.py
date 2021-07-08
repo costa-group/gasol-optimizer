@@ -16,7 +16,7 @@ split_block = ["LOG0","LOG1","LOG2","LOG3","LOG4","CALLDATACOPY","CODECOPY","EXT
 
 pre_defined_functions = ["PUSH","POP","SWAP","DUP"]
 
-zero_ary = ["origin","caller","callvalue","address","number","gasprice","difficulty","coinbase","timestamp","codesize","gaslimit","gas","calldatasize","returndatasize","msize","selfbalance","chainid","pushdeployaddress"]
+zero_ary = ["origin","caller","callvalue","address","number","gasprice","difficulty","coinbase","timestamp","codesize","gaslimit","gas","calldatasize","returndatasize","msize","selfbalance","chainid","pushdeployaddress","pushsize"]
 
 commutative_bytecodes = ["ADD","MUL","EQ","AND","OR","XOR"]
 
@@ -234,7 +234,7 @@ def get_encoding_init_block(instructions,source_stack):
         if instructions[i].startswith("nop("):
             instr = instructions[i][4:-1].strip()
             if instr.startswith("DUP") or instr.startswith("SWAP") or instr.startswith("PUSH") or instr.startswith("POP"):
-                if instr.startswith("PUSH") and instr.find("DEPLOYADDRESS") == -1:
+                if instr.startswith("PUSH") and instr.find("DEPLOYADDRESS") == -1 and instr.find("SIZE") ==-1:
                     value = instructions[i-1].split("=")[-1].strip()
                     if value.find("pushtag")!=-1 or value.find("push#[$]")!=-1 or value.find("push[$]")!=-1 or value.find("pushdata")!=-1:
                         pos = value.find("(")
@@ -253,7 +253,7 @@ def get_encoding_init_block(instructions,source_stack):
                     else:
                         opcodes.append(instr)
                         push_values.append(value) #normal push
-                elif instr.startswith("PUSH") and instr.find("DEPLOYADDRESS") !=-1:
+                elif instr.startswith("PUSH") and (instr.find("DEPLOYADDRESS") !=-1 or instr.find("SIZE") !=-1):
                     var = instructions[i-1].split("=")[0].strip()
 
                     instructions_without_nop = list(filter(lambda x: not x.startswith("nop("), instructions[:i]))
@@ -263,7 +263,7 @@ def get_encoding_init_block(instructions,source_stack):
                     # print(s_dict)
                     # print(u_dict)
                     opcodes.append((s_dict[var],u_dict[s_dict[var]]))
-
+                    
                 else: #DUP SWAP POP
                     opcodes.append(instr)
             else:
@@ -827,6 +827,11 @@ def get_involved_vars(instr,var):
         var_list.append("pushdeployaddress")
         funct =  "pushdeployaddress"
 
+    elif instr.find("pushsize")!=-1:
+        var_list.append("pushsize")
+        funct =  "pushsize"
+
+        
     elif instr.find("address")!=-1:
         var_list.append("address")
         funct =  "address"
@@ -1290,12 +1295,16 @@ def compute_vars_set(sstack,tstack):
     vars_list.sort()
     return vars_list
 
-def recompute_vars_set(sstack,tstack,userdef):
+#When we are simplifying user_def_init = []
+def recompute_vars_set(sstack,tstack,userdef,user_def_init):
     vars_list = []
 
     vars_list = list(sstack)
 
-    for user_ins in userdef:
+    
+    user_def_instr = userdef+user_def_init
+    
+    for user_ins in user_def_instr:
         output_vars = user_ins["outpt_sk"]
         input_vars = user_ins["inpt_sk"]
         potential_vars = output_vars+input_vars+tstack
@@ -1371,9 +1380,13 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
         apply_all_comparison(new_user_defins,new_ts)
     else:
         new_user_defins = user_defins
-       
-    vars_list = recompute_vars_set(new_ss,new_ts,new_user_defins)
-    
+
+
+    if simplification:
+        vars_list = recompute_vars_set(new_ss,new_ts,new_user_defins,[])
+    else:
+        vars_list = recompute_vars_set(new_ss,new_ts,new_user_defins,opcodes_seq["non_inter"])
+        
     total_inpt_vars = []
     
     for user_ins in new_user_defins:
@@ -1410,6 +1423,7 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     if not simplification:
         json_dict["init_info"] = opcodes_seq
 
+        
     if subblock != None:
         block_nm = block_name+"."+str(subblock)
     else:
@@ -1642,6 +1656,10 @@ def generate_userdefname(u_var,funct,args,arity):
     elif funct.find("pushdeployaddress")!=-1:
         instr_name = "PUSHDEPLOYADDRESS"
 
+    elif funct.find("pushsize")!=-1:
+        instr_name = "PUSHSIZE"
+
+        
     elif funct.find("xor") !=-1:
         instr_name = "XOR"
         
