@@ -69,7 +69,7 @@ def init_globals():
     opcodesZ = ["RETURNDATACOPY","RETURNDATASIZE"]
 
     global opcodesYul
-    opcodesYul = ["PUSHTAG","PUSH#[$]","PUSH[$]", "PUSHDATA", "PUSHDEPLOYADDRESS", "ASSIGNIMMUTABLE"]
+    opcodesYul = ["PUSHTAG","PUSH#[$]","PUSH[$]", "PUSHDATA", "PUSHDEPLOYADDRESS", "ASSIGNIMMUTABLE","PUSHSIZE"]
     
     global current_local_var
     current_local_var = 0
@@ -874,6 +874,11 @@ def translateYulOpcodes(opcode, value, index_variables):
         v1,updated_variables = get_new_variable(index_variables)
         instr = v1+" = pushdeployaddress"
 
+    elif opcode == "PUSHSIZE":
+        v1,updated_variables = get_new_variable(index_variables)
+        instr = v1+" = pushsize"
+
+        
     else:
         v1,updated_variables = get_new_variable(index_variables)
         try:
@@ -973,7 +978,7 @@ def compile_instr(rule,evm_opcode,variables,list_jumps,cond):
 
 def isYulInstruction(opcode):
     if opcode.find("TAG") == -1 and opcode.find("#") == -1 and opcode.find("$") == -1 \
-            and opcode.find("DATA") == -1 and opcode.find("DEPLOY") == -1:
+            and opcode.find("DATA") == -1 and opcode.find("DEPLOY") == -1 and opcode.find("SIZE") == -1:
         return False
     else:
         return True
