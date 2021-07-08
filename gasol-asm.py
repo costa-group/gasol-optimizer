@@ -140,7 +140,7 @@ def compute_original_sfs_without_simplifications(instructions,stack_size,cname,b
                                           preffix = prefix,simplification = False)
 
     sfs_dict = get_sfs_dict()
-    print(sfs_dict)
+
     return sfs_dict
 
 
