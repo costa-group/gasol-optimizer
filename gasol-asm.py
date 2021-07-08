@@ -70,6 +70,8 @@ def preprocess_instructions(bytecodes):
                 # Fixme: add ALL PUSH variants: PUSH data, PUSH DEPLOYADDRESS
                 op = "PUSHDEPLOYADDRESS"
 
+            elif op.startswith("PUSH") and op.find("SIZE") !=-1:
+                op = "PUSHSIZE"
         instructions.append(op)
 
 
@@ -439,6 +441,8 @@ def optimize_isolated_asm_block(block_name, timeout=10):
                 i=i+1
             elif op.startswith("PUSH") and op.find("DEPLOYADDRESS") !=-1:
                 op = "PUSHDEPLOYADDRESS"
+            elif op.startswith("PUSH") and op.find("SIZE") !=-1:
+                op = "PUSHSIZE"
             else:
                 t = ops[i+1]
                 val = ops[i+2]
