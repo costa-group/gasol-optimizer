@@ -65,13 +65,16 @@ def preprocess_instructions(bytecodes):
 
             elif op.startswith("PUSH") and op.find("data")!=-1:
                 op = "PUSHDATA"+" 0x"+b.getValue()
+
+            elif op.startswith("PUSH") and op.find("IMMUTABLE")!=-1:
+                op = "PUSHIMMUTABLE"+" 0x"+b.getValue()
                 
             elif op.startswith("PUSH") and op.find("DEPLOYADDRESS") !=-1:
                 # Fixme: add ALL PUSH variants: PUSH data, PUSH DEPLOYADDRESS
                 op = "PUSHDEPLOYADDRESS"
-
             elif op.startswith("PUSH") and op.find("SIZE") !=-1:
                 op = "PUSHSIZE"
+            
         instructions.append(op)
 
 
@@ -443,6 +446,10 @@ def optimize_isolated_asm_block(block_name, timeout=10):
                 op = "PUSHDEPLOYADDRESS"
             elif op.startswith("PUSH") and op.find("SIZE") !=-1:
                 op = "PUSHSIZE"
+            elif op.startswith("PUSH") and op.find("IMMUTABLE") !=-1:
+                val = ops[i+1]
+                op = "PUSHIMMUTABLE"+" 0x"+ val if not val.startswith("0x") else "PUSHIMMUTABLE "+val
+                i=i+1
             else:
                 t = ops[i+1]
                 val = ops[i+2]
