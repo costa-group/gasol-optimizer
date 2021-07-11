@@ -180,7 +180,6 @@ def optimize_asm_block(block, contract_name, timeout):
 
             bs = sfs_block['max_sk_sz']
             user_instr = sfs_block['init_info']['non_inter']
-            print(solver_output)
             theta_dict, instruction_theta_dict, opcodes_theta_dict, gas_theta_dict = generate_theta_dict_from_sequence(bs, user_instr)
 
             instr_sequence = obtain_log_representation_from_solution(opcodes, push_values, theta_dict)

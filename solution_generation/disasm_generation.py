@@ -216,6 +216,12 @@ def obtain_log_representation_from_solution(opcodes, pushed_values, theta_dict):
         if opcodes[i] == "PUSH":
             instr_seq.append(-pushed_values[j])
             j += 1
+        # If we have a push that is not PUSHDEPLOYADDRESS, ASSIGNIMMUTABLE nor PUSHSIZE, then we need to
+        # "consume" the pushed value from the list of pushed values.
+        elif opcodes[i].startswith("PUSH") and not opcodes[i].startswith("PUSHDEPLOYADDRESS") \
+                and not opcodes[i].startswith("ASSIGNIMMUTABLE") and not opcodes[i].startswith("PUSHSIZE") :
+            instr_seq.append(theta_dict[opcodes[i]])
+            j += 1
         else:
             instr_seq.append(theta_dict[opcodes[i]])
         i += 1
