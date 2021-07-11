@@ -354,11 +354,9 @@ def optimize_asm(file_name, timeout=10):
     if "solutions" not in os.listdir(gasol_path):
         os.mkdir(gasol_path+"solutions")
 
-    csv_file = gasol_path + "solutions/statistics.csv"
     with open(csv_file,'w') as f:
         f.write("\n".join(csv_out))
 
-    log_file = gasol_path + "verification.log"
     with open(log_file, "w") as log_f:
         json.dump(log_dicts, log_f)
 
