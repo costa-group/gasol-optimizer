@@ -1,12 +1,10 @@
 #Pablo Gordillo
-import re
-import os
 import traceback
 from timeit import default_timer as dtimer
 
 from rbr_rule import RBRRule
 from gasol_optimization import smt_translate_block
-from global_params import gasol_path, tmp_path, gasol_folder
+from global_params.paths import *
 
 
 '''

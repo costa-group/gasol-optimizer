@@ -3,16 +3,12 @@
 from superoptimization_enconding import generate_smtlib_encoding, generate_smtlib_encoding_appending
 from utils_bckend import add_bars_and_index_to_string
 import json
-import argparse
 from encoding_files import initialize_dir_and_streams, write_encoding
 from smtlib_utils import set_logic, check_sat
 import re
 from encoding_utils import generate_disasm_map, generate_costs_ordered_dict, generate_stack_theta, generate_instr_map, \
     generate_uninterpreted_theta
 import copy
-
-costabs_path = "/tmp/gasol/"
-
 
 def parse_data(json_path, var_initial_idx=0, with_simplifications=True):
     # We can pass either the path to a json file, or
@@ -86,11 +82,10 @@ def initialize_flags_and_additional_info(args_i, current_cost, instr_seq, previo
 
 # Executes the smt encoding generator from the main script
 def execute_syrup_backend(args_i,json_file = None, previous_solution_dict = None, block_name = None, timeout=10):
-    path = costabs_path
     # Args_i is None if the function is called from syrup-asm. In this case
     # we assume by default oms, and json_file already contains the sfs dict
     if args_i is None:
-        es = initialize_dir_and_streams(path,"oms", block_name)
+        es = initialize_dir_and_streams("oms", block_name)
         json_path = json_file
     else:
         if json_file:
@@ -98,9 +93,8 @@ def execute_syrup_backend(args_i,json_file = None, previous_solution_dict = None
         else:
             json_path = args_i.source
 
-        path = costabs_path
         solver = args_i.solver
-        es = initialize_dir_and_streams(path, solver, json_path)
+        es = initialize_dir_and_streams(solver, json_path)
 
     b0, bs, user_instr, variables, initial_stack, final_stack, current_cost, instr_seq = parse_data(json_path)
 
@@ -113,12 +107,12 @@ def execute_syrup_backend(args_i,json_file = None, previous_solution_dict = None
     es.close()
 
 
-def execute_syrup_backend_combined(sfs_dict, instr_sequence_dict, block_optimized_dict, contract_name, solver):
+def execute_syrup_backend_combined(sfs_dict, instr_sequence_dict, contract_name, solver):
     next_empty_idx = 0
     # Stores the number of previous stack variables to ensures there's no collision
     next_var_idx = 0
 
-    es = initialize_dir_and_streams(costabs_path, solver, contract_name)
+    es = initialize_dir_and_streams(solver, contract_name)
 
     write_encoding(set_logic('QF_LIA'))
 
@@ -127,13 +121,10 @@ def execute_syrup_backend_combined(sfs_dict, instr_sequence_dict, block_optimize
         sfs_block = sfs_dict[block]
 
         log_dict = instr_sequence_dict[block]
-        is_optimized = block_optimized_dict[block]
-
-        print(block)
 
         b0, bs, user_instr, variables, initial_stack, final_stack, current_cost, instr_seq = parse_data(sfs_block,
-                                                                                                        next_var_idx,
-                                                                                                        is_optimized)
+                                                                                                        next_var_idx)
+
         generate_smtlib_encoding_appending(b0, bs, user_instr, variables, initial_stack, final_stack,
                                            log_dict, next_empty_idx)
         next_empty_idx += b0 + 1
@@ -158,62 +149,3 @@ def generate_theta_dict_from_sequence(bs, usr_instr):
     disasm_map = generate_disasm_map(usr_instr, theta_dict)
     costs_map = generate_costs_ordered_dict(bs, usr_instr, theta_dict)
     return theta_dict, instr_map, disasm_map, costs_map
-
-
-if __name__ == "__main__":
-    ap = argparse.ArgumentParser(description='Backend of syrup tool')
-    ap.add_argument('json_path', help='Path to json file that contains the SFS')
-    ap.add_argument('-out', help='Path to dir where the smt is stored (by default, in ' + str(costabs_path) + ")",
-                    nargs='?', default=costabs_path, metavar='dir')
-    ap.add_argument('-write-only', help='print smt constraint in SMT-LIB format, '
-                                                             'a mapping to instructions, and objectives',
-                    action='store_true', dest='write_only')
-    ap.add_argument('-at-most', help='add a constraint for each uninterpreted function so that they are used at most once',
-                    action='store_true', dest='at_most')
-    ap.add_argument('-pushed-once', help='add a constraint to indicate that each pushed value is pushed at least once',
-                    action='store_true', dest='pushed_once')
-    ap.add_argument("-solver", "--solver", help="Choose the solver", choices = ["z3","barcelogic","oms"], default="z3")
-    ap.add_argument("-instruction-order", help='add a constraint representing the order among instructions',
-                    action='store_true', dest='instruction_order')
-    ap.add_argument("-no-output-before-pop", help='Add a constraint representing the fact that the previous instruction'
-                                                  'of a pop can only be a instruction that does not produce an element',
-                    action='store_true', dest='no_output_before_pop')
-    ap.add_argument("-tout", metavar='timeout', action='store', type=int, help="Timeout in seconds. "
-                                                                               "Works only for z3 and oms (so far)")
-    ap.add_argument("-inequality-gas-model", dest='inequality_gas_model', action='store_true',
-                    help="Soft constraints with inequalities instead of equalities")
-    ap.add_argument("-initial-solution", dest='initial_solution', action='store_true',
-                    help="Consider the instructions of blocks without optimizing as part of the encoding")
-    ap.add_argument("-disable-default-encoding", dest='default_encoding', action='store_false',
-                    help="Disable the constraints added for the default encoding")
-    ap.add_argument("-number-instruction-gas-model", dest='number_instruction_gas_model', action='store_true',
-                    help="Soft constraints for optimizing the number of instructions instead of gas")
-    ap.add_argument("-check-log-file", dest='log_path', action='store', metavar="log_file",
-                        help="Checks every solution from a log file generated by -generate-log-file is "
-                             "returned by the solver")
-
-    args = vars(ap.parse_args())
-    json_path = args['json_path']
-    path = args['out']
-    solver = args['solver']
-    timeout = args['tout']
-
-    b0, bs, user_instr, variables, initial_stack, final_stack, current_cost, instr_seq = parse_data(json_path)
-
-    flags = {'at-most': args['at_most'], 'pushed-at-least': args['pushed_once'],
-             'instruction-order': args['instruction_order'], 'no-output-before-pop': args['no_output_before_pop'],
-             'inequality-gas-model': args['inequality_gas_model'], 'initial-solution': args['initial_solution'],
-             'default-encoding': args['default_encoding'],
-             'number-instruction-gas-model': args['number_instruction_gas_model']}
-
-    log_dict = None
-    if args['log_path'] is not None:
-        with open(args['log_path'], 'r') as log_path:
-            log_dict = json.load(log_path)
-    additional_info = {'tout': args['tout'], 'solver': solver, 'current_cost': current_cost, 'instr_seq': instr_seq,
-                       'previous_solution': log_dict}
-    es = initialize_dir_and_streams(path, solver)
-
-    generate_smtlib_encoding(b0, bs, user_instr, variables, initial_stack, final_stack, flags, additional_info)
-
-    es.close()

@@ -1,12 +1,9 @@
 import json
-import os
 import math
 from timeit import default_timer as dtimer
-
-from rbr_rule import RBRRule
 from utils import is_integer,all_integers, find_sublist
-import  opcodes 
-from global_params import json_path, gasol_path, tmp_path, gasol_folder
+import  opcodes
+from global_params.paths import *
 
 
 terminate_block = ["ASSERTFAIL","RETURN","REVERT","SUICIDE","STOP"]

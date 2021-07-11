@@ -11,7 +11,7 @@ def buildAsmBytecode(instruction):
     end = instruction["end"]
     name = instruction["name"]
     source = instruction.get("source", -1)
-    value = instruction.get("value", "0000000000000000000000000000000000000000000000000000000000000000")
+    value = instruction.get("value", None)
 
     asm_bytecode = AsmBytecode(begin,end,source,name,value)
     return asm_bytecode
