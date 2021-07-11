@@ -4,31 +4,29 @@ import json
 import collections
 import pathlib
 
+from global_params.paths import gasol_path
 
 def init():
-    global tmp_costabs
-    tmp_costabs = "/tmp/gasol/"
-
     global instruction_json
-    instruction_json = tmp_costabs + "smt_encoding/instruction.json"
+    instruction_json = gasol_path + "smt_encoding/instruction.json"
 
     global opcodes_json
-    opcodes_json = tmp_costabs + "smt_encoding/opcode.json"
+    opcodes_json = gasol_path + "smt_encoding/opcode.json"
 
     global gas_json
-    gas_json = tmp_costabs + "smt_encoding/gas.json"
+    gas_json = gasol_path + "smt_encoding/gas.json"
 
     global solution_file
-    solution_file = tmp_costabs + "solution.txt"
+    solution_file = gasol_path + "solution.txt"
 
     global instruction_final_solution
-    instruction_final_solution = tmp_costabs + "optimized_block_instructions.disasm_opt"
+    instruction_final_solution = gasol_path + "optimized_block_instructions.disasm_opt"
 
     global opcodes_final_solution
-    opcodes_final_solution = tmp_costabs + "optimized_block_opcodes.evm"
+    opcodes_final_solution = gasol_path + "optimized_block_opcodes.evm"
 
     global gas_final_solution
-    gas_final_solution = tmp_costabs + "gas.txt"
+    gas_final_solution = gasol_path + "gas.txt"
 
 # Push is determined by the number of bytes of pushed value
 def decide_push_type(elem):
@@ -62,13 +60,13 @@ def generate_file_names(contract_name, block_name):
     global opcodes_final_solution
     global gas_final_solution
 
-    instruction_json = tmp_costabs+"smt_encoding/"+block_name+"_instruction.json"
-    opcodes_json = tmp_costabs+"smt_encoding/"+block_name+"_opcode.json"
-    gas_json = tmp_costabs+"smt_encoding/"+block_name+"_gas.json"
+    instruction_json = gasol_path+"smt_encoding/"+block_name+"_instruction.json"
+    opcodes_json = gasol_path+"smt_encoding/"+block_name+"_opcode.json"
+    gas_json = gasol_path+"smt_encoding/"+block_name+"_gas.json"
 
-    instruction_final_solution = tmp_costabs+"solutions/" + contract_name + "/disasm/" + block_name + "_optimized.disasm_opt"
-    opcodes_final_solution = tmp_costabs+"solutions/" + contract_name + "/evm/" + block_name+"_optimized.evm"
-    gas_final_solution = tmp_costabs + "solutions/" + contract_name + "/total_gas/" + block_name + "_real_gas.txt"
+    instruction_final_solution = gasol_path+"solutions/" + contract_name + "/disasm/" + block_name + "_optimized.disasm_opt"
+    opcodes_final_solution = gasol_path+"solutions/" + contract_name + "/evm/" + block_name+"_optimized.evm"
+    gas_final_solution = gasol_path + "solutions/" + contract_name + "/total_gas/" + block_name + "_real_gas.txt"
 
 
 # Given the sequence of instructions in disassembly format, in opcode format and the pushed values, returns
@@ -140,9 +138,9 @@ def generate_disasm_sol_from_output(contract_name, solver_output,
     instr_sol, opcode_sol, pushed_values_decimal, total_gas = \
         generate_info_from_solution(solver_output, opcodes_theta_dict, instruction_theta_dict, gas_theta_dict)
 
-    pathlib.Path(tmp_costabs+"solutions/" + contract_name + "/disasm/").mkdir(parents=True, exist_ok=True)
-    pathlib.Path(tmp_costabs+"solutions/" + contract_name + "/evm/").mkdir(parents=True, exist_ok=True)
-    pathlib.Path(tmp_costabs+"solutions/" + contract_name + "/total_gas/").mkdir(parents=True, exist_ok=True)
+    pathlib.Path(gasol_path+"solutions/" + contract_name + "/disasm/").mkdir(parents=True, exist_ok=True)
+    pathlib.Path(gasol_path+"solutions/" + contract_name + "/evm/").mkdir(parents=True, exist_ok=True)
+    pathlib.Path(gasol_path+"solutions/" + contract_name + "/total_gas/").mkdir(parents=True, exist_ok=True)
 
 
     opcode_list = []
@@ -236,9 +234,9 @@ def generate_disasm_sol_from_log_block(contract_name, block_name, instr_sequence
     instr_sol, opcode_sol, pushed_values_decimal, total_gas = \
         generate_info_from_sequence(instr_sequence, opcodes_theta_dict, instruction_theta_dict, gas_theta_dict)
 
-    pathlib.Path(tmp_costabs + "solutions/" + contract_name + "/disasm/").mkdir(parents=True, exist_ok=True)
-    pathlib.Path(tmp_costabs + "solutions/" + contract_name + "/evm/").mkdir(parents=True, exist_ok=True)
-    pathlib.Path(tmp_costabs + "solutions/" + contract_name + "/total_gas/").mkdir(parents=True, exist_ok=True)
+    pathlib.Path(gasol_path + "solutions/" + contract_name + "/disasm/").mkdir(parents=True, exist_ok=True)
+    pathlib.Path(gasol_path + "solutions/" + contract_name + "/evm/").mkdir(parents=True, exist_ok=True)
+    pathlib.Path(gasol_path + "solutions/" + contract_name + "/total_gas/").mkdir(parents=True, exist_ok=True)
 
     opcode_list = []
     evm_list = []

@@ -8,10 +8,10 @@ import pandas as pd
 import subprocess
 import shlex
 import resource
-from global_params.paths import gasol_exec, log_file, oms_exec, project_path, smt_encoding_path
+from global_params.paths import gasol_exec, log_file, oms_exec, project_path, smt_encoding_path, gasol_path
 import re
 
-parent_directory = project_path + "/examples/prueba"
+parent_directory = project_path + "/examples/jsons-solc"
 final_directory = project_path + "/results/"
 
 def run_command(cmd):
@@ -36,8 +36,9 @@ if __name__ == "__main__":
         print("Analyzing " + asm_json)
         csv_row = {'name': asm_json.split("/")[-1].rstrip(".json_solc")}
         try:
-            run_command(gasol_exec + " " + asm_json)
-            sol_output = run_command(gasol_exec + " " + asm_json + " " + "-optimize-gasol-from-log-file /tmp/gasol/verification.log")
+            run_command(gasol_exec + " " + asm_json + " -tout 1")
+            sol_output = run_command(gasol_exec + " " + asm_json + " " + "-optimize-gasol-from-log-file " +
+                                     gasol_path + "verification.log")
             print("Analyzing oms")
             _, oms_time = run_and_measure_command(oms_exec + " " + smt_encoding_path + "verify_oms.smt2")
 
