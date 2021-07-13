@@ -47,7 +47,7 @@ if __name__ == "__main__":
             else:
                 csv_row['log_verified'] = False
 
-            csv_row['oms_time'] = oms_time
+            csv_row['oms_time'] = round(oms_time, 3)
 
             csv_row['log_size'] = os.path.getsize(log_file)
             csv_row['correct'] = True
