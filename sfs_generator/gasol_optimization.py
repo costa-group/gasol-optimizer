@@ -1542,8 +1542,9 @@ def build_userdef_instructions():
     global already_defined_userdef
     
     already_defined_userdef = []
-    
-    for u_var in u_dict.keys():
+
+    u_dict_sort = sorted(u_dict.keys())
+    for u_var in u_dict_sort:
         exp = u_dict[u_var]
         arity_exp = exp[1]
         args_exp = exp[0]
