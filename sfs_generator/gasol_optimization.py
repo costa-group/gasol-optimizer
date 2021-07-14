@@ -3,7 +3,8 @@ import math
 from timeit import default_timer as dtimer
 from utils import is_integer,all_integers, find_sublist
 import  opcodes
-from global_params.paths import *
+import os
+from global_params.paths import gasol_path, json_path
 
 
 terminate_block = ["ASSERTFAIL","RETURN","REVERT","SUICIDE","STOP"]
@@ -2799,7 +2800,7 @@ def apply_transform(instr):
             discount_op+=1
             return 0
 
-        elif inp[1] == 0:
+        elif inp_vars[1] == 0:
             saved_push+=2
             gas_saved_op+=5
 
