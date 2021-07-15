@@ -14,7 +14,7 @@ sys.path.append(os.path.dirname(os.path.realpath(__file__))+"/verification")
 from parser_asm import parse_asm
 import ir_block
 from gasol_optimization import get_sfs_dict
-from python_syrup import execute_syrup_backend, generate_theta_dict_from_sequence, execute_syrup_backend_combined
+from gasol_encoder import execute_syrup_backend, generate_theta_dict_from_sequence, execute_syrup_backend_combined
 from solver_output_generation import obtain_solver_output
 from disasm_generation import generate_info_from_solution, generate_disasm_sol_from_output, \
     read_initial_dicts_from_files, generate_disasm_sol_from_log_block, obtain_log_representation_from_solution
