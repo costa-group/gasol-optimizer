@@ -64,7 +64,7 @@ C. In order to execute GASOL on a asm json file and obtain the previous optimiza
 ./gasol_asm.py asmjson_filename -optimize-gasol-from-log-file log_file
 ```
 
-For instance, to optimize the solidity file examples/solidity/0x363c421901B7BDCa0f2a17dA03948D676bE350E4.sol using the log file run the following command:
+For instance, to optimize the solidity file examples/solidity/0x363c421901B7BDCa0f2a17dA03948D676bE350E4.sol using the log file generated from previous execution run the following command:
 ```
 ./gasol_asm.py 0x363c421901B7BDCa0f2a17dA03948D676bE350E4.json_solc -optimize-gasol-from-log-file /tmp/gasol/verification.log 
 ```
