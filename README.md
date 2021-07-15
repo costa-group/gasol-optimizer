@@ -27,7 +27,7 @@ By default, GASOL uses [OptiMathSAT](http://optimathsat.disi.unitn.it/) as SMT s
 
 A. In order to execute GASOL on a asm json file, run the following command from the root directory of the repository:
 ```
-./gasol-asm.py asmjson_filename
+./gasol_asm.py asmjson_filename
 ```
 where asmjson_filename is the name of the file where the asm json is stored. A set of asm json files to test the prototype is available [here](https://github.com/costa-group/gasol-optimizer/tree/main/examples/jsons-solc). GASOL will analyze all basic blocks of the provided smart contracts. Note that it may take some time to finish the execution. 
 
@@ -36,13 +36,13 @@ The optimized version for each block is stored in the directory /tmp/gasol/solut
 For instance, to execute GASOL on the smart contract stored in the solidity file examples/solidity/0x363c421901B7BDCa0f2a17dA03948D676bE350E4.sol run the following commands:
 ```
 solc --combined-json asm examples/solidity/0x363c421901B7BDCa0f2a17dA03948D676bE350E4.sol 1> 0x363c421901B7BDCa0f2a17dA03948D676bE350E4.json_solc
-./gasol-asm.py 0x363c421901B7BDCa0f2a17dA03948D676bE350E4.json_solc
+./gasol_asm.py 0x363c421901B7BDCa0f2a17dA03948D676bE350E4.json_solc
 ```
 It generates two directories in /tmp/gasol/solutions (MerkleDistributor and MerkleProof respectively) that contain the optimized blocks.
 
 B. In order to execute GASOL on a basic block, run the following command from the root directory of the repository:
 ```
-./gasol-asm.py block_filename -bl
+./gasol_asm.py block_filename -bl
 ```
 where block_filename is the name of the file where the basic block is stored. Note that the basic block has to be stored as a sequence of EVM instructions separated by blanks. See the examples [here](https://github.com/costa-group/gasol-optimizer/tree/main/examples/blocks) for more details. In this case, though the optimized block can be found in the same directory mentioned above, it is also displayed in the console.
 
