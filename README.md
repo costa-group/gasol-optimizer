@@ -48,7 +48,7 @@ where block_filename is the name of the file where the basic block is stored. No
 
 For instance, to execute GASOL on the EVM block stored in the file examples/blocks/test.disasm_blk run the following command:
 ```
-./gasol-asm.py example/block/test.disasm_blk
+./gasol_asm.py examples/blocks/test.disasm_blk -bl
 ```
 Hence, it will output the optimized block in the console:
 ```
