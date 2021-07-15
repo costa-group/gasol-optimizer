@@ -23,35 +23,48 @@ GASOL can optimize either a single sequence of assembly EVM instructions (block)
 solc --combined-json asm solidity_file.sol
 ```
 
-By default, GASOL uses [OptiMathSAT](http://optimathsat.disi.unitn.it/) as SMT solver with a timeout of 10s per block.
+By default, GASOL uses [OptiMathSAT](http://optimathsat.disi.unitn.it/) as SMT solver with a timeout of 10s per block. This timeout can be changed using `-tout` flag followed
+by the new timeout in seconds.
 
 A. In order to execute GASOL on a asm json file, run the following command from the root directory of the repository:
 ```
-./gasol-asm.py asmjson_filename
+./gasol_asm.py asmjson_filename
 ```
 where asmjson_filename is the name of the file where the asm json is stored. A set of asm json files to test the prototype is available [here](https://github.com/costa-group/gasol-optimizer/tree/main/examples/jsons-solc). GASOL will analyze all basic blocks of the provided smart contracts. Note that it may take some time to finish the execution. 
 
 The optimized version for each block is stored in the directory /tmp/gasol/solutions. There, you are going to find a directory for each of the contracts contained in the analyzed Solidity file. Each of these directories has a folder called disasm with the optimized assembly version of the blocks.
 
-For instance, to execute GASOL on the smart contract stored in the solidity file examples/solidity/0x363c421901B7BDCa0f2a17dA03948D676bE350E4.sol run the following commands:
+For instance, to execute GASOL on the smart contract stored in the solidity file examples/solidity/0x363c421901B7BDCa0f2a17dA03948D676bE350E4.sol with a timeout of 15 seconds per block run the following commands:
 ```
 solc --combined-json asm examples/solidity/0x363c421901B7BDCa0f2a17dA03948D676bE350E4.sol 1> 0x363c421901B7BDCa0f2a17dA03948D676bE350E4.json_solc
-./gasol-asm.py 0x363c421901B7BDCa0f2a17dA03948D676bE350E4.json_solc
+./gasol_asm.py 0x363c421901B7BDCa0f2a17dA03948D676bE350E4.json_solc -tout 15
 ```
-It generates two directories in /tmp/gasol/solutions (MerkleDistributor and MerkleProof respectively) that contain the optimized blocks.
+It generates two directories in /tmp/gasol/solutions (MerkleDistributor and MerkleProof respectively) that contain the optimized blocks. It also generates the file 
+/tmp/gasol/verification.log that contains the needed information to be able to generate the exact same output when optimizing again the same source file. If the source
+file is optimized again without using this log file, it can lead to different optimized code due to the usage of SMT solvers.
 
 B. In order to execute GASOL on a basic block, run the following command from the root directory of the repository:
 ```
-./gasol-asm.py block_filename -bl
+./gasol_asm.py block_filename -bl
 ```
 where block_filename is the name of the file where the basic block is stored. Note that the basic block has to be stored as a sequence of EVM instructions separated by blanks. See the examples [here](https://github.com/costa-group/gasol-optimizer/tree/main/examples/blocks) for more details. In this case, though the optimized block can be found in the same directory mentioned above, it is also displayed in the console.
 
 For instance, to execute GASOL on the EVM block stored in the file examples/blocks/test.disasm_blk run the following command:
 ```
-./gasol-asm.py example/block/test.disasm_blk
+./gasol_asm.py examples/blocks/test.disasm_blk -bl
 ```
 Hence, it will output the optimized block in the console:
 ```
 Executing oms for file block0
 OPTIMIZED BLOCK: ['PUSH1 4 ', 'DUP2 ', 'DUP2 ', 'ADD ']
+```
+
+C. In order to execute GASOL on a asm json file and obtain the previous optimization output from a log file run the following command:
+```
+./gasol_asm.py asmjson_filename -optimize-gasol-from-log-file log_file
+```
+
+For instance, to optimize the solidity file examples/solidity/0x363c421901B7BDCa0f2a17dA03948D676bE350E4.sol using the log file generated from previous execution run the following command:
+```
+./gasol_asm.py 0x363c421901B7BDCa0f2a17dA03948D676bE350E4.json_solc -optimize-gasol-from-log-file /tmp/gasol/verification.log 
 ```

@@ -67,7 +67,8 @@ def generate_stack_theta(bs):
 def generate_uninterpreted_theta(user_instr, initial_index):
     theta_comm = {}
     theta_non_comm = {}
-    for instr in user_instr:
+    # We need to sort to ensure indexis are always generated following the same convention
+    for instr in sorted(user_instr, key=lambda k: k['id']):
         if instr['commutative']:
             theta_comm[instr['id']] = initial_index
         else:
