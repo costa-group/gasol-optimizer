@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 
-class AsmBytecode():
+class AsmBytecode:
 
-    def __init__(self,begin,end,soruce,disasm,value):
+    def __init__(self,begin,end,source,disasm,value):
         self.begin = begin
         self.end = end
-        self.source = soruce
+        self.source = source
         self.disasm = disasm
         self.value = value
 

@@ -306,6 +306,10 @@ def optimize_asm(file_name, timeout=10):
 
     for c in asm.getContracts():
 
+        # If it does not have the asm field, then we skip it, as there are no instructions to optimize
+        if not c.has_asm_field():
+            continue
+
         # current_dict = {}
         current_cost = 0
         optimized_cost = 0
@@ -374,6 +378,10 @@ def optimize_asm_from_log(file_name, json_log):
     sfs_dict, instr_sequence_dict, file_ids = {}, {}, set()
 
     for c in asm.getContracts():
+
+        # If it does not have the asm field, then we skip it, as there are no instructions to optimize
+        if not c.has_asm_field():
+            continue
 
         contract_name = (c.getContractName().split("/")[-1]).split(":")[-1]
         init_code = c.getInitCode()

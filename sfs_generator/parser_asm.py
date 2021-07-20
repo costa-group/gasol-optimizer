@@ -10,7 +10,7 @@ def buildAsmBytecode(instruction):
     begin = instruction["begin"]
     end = instruction["end"]
     name = instruction["name"]
-    source = instruction.get("source", -1)
+    source = instruction["source"]
     value = instruction.get("value", None)
 
     asm_bytecode = AsmBytecode(begin,end,source,name,value)
@@ -106,6 +106,7 @@ def parse_asm(file_name):
 
     for c in contracts:
         if contracts[c].get("asm",None) is None:
+            asm_json.addContracts(AsmContract(c, False))
             continue
 
         asm_c = build_asm_contract(c,contracts[c]["asm"])

@@ -1,40 +1,45 @@
 #!/usr/bin/env python3
 
-class AsmContract():
+class AsmContract:
 
-    def __init__(self,cname):
+    def __init__(self,cname, contains_asm_field = True):
         self.cname = cname
         self.code = []
         self.data = {}
         self.data_addresses = {}
-        
-    def setAux(self,dataId,aux):
-        if not self.data.get(dataId,False):
-            self.data[dataId] = {}
-            self.data[dataId]["aux"] = aux
+        self.contains_asm_field = contains_asm_field
+
+    def has_asm_field(self):
+        return self.contains_asm_field
+
+    def setAux(self,data_id,aux):
+        if not self.data.get(data_id,False):
+            self.data[data_id] = {}
+            self.data[data_id]["aux"] = aux
             
         else:
-            self.data[dataId]["aux"] = aux
+            self.data[data_id]["aux"] = aux
 
-    def setRunCode(self,dataId,blocks):
-        if not self.data.get(dataId, False):
-            self.data[dataId] = {}
-            self.data[dataId]["code"] = blocks
 
-        else:
-            self.data[dataId]["code"] = blocks
-
-    def setAuxData(self,dataId,data):
-        if not self.data.get(dataId,False):
-            self.data[dataId]["data"] = {}
-            self.data[dataId]["data"] = data
+    def setRunCode(self,data_id,blocks):
+        if not self.data.get(data_id, False):
+            self.data[data_id] = {}
+            self.data[data_id]["code"] = blocks
 
         else:
-            self.data[dataId]["data"] = data
+            self.data[data_id]["code"] = blocks
 
-    def setData(self,dataId,data):
-        if not self.data_addresses.get(dataId,False):
-            self.data_addresses[dataId] = data
+    def setAuxData(self,data_id,data):
+        if not self.data.get(data_id,False):
+            self.data[data_id]["data"] = {}
+            self.data[data_id]["data"] = data
+
+        else:
+            self.data[data_id]["data"] = data
+
+    def setData(self,data_id,data):
+        if not self.data_addresses.get(data_id,False):
+            self.data_addresses[data_id] = data
             
     def getInitCode(self):
         return self.code
@@ -44,19 +49,28 @@ class AsmContract():
 
     def addCodeBlock(self,block):
         self.code.append(block)
+        
+    def is_data_address(self, data_id):
+        return data_id in self.data_addresses
 
 
-    def getData(self):
-        return self.data
+    def getDataField(self, data_id):
+        return self.data_addresses[data_id]
 
     def getDataIds(self):
         return self.data.keys()
     
-    def getDataOf(self,dataId):
-        return self.data[dataId]
+    def getDataOf(self,data_id):
+        return self.data[data_id]
 
-    def getRunCodeOf(self,dataId):
-        return self.data[dataId]["code"]
+    def getRunCodeOf(self,data_id):
+        return self.data[data_id]["code"]
+    
+    def get_aux(self,data_id):
+        return self.data[data_id]["aux"]
+    
+    def get_data_aux(self,data_id):
+        return self.data[data_id].get("data", None)
 
     def getContractName(self):
         return self.cname
