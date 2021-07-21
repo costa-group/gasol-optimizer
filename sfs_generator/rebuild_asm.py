@@ -2,7 +2,8 @@
 import argparse
 import json
 import sys
-sys.path.append("../")
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 import sfs_generator.parser_asm
 from deepdiff import DeepDiff
 
@@ -37,25 +38,24 @@ def rebuild_asm_contract(asm_contract):
 
     for data_id in data_ids:
 
+        json_data_fields = {}
 
-        if not asm_contract.is_data_address(data_id):
+        aux_data = asm_contract.get_aux(data_id)
+        json_data_fields[".auxdata"] = aux_data
 
-            json_data_fields = {}
+        run_bytecode = rebuild_asm_block(asm_contract.getRunCodeOf(data_id))
+        json_data_fields[".code"] = run_bytecode
 
-            aux_data = asm_contract.get_aux(data_id)
-            json_data_fields[".auxdata"] = aux_data
+        data = asm_contract.get_data_aux(data_id)
+        if data is not None:
+            json_data_fields[".data"] = data
 
-            run_bytecode = rebuild_asm_block(asm_contract.getRunCodeOf(data_id))
-            json_data_fields[".code"] = run_bytecode
+        json_data[data_id] = json_data_fields
 
-            data = asm_contract.get_data_aux(data_id)
-            if data is not None:
-                json_data_fields[".data"] = data
+    data_addresses = asm_contract.getDataFieldIds()
 
-            json_data[data_id] = json_data_fields
-
-        else:
-            json_data[data_id] = asm_contract.getDataField(data_id)
+    for address in data_addresses:
+        json_data[address] = asm_contract.getDataField(address)
 
     json_contract[".data"] = json_data
 
@@ -83,6 +83,7 @@ def rebuild_asm(asm_json):
     return final_asm
 
 if __name__ == '__main__':
+    print(sys.path)
     ap = argparse.ArgumentParser(description='Backend of GASOL tool')
     ap.add_argument('input_path', help='Path to input file that contains the asm')
 

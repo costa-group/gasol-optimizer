@@ -57,6 +57,9 @@ class AsmContract:
     def getDataField(self, data_id):
         return self.data_addresses[data_id]
 
+    def getDataFieldIds(self):
+        return self.data_addresses.keys()
+
     def getDataIds(self):
         return self.data.keys()
     

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
 import json
-from asm_bytecode import AsmBytecode
-from asm_json import AsmJSON
-from asm_block import AsmBlock
-from asm_contract import AsmContract
+from sfs_generator.asm_bytecode import AsmBytecode
+from sfs_generator.asm_json import AsmJSON
+from sfs_generator.asm_block import AsmBlock
+from sfs_generator.asm_contract import AsmContract
 
 def buildAsmBytecode(instruction):
     begin = instruction["begin"]
@@ -88,7 +88,6 @@ def build_asm_contract(cname,cinfo):
             
         else:
             asm_c.setData(elem, data[elem])
-        
     return asm_c
 
 def parse_asm(file_name):

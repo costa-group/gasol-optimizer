@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from asm_contract import AsmContract
+from sfs_generator.asm_contract import AsmContract
 
 class AsmJSON():
 
@@ -23,6 +23,9 @@ class AsmJSON():
 
         else:
             raise TypeError("addContracts: contract is not an instance of AsmContract")
+
+    def set_contracts(self, contracts):
+        self.contracts = contracts
 
 
     def __str__(self):

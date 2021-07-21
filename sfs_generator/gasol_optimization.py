@@ -1,8 +1,8 @@
 import json
 import math
 from timeit import default_timer as dtimer
-from utils import is_integer,all_integers, find_sublist
-import  opcodes
+from sfs_generator.utils import is_integer,all_integers, find_sublist
+import  sfs_generator.opcodes as opcodes
 import os
 from global_params.paths import gasol_path, json_path
 
