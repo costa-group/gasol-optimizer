@@ -17,11 +17,13 @@ from gasol_optimization import get_sfs_dict
 from gasol_encoder import execute_syrup_backend, generate_theta_dict_from_sequence, execute_syrup_backend_combined
 from solver_output_generation import obtain_solver_output
 from disasm_generation import generate_info_from_solution, generate_disasm_sol_from_output, \
-    read_initial_dicts_from_files, generate_disasm_sol_from_log_block, obtain_log_representation_from_solution
+    read_initial_dicts_from_files, generate_disasm_sol_from_log_block, obtain_log_representation_from_solution,\
+    generate_sub_block_asm_representation_from_output, obtain_push_values_dict_from_uninterpreted_push
 from solver_solution_verify import check_solver_output_is_correct, generate_solution_dict
 from global_params.paths import *
 from utils import isYulInstruction, compute_stack_size
-
+from copy import deepcopy
+from rebuild_asm import rebuild_asm
 
 def clean_dir():
     ext = ["rbr", "csv", "sol", "bl", "disasm", "json"]
@@ -118,13 +120,14 @@ def optimize_block(instructions,stack_size,cname,block_id, timeout, is_initial_b
 
         current_cost = sfs_block['current_cost']
         current_size = sfs_block['max_progr_len']
+        user_instr = sfs_block['user_instrs']
 
         execute_syrup_backend(None, sfs_block, block_name=block_name, timeout=timeout)
 
         # At this point, solution is a string that contains the output directly
         # from the solver
         solver_output = obtain_solver_output(block_name, "oms", timeout)
-        block_solutions.append((solver_output, block_name, current_cost, current_size))
+        block_solutions.append((solver_output, block_name, current_cost, current_size, user_instr))
 
     return block_solutions    
 
@@ -165,7 +168,7 @@ def optimize_asm_block(block, contract_name, timeout):
 
     sfs_original = None
     
-    for solver_output, block_name, current_cost, current_length \
+    for solver_output, block_name, current_cost, current_length, _ \
             in optimize_block(instructions, stack_size, contract_name, block_id, timeout, is_init_block):
 
         # We weren't able to find a solution using the solver, so we just update the gas consumption
@@ -469,7 +472,7 @@ def optimize_isolated_asm_block(block_name, timeout=10):
 
     stack_size = compute_stack_size(opcodes)
     contract_name = block_name.split('/')[-1]
-    for solver_output, block_name, current_cost, current_length \
+    for solver_output, block_name, current_cost, current_length, _ \
         in optimize_block(opcodes,stack_size,contract_name,0, timeout, False):
 
         # We weren't able to find a solution using the solver, so we just update the gas consumption
@@ -487,8 +490,102 @@ def optimize_isolated_asm_block(block_name, timeout=10):
             print("The solver has not been able to find a better solution")
 
 
+# Given an asm_block and its contract name, returns the asm block after the optimization
+def optimize_asm_block_asm_format(block, contract_name, timeout):
+    bytecodes = block.getInstructions()
+    stack_size = block.getSourceStack()
+    block_id = block.getBlockId()
+    is_init_block = block.get_is_init_block()
+    new_block = deepcopy(block)
 
-    
+    # Optimized blocks. When a block is not optimized, None is pushed to the list.
+    optimized_blocks = []
+
+    log_dicts = {}
+
+    instructions = preprocess_instructions(bytecodes)
+
+
+    for solver_output, block_name, current_cost, current_length, user_instr \
+            in optimize_block(instructions, stack_size, contract_name, block_id, timeout, is_init_block):
+
+        # We weren't able to find a solution using the solver, so we just update
+        if not check_solver_output_is_correct(solver_output):
+            optimized_blocks.append(None)
+            continue
+
+        opcodes_theta_dict, instruction_theta_dict, gas_theta_dict = read_initial_dicts_from_files(contract_name,
+                                                                                                   block_name)
+        instruction_output, _, pushed_output, optimized_cost = \
+            generate_info_from_solution(solver_output, opcodes_theta_dict, instruction_theta_dict, gas_theta_dict)
+
+        if current_cost > optimized_cost:
+            values_dict = obtain_push_values_dict_from_uninterpreted_push(user_instr)
+            new_sub_block = generate_sub_block_asm_representation_from_output(solver_output, opcodes_theta_dict, instruction_theta_dict,
+                                                              gas_theta_dict, values_dict)
+            optimized_blocks.append(new_sub_block)
+            log_dicts[contract_name + '_' + block_name] = generate_solution_dict(solver_output)
+        else:
+            optimized_blocks.append(None)
+
+    new_block.set_instructions_from_sub_blocks(optimized_blocks)
+
+    return new_block, log_dicts
+
+
+def optimize_asm_in_asm_format(file_name, timeout=10):
+    asm = parse_asm(file_name)
+    log_dicts = {}
+    contracts = []
+
+    for c in asm.getContracts():
+
+        new_contract = deepcopy(c)
+
+        # If it does not have the asm field, then we skip it, as there are no instructions to optimize
+        if not c.has_asm_field():
+            continue
+
+        contract_name = (c.getContractName().split("/")[-1]).split(":")[-1]
+        init_code = c.getInitCode()
+
+        print("\nAnalyzing Init Code of: " + contract_name)
+        print("-----------------------------------------\n")
+
+        init_code_blocks = []
+
+        for block in init_code:
+            asm_block, log_element = optimize_asm_block_asm_format(block, contract_name, timeout)
+            log_dicts.update(log_element)
+            init_code_blocks.append(asm_block)
+
+        new_contract.setInitCode(init_code_blocks)
+
+        print("\nAnalyzing Runtime Code of: " + contract_name)
+        print("-----------------------------------------\n")
+        for identifier in c.getDataIds():
+            blocks = c.getRunCodeOf(identifier)
+
+            run_code_blocks = []
+            for block in blocks:
+                asm_block, log_element = optimize_asm_block_asm_format(block, contract_name, timeout)
+                log_dicts.update(log_element)
+                run_code_blocks.append(asm_block)
+
+            new_contract.setRunCode(identifier, run_code_blocks)
+
+        contracts.append(new_contract)
+
+    new_asm = deepcopy(asm)
+    new_asm.set_contracts(contracts)
+
+    with open(log_file, "w") as log_f:
+        json.dump(log_dicts, log_f)
+
+    with open("prueba.json_solc", 'w') as f:
+        f.write(json.dumps(rebuild_asm(new_asm)))
+
+
 if __name__ == '__main__':
     clean_dir()
     ap = argparse.ArgumentParser(description='Backend of GASOL tool')
@@ -505,7 +602,8 @@ if __name__ == '__main__':
             log_dict = json.load(path)
             optimize_asm_from_log(args.input_path, log_dict)
     elif not args.block:
-        optimize_asm(args.input_path, args.tout)
+        # optimize_asm(args.input_path, args.tout)
+        optimize_asm_in_asm_format(args.input_path, args.tout)
     else:
         optimize_isolated_asm_block(args.input_path, args.tout)
 

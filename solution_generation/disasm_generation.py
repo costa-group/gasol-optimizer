@@ -5,6 +5,7 @@ import collections
 import pathlib
 
 from global_params.paths import gasol_path
+from sfs_generator.asm_bytecode import AsmBytecode
 
 def init():
     global instruction_json
@@ -266,3 +267,45 @@ def generate_disasm_sol_from_log_block(contract_name, block_name, instr_sequence
         gas_file.write(str(total_gas))
 
     return opcode_list
+
+
+# Given the user instructions and the theta dict, generates a dict with the values associated
+# to "uninterpreted" PUSH instructions (PUSH data, PUSH[$] ...) linked to the corresponding instruction id
+def obtain_push_values_dict_from_uninterpreted_push(user_instr):
+    theta_uninterpreted_push_dict = {}
+
+    for instr in user_instr:
+        id = instr['id']
+        value = instr.get('value', None)
+        if value is not None:
+            theta_uninterpreted_push_dict[id] = value
+
+    return theta_uninterpreted_push_dict
+
+# Given the output obtained from executing the corresponding SMT solver and the corresponding dicts, it generates
+# the optimized sub-block following the AsmBytecode format.
+def generate_sub_block_asm_representation_from_output(solver_output, opcodes_theta_dict, instruction_theta_dict,
+                                                      gas_theta_dict, values_dict):
+
+    sub_block_instructions_asm = []
+
+    instr_sol, _, pushed_values_decimal, _ = \
+        generate_info_from_solution(solver_output, opcodes_theta_dict, instruction_theta_dict, gas_theta_dict)
+    for position, instr in instr_sol.items():
+
+        # Push match refers to usual PUSH instructions that are introduced as basic operations
+        push_match = re.match(re.compile('PUSH([0-9]+)'), instr)
+
+        # Basic stack instructions refer to those instruction that only manage the stack: SWAPk, POP or DUPk.
+        # These instructions just initialize each field in the asm format to -1
+        basic_stack_instr_match = re.match(re.compile('SWAP|POP|DUP'), instr)
+        if push_match:
+            value = hex(int(pushed_values_decimal[position]))[2:]
+            sub_block_instructions_asm.append(AsmBytecode(-1,-1,-1,"PUSH",value))
+        elif basic_stack_instr_match:
+            sub_block_instructions_asm.append(AsmBytecode(-1,-1,-1,instr,None))
+        else:
+            # TODO: Add information retrieval from uninterpreted functions
+            value = values_dict.get(instr, None)
+            sub_block_instructions_asm.append(AsmBytecode(-1,-1,-1,instr, value))
+    return sub_block_instructions_asm
