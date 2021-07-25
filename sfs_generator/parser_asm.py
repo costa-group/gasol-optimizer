@@ -28,7 +28,7 @@ def buildBlocks(cname,instr_list, is_init_code):
     while i < len(instr_list):
         instr_name = instr_list[i]["name"]
         asm_bytecode = buildAsmBytecode(instr_list[i])
-        if instr_name in ["JUMP","JUMPI","STOP","RETURN","REVERT","INVALID"]:
+        if instr_name in ["JUMP","JUMPI","STOP","RETURN","REVERT","INVALID","JUMPDEST"]:
             block.addInstructions(asm_bytecode)
             block.compute_stack_size()
             bytecodes.append(block)
@@ -36,7 +36,7 @@ def buildBlocks(cname,instr_list, is_init_code):
             block = AsmBlock(cname,blockId, is_init_code)
             blockId+=1
         elif instr_name == "tag":
-            if last not in ["JUMP","JUMPI","STOP","RETURN","REVERT","INVALID"]:
+            if last not in ["JUMP","JUMPI","STOP","RETURN","REVERT","INVALID","JUMPDEST"]:
                 block.compute_stack_size()
                 bytecodes.append(block)
                 last = ""
@@ -47,7 +47,7 @@ def buildBlocks(cname,instr_list, is_init_code):
             block.addInstructions(asm_bytecode)
         i+=1
 
-    if last not in ["JUMP","JUMPI","STOP","RETURN","REVERT","INVALID"] and block not in bytecodes:
+    if last not in ["JUMP","JUMPI","STOP","RETURN","REVERT","INVALID","JUMPDEST"] and block not in bytecodes:
         bytecodes.append(block)
         block.compute_stack_size()
         

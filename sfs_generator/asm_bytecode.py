@@ -43,3 +43,7 @@ class AsmBytecode:
     def __str__(self):
         content = "{begin:"+str(self.begin)+", end:"+str(self.end)+", source:"+str(self.source)+", name:"+str(self.disasm)+", value:"+str(self.value)+"}"
         return content
+
+    def __repr__(self):
+        content = "{begin:"+str(self.begin)+", end:"+str(self.end)+", source:"+str(self.source)+", name:"+str(self.disasm)+", value:"+str(self.value)+"}"
+        return content

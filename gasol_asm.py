@@ -24,6 +24,7 @@ from global_params.paths import *
 from utils import isYulInstruction, compute_stack_size
 from copy import deepcopy
 from rebuild_asm import rebuild_asm
+from verification.sfs_verify import verify_block_from_list_of_sfs
 
 def clean_dir():
     ext = ["rbr", "csv", "sol", "bl", "disasm", "json"]
@@ -113,7 +114,7 @@ def optimize_block(instructions,stack_size,cname,block_id, timeout, is_initial_b
         return []
 
     block_solutions = []
-
+    print(sfs_dict['syrup_contract'])
     # SFS dict of syrup contract contains all sub-blocks derived from a block after splitting
     for block_name in sfs_dict['syrup_contract']:
         sfs_block = sfs_dict['syrup_contract'][block_name]
@@ -533,10 +534,31 @@ def optimize_asm_block_asm_format(block, contract_name, timeout):
     return new_block, log_dicts
 
 
+def compare_asm_block_asm_format(old_block, new_block, contract_name="example"):
+
+    old_instructions = preprocess_instructions(old_block.getInstructions())
+
+    old_sfs_dict = compute_original_sfs_with_simplifications(old_instructions, old_block.getSourceStack(),
+                                                             contract_name, old_block.get_is_init_block(),
+                                                             old_block.get_is_init_block())["syrup_contract"]
+
+    new_instructions = preprocess_instructions(new_block.getInstructions())
+
+
+    new_sfs_dict = compute_original_sfs_with_simplifications(new_instructions, new_block.getSourceStack(),
+                                                             contract_name, new_block.get_is_init_block(),
+                                                             new_block.get_is_init_block())["syrup_contract"]
+
+    final_comparison = verify_block_from_list_of_sfs(old_sfs_dict, new_sfs_dict)
+
+    return final_comparison
+
+
 def optimize_asm_in_asm_format(file_name, timeout=10):
     asm = parse_asm(file_name)
     log_dicts = {}
     contracts = []
+    verifier_error = False
 
     for c in asm.getContracts():
 
@@ -559,6 +581,11 @@ def optimize_asm_in_asm_format(file_name, timeout=10):
             log_dicts.update(log_element)
             init_code_blocks.append(asm_block)
 
+            if not compare_asm_block_asm_format(block, asm_block):
+                print("Optimized block " + str(block.getBlockId()) + " from init code at contract " + contract_name +
+                      " has not been verified correctly")
+                verifier_error = True
+
         new_contract.setInitCode(init_code_blocks)
 
         print("\nAnalyzing Runtime Code of: " + contract_name)
@@ -572,9 +599,19 @@ def optimize_asm_in_asm_format(file_name, timeout=10):
                 log_dicts.update(log_element)
                 run_code_blocks.append(asm_block)
 
+                if not compare_asm_block_asm_format(block, asm_block):
+                    print("Optimized block " + str(block.getBlockId()) + " from data id " + str(identifier)
+                          + " at contract " + contract_name + " has not been verified correctly")
+                    verifier_error = True
+
             new_contract.setRunCode(identifier, run_code_blocks)
 
         contracts.append(new_contract)
+
+    if not verifier_error:
+        print("Optimized bytecode has been checked successfully")
+    else:
+        print("Error when generating the optimized bytecode")
 
     new_asm = deepcopy(asm)
     new_asm.set_contracts(contracts)
