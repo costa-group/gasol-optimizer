@@ -62,9 +62,9 @@ class AsmBlock():
 
             instruction = asm_bytecode.getDisasm()
 
-            # Three cases: either a instruction correspond to a jump instruction, a split instruction or neither
-            # of them.
-            if instruction in ["JUMP","JUMPI","JUMPDEST","tag","INVALID","JUMPDEST"] or instruction in split_block:
+            # Three cases: either a instruction correspond to a jump/end or split instruction or neither of them.
+            if instruction in ["JUMP","JUMPI","STOP","RETURN","REVERT","INVALID","JUMPDEST","tag"] \
+                    or instruction in split_block:
                 if current_sub_block:
                     sub_blocks.append(current_sub_block)
                     current_sub_block = []
