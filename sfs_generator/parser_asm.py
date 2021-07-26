@@ -36,8 +36,8 @@ def buildBlocks(cname,instr_list, is_init_code):
             block = AsmBlock(cname,blockId, is_init_code)
             blockId+=1
 
-        # JUMPDEST and tag always correspond to the beginning of a new block
-        elif instr_name == "JUMPDEST" or instr_name == "tag":
+        # Tag always correspond to the beginning of a new block. JUMPDEST is always preceded by a tag instruction
+        elif instr_name == "tag":
             # There must be at least one instruction to add current block
             if block.getInstructions():
                 block.compute_stack_size()

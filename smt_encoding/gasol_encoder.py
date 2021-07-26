@@ -7,7 +7,7 @@ from encoding_files import initialize_dir_and_streams, write_encoding
 from smtlib_utils import set_logic, check_sat
 import re
 from encoding_utils import generate_disasm_map, generate_costs_ordered_dict, generate_stack_theta, generate_instr_map, \
-    generate_uninterpreted_theta
+    generate_uninterpreted_theta, generate_uninterpreted_push_map
 import copy
 
 def parse_data(json_path, var_initial_idx=0, with_simplifications=True):
@@ -148,4 +148,5 @@ def generate_theta_dict_from_sequence(bs, usr_instr):
     instr_map = generate_instr_map(usr_instr, theta_stack, theta_comm, theta_non_comm)
     disasm_map = generate_disasm_map(usr_instr, theta_dict)
     costs_map = generate_costs_ordered_dict(bs, usr_instr, theta_dict)
-    return theta_dict, instr_map, disasm_map, costs_map
+    value_map = generate_uninterpreted_push_map(usr_instr, theta_dict)
+    return theta_dict, instr_map, disasm_map, costs_map, value_map

@@ -103,7 +103,7 @@ def read_initial_dicts_from_files(contract_name, block_name):
 # Generates three structures containing all the info from the solver: the sequence of instructions
 # in plain text, the sequence of instructions converted to hexadecimal, the pushed values corresponding to push
 # opcodes and an int that contains the gas cost of this solution.
-def generate_info_from_solution(solver_output, opcodes_theta_dict, instruction_theta_dict, gas_theta_dict):
+def generate_info_from_solution(solver_output, opcodes_theta_dict, instruction_theta_dict, gas_theta_dict, values_dict = None):
     instr_sol = {}
     opcode_sol = {}
     pushed_values_decimal = {}
@@ -116,17 +116,23 @@ def generate_info_from_solution(solver_output, opcodes_theta_dict, instruction_t
     for line in solver_output.splitlines():
         for match in re.finditer(pattern1, line):
             instruction_position = int(match.group(1))
-            instruction_theta = match.group(2)
+            instruction_theta = int(match.group(2))
                 # Nops are excluded. theta(NOP) = 2
-            if instruction_theta == '2':
+            if instruction_theta == 2:
                 break
             instr_sol[instruction_position] = instruction_theta_dict[instruction_theta]
             opcode_sol[instruction_position] = opcodes_theta_dict[instruction_theta]
             total_gas += gas_theta_dict[instruction_theta]
+            if values_dict.get(instruction_theta, None) is not None:
+                pushed_values_decimal[instruction_position] = values_dict[instruction_theta]
 
         for match in re.finditer(pattern2, line):
             instruction_position = int(match.group(1))
             pushed_value = match.group(2)
+
+            # Already special PUSH instructions
+            if instruction_position in pushed_values_decimal:
+                continue
             pushed_values_decimal[instruction_position] = pushed_value
 
     instr_sol, opcode_sol, pushed_values_decimal = generate_ordered_structures(instr_sol, opcode_sol, pushed_values_decimal)
@@ -269,19 +275,6 @@ def generate_disasm_sol_from_log_block(contract_name, block_name, instr_sequence
     return opcode_list
 
 
-# Given the user instructions and the theta dict, generates a dict with the values associated
-# to "uninterpreted" PUSH instructions (PUSH data, PUSH[$] ...) linked to the corresponding instruction id
-def obtain_push_values_dict_from_uninterpreted_push(user_instr):
-    theta_uninterpreted_push_dict = {}
-
-    for instr in user_instr:
-        id = instr['id']
-        value = instr.get('value', None)
-        if value is not None:
-            theta_uninterpreted_push_dict[id] = value
-
-    return theta_uninterpreted_push_dict
-
 # Given the output obtained from executing the corresponding SMT solver and the corresponding dicts, it generates
 # the optimized sub-block following the AsmBytecode format.
 def generate_sub_block_asm_representation_from_output(solver_output, opcodes_theta_dict, instruction_theta_dict,
@@ -290,7 +283,7 @@ def generate_sub_block_asm_representation_from_output(solver_output, opcodes_the
     sub_block_instructions_asm = []
 
     instr_sol, _, pushed_values_decimal, _ = \
-        generate_info_from_solution(solver_output, opcodes_theta_dict, instruction_theta_dict, gas_theta_dict)
+        generate_info_from_solution(solver_output, opcodes_theta_dict, instruction_theta_dict, gas_theta_dict, values_dict)
     for position, instr in instr_sol.items():
 
         # Push match refers to usual PUSH instructions that are introduced as basic operations
@@ -298,14 +291,13 @@ def generate_sub_block_asm_representation_from_output(solver_output, opcodes_the
 
         # Basic stack instructions refer to those instruction that only manage the stack: SWAPk, POP or DUPk.
         # These instructions just initialize each field in the asm format to -1
-        basic_stack_instr_match = re.match(re.compile('SWAP|POP|DUP'), instr)
+        special_push_with_value_match = re.match(re.compile('PUSHIMMUTABLE|PUSHTAG|PUSH#\[\$]|PUSH\[\$]|PUSHDATA'), instr)
         if push_match:
             value = hex(int(pushed_values_decimal[position]))[2:]
             sub_block_instructions_asm.append(AsmBytecode(-1,-1,-1,"PUSH",value))
-        elif basic_stack_instr_match:
-            sub_block_instructions_asm.append(AsmBytecode(-1,-1,-1,instr,None))
+        elif special_push_with_value_match:
+            value = hex(int(pushed_values_decimal[position]))[2:]
+            sub_block_instructions_asm.append(AsmBytecode(-1, -1, -1, instr, value))
         else:
-            # TODO: Add information retrieval from uninterpreted functions
-            value = values_dict.get(instr, None)
-            sub_block_instructions_asm.append(AsmBytecode(-1,-1,-1,instr, value))
+            sub_block_instructions_asm.append(AsmBytecode(-1,-1,-1,instr,None))
     return sub_block_instructions_asm

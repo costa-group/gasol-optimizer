@@ -18,7 +18,7 @@ from gasol_encoder import execute_syrup_backend, generate_theta_dict_from_sequen
 from solver_output_generation import obtain_solver_output
 from disasm_generation import generate_info_from_solution, generate_disasm_sol_from_output, \
     read_initial_dicts_from_files, generate_disasm_sol_from_log_block, obtain_log_representation_from_solution,\
-    generate_sub_block_asm_representation_from_output, obtain_push_values_dict_from_uninterpreted_push
+    generate_sub_block_asm_representation_from_output
 from solver_solution_verify import check_solver_output_is_correct, generate_solution_dict
 from global_params.paths import *
 from utils import isYulInstruction, compute_stack_size
@@ -470,18 +470,25 @@ def optimize_isolated_asm_block(block_name, timeout=10):
             opcodes.append(op)
 
         i+=1
-
+    print(opcodes)
     stack_size = compute_stack_size(opcodes)
     contract_name = block_name.split('/')[-1]
-    for solver_output, block_name, current_cost, current_length, _ \
+
+    sfs_dict = compute_original_sfs_with_simplifications(instructions,stack_size,contract_name, 0, False)
+
+    for solver_output, block_name, current_cost, current_length, user_instr \
         in optimize_block(opcodes,stack_size,contract_name,0, timeout, False):
 
         # We weren't able to find a solution using the solver, so we just update the gas consumption
         if check_solver_output_is_correct(solver_output):
-            opcodes_theta_dict, instruction_theta_dict, gas_theta_dict = read_initial_dicts_from_files(contract_name,
-                                                                                                       "block0")
+            bs = sfs_dict['syrup_contract'][block_name]['max_sk_sz']
+
+            _, instruction_theta_dict, opcodes_theta_dict, gas_theta_dict, values_dict = \
+                generate_theta_dict_from_sequence(bs, user_instr)
+
             instruction_output, _, pushed_output, total_gas = \
-                generate_info_from_solution(solver_output, opcodes_theta_dict, instruction_theta_dict, gas_theta_dict)
+                generate_info_from_solution(solver_output, opcodes_theta_dict, instruction_theta_dict,
+                                            gas_theta_dict, values_dict)
 
             sol = generate_disasm_sol_from_output(contract_name, solver_output,
                                                   opcodes_theta_dict, instruction_theta_dict, gas_theta_dict)
@@ -501,10 +508,13 @@ def optimize_asm_block_asm_format(block, contract_name, timeout):
 
     # Optimized blocks. When a block is not optimized, None is pushed to the list.
     optimized_blocks = []
+    print(block.split_in_sub_blocks())
 
     log_dicts = {}
 
     instructions = preprocess_instructions(bytecodes)
+
+    sfs_dict = compute_original_sfs_with_simplifications(instructions,stack_size,contract_name, block_id, is_init_block)
 
 
     for solver_output, block_name, current_cost, current_length, user_instr \
@@ -515,13 +525,15 @@ def optimize_asm_block_asm_format(block, contract_name, timeout):
             optimized_blocks.append(None)
             continue
 
-        opcodes_theta_dict, instruction_theta_dict, gas_theta_dict = read_initial_dicts_from_files(contract_name,
-                                                                                                   block_name)
+        bs = sfs_dict['syrup_contract'][block_name]['max_sk_sz']
+
+        _, instruction_theta_dict, opcodes_theta_dict, gas_theta_dict, values_dict = generate_theta_dict_from_sequence(bs, user_instr)
+
         instruction_output, _, pushed_output, optimized_cost = \
-            generate_info_from_solution(solver_output, opcodes_theta_dict, instruction_theta_dict, gas_theta_dict)
+            generate_info_from_solution(solver_output, opcodes_theta_dict, instruction_theta_dict,
+                                        gas_theta_dict, values_dict)
 
         if current_cost > optimized_cost:
-            values_dict = obtain_push_values_dict_from_uninterpreted_push(user_instr)
             new_sub_block = generate_sub_block_asm_representation_from_output(solver_output, opcodes_theta_dict, instruction_theta_dict,
                                                               gas_theta_dict, values_dict)
             optimized_blocks.append(new_sub_block)
@@ -584,6 +596,9 @@ def optimize_asm_in_asm_format(file_name, timeout=10):
             if not compare_asm_block_asm_format(block, asm_block):
                 print("Optimized block " + str(block.getBlockId()) + " from init code at contract " + contract_name +
                       " has not been verified correctly")
+                print(block.getInstructions())
+                print("Nuevo")
+                print(asm_block.getInstructions())
                 verifier_error = True
 
         new_contract.setInitCode(init_code_blocks)
@@ -602,6 +617,9 @@ def optimize_asm_in_asm_format(file_name, timeout=10):
                 if not compare_asm_block_asm_format(block, asm_block):
                     print("Optimized block " + str(block.getBlockId()) + " from data id " + str(identifier)
                           + " at contract " + contract_name + " has not been verified correctly")
+                    print(block.getInstructions())
+                    print("Nuevo")
+                    print(asm_block.getInstructions())
                     verifier_error = True
 
             new_contract.setRunCode(identifier, run_code_blocks)
