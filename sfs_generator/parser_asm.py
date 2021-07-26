@@ -22,7 +22,6 @@ def buildBlocks(cname,instr_list, is_init_code):
 
     block = AsmBlock(cname,0, is_init_code)
     blockId = 1
-
     i = 0
     while i < len(instr_list):
         instr_name = instr_list[i]["name"]

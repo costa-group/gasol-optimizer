@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import sfs_generator.utils as utils
-from sfs_generator.gasol_optimization import split_block
+from global_params.constants import split_block
 
 class AsmBlock():
     
