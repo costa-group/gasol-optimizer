@@ -2620,13 +2620,13 @@ def smt_translate_block(rule,name,preffix,simplification=True):
         new_instructions = []
 
         subblocks = split_blocks(rule,r,new_instructions)
-        print(subblocks)
         generate_subblocks(rule,subblocks,True,preffix,simplification)
 
     end = dtimer()
     # for f in info_deploy:
     #     print f
     sfs_contracts["syrup_contract"] = blocks_json_dict
+    print(sfs_contracts)
     end = dtimer()
 
     print("RULES  : "+str(gas_saved_op))
