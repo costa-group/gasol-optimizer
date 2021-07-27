@@ -564,11 +564,17 @@ def compare_asm_block_asm_format(old_block, new_block, contract_name="example"):
     return final_comparison
 
 
-def optimize_asm_in_asm_format(file_name, timeout=10, log=False):
+def optimize_asm_in_asm_format(file_name, output_file, timeout=10, log=False):
     asm = parse_asm(file_name)
     log_dicts = {}
     contracts = []
     verifier_error = False
+
+    file_name_str = file_name.split("/")[-1].split(".")[0]
+
+    # If not output file provided, then we create a name by default.
+    if output_file is None:
+        output_file = file_name_str + "_optimized.json_solc"
 
     for c in asm.getContracts():
 
@@ -633,10 +639,10 @@ def optimize_asm_in_asm_format(file_name, timeout=10, log=False):
     new_asm.set_contracts(contracts)
 
     if log:
-        with open(log_file, "w") as log_f:
+        with open(gasol_path + file_name_str + ".log" , "w") as log_f:
             json.dump(log_dicts, log_f)
 
-    with open("prueba.json_solc", 'w') as f:
+    with open(output_file, 'w') as f:
         f.write(json.dumps(rebuild_asm(new_asm)))
 
 
@@ -651,6 +657,7 @@ if __name__ == '__main__':
                         help="Generates the same optimized bytecode than the one associated to the log file")
     ap.add_argument("-log", "--generate-log", help ="Generate log file for Etherscan verification",
                     action = "store_true", dest='log_flag')
+    ap.add_argument("-o", help="ASM output path", dest='output_path', action='store')
 
 
     args = ap.parse_args()
@@ -660,7 +667,7 @@ if __name__ == '__main__':
             optimize_asm_from_log(args.input_path, log_dict)
     elif not args.block:
         # optimize_asm(args.input_path, args.tout)
-        optimize_asm_in_asm_format(args.input_path, args.tout, args.log_flag)
+        optimize_asm_in_asm_format(args.input_path, args.output_path, args.tout, args.log_flag)
     else:
         optimize_isolated_asm_block(args.input_path, args.tout)
 
