@@ -502,6 +502,18 @@ def optimize_isolated_asm_block(block_name, timeout=10):
         print("Optimized sequence: " +str(sol))
 
 
+# Due to intra block optimization, we need to be wary of those cases in which the optimized outcome is determined
+# from other blocks. In particular, when a sub block starts with a POP opcode, then it can be optimized iff the
+# previous block has been optimized
+def filter_optimized_blocks_by_intrablock_optimization(asm_sub_blocks, optimized_sub_blocks):
+    sub_block_id = 0
+    sub_block_ids = [-1] * len(asm_sub_blocks)
+
+
+    # Traverse from right to left
+    for i in range(len(asm_sub_blocks), -1, -1):
+        current_asm = asm_sub_blocks[i]
+
 
 # Given an asm_block and its contract name, returns the asm block after the optimization
 def optimize_asm_block_asm_format(block, contract_name, timeout):
@@ -574,7 +586,12 @@ def compare_asm_block_asm_format(old_block, new_block, contract_name="example"):
 
     final_comparison = verify_block_from_list_of_sfs(old_sfs_dict, new_sfs_dict)
 
-    return final_comparison
+    # We also must check intermediate instructions match i.e those that are not sub blocks
+    intermediate_instructions_old = list(map(lambda x: None if isinstance(x, list) else x, old_block.split_in_sub_blocks()))
+
+    intermediate_instructions_new = list(map(lambda x: None if isinstance(x, list) else x, new_block.split_in_sub_blocks()))
+
+    return final_comparison and (intermediate_instructions_old == intermediate_instructions_new)
 
 
 def optimize_asm_in_asm_format(file_name, output_file, timeout=10, log=False):

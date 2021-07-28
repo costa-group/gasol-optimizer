@@ -47,3 +47,7 @@ class AsmBytecode:
     def __repr__(self):
         content = "{begin:"+str(self.begin)+", end:"+str(self.end)+", source:"+str(self.source)+", name:"+str(self.disasm)+", value:"+str(self.value)+"}"
         return content
+
+    def __eq__(self, other):
+        return self.begin == other.begin and self.end == other.end and self.source == other.source and \
+               self.disasm == other.disasm and self.value == other.value
