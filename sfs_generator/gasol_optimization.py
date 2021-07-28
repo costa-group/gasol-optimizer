@@ -2626,7 +2626,6 @@ def smt_translate_block(rule,name,preffix,simplification=True):
     # for f in info_deploy:
     #     print f
     sfs_contracts["syrup_contract"] = blocks_json_dict
-    print(sfs_contracts)
     end = dtimer()
 
     print("RULES  : "+str(gas_saved_op))
