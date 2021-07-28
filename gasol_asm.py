@@ -600,7 +600,7 @@ def optimize_asm_block_asm_format(block, contract_name, timeout):
         if not sfs_dict:
             optimized_blocks[block_name] = []
 
-        optimized_blocks_list = optimized_blocks.values()
+        optimized_blocks_list = list(optimized_blocks.values())
 
     # Case more than one sub blocks: several intermediate sub blocks may have been skipped.
     # They can be identified from those sub blocks numbers that are not present in the sfs dict
