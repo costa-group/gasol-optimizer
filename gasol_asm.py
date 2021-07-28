@@ -111,15 +111,10 @@ def compute_original_sfs_with_simplifications(instructions, stack_size, cname, b
 # to that sequence.
 def optimize_block(sfs_dict, timeout):
 
-    # No optimization is made if sfs_dict['syrup_contract'] == {}
-    if sfs_dict['syrup_contract'] == {}:
-        return []
-
     block_solutions = []
-    print("optimize_block block", sfs_dict['syrup_contract'])
     # SFS dict of syrup contract contains all sub-blocks derived from a block after splitting
-    for block_name in sfs_dict['syrup_contract']:
-        sfs_block = sfs_dict['syrup_contract'][block_name]
+    for block_name in sfs_dict:
+        sfs_block = sfs_dict[block_name]
 
         current_cost = sfs_block['current_cost']
         current_size = sfs_block['max_progr_len']
@@ -560,8 +555,7 @@ def optimize_asm_block_asm_format(block, contract_name, timeout):
 
     instructions = preprocess_instructions(bytecodes)
 
-    sfs_dict = compute_original_sfs_with_simplifications(instructions,stack_size,contract_name, block_id, is_init_block)
-    print("optimize_asm_block_asm_format", sfs_dict["syrup_contract"])
+    sfs_dict = compute_original_sfs_with_simplifications(instructions,stack_size,contract_name, block_id, is_init_block)["syrup_contract"]
 
     for solver_output, block_name, current_cost, current_length, user_instr \
             in optimize_block(sfs_dict, timeout):
@@ -571,13 +565,16 @@ def optimize_asm_block_asm_format(block, contract_name, timeout):
             optimized_blocks[block_name] = None
             continue
 
-        bs = sfs_dict['syrup_contract'][block_name]['max_sk_sz']
+        bs = sfs_dict[block_name]['max_sk_sz']
 
         _, instruction_theta_dict, opcodes_theta_dict, gas_theta_dict, values_dict = generate_theta_dict_from_sequence(bs, user_instr)
 
         instruction_output, _, pushed_output, optimized_cost = \
             generate_info_from_solution(solver_output, opcodes_theta_dict, instruction_theta_dict,
                                         gas_theta_dict, values_dict)
+
+        if block_name == "initial_block0.13":
+            print("Instr output", instruction_output)
 
         # FIXME: Temporary change for experimental purposes: instead of only adding the truly optimized blocks, we consider all.
         # This is done due to interblock optimization not well defined
@@ -589,15 +586,53 @@ def optimize_asm_block_asm_format(block, contract_name, timeout):
         else:
             optimized_blocks[block_name] = None
 
-    # We sort by block id and obtain the associated values in order
-    optimized_blocks_list = list(collections.OrderedDict(sorted(optimized_blocks.items(), key=lambda kv: kv[0])).values())
+    if is_init_block:
+        block_name = "initial_block" + str(block_id)
+    else:
+        block_name = "block" + str(block_id)
 
     asm_sub_blocks = list(filter(lambda x: isinstance(x, list), block.split_in_sub_blocks()))
+
+    # At this point, we must be wary: some blocks may have been simplified totally and are not contained in the
+    # optimized blocks dict. Thus, we need to identify them and assign them to []
+    # Three cases: zero sub-block present in the contract, one or more than one
+
+    # Case zero: nothing has been optimized
+    if len(asm_sub_blocks) == 0:
+        return deepcopy(block), {}
+    # Case one: block may have been skipped completely
+    if len(asm_sub_blocks) == 1:
+        if not sfs_dict:
+            optimized_blocks[block_name] = []
+
+        optimized_blocks_list = optimized_blocks.values()
+
+    # Case more than one sub blocks: several intermediate sub blocks may have been skipped.
+    # They can be identified from those sub blocks numbers that are not present in the sfs dict
+    else:
+        number_of_asm_sub_blocks = len(asm_sub_blocks)
+
+        # If no key in the sfs dict contains i, it means that we have totally simplified that block and it didn't
+        # appear in the sfs. Thus, we need to add it to the corresponding key
+        # Note that sfs_dict keys are always of the form block_name_index, so we can obtain the generic name
+        if number_of_asm_sub_blocks != len(sfs_dict.keys()):
+            ids_in_dict = set(map(lambda x: int(x.replace(block_name + ".", '')), sfs_dict.keys()))
+            ids_not_in_dict = set(range(number_of_asm_sub_blocks)).difference(ids_in_dict)
+            for elem in ids_not_in_dict:
+                optimized_blocks[block_name + "." + str(elem)] = []
+
+        optimized_blocks_list = list(collections.OrderedDict(
+            sorted(optimized_blocks.items(), key=lambda kv: int((kv[0]).replace(block_name + ".", '')))).values())
+
+    print("Optimized blocks", optimized_blocks)
+    # We sort by block id and obtain the associated values in order
+    print("before :", optimized_blocks_list)
     optimized_blocks_list_with_intra_block_consideration = \
         filter_optimized_blocks_by_intra_block_optimization(asm_sub_blocks, optimized_blocks_list)
-
+    print("after :", optimized_blocks_list_with_intra_block_consideration)
     new_block.set_instructions_from_sub_blocks(optimized_blocks_list_with_intra_block_consideration)
-
+    print("Instructions", new_block.getInstructions())
+    new_block.compute_stack_size()
     return new_block, log_dicts
 
 
@@ -616,6 +651,11 @@ def compare_asm_block_asm_format(old_block, new_block, contract_name="example"):
                                                              new_block.get_is_init_block())["syrup_contract"]
 
     final_comparison = verify_block_from_list_of_sfs(old_sfs_dict, new_sfs_dict)
+
+    print(old_instructions)
+    print(new_instructions)
+    print("OLD", old_sfs_dict)
+    print("NEW", new_sfs_dict)
 
     # We also must check intermediate instructions match i.e those that are not sub blocks
     intermediate_instructions_old = list(map(lambda x: None if isinstance(x, list) else x, old_block.split_in_sub_blocks()))
