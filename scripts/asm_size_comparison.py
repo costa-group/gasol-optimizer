@@ -13,7 +13,7 @@ from sfs_generator.parser_asm import parse_asm
 from sfs_generator.utils import compute_number_of_instructions_in_asm_json_per_file
 import re
 
-parent_directory = project_path + "/examples/jsons-solc"
+parent_directory = project_path + "/examples/prueba"
 final_directory = project_path + "/results/"
 
 def run_command(cmd):

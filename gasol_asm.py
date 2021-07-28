@@ -505,15 +505,45 @@ def optimize_isolated_asm_block(block_name, timeout=10):
 # Due to intra block optimization, we need to be wary of those cases in which the optimized outcome is determined
 # from other blocks. In particular, when a sub block starts with a POP opcode, then it can be optimized iff the
 # previous block has been optimized
-def filter_optimized_blocks_by_intrablock_optimization(asm_sub_blocks, optimized_sub_blocks):
-    sub_block_id = 0
-    sub_block_ids = [-1] * len(asm_sub_blocks)
+def filter_optimized_blocks_by_intra_block_optimization(asm_sub_blocks, optimized_sub_blocks):
+    final_sub_blocks = []
 
+    current_pop_streak_blocks = []
 
+    previous_block_starts_with_pop = False
     # Traverse from right to left
-    for i in range(len(asm_sub_blocks), -1, -1):
-        current_asm = asm_sub_blocks[i]
+    for asm_sub_block, optimized_sub_block in zip(reversed(asm_sub_blocks), reversed(optimized_sub_blocks)):
+        if asm_sub_block[0].getDisasm() == "POP":
+            current_pop_streak_blocks.append(deepcopy(optimized_sub_block))
+            previous_block_starts_with_pop = True
+        elif previous_block_starts_with_pop:
+            current_pop_streak_blocks.append(deepcopy(optimized_sub_block))
 
+            # All elements are not None, so the optimization can be applied
+            if all(current_pop_streak_blocks):
+                final_sub_blocks.extend(current_pop_streak_blocks)
+            # Otherwise, all optimized blocks must be set to None
+
+            else:
+                none_pop_blocks = [None] * len(current_pop_streak_blocks)
+                final_sub_blocks.extend(none_pop_blocks)
+
+            previous_block_starts_with_pop = False
+            current_pop_streak_blocks = []
+        else:
+            final_sub_blocks.append(deepcopy(optimized_sub_block))
+            previous_block_starts_with_pop = False
+
+    # Final check in case first block also starts with a POP instruction
+    if previous_block_starts_with_pop:
+        if all(current_pop_streak_blocks):
+            final_sub_blocks.extend(current_pop_streak_blocks)
+        else:
+            none_pop_blocks = [None] * len(current_pop_streak_blocks)
+            final_sub_blocks.extend(none_pop_blocks)
+
+    # Finally, as we were working with reversed list, we reverse the solution to obtain the proper one
+    return list(reversed(final_sub_blocks))
 
 # Given an asm_block and its contract name, returns the asm block after the optimization
 def optimize_asm_block_asm_format(block, contract_name, timeout):
@@ -525,7 +555,6 @@ def optimize_asm_block_asm_format(block, contract_name, timeout):
 
     # Optimized blocks. When a block is not optimized, None is pushed to the list.
     optimized_blocks = {}
-    print(block.split_in_sub_blocks())
 
     log_dicts = {}
 
@@ -552,17 +581,22 @@ def optimize_asm_block_asm_format(block, contract_name, timeout):
 
         # FIXME: Temporary change for experimental purposes: instead of only adding the truly optimized blocks, we consider all.
         # This is done due to interblock optimization not well defined
-        # if current_cost > optimized_cost:
-        new_sub_block = generate_sub_block_asm_representation_from_output(solver_output, opcodes_theta_dict, instruction_theta_dict,
+        if current_cost > optimized_cost:
+            new_sub_block = generate_sub_block_asm_representation_from_output(solver_output, opcodes_theta_dict, instruction_theta_dict,
                                                               gas_theta_dict, values_dict)
-        optimized_blocks[block_name] = new_sub_block
-        log_dicts[contract_name + '_' + block_name] = generate_solution_dict(solver_output)
-        # else:
-        #    optimized_blocks[block_name] = None
+            optimized_blocks[block_name] = new_sub_block
+            log_dicts[contract_name + '_' + block_name] = generate_solution_dict(solver_output)
+        else:
+            optimized_blocks[block_name] = None
 
     # We sort by block id and obtain the associated values in order
     optimized_blocks_list = list(collections.OrderedDict(sorted(optimized_blocks.items(), key=lambda kv: kv[0])).values())
-    new_block.set_instructions_from_sub_blocks(optimized_blocks_list)
+
+    asm_sub_blocks = list(filter(lambda x: isinstance(x, list), block.split_in_sub_blocks()))
+    optimized_blocks_list_with_intra_block_consideration = \
+        filter_optimized_blocks_by_intra_block_optimization(asm_sub_blocks, optimized_blocks_list)
+
+    new_block.set_instructions_from_sub_blocks(optimized_blocks_list_with_intra_block_consideration)
 
     return new_block, log_dicts
 
@@ -574,15 +608,12 @@ def compare_asm_block_asm_format(old_block, new_block, contract_name="example"):
     old_sfs_dict = compute_original_sfs_with_simplifications(old_instructions, old_block.getSourceStack(),
                                                              contract_name, old_block.getBlockId(),
                                                              old_block.get_is_init_block())["syrup_contract"]
-    print("compare_asm_block_asm_format OLD", old_sfs_dict)
-
     new_instructions = preprocess_instructions(new_block.getInstructions())
 
 
     new_sfs_dict = compute_original_sfs_with_simplifications(new_instructions, new_block.getSourceStack(),
                                                              contract_name, new_block.getBlockId(),
                                                              new_block.get_is_init_block())["syrup_contract"]
-    print("compare_asm_block_asm_format NEW:", old_sfs_dict, new_sfs_dict)
 
     final_comparison = verify_block_from_list_of_sfs(old_sfs_dict, new_sfs_dict)
 
