@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import os
 import sys
-sys.path.append("../")
+sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 import glob
 import pathlib
 import pandas as pd
@@ -11,7 +11,7 @@ import resource
 from global_params.paths import gasol_exec, log_file, oms_exec, project_path, smt_encoding_path, gasol_path
 import re
 
-parent_directory = project_path + "/examples/jsons-solc"
+parent_directory = project_path + "/examples/prueba"
 final_directory = project_path + "/results/"
 
 def run_command(cmd):
@@ -33,13 +33,12 @@ if __name__ == "__main__":
 
     row_list = []
     for asm_json in glob.glob(parent_directory + "/*.json_solc"):
-        print("Analyzing " + asm_json)
-        csv_row = {'name': asm_json.split("/")[-1].rstrip(".json_solc")}
+        contract_name = asm_json.split("/")[-1].rstrip(".json_solc")
+        csv_row = {'name': contract_name}
         try:
-            run_command(gasol_exec + " " + asm_json + " -tout 1")
+            run_command(gasol_exec + " " + asm_json + " -log ")
             sol_output = run_command(gasol_exec + " " + asm_json + " " + "-optimize-gasol-from-log-file " +
-                                     gasol_path + "verification.log")
-            print("Analyzing oms")
+                                     gasol_path + contract_name + ".log")
             _, oms_time = run_and_measure_command(oms_exec + " " + smt_encoding_path + "verify_oms.smt2")
 
             if re.search("Solution generated from log file has been verified correctly", sol_output):

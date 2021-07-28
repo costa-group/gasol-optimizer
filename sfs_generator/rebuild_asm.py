@@ -1,11 +1,4 @@
 #!/usr/bin/env python3
-import argparse
-import json
-import sys
-import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-import sfs_generator.parser_asm
-from deepdiff import DeepDiff
 
 def rebuild_asm_bytecode(asm_bytecode):
     json_bytecode = {"begin": asm_bytecode.getBegin(), "end": asm_bytecode.getEnd(), "name": asm_bytecode.getDisasm(),
@@ -81,21 +74,3 @@ def rebuild_asm(asm_json):
     final_asm["contracts"] = contracts
 
     return final_asm
-
-if __name__ == '__main__':
-    print(sys.path)
-    ap = argparse.ArgumentParser(description='Backend of GASOL tool')
-    ap.add_argument('input_path', help='Path to input file that contains the asm')
-
-    args = ap.parse_args()
-    asm = sfs_generator.parser_asm.parse_asm(args.input_path)
-    final_json = rebuild_asm(asm)
-
-    with open(args.input_path) as f:
-        data = json.load(f)
-
-    diff = DeepDiff(data, final_json)
-    print(diff)
-
-    #with open("prueba.json", 'w') as f:
-    #    f.write(json.dumps(final_json))

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import os
 import sys
-sys.path.append("../")
+sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 import glob
 import pathlib
 import pandas as pd
@@ -38,7 +38,7 @@ if __name__ == "__main__":
         contract_name = asm_json.split("/")[-1].rstrip(".json_solc")
         csv_row = {'name': contract_name}
         try:
-            solution_output, total_time = run_and_measure_command(gasol_exec + " " + asm_json + " -tout 1")
+            solution_output, total_time = run_and_measure_command(gasol_exec + " " + asm_json)
 
             if re.search("Optimized bytecode has been checked successfully", solution_output):
                 csv_row['verified_correctly'] = True
