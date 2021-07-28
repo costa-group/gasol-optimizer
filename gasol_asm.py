@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import argparse
+import collections
 import json
 import os
 import sys
@@ -25,6 +26,7 @@ from utils import isYulInstruction, compute_stack_size
 from copy import deepcopy
 from rebuild_asm import rebuild_asm
 from verification.sfs_verify import verify_block_from_list_of_sfs
+from sfs_generator.utils import compute_number_of_instructions_in_asm_json_per_file
 
 def clean_dir():
     ext = ["rbr", "csv", "sol", "bl", "disasm", "json"]
@@ -99,6 +101,7 @@ def compute_original_sfs_with_simplifications(instructions, stack_size, cname, b
                                           preffix=prefix, simplification=True)
 
     sfs_dict = get_sfs_dict()
+    print("compute_original_sfs_with_simplifications" ,sfs_dict["syrup_contract"])
 
     return sfs_dict
 
@@ -113,7 +116,7 @@ def optimize_block(sfs_dict, timeout):
         return []
 
     block_solutions = []
-    print(sfs_dict['syrup_contract'])
+    print("optimize_block block", sfs_dict['syrup_contract'])
     # SFS dict of syrup contract contains all sub-blocks derived from a block after splitting
     for block_name in sfs_dict['syrup_contract']:
         sfs_block = sfs_dict['syrup_contract'][block_name]
@@ -469,29 +472,35 @@ def optimize_isolated_asm_block(block_name, timeout=10):
             opcodes.append(op)
 
         i+=1
-    print(opcodes)
+
     stack_size = compute_stack_size(opcodes)
     contract_name = block_name.split('/')[-1]
 
+    sfs_dict = compute_original_sfs_with_simplifications(opcodes, stack_size, contract_name, 0, False)
+
     for solver_output, block_name, current_cost, current_length, user_instr \
-        in optimize_block(opcodes,stack_size,contract_name,0, timeout, False):
+        in optimize_block(sfs_dict, timeout):
 
-        # We weren't able to find a solution using the solver, so we just update the gas consumption
-        if check_solver_output_is_correct(solver_output):
+        # We weren't able to find a solution using the solver, so we just update
+        if not check_solver_output_is_correct(solver_output):
+            print("The solver has not been able to find a solution for sub block " + block_name)
+            continue
 
-            opcodes_theta_dict, instruction_theta_dict, gas_theta_dict = read_initial_dicts_from_files(contract_name,
-                                                                                                       "block0")
+        bs = sfs_dict['syrup_contract'][block_name]['max_sk_sz']
 
-            instruction_output, _, pushed_output, total_gas = \
-                generate_info_from_solution(solver_output, opcodes_theta_dict, instruction_theta_dict,
-                                            gas_theta_dict)
+        _, instruction_theta_dict, opcodes_theta_dict, gas_theta_dict, values_dict = generate_theta_dict_from_sequence(bs, user_instr)
 
-            sol = generate_disasm_sol_from_output(contract_name, solver_output,
-                                                  opcodes_theta_dict, instruction_theta_dict, gas_theta_dict)
-            print("OPTIMIZED BLOCK: "+str(sol))
+        instruction_output, _, pushed_output, optimized_cost = \
+            generate_info_from_solution(solver_output, opcodes_theta_dict, instruction_theta_dict,
+                                        gas_theta_dict, values_dict)
 
-        else:
-            print("The solver has not been able to find a better solution")
+        sol = generate_disasm_sol_from_output(contract_name, solver_output,
+                                              opcodes_theta_dict, instruction_theta_dict, gas_theta_dict)
+
+        print("Estimated previous cost: " + str(current_cost))
+        print("Estimated new cost: " + str(optimized_cost))
+        print("Optimized sequence: " +str(sol))
+
 
 
 # Given an asm_block and its contract name, returns the asm block after the optimization
@@ -503,23 +512,22 @@ def optimize_asm_block_asm_format(block, contract_name, timeout):
     new_block = deepcopy(block)
 
     # Optimized blocks. When a block is not optimized, None is pushed to the list.
-    optimized_blocks = []
+    optimized_blocks = {}
     print(block.split_in_sub_blocks())
 
     log_dicts = {}
 
     instructions = preprocess_instructions(bytecodes)
-    print(instructions)
 
     sfs_dict = compute_original_sfs_with_simplifications(instructions,stack_size,contract_name, block_id, is_init_block)
-
+    print("optimize_asm_block_asm_format", sfs_dict["syrup_contract"])
 
     for solver_output, block_name, current_cost, current_length, user_instr \
             in optimize_block(sfs_dict, timeout):
 
         # We weren't able to find a solution using the solver, so we just update
         if not check_solver_output_is_correct(solver_output):
-            optimized_blocks.append(None)
+            optimized_blocks[block_name] = None
             continue
 
         bs = sfs_dict['syrup_contract'][block_name]['max_sk_sz']
@@ -530,16 +538,19 @@ def optimize_asm_block_asm_format(block, contract_name, timeout):
             generate_info_from_solution(solver_output, opcodes_theta_dict, instruction_theta_dict,
                                         gas_theta_dict, values_dict)
 
-        if current_cost > optimized_cost:
-            print(solver_output)
-            new_sub_block = generate_sub_block_asm_representation_from_output(solver_output, opcodes_theta_dict, instruction_theta_dict,
+        # FIXME: Temporary change for experimental purposes: instead of only adding the truly optimized blocks, we consider all.
+        # This is done due to interblock optimization not well defined
+        # if current_cost > optimized_cost:
+        new_sub_block = generate_sub_block_asm_representation_from_output(solver_output, opcodes_theta_dict, instruction_theta_dict,
                                                               gas_theta_dict, values_dict)
-            optimized_blocks.append(new_sub_block)
-            log_dicts[contract_name + '_' + block_name] = generate_solution_dict(solver_output)
-        else:
-            optimized_blocks.append(None)
+        optimized_blocks[block_name] = new_sub_block
+        log_dicts[contract_name + '_' + block_name] = generate_solution_dict(solver_output)
+        # else:
+        #    optimized_blocks[block_name] = None
 
-    new_block.set_instructions_from_sub_blocks(optimized_blocks)
+    # We sort by block id and obtain the associated values in order
+    optimized_blocks_list = list(collections.OrderedDict(sorted(optimized_blocks.items(), key=lambda kv: kv[0])).values())
+    new_block.set_instructions_from_sub_blocks(optimized_blocks_list)
 
     return new_block, log_dicts
 
@@ -551,6 +562,7 @@ def compare_asm_block_asm_format(old_block, new_block, contract_name="example"):
     old_sfs_dict = compute_original_sfs_with_simplifications(old_instructions, old_block.getSourceStack(),
                                                              contract_name, old_block.getBlockId(),
                                                              old_block.get_is_init_block())["syrup_contract"]
+    print("compare_asm_block_asm_format OLD", old_sfs_dict)
 
     new_instructions = preprocess_instructions(new_block.getInstructions())
 
@@ -558,6 +570,7 @@ def compare_asm_block_asm_format(old_block, new_block, contract_name="example"):
     new_sfs_dict = compute_original_sfs_with_simplifications(new_instructions, new_block.getSourceStack(),
                                                              contract_name, new_block.getBlockId(),
                                                              new_block.get_is_init_block())["syrup_contract"]
+    print("compare_asm_block_asm_format NEW:", old_sfs_dict, new_sfs_dict)
 
     final_comparison = verify_block_from_list_of_sfs(old_sfs_dict, new_sfs_dict)
 
@@ -637,6 +650,9 @@ def optimize_asm_in_asm_format(file_name, output_file, timeout=10, log=False):
 
     new_asm = deepcopy(asm)
     new_asm.set_contracts(contracts)
+
+    print("Previous size:", compute_number_of_instructions_in_asm_json_per_file(asm))
+    print("New size:", compute_number_of_instructions_in_asm_json_per_file(new_asm))
 
     if log:
         with open(gasol_path + file_name_str + ".log" , "w") as log_f:
