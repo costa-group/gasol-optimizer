@@ -139,43 +139,29 @@ def generate_info_from_solution(solver_output, opcodes_theta_dict, instruction_t
     return instr_sol, opcode_sol, pushed_values_decimal, total_gas
 
 
-def generate_disasm_sol_from_output(contract_name, solver_output,
-                                    opcodes_theta_dict, instruction_theta_dict, gas_theta_dict):
-    init()
-    instr_sol, opcode_sol, pushed_values_decimal, total_gas = \
-        generate_info_from_solution(solver_output, opcodes_theta_dict, instruction_theta_dict, gas_theta_dict)
+def generate_disasm_sol_from_output(solver_output, opcodes_theta_dict, instruction_theta_dict,
+                                                      gas_theta_dict, values_dict):
 
-    pathlib.Path(gasol_path+"solutions/" + contract_name + "/disasm/").mkdir(parents=True, exist_ok=True)
-    pathlib.Path(gasol_path+"solutions/" + contract_name + "/evm/").mkdir(parents=True, exist_ok=True)
-    pathlib.Path(gasol_path+"solutions/" + contract_name + "/total_gas/").mkdir(parents=True, exist_ok=True)
-
+    instr_sol, _, pushed_values_decimal, _ = \
+        generate_info_from_solution(solver_output, opcodes_theta_dict, instruction_theta_dict, gas_theta_dict, values_dict)
 
     opcode_list = []
-    evm_list = []
-    
-    with open(opcodes_final_solution, 'w') as opcodes_file:
-        for position, opcode in opcode_sol.items():
-            push_match = re.match(re.compile('PUSH([0-9]+)'), instr_sol[position])
-            if push_match:
-                val2write = opcode + hex(int(pushed_values_decimal[position]))[2:]
-                opcodes_file.write(val2write)
-                evm_list.append(val2write)
-            else:
-                opcodes_file.write(opcode)
-                evm_list.append(opcode)
-                
-    with open(instruction_final_solution, 'w') as instruction_file:
-        for position, instr in instr_sol.items():
-            if re.match(re.compile('PUSH([0-9]+)'), instr):
-                val2write = instr + " " + pushed_values_decimal[position] + " "
-                instruction_file.write(val2write)
-                opcode_list.append(val2write)
-            else:
-                instruction_file.write(instr + " ")
-                opcode_list.append(instr + " ")
-                
-    with open(gas_final_solution, 'w') as gas_file:
-        gas_file.write(str(total_gas))
+    print(solver_output)
+    print(instr_sol)
+
+    for position, instr in instr_sol.items():
+
+        # Push match refers to usual PUSH instructions that are introduced as basic operations
+        push_match = re.match(re.compile('PUSH([0-9]+)'), instr)
+
+        # Basic stack instructions refer to those instruction that only manage the stack: SWAPk, POP or DUPk.
+        # These instructions just initialize each field in the asm format to -1
+        special_push_with_value_match = re.match(re.compile('PUSHIMMUTABLE|PUSHTAG|PUSH#\[\$]|PUSH\[\$]|PUSHDATA'), instr)
+        if push_match or special_push_with_value_match:
+            value = hex(int(pushed_values_decimal[position]))[2:]
+            opcode_list.append(instr + " 0x" + value)
+        else:
+            opcode_list.append(instr)
 
     return opcode_list
 

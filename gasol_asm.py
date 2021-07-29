@@ -125,101 +125,8 @@ def optimize_block(sfs_dict, timeout):
         solver_output = obtain_solver_output(block_name, "oms", timeout)
         block_solutions.append((solver_output, block_name, current_cost, current_size, user_instr))
 
-    return block_solutions    
+    return block_solutions
 
-
-def compute_original_sfs_without_simplifications(instructions,stack_size,cname,block_id,is_initial_block):
-    block_ins = list(filter(lambda x: x not in ["JUMP","JUMPI","JUMPDEST","tag","INVALID", "STOP","RETURN","INVALID"], instructions))
-
-    block_data = {"instructions": block_ins, "input": stack_size}
-
-    if is_initial_block:
-        prefix = "initial_"
-    else:
-        prefix = ""
-        
-    exit_code = ir_block.evm2rbr_compiler(contract_name=cname, block=block_data, block_id=block_id,
-                                          preffix = prefix,simplification = False)
-
-    sfs_dict = get_sfs_dict()
-
-    return sfs_dict
-
-
-# Given an asm_block and its contract name, returns the asm block after the optimization
-def optimize_asm_block(block, contract_name, timeout):
-    bytecodes = block.getInstructions()
-    stack_size = block.getSourceStack()
-    block_id = block.getBlockId()
-    is_init_block = block.get_is_init_block()
-
-    total_current_cost, total_optimized_cost = 0, 0
-    total_current_length, total_optimized_length = 0,0
-    optimized_blocks = []
-
-    log_dicts = {}
-
-    
-    instructions = preprocess_instructions(bytecodes)
-
-    sfs_original = None
-    
-    for solver_output, block_name, current_cost, current_length, _ \
-            in optimize_block(instructions, stack_size, contract_name, block_id, timeout, is_init_block):
-
-        # We weren't able to find a solution using the solver, so we just update the gas consumption
-        if not check_solver_output_is_correct(solver_output):
-
-            if sfs_original is None:
-                # Dict that contains a SFS per sub-block without applying rule simplifications. Useful for rebuilding
-                # solutions when no solution has been found.
-                sfs_original = compute_original_sfs_without_simplifications(instructions, stack_size, contract_name,
-                                                                            block_id, is_init_block)
-
-            sfs_block = sfs_original['syrup_contract'][block_name]
-            opcodes = sfs_block['init_info']['opcodes_seq']
-            push_values = sfs_block['init_info']['push_vals']
-
-            bs = sfs_block['max_sk_sz']
-            user_instr = sfs_block['init_info']['non_inter']
-            theta_dict, instruction_theta_dict, opcodes_theta_dict, gas_theta_dict = generate_theta_dict_from_sequence(bs, user_instr)
-
-            instr_sequence = obtain_log_representation_from_solution(opcodes, push_values, theta_dict)
-            generate_disasm_sol_from_log_block(contract_name, block_name, instr_sequence,
-                                               opcodes_theta_dict, instruction_theta_dict, gas_theta_dict)
-            total_current_cost += current_cost
-            total_optimized_cost += current_cost
-            total_current_length += current_length
-            total_optimized_length += current_length
-
-            # log_dicts[contract_name + '_' + block_name] = [1, *instr_sequence]
-
-            continue
-
-        # If it is a block in the initial code, then we add prefix "initial_"
-        # if block.get_is_init_block():
-        #    block_name = "initial_" + block_name
-
-        opcodes_theta_dict, instruction_theta_dict, gas_theta_dict = read_initial_dicts_from_files(contract_name, block_name)
-        instruction_output, _, pushed_output, total_gas = \
-            generate_info_from_solution(solver_output, opcodes_theta_dict, instruction_theta_dict, gas_theta_dict)
-
-        generate_disasm_sol_from_output(contract_name, solver_output,
-                                        opcodes_theta_dict, instruction_theta_dict, gas_theta_dict)
-
-        total_current_cost += current_cost
-        total_optimized_cost += min(current_cost, total_gas)
-
-        total_current_length += current_length
-        total_optimized_length += len(instruction_output)
-
-        if current_cost > total_gas:
-            optimized_blocks.append(block_name)
-
-        # Add 0 as first element to indicate block found has been optimized
-        log_dicts[contract_name + '_' + block_name] = generate_solution_dict(solver_output)
-
-    return total_current_cost, total_optimized_cost, optimized_blocks, total_current_length, total_optimized_length, log_dicts
 
 # Given the log file loaded in json format, current block and the contract name, generates three dicts: one that
 # contains the sfs from each block, the second one contains the sequence of instructions and
@@ -278,7 +185,7 @@ def check_log_file_is_correct(sfs_dict, instr_sequence_dict):
 
 
 # Given a dict with the sfs from each block and another dict that contains whether previous block was optimized or not,
-# generates the corresponding solution. All comprobations are assumed to have been done previously
+# generates the corresponding solution. All checks are assumed to have been done previously
 def optimize_asm_block_from_log(sfs_dict, instr_sequence_dict):
     for block_id in sfs_dict:
 
@@ -294,79 +201,6 @@ def optimize_asm_block_from_log(sfs_dict, instr_sequence_dict):
         _, instruction_theta_dict, opcodes_theta_dict, gas_theta_dict = generate_theta_dict_from_sequence(bs, user_instr)
         generate_disasm_sol_from_log_block(contract_name, block_id, instr_sequence,
                                         opcodes_theta_dict, instruction_theta_dict, gas_theta_dict)
-
-
-def optimize_asm(file_name, timeout=10):
-    asm = parse_asm(file_name)
-    # csv_statistics = []
-
-    csv_out = ["contract_name, saved_gas, old_cost, optimized_cost,old_length, optimized_length, saved_length, optimized_blocks"]
-    log_dicts = {}
-
-    for c in asm.getContracts():
-
-        # If it does not have the asm field, then we skip it, as there are no instructions to optimize
-        if not c.has_asm_field():
-            continue
-
-        # current_dict = {}
-        current_cost = 0
-        optimized_cost = 0
-        optimized_blocks = []
-        current_length = 0
-        optimized_length = 0
-
-        contract_name = (c.getContractName().split("/")[-1]).split(":")[-1]
-        init_code = c.getInitCode()
-
-        print("\nAnalyzing Init Code of: "+contract_name)
-        print("-----------------------------------------\n")
-        for block in init_code:
-            tuple_cost = optimize_asm_block(block, contract_name, timeout)
-            current_cost += tuple_cost[0]
-            optimized_cost += tuple_cost[1]
-            optimized_blocks.extend(tuple_cost[2])
-            current_length += tuple_cost[3]
-            optimized_length += tuple_cost[4]
-            log_dicts.update(tuple_cost[5])
-
-        print("\nAnalyzing Runtime Code of: "+contract_name)
-        print("-----------------------------------------\n")
-        for identifier in c.getDataIds():
-            blocks = c.getRunCodeOf(identifier)
-            for block in blocks:
-                tuple_cost = optimize_asm_block(block, contract_name, timeout)
-                current_cost += tuple_cost[0]
-                optimized_cost += tuple_cost[1]
-                optimized_blocks.extend(tuple_cost[2])
-                current_length += tuple_cost[3]
-                optimized_length += tuple_cost[4]
-                log_dicts.update(tuple_cost[5])
-
-        saved_gas = current_cost - optimized_cost
-        saved_length = current_length - optimized_length
-                
-        new_line = [contract_name,str(saved_gas),str(current_cost),str(optimized_cost),str(current_length),
-                    str(optimized_length),str(saved_length),str(optimized_blocks)]
-        csv_out.append(",".join(new_line))
-        # current_dict['old_cost'] = current_cost
-        # current_dict['optimized_cost'] = optimized_cost
-        # current_dict['contract_name'] = contract_name
-        # current_dict['optimized_blocks'] = optimized_blocks
-        # current_dict['saved_gas'] = current_cost - optimized_cost
-        # current_dict['old_length'] = current_length
-        # current_dict['optimized_length'] = optimized_length
-        # current_dict['saved_length'] = current_length - optimized_length
-        # csv_statistics.append(current_dict)
-
-    if "solutions" not in os.listdir(gasol_path):
-        os.mkdir(gasol_path+"solutions")
-
-    with open(csv_file,'w') as f:
-        f.write("\n".join(csv_out))
-
-    with open(log_file, "w") as log_f:
-        json.dump(log_dicts, log_f)
 
 
 def optimize_asm_from_log(file_name, json_log):
@@ -467,10 +301,11 @@ def optimize_isolated_asm_block(block_name, timeout=10):
         i+=1
 
     stack_size = compute_stack_size(opcodes)
+    print(opcodes)
     contract_name = block_name.split('/')[-1]
 
-    sfs_dict = compute_original_sfs_with_simplifications(opcodes, stack_size, contract_name, 0, False)
-
+    sfs_dict = compute_original_sfs_with_simplifications(opcodes, stack_size, contract_name, 0, False)["syrup_contract"]
+    print(sfs_dict)
     for solver_output, block_name, current_cost, current_length, user_instr \
         in optimize_block(sfs_dict, timeout):
 
@@ -479,7 +314,7 @@ def optimize_isolated_asm_block(block_name, timeout=10):
             print("The solver has not been able to find a solution for sub block " + block_name)
             continue
 
-        bs = sfs_dict['syrup_contract'][block_name]['max_sk_sz']
+        bs = sfs_dict[block_name]['max_sk_sz']
 
         _, instruction_theta_dict, opcodes_theta_dict, gas_theta_dict, values_dict = generate_theta_dict_from_sequence(bs, user_instr)
 
@@ -487,8 +322,7 @@ def optimize_isolated_asm_block(block_name, timeout=10):
             generate_info_from_solution(solver_output, opcodes_theta_dict, instruction_theta_dict,
                                         gas_theta_dict, values_dict)
 
-        sol = generate_disasm_sol_from_output(contract_name, solver_output,
-                                              opcodes_theta_dict, instruction_theta_dict, gas_theta_dict)
+        sol = generate_disasm_sol_from_output(solver_output, opcodes_theta_dict, instruction_theta_dict, gas_theta_dict, values_dict)
 
         print("Estimated previous cost: " + str(current_cost))
         print("Estimated new cost: " + str(optimized_cost))
@@ -571,8 +405,6 @@ def optimize_asm_block_asm_format(block, contract_name, timeout):
             generate_info_from_solution(solver_output, opcodes_theta_dict, instruction_theta_dict,
                                         gas_theta_dict, values_dict)
 
-        # FIXME: Temporary change for experimental purposes: instead of only adding the truly optimized blocks, we consider all.
-        # This is done due to interblock optimization not well defined
         if current_cost > optimized_cost:
             new_sub_block = generate_sub_block_asm_representation_from_output(solver_output, opcodes_theta_dict, instruction_theta_dict,
                                                               gas_theta_dict, values_dict)
@@ -599,6 +431,7 @@ def optimize_asm_block_asm_format(block, contract_name, timeout):
     if len(asm_sub_blocks) == 1:
         if not sfs_dict:
             optimized_blocks[block_name] = []
+            log_dicts[contract_name + '_' + block_name] = []
 
         optimized_blocks_list = list(optimized_blocks.values())
 
@@ -615,6 +448,7 @@ def optimize_asm_block_asm_format(block, contract_name, timeout):
             ids_not_in_dict = set(range(number_of_asm_sub_blocks)).difference(ids_in_dict)
             for elem in ids_not_in_dict:
                 optimized_blocks[block_name + "." + str(elem)] = []
+                log_dicts[contract_name + '_' + block_name + "." + str(elem)] = []
 
         optimized_blocks_list = list(collections.OrderedDict(
             sorted(optimized_blocks.items(), key=lambda kv: int((kv[0]).replace(block_name + ".", '')))).values())
