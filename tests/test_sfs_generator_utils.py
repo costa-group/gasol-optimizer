@@ -14,7 +14,7 @@ class TestComputeNumberOfInstructions(unittest.TestCase):
         input_path = project_path + "/examples/jsons-solc/0x7aa21657E549943089bfA6547465b910c6b89c98.json_solc"
         asm = parse_asm(input_path)
         number_of_instructions = compute_number_of_instructions_in_asm_json_per_file(asm)
-        self.assertEqual(number_of_instructions, 46)
+        self.assertEqual(number_of_instructions, 9)
 
 
 if __name__ == '__main__':

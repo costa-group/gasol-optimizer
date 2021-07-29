@@ -38,14 +38,6 @@ if __name__ == "__main__":
         contract_name = asm_json.split("/")[-1].rstrip(".json_solc")
         csv_row = {'name': contract_name}
         try:
-            solution_output, total_time = run_and_measure_command(gasol_exec + " " + asm_json)
-
-            if re.search("Optimized bytecode has been checked successfully", solution_output):
-                csv_row['verified_correctly'] = True
-            else:
-                csv_row['verified_correctly'] = False
-
-            csv_row['total_time'] = round(total_time, 3)
             old_asm = parse_asm(asm_json)
             new_asm = parse_asm(contract_name + "_optimized.json_solc")
             csv_row['old_size'] = compute_number_of_instructions_in_asm_json_per_file(old_asm)
@@ -56,8 +48,7 @@ if __name__ == "__main__":
             csv_row['correct'] = False
 
         row_list.append(csv_row)
-    df = pd.DataFrame(row_list, columns=['name', 'verified_correctly', 'total_time', 'old_size',
-                                         'new_size', 'size_relation', 'correct'])
+    df = pd.DataFrame(row_list, columns=['name', 'old_size', 'new_size', 'size_relation', 'correct'])
 
-    csv_file = final_directory + "size_comparison.csv"
+    csv_file = final_directory + "size_comparison_only_size.csv"
     df.to_csv(csv_file)
