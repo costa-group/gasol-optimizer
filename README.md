@@ -74,8 +74,8 @@ C. An optional log file can be generated when executing GASOL on an asm json fil
 ./gasol_asm.py asmjson_filename --generate-log
 ```
 
-This log file is generated to ensure the same optimization output is obtained 
-if provided when invoking GASOL. This feature has been included for verification purposes in Etherscan.
+It ensures that the same optimization output is obtained 
+if the log file is provided when invoking GASOL. This feature has been included for verification purposes in Etherscan.
 It is stored in /tmp/gasol/*asmjson_filename*.log. In order to execute GASOL providing a log file, 
 run the following command from the root directory of the repository:
 
