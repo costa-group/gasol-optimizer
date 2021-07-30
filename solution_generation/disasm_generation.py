@@ -169,7 +169,7 @@ def generate_disasm_sol_from_output(solver_output, opcodes_theta_dict, instructi
 # in plain text, the sequence of instructions converted to hexadecimal, the pushed values corresponding to push
 # opcodes and an int that contains the gas cost of this solution.
 def generate_info_from_sequence(instr_sequence, opcodes_theta_dict,
-                                instruction_theta_dict, gas_theta_dict):
+                                instruction_theta_dict, gas_theta_dict, values_dict):
     instr_sol = {}
     opcode_sol = {}
     pushed_values_decimal = {}
@@ -186,6 +186,8 @@ def generate_info_from_sequence(instr_sequence, opcodes_theta_dict,
             instr_sol[instruction_position] = instruction_theta_dict[sequence_elem]
             opcode_sol[instruction_position] = opcodes_theta_dict[sequence_elem]
             total_gas += gas_theta_dict[sequence_elem]
+            if values_dict.get(sequence_elem, None) is not None:
+                pushed_values_decimal[instruction_position] = values_dict[sequence_elem]
         # Otherwise, it represents a theta value
         else:
             instr_sol[instruction_position] = "PUSH"
@@ -218,58 +220,12 @@ def obtain_log_representation_from_solution(opcodes, pushed_values, theta_dict):
         i += 1
     return instr_seq
 
-
-# Given a sequence of instructions and the corresponding dicts, writes the final solution in the corresponding folders.
-def generate_disasm_sol_from_log_block(contract_name, block_name, instr_sequence,
-                                       opcodes_theta_dict, instruction_theta_dict, gas_theta_dict):
-    init()
-    generate_file_names(contract_name, block_name)
-    instr_sol, opcode_sol, pushed_values_decimal, total_gas = \
-        generate_info_from_sequence(instr_sequence, opcodes_theta_dict, instruction_theta_dict, gas_theta_dict)
-
-    pathlib.Path(gasol_path + "solutions/" + contract_name + "/disasm/").mkdir(parents=True, exist_ok=True)
-    pathlib.Path(gasol_path + "solutions/" + contract_name + "/evm/").mkdir(parents=True, exist_ok=True)
-    pathlib.Path(gasol_path + "solutions/" + contract_name + "/total_gas/").mkdir(parents=True, exist_ok=True)
-
-    opcode_list = []
-    evm_list = []
-
-    with open(opcodes_final_solution, 'w') as opcodes_file:
-        for position, opcode in opcode_sol.items():
-            push_match = re.match(re.compile('PUSH([0-9]+)'), instr_sol[position])
-            if push_match:
-                val2write = opcode + hex(int(pushed_values_decimal[position]))[2:]
-                opcodes_file.write(val2write)
-                evm_list.append(val2write)
-            else:
-                opcodes_file.write(opcode)
-                evm_list.append(opcode)
-
-    with open(instruction_final_solution, 'w') as instruction_file:
-        for position, instr in instr_sol.items():
-            if re.match(re.compile('PUSH([0-9]+)'), instr):
-                val2write = instr + " " + str(pushed_values_decimal[position]) + " "
-                instruction_file.write(val2write)
-                opcode_list.append(val2write)
-            else:
-                instruction_file.write(instr + " ")
-                opcode_list.append(instr + " ")
-
-    with open(gas_final_solution, 'w') as gas_file:
-        gas_file.write(str(total_gas))
-
-    return opcode_list
-
-
-# Given the output obtained from executing the corresponding SMT solver and the corresponding dicts, it generates
-# the optimized sub-block following the AsmBytecode format.
-def generate_sub_block_asm_representation_from_output(solver_output, opcodes_theta_dict, instruction_theta_dict,
-                                                      gas_theta_dict, values_dict):
-
+# Given a dict of instructions in assembly format (PUSH20, DUP1, ADD, ...) with its corresponding position in the sequence
+# as keys and a similar representation for the pushed values in decimal format,
+# it generates the optimized sub-block following the ASM bytecode format.
+def generate_sub_block_asm_representation_from_instructions(instr_sol, pushed_values_decimal):
     sub_block_instructions_asm = []
 
-    instr_sol, _, pushed_values_decimal, _ = \
-        generate_info_from_solution(solver_output, opcodes_theta_dict, instruction_theta_dict, gas_theta_dict, values_dict)
     for position, instr in instr_sol.items():
 
         # Push match refers to usual PUSH instructions that are introduced as basic operations
@@ -277,13 +233,38 @@ def generate_sub_block_asm_representation_from_output(solver_output, opcodes_the
 
         # Basic stack instructions refer to those instruction that only manage the stack: SWAPk, POP or DUPk.
         # These instructions just initialize each field in the asm format to -1
-        special_push_with_value_match = re.match(re.compile('PUSHIMMUTABLE|PUSHTAG|PUSH#\[\$]|PUSH\[\$]|PUSHDATA'), instr)
+        special_push_with_value_match = re.match(re.compile('PUSHIMMUTABLE|PUSHTAG|PUSH#\[\$]|PUSH\[\$]|PUSHDATA'),
+                                                 instr)
         if push_match:
             value = hex(int(pushed_values_decimal[position]))[2:]
-            sub_block_instructions_asm.append(AsmBytecode(-1,-1,-1,"PUSH",value))
+            sub_block_instructions_asm.append(AsmBytecode(-1, -1, -1, "PUSH", value))
         elif special_push_with_value_match:
             value = hex(int(pushed_values_decimal[position]))[2:]
             sub_block_instructions_asm.append(AsmBytecode(-1, -1, -1, instr, value))
         else:
-            sub_block_instructions_asm.append(AsmBytecode(-1,-1,-1,instr,None))
+            sub_block_instructions_asm.append(AsmBytecode(-1, -1, -1, instr, None))
     return sub_block_instructions_asm
+
+
+# Given a sequence of instructions and the corresponding dicts, it generates the optimized sub-block following the
+# ASM bytecode format.
+def generate_sub_block_asm_representation_from_log(instr_sequence,
+                                       opcodes_theta_dict, instruction_theta_dict, gas_theta_dict, values_dict):
+
+    instr_sol, _, pushed_values_decimal, _ = \
+        generate_info_from_sequence(instr_sequence, opcodes_theta_dict, instruction_theta_dict, gas_theta_dict, values_dict)
+
+    return generate_sub_block_asm_representation_from_instructions(instr_sol, pushed_values_decimal)
+
+
+
+
+# Given the output obtained from executing the corresponding SMT solver and the corresponding dicts, it generates
+# the optimized sub-block following the AsmBytecode format.
+def generate_sub_block_asm_representation_from_output(solver_output, opcodes_theta_dict, instruction_theta_dict,
+                                                      gas_theta_dict, values_dict):
+
+    instr_sol, _, pushed_values_decimal, _ = \
+        generate_info_from_solution(solver_output, opcodes_theta_dict, instruction_theta_dict, gas_theta_dict, values_dict)
+
+    return generate_sub_block_asm_representation_from_instructions(instr_sol, pushed_values_decimal)

@@ -18,7 +18,7 @@ from gasol_optimization import get_sfs_dict
 from gasol_encoder import execute_syrup_backend, generate_theta_dict_from_sequence, execute_syrup_backend_combined
 from solver_output_generation import obtain_solver_output
 from disasm_generation import generate_info_from_solution, generate_disasm_sol_from_output, \
-    read_initial_dicts_from_files, generate_disasm_sol_from_log_block, obtain_log_representation_from_solution,\
+    read_initial_dicts_from_files, generate_sub_block_asm_representation_from_log, obtain_log_representation_from_solution,\
     generate_sub_block_asm_representation_from_output
 from solver_solution_verify import check_solver_output_is_correct, generate_solution_dict
 from global_params.paths import *
@@ -186,11 +186,28 @@ def check_log_file_is_correct(sfs_dict, instr_sequence_dict):
 
 # Given a dict with the sfs from each block and another dict that contains whether previous block was optimized or not,
 # generates the corresponding solution. All checks are assumed to have been done previously
-def optimize_asm_block_from_log(sfs_dict, instr_sequence_dict):
+def optimize_asm_block_from_log(block, sfs_dict, instr_sequence_dict):
+    new_block = deepcopy(block)
+    optimized_blocks = {}
+    is_init_block = block.get_is_init_block()
+    block_id = block.getBlockId()
+
+    if is_init_block:
+        block_name = "initial_block" + str(block_id)
+    else:
+        block_name = "block" + str(block_id)
+
     for block_id in sfs_dict:
 
-        # By naming convention, contract name always correspond to first string concatenated with "_"
-        contract_name = block_id.split("_")[0]
+        # We obtain the subindex from the block (if any)
+        block_sub_index_str = block_id.split(block_name)[-1]
+
+        # No subindex. By default, assigned to 0
+        if block_sub_index_str == '':
+            block_sub_index = 0
+        else:
+            # we must ignore the point . (first chatr in block_sub_index_str)
+            block_sub_index = int(block_sub_index_str[1:])
 
         sfs_block = sfs_dict[block_id]
 
@@ -198,53 +215,92 @@ def optimize_asm_block_from_log(sfs_dict, instr_sequence_dict):
 
         bs = sfs_block['max_sk_sz']
         instr_sequence = instr_sequence_dict[block_id]
-        _, instruction_theta_dict, opcodes_theta_dict, gas_theta_dict = generate_theta_dict_from_sequence(bs, user_instr)
-        generate_disasm_sol_from_log_block(contract_name, block_id, instr_sequence,
-                                        opcodes_theta_dict, instruction_theta_dict, gas_theta_dict)
+        _, instruction_theta_dict, opcodes_theta_dict, gas_theta_dict, values_dict = \
+            generate_theta_dict_from_sequence(bs, user_instr)
+
+        asm_sub_block = generate_sub_block_asm_representation_from_log(instr_sequence, opcodes_theta_dict,
+                                                                       instruction_theta_dict, gas_theta_dict, values_dict)
+        optimized_blocks[block_sub_index] = asm_sub_block
+
+    asm_sub_blocks = list(filter(lambda x: isinstance(x, list), block.split_in_sub_blocks()))
+    optimized_blocks_list = [None if i not in optimized_blocks else optimized_blocks[i] for i in range(len(asm_sub_blocks))]
+
+    new_block.set_instructions_from_sub_blocks(optimized_blocks_list)
+    new_block.compute_stack_size()
+    return new_block
 
 
-def optimize_asm_from_log(file_name, json_log):
+def optimize_asm_from_log(file_name, json_log, output_file):
     asm = parse_asm(file_name)
 
     # Blocks from all contracts are checked together. Thus, we first will obtain the needed
     # information from each block
     sfs_dict, instr_sequence_dict, file_ids = {}, {}, set()
+    contracts = []
+
+    file_name_str = file_name.split("/")[-1].split(".")[0]
+
+    # If not output file provided, then we create a name by default.
+    if output_file is None:
+        output_file = file_name_str + "_optimized_from_log.json_solc"
 
     for c in asm.getContracts():
 
+        new_contract = deepcopy(c)
+
         # If it does not have the asm field, then we skip it, as there are no instructions to optimize
         if not c.has_asm_field():
+            contracts.append(new_contract)
             continue
 
         contract_name = (c.getContractName().split("/")[-1]).split(":")[-1]
         init_code = c.getInitCode()
+        init_code_blocks = []
 
         print("\nAnalyzing Init Code of: " + contract_name)
         print("-----------------------------------------\n")
         for block in init_code:
             sfs_final_block, instr_sequence_dict_block, block_ids = generate_sfs_dicts_from_log(block, contract_name, json_log)
+            new_block = optimize_asm_block_from_log(block, sfs_final_block, instr_sequence_dict_block)
             sfs_dict.update(sfs_final_block)
             instr_sequence_dict.update(instr_sequence_dict_block)
             file_ids.update(block_ids)
+            init_code_blocks.append(new_block)
+
+        new_contract.setInitCode(init_code_blocks)
 
         print("\nAnalyzing Runtime Code of: " + contract_name)
         print("-----------------------------------------\n")
         for identifier in c.getDataIds():
             blocks = c.getRunCodeOf(identifier)
+
+            run_code_blocks = []
+
             for block in blocks:
                 sfs_final_block, instr_sequence_dict_block, block_ids = generate_sfs_dicts_from_log(block, contract_name, json_log)
+                new_block = optimize_asm_block_from_log(block, sfs_final_block, instr_sequence_dict_block)
                 sfs_dict.update(sfs_final_block)
                 instr_sequence_dict.update(instr_sequence_dict_block)
                 file_ids.update(block_ids)
-                
+                run_code_blocks.append(new_block)
+
+            new_contract.setRunCode(identifier, run_code_blocks)
+
+        contracts.append(new_contract)
+
     # We check ids in json log file matches the ones generated from the source file
     if not set(json_log.keys()).issubset(file_ids):
         print("Log file does not match source file")
     else:
-        correct = check_log_file_is_correct(sfs_dict, instr_sequence_dict)
+        not_empty = {k : v for k,v in sfs_dict.items() if v != []}
+        correct = check_log_file_is_correct(not_empty, instr_sequence_dict)
         if correct:
-            optimize_asm_block_from_log(sfs_dict, instr_sequence_dict)
             print("Solution generated from log file has been verified correctly")
+            new_asm = deepcopy(asm)
+            new_asm.set_contracts(contracts)
+
+            with open(output_file, 'w') as f:
+                f.write(json.dumps(rebuild_asm(new_asm)))
         else:
             print("Log file does not contain a valid solution")
 
@@ -301,11 +357,9 @@ def optimize_isolated_asm_block(block_name, timeout=10):
         i+=1
 
     stack_size = compute_stack_size(opcodes)
-    print(opcodes)
     contract_name = block_name.split('/')[-1]
 
     sfs_dict = compute_original_sfs_with_simplifications(opcodes, stack_size, contract_name, 0, False)["syrup_contract"]
-    print(sfs_dict)
     for solver_output, block_name, current_cost, current_length, user_instr \
         in optimize_block(sfs_dict, timeout):
 
@@ -433,7 +487,7 @@ def optimize_asm_block_asm_format(block, contract_name, timeout):
             optimized_blocks[block_name] = []
             log_dicts[contract_name + '_' + block_name] = []
 
-        optimized_blocks_list = list(optimized_blocks.values())
+        optimized_blocks_list_with_intra_block_consideration = list(optimized_blocks.values())
 
     # Case more than one sub blocks: several intermediate sub blocks may have been skipped.
     # They can be identified from those sub blocks numbers that are not present in the sfs dict
@@ -453,9 +507,15 @@ def optimize_asm_block_asm_format(block, contract_name, timeout):
         optimized_blocks_list = list(collections.OrderedDict(
             sorted(optimized_blocks.items(), key=lambda kv: int((kv[0]).replace(block_name + ".", '')))).values())
 
-    # We sort by block id and obtain the associated values in order
-    optimized_blocks_list_with_intra_block_consideration = \
-        filter_optimized_blocks_by_intra_block_optimization(asm_sub_blocks, optimized_blocks_list)
+        # We sort by block id and obtain the associated values in order
+        optimized_blocks_list_with_intra_block_consideration = \
+            filter_optimized_blocks_by_intra_block_optimization(asm_sub_blocks, optimized_blocks_list)
+
+        # If a sub block was optimized but finally we have to skip that optimization, we have to remove the corresponding
+        # sub block information from the log dict. These sub blocks correspond to those that appeared at the log dict
+        # but its corresponding block optimized in the list is not None
+        log_dicts = {k : v for k,v in log_dicts.items() if optimized_blocks_list_with_intra_block_consideration[int(k.split(".")[-1])] is not None}
+
 
     new_block.set_instructions_from_sub_blocks(optimized_blocks_list_with_intra_block_consideration)
     new_block.compute_stack_size()
@@ -505,6 +565,7 @@ def optimize_asm_in_asm_format(file_name, output_file, timeout=10, log=False):
 
         # If it does not have the asm field, then we skip it, as there are no instructions to optimize
         if not c.has_asm_field():
+            contracts.append(new_contract)
             continue
 
         contract_name = (c.getContractName().split("/")[-1]).split(":")[-1]
@@ -588,9 +649,8 @@ if __name__ == '__main__':
     if args.log_path is not None:
         with open(args.log_path) as path:
             log_dict = json.load(path)
-            optimize_asm_from_log(args.input_path, log_dict)
+            optimize_asm_from_log(args.input_path, log_dict, args.output_path)
     elif not args.block:
-        # optimize_asm(args.input_path, args.tout)
         optimize_asm_in_asm_format(args.input_path, args.output_path, args.tout, args.log_flag)
     else:
         optimize_isolated_asm_block(args.input_path, args.tout)
