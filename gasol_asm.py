@@ -378,7 +378,8 @@ def optimize_isolated_asm_block(block_name, timeout=10):
 
         sol = generate_disasm_sol_from_output(solver_output, opcodes_theta_dict, instruction_theta_dict, gas_theta_dict, values_dict)
 
-        print("Estimated previous cost: " + str(current_cost))
+        print("Estimated initial cost: " + str(current_cost))
+        print("Initial sequence: " + str(opcodes))
         print("Estimated new cost: " + str(optimized_cost))
         print("Optimized sequence: " +str(sol))
 

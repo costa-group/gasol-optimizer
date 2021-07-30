@@ -44,10 +44,6 @@ def parse_data(json_path, var_initial_idx=0, with_simplifications=True):
         new_instr = copy.deepcopy(instr)
         new_instr['outpt_sk'] = list(map(lambda x: add_bars_and_index_to_string(x, var_initial_idx), instr['outpt_sk']))
         new_instr['inpt_sk'] = list(map(lambda x: add_bars_and_index_to_string(x, var_initial_idx), instr['inpt_sk']))
-
-        if len(list(filter(lambda x: x == "|s(2676)|", new_instr['outpt_sk']))) > 0:
-            print(instr, new_instr, data['vars'])
-
         new_user_instr.append(new_instr)
 
     initial_stack = list(map(lambda x: add_bars_and_index_to_string(x, var_initial_idx), data['src_ws']))
