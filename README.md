@@ -33,8 +33,8 @@ A. In order to execute GASOL on a asm json file, run the following command from 
 where asmjson_filename is the name of the file where the asm json is stored. A set of asm json files to test the prototype is available [here](https://github.com/costa-group/gasol-optimizer/tree/main/examples/jsons-solc). GASOL will analyze all basic blocks of the provided smart contracts. Note that it may take some time to finish the execution. 
 
 
-As a result of the optimization, another asm json with the optimized blocks is gen-
-erated. By default, this file is stored in the same folder from which the executable
+As a result of the optimization, another asm json with the optimized blocks is generated. 
+By default, this file is stored in the same folder from which the executable
 was invoked. Its file name corresponds to the initial asm json file name after adding
 the suffix *_optimized*. This output file can be specified using −o flag:
 
@@ -42,7 +42,7 @@ the suffix *_optimized*. This output file can be specified using −o flag:
 ./gasol_asm.py asmjson_filename −o solution_filename
 ```
 
-For instance, to execute GASOL on the smart contract stored in the solidity file examples/jsons-solc/0x20e7Efc18f4D03670EDC2FD86b840AB2D01E030D.json_solc with a timeout of 5 seconds per block run the following commands:
+For instance, to execute GASOL on the asm file examples/jsons-solc/0x20e7Efc18f4D03670EDC2FD86b840AB2D01E030D.json_solc with a timeout of 5 seconds per block run the following command:
 ```
 ./gasol_asm.py examples/jsons-solc/0x20e7Efc18f4D03670EDC2FD86b840AB2D01E030D.json_solc -tout 5
 ```
