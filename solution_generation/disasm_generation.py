@@ -146,8 +146,6 @@ def generate_disasm_sol_from_output(solver_output, opcodes_theta_dict, instructi
         generate_info_from_solution(solver_output, opcodes_theta_dict, instruction_theta_dict, gas_theta_dict, values_dict)
 
     opcode_list = []
-    print(solver_output)
-    print(instr_sol)
 
     for position, instr in instr_sol.items():
 
