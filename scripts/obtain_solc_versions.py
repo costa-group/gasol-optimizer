@@ -4,12 +4,9 @@ import sys
 sys.path.append("../")
 import glob
 import pathlib
-import pandas as pd
 import subprocess
 import shlex
-import resource
-from global_params.paths import gasol_exec, log_file, oms_exec, project_path, smt_encoding_path, gasol_path
-import re
+from global_params.paths import project_path
 
 parent_directory = project_path + "/examples/solidity"
 normal_directory = project_path + "/examples/jsons_solc_normal"

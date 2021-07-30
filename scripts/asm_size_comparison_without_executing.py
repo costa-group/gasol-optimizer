@@ -8,10 +8,9 @@ import pandas as pd
 import subprocess
 import shlex
 import resource
-from global_params.paths import gasol_exec, log_file, oms_exec, project_path, smt_encoding_path, gasol_path
+from global_params.paths import project_path
 from sfs_generator.parser_asm import parse_asm
 from sfs_generator.utils import compute_number_of_instructions_in_asm_json_per_file
-import re
 
 parent_directory = project_path + "/experiments/jsons_solc_noyul"
 final_directory = project_path + "/results_noyul/"
