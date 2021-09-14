@@ -46,7 +46,10 @@ def generate_solution_dict(solver_output):
 def check_solver_output_is_correct(solver_output):
     # Sat for OMS, Z3 and optimal for barcelogic.
     pattern1 = re.compile("sat|optimal")
+    pattern2 = re.compile("unsat")
     for line in solver_output.splitlines():
+        for _ in re.finditer(pattern2, line):
+            return False
         for _ in re.finditer(pattern1, line):
             return True
     return False

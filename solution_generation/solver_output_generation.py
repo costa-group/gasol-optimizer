@@ -1,25 +1,7 @@
-import os
 import shlex
 import subprocess
+from global_params.paths import *
 
-def init():
-    global project_path
-    project_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-
-    global tmp_costabs
-    tmp_costabs = "/tmp/gasol/"
-
-    global encoding_path
-    encoding_path = tmp_costabs + "smt_encoding/"
-
-    global z3_exec
-    z3_exec = project_path + "/bin/z3"
-
-    global bclt_exec
-    bclt_exec = project_path + "/bin/barcelogic"
-
-    global oms_exec
-    oms_exec = project_path + "/bin/optimathsat"
 
 
 def run_command(cmd):
@@ -44,7 +26,7 @@ def get_solver_to_execute(smt_file, solver, tout):
 # Calls syrup and computes the solution. Returns the raw output from the corresponding solver
 def generate_solution(block_name, solver, tout):
     # encoding_file = encoding_path+"encoding_Z3.smt2"
-    encoding_file = encoding_path + block_name + "_" + solver + ".smt2"
+    encoding_file = smt_encoding_path + block_name + "_" + solver + ".smt2"
 
     exec_command = get_solver_to_execute(encoding_file, solver, tout)
 
@@ -55,5 +37,4 @@ def generate_solution(block_name, solver, tout):
 
 
 def obtain_solver_output(block_name, solver, tout):
-    init()
     return generate_solution(block_name, solver, tout)

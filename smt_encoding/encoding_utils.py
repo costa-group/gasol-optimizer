@@ -67,7 +67,8 @@ def generate_stack_theta(bs):
 def generate_uninterpreted_theta(user_instr, initial_index):
     theta_comm = {}
     theta_non_comm = {}
-    for instr in user_instr:
+    # We need to sort to ensure indexis are always generated following the same convention
+    for instr in sorted(user_instr, key=lambda k: k['id']):
         if instr['commutative']:
             theta_comm[instr['id']] = initial_index
         else:
@@ -324,3 +325,18 @@ def generate_instr_map(user_instr, theta_stack, theta_comm, theta_non_comm):
         theta_dict_reversed[theta_value] = disasm
 
     return theta_dict_reversed
+
+
+# Given the user instructions and the theta dict, generates a dict with the theta values associated
+# to "uninterpreted" PUSH instructions (PUSH data, PUSH[$] ...) linked to the corresponding instruction id
+def generate_uninterpreted_push_map(user_instr, theta_dict):
+    theta_uninterpreted_push_dict = {}
+
+    for instr in user_instr:
+        id = instr['id']
+        theta_value = theta_dict[id]
+        value = instr.get('value', None)
+        if value is not None:
+            theta_uninterpreted_push_dict[theta_value] = value[0]
+
+    return theta_uninterpreted_push_dict

@@ -1,3 +1,4 @@
+import sfs_generator.opcodes as opcodes
 
 def toInt(a):
     elem = a.split("_")
@@ -109,3 +110,62 @@ def find_sublist(search_list, pattern):
     else:
         init = init-1
     return init,fin
+
+''' 
+Given a sequence of evm instructions as a list, it returns the
+minimum number of elements that needs to be located in the stack in
+orde to execute the sequence 
+'''
+
+def compute_stack_size(evm_instructions):
+    current_stack = 0
+    init_stack = 0
+    
+    for op in evm_instructions:
+        opcode_info = opcodes.get_opcode(op)
+
+        consumed_elements = opcode_info[1]
+        produced_elements = opcode_info[2]
+            
+        if consumed_elements > current_stack:
+            diff = consumed_elements - current_stack
+            init_stack +=diff
+            current_stack = current_stack+diff-consumed_elements+produced_elements
+        else:
+            current_stack = current_stack-consumed_elements+produced_elements
+
+    return init_stack
+
+
+'''
+Function that identifies the PUSH opcodes used in the yul translation that are not real evm opcodes.
+(PUSH tag, PUSHDEPLOYADDRESS, PUSH data...)
+'''
+def isYulInstruction(opcode):
+    if opcode.find("tag") ==-1 and opcode.find("#") ==-1 and opcode.find("$") ==-1 \
+            and opcode.find("data") ==-1 and opcode.find("DEPLOY") ==-1 and opcode.find("SIZE")==-1 and opcode.find("IMMUTABLE")==-1:
+        return False
+    else:
+        return True
+
+
+# Computes the number of bytecodes given an ASM json object
+def compute_number_of_instructions_in_asm_json_per_contract(asm_json):
+    contract_counter_dict = {}
+    for c in asm_json.getContracts():
+        number_instrs = 0
+        contract_name = (c.getContractName().split("/")[-1]).split(":")[-1]
+
+        for identifier in c.getDataIds():
+            blocks = c.getRunCodeOf(identifier)
+            for block in blocks:
+                number_instrs += len(list(filter(lambda x: x.getDisasm() != "tag", block.getInstructions())))
+
+        contract_counter_dict[contract_name] = number_instrs
+    return contract_counter_dict
+
+
+# Computes the number of bytecodes given an ASM json object
+def compute_number_of_instructions_in_asm_json_per_file(asm_json):
+    contract_counter_dict = compute_number_of_instructions_in_asm_json_per_contract(asm_json)
+    return sum(contract_counter_dict.values())
