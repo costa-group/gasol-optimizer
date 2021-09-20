@@ -4096,3 +4096,6 @@ def is_identity_map(source_stack,target_stack):
             return False
 
     return True
+
+def independence_storage():
+    pass
