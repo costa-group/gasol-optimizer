@@ -92,6 +92,32 @@ def init_globals():
 
     global already_considered
     already_considered = []
+
+    global sstore_seq
+    sstore_seq = []
+
+    global sstore_vars
+    sstore_vars = {}
+
+    global sstore_v_counter
+    sstore_v_counter = 0
+
+    #it stores when the sloads are executed
+    global sload_relative_pos
+    sload_relative_pos = {}
+
+    global mstore_seq
+    mstore_seq = []
+
+    global mstore_vars
+    mstore_vars = {}
+
+    global mstore_v_counter
+    mstore_v_counter = 0
+
+    #it stores when the sloads are executed
+    global mload_relative_pos
+    mload_relative_pos = {}
     
 def add_storage2split():
     global split_block
@@ -212,7 +238,7 @@ def contained_in_source_stack(v,instructions,source_stack):
 
     return contained
 
-
+#Here instructions = instrs+nops
 def get_encoding_init_block(instructions,source_stack):
     global s_dict
     global u_dict
@@ -412,13 +438,95 @@ def search_for_value_aux(var, instructions,source_stack,level,evaluate = True):
         
             s_dict[var] = u_var
 
+
+
+#We need to store the order in which the load instructions are
+#executed in order to stablish an order with the storage instructions.
+def relative_pos_load(funct,exp,u_var):
+    global sload_relative_pos
+    global mload_relative_pos
+
+    if funct == "sload":
+        pos = len(sload_relative_pos)
+        sload_relative_pos.insert(0,u_var)
+
+    if funct == "mload":
+        pos = len(mload_relative_pos)
+        mload_relative_pos.insert(0,u_var)
+
+
+            
+def generate_sstore_mstore(store_ins,instructions,source_stack):
+    level = 0
+    new_vars, funct = get_involved_vars(store_ins,"")
+
+    values = {}
+    for v in new_vars:
+
+        search_for_value_aux(v,instructions,source_stack,level)
+    
+        values[v] = s_dict[v]
+
+    exp_join = rebuild_expression(new_vars,funct,values,level)
+
+    #print("LLEGO AQUI SSTORE")
+    #print(exp_join)
+
+    return exp_join[1],exp_join[2]
+
+def generate_sload_mload(load_ins,instructions,source_stack):
+
+    level = 0
+    new_vars, funct = get_involved_vars(load_ins,"")
+    
+        
+    in_sourcestack = contained_in_source_stack(new_vars[0],instructions,source_stack)
+    
+    if in_sourcestack or is_integer(new_vars[0])!=-1:
+        if is_integer(new_vars[0])!=-1:
+            val = int(new_vars[0])
+        else:
+            val = new_vars[0]
+            #update_unary_func(funct,var,new_vars[0])
+
+        elem = ((new_vars[0],func),1)
+        new_uvar, defined = is_already_defined(elem)
+        return new_uvar,elem
+            
+    else:
+        if new_vars[0] not in zero_ary:
+            search_for_value_aux(new_vars[0],instructions,source_stack,level)
+            val = s_dict[new_vars[0]]
+        else:
+            val = new_vars[0]
+        #update_unary_func(funct,var,val)
+
+        elem = ((val,funct),1)
+        new_uvar, defined = is_already_defined(elem)
+        return new_uvar,elem
+
+
 def is_already_defined(elem):
     for u_var in u_dict.keys():
         if elem == u_dict[u_var]:
             return u_var, True
 
     return -1, False
-    
+
+def is_already_defined_storage(elem,location):
+
+    if location == "storage":
+        for var in sstore_vars.keys():
+            if elem == sstore_vars[var]:
+                return var, True
+
+    elif location == "memory":
+        for var in mstore_vars.keys():
+            if elem == mstore_vars[var]:
+                return var, True
+
+    return -1, False
+
 def update_unary_func(func,var,val,evaluate):
     global s_dict
     global u_dict
@@ -480,6 +588,31 @@ def get_involved_vars(instr,var):
         var_list.append(var0)
 
         funct = "sload"
+
+    elif instr.find("sstore(")!=-1:
+        instr_new = instr.strip("\n")
+        pos = instr_new.find("sstore(")
+        arg01 = instr[pos+7:-1]
+        var01 = arg01.split(",")
+        var0 = var01[0].strip()
+        var1 = var01[1].strip()
+        var_list.append(var0)
+        var_list.append(var1)
+
+        funct = "sstore"
+
+    elif instr.find("mstore(")!=-1:
+        instr_new = instr.strip("\n")
+        pos = instr_new.find("mstore(")
+        arg01 = instr[pos+7:-1]
+        var01 = arg01.split(",")
+        var0 = var01[0].strip()
+        var1 = var01[1].strip()
+        var_list.append(var0)
+        var_list.append(var1)
+
+        funct = "mstore"
+
         
     elif instr.find("timestamp")!=-1:
         var_list.append("timestamp")
@@ -1134,14 +1267,17 @@ def compute_binary(expression,level):
         exp_str_comm = str(funct)+" "+str(vals[1])+" "+str(vals[0])+","+str(level)
 
         val = evaluate_expression(funct,vals[0],vals[1])
-        
-        if funct in ["*","/","%"]:
-            gas_saved_op+=5
-        else:
-            gas_saved_op+=3
 
-        saved_push+=2
+
         if exp_str not in already_considered:
+
+            if funct in ["*","/","%"]:
+                gas_saved_op+=5
+            else:
+                gas_saved_op+=3
+
+            saved_push+=2
+            
             if (funct in ["+","*","and","or","xor","eq"]) and (exp_str_comm not in already_considered):
                 discount_op+=2
                 print("[RULE]: Evaluate expression "+str(expression))
@@ -1230,6 +1366,21 @@ def create_new_svar():
 
     return var
 
+def create_new_sstorevar():
+    global sstore_v_counter
+
+    var =  "sto"+str(sstore_v_counter)
+    sstore_v_counter+=1
+
+    return var
+
+def create_new_mstorevar():
+    global mstore_v_counter
+
+    var =  "mem"+str(mstore_v_counter)
+    mstore_v_counter+=1
+
+    return var
   
 def simplify_constants(opcodes_seq,user_def):
     for u in user_def:
@@ -1249,7 +1400,81 @@ def generate_encoding(instructions,variables,source_stack,simplification=True):
     for v in variables:
         s_dict = {}
         search_for_value(v,instructions_reverse, source_stack,simplification)
-        variable_content[v] = s_dict[v]    
+        variable_content[v] = s_dict[v]
+
+
+     if not split_sto:
+        generate_storage_info(instructions,source_stack)
+
+def generate_storage_info(instructions,source_stack):
+    global sstore_seq
+    global mstore_seq
+    global sstore_vars
+    global mmstore_vars
+    global sload_relative_pos
+    global mload_relative_pos
+    
+    #print("SLOADS")
+    #print(sload_relative_pos)
+
+    for x in range(0,len(instructions)):
+        s_dict = {}
+
+        if instructions[x].find("sstore")!=-1:
+            exp = generate_sstore_mstore(instructions[x],instructions[x-1::-1],source_stack)
+            #print("ESTO GUARDO EN SSTORE")
+            #print(exp)
+            sstore_seq.append(exp)
+                
+        # elif instructions[x].find("sload")!=-1:
+        #     last_sload = sloads_aux[0]
+        #     sloads_aux = sloads_aux[1::]
+            
+        elif instructions[x].find("mstore")!=-1:
+            exp = generate_sstore_mstore(instructions[x],instructions[x-1::-1],source_stack)
+            #print("ESTO GUARDO EN MSTORE")
+            #print(exp)
+            mstore_seq.append(exp)
+
+    last_sload = ""
+    sstores = list(sstore_seq)
+    last_mload = ""
+    mstores = list(mstore_seq)
+
+    storage_order = []
+    memory_order = []
+    
+    for x in range(0,len(instructions)):
+        if instructions[x].find("sload")!=-1:
+            exp,r = generate_sload_mload(instructions[x],instructions[x-1::-1],source_stack)
+            last_sload = exp
+            #print("MIRA UN SLOAD")
+            #print(exp)
+            storage_order.append(r)
+            
+        elif instructions[x].find("sstore")!=-1 and last_sload != "" and sload_relative_pos.get(last_sload,[])==[]:
+            sload_relative_pos[last_sload]=sstores.pop(0)
+            storage_order.append(sload_relative_pos[last_sload])
+            
+        elif instructions[x].find("mload")!=-1:
+            exp,r = generate_sload_mload(instructions[x],instructions[x-1::-1],source_stack)
+            last_mload = exp
+            #print("MIRA UN MLOAD")
+            #print(exp)
+            memory_order.append(r)
+            
+        elif instructions[x].find("mstore")!=-1 and last_mload != "" and mload_relative_pos.get(last_mload,[])==[]:
+            mload_relative_pos[last_mload]=mstores.pop(0)
+            memory_order.append(mload_relative_pos[last_mload])
+            
+    #print("FINAL SSTORE:")
+    #print(sstore_seq)
+    #print("FINAL SLOAD:")
+    #print(sload_relative_pos)
+    #print("STORAGE ORDER:")
+    #print(storage_order)
+
+
         
 def generate_source_stack_variables(idx):
     ss_list = []
@@ -1342,7 +1567,67 @@ def compute_max_idx(max_ss,ss):
     idx_top = int(top_s[2:-1])
 
     return idx_top
+
+
+
+
+def generate_sstore_info(sstore_elem):
+    global user_def_counter
+    global sstore_v_counter
+
+    obj = {}
+    idx  = user_def_counter.get("SSTORE",0)
+
+    instr_name = "SSTORE"
+    name = "SSTORE"+"_"+str(idx)
+
     
+    
+    obj["id"] = name
+    obj["opcode"] = process_opcode(str(opcodes.get_opcode(instr_name)[0]))
+    obj["disasm"] = instr_name
+    obj["inpt_sk"] = [sstore_elem[0][0],sstore_elem[0][1]]
+    obj["sto_state"] = ["sto"+str(sstore_v_counter-1)] if sstore_v_counter != 0 else []
+
+    out_var = create_new_sstorevar()
+    obj["out_sto"] = [out_var]
+    
+    obj["gas"] = opcodes.get_ins_cost(instr_name)
+    obj["commutative"] = False
+    user_def_counter["SSTORE"]=idx+1
+
+    return obj
+
+def generate_mstore_info(sstore_elem):
+    global user_def_counter
+    global mstore_v_counter
+
+    obj = {}
+    idx  = user_def_counter.get("MSTORE",0)
+
+    instr_name = "MSTORE"
+    name = "MSTORE"+"_"+str(idx)
+
+    
+    
+    obj["id"] = name
+    obj["opcode"] = process_opcode(str(opcodes.get_opcode(instr_name)[0]))
+    obj["disasm"] = instr_name
+    obj["inpt_sk"] = [sstore_elem[0][0],sstore_elem[0][1]]
+    obj["mem_state"] = ["mem"+str(mstore_v_counter-1)] if mstore_v_counter != 0 else []
+
+    out_var = create_new_mstorevar()
+    obj["out_mem"] = [out_var]
+    
+    obj["gas"] = opcodes.get_ins_cost(instr_name)
+    obj["commutative"] = False
+    user_def_counter["MSTORE"]=idx+1
+
+    return obj
+
+
+
+
 def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,simplification = True):
     global max_instr_size
     global num_pops
@@ -1419,6 +1704,23 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
         max_instr_size = num
         num_pops = num
 
+    #Adding sstore seq
+    sto_objs = []
+    for sto in sstore_seq:
+        # print("opopopopopopopoppppo")
+        # print(sto)
+        x = generate_sstore_info(sto)
+        sto_objs.append(x)
+        # print("STO")
+        # print(x)
+
+    mem_objs = []
+    for mem in mstore_seq:
+        x = generate_mstore_info(sto)
+        mem_objs.append(x)
+
+
+        
     json_dict["init_progr_len"] = max_instr_size-discount_op
     json_dict["max_progr_len"] = max_instr_size
     json_dict["max_sk_sz"] = max_sk_sz_idx-len(remove_vars)
