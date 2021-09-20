@@ -1,4 +1,4 @@
-import opcodes
+import sfs_generator.opcodes as opcodes
 
 def toInt(a):
     elem = a.split("_")
@@ -148,3 +148,24 @@ def isYulInstruction(opcode):
     else:
         return True
 
+
+# Computes the number of bytecodes given an ASM json object
+def compute_number_of_instructions_in_asm_json_per_contract(asm_json):
+    contract_counter_dict = {}
+    for c in asm_json.getContracts():
+        number_instrs = 0
+        contract_name = (c.getContractName().split("/")[-1]).split(":")[-1]
+
+        for identifier in c.getDataIds():
+            blocks = c.getRunCodeOf(identifier)
+            for block in blocks:
+                number_instrs += len(list(filter(lambda x: x.getDisasm() != "tag", block.getInstructions())))
+
+        contract_counter_dict[contract_name] = number_instrs
+    return contract_counter_dict
+
+
+# Computes the number of bytecodes given an ASM json object
+def compute_number_of_instructions_in_asm_json_per_file(asm_json):
+    contract_counter_dict = compute_number_of_instructions_in_asm_json_per_contract(asm_json)
+    return sum(contract_counter_dict.values())
