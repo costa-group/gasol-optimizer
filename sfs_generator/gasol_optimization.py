@@ -1,8 +1,8 @@
 import json
 import math
 from timeit import default_timer as dtimer
-from utils import is_integer,all_integers, find_sublist
-import  opcodes
+from sfs_generator.utils import is_integer,all_integers, find_sublist
+import  sfs_generator.opcodes as opcodes
 import os
 from global_params.paths import gasol_path, json_path
 
@@ -2413,6 +2413,7 @@ def generate_subblocks(rule,list_subblocks,isolated,preffix,simplification):
     source_stack_idx-=1
     i = 0
 
+    pops2remove = 0
     while(i < len(list_subblocks)-1):
 
         init_globals()
@@ -2425,7 +2426,7 @@ def generate_subblocks(rule,list_subblocks,isolated,preffix,simplification):
         seq = range(ts_idx,-1,-1)
         target_stack = list(map(lambda x: "s("+str(x)+")",seq))
 
-        new_nexts = translate_subblock(rule,block,source_stack,target_stack,source_stack_idx,i,list_subblocks[i+1],preffix,simplification)
+        new_nexts, pops2remove = translate_subblock(rule,block,source_stack,target_stack,source_stack_idx,i,list_subblocks[i+1],preffix,simplification,pops2remove)
 
         if new_nexts == []:
         #We update the source stack for the new block
@@ -2449,13 +2450,13 @@ def generate_subblocks(rule,list_subblocks,isolated,preffix,simplification):
 
     block = instrs[2:]
     if block != []:
-        translate_last_subblock(rule,block,source_stack,source_stack_idx,i,isolated,preffix,simplification)
+        translate_last_subblock(rule,block,source_stack,source_stack_idx,i,isolated,preffix,simplification,pops2remove)
 
     if compute_gast:
         gas_t+=get_cost(original_opcodes)
 
     
-def translate_subblock(rule,instrs,sstack,tstack,sstack_idx,idx,next_block,preffix,simp):
+def translate_subblock(rule,instrs,sstack,tstack,sstack_idx,idx,next_block,preffix,simp,prev_pops):
     global max_instr_size
     global max_stack_size
     global num_pops
@@ -2488,9 +2489,10 @@ def translate_subblock(rule,instrs,sstack,tstack,sstack_idx,idx,next_block,preff
         if max_stack_size!=0 and gas !=0 and not is_identity_map(sstack,tstack):
             compute_gast = True
             new_tstack,new_nexts = optimize_splitpop_block(tstack,sstack,next_block,opcodes)
+            pops2remove = 0
             if new_nexts != []:
                 pops2remove = new_nexts[2]
-                gas = gas+2*pops2remove
+                # gas = gas+2*pops2remove
                 max_instr_size+=pops2remove
 
             new_opcodes = compute_opcodes2write(opcodes,0)
@@ -2499,13 +2501,17 @@ def translate_subblock(rule,instrs,sstack,tstack,sstack_idx,idx,next_block,preff
                 init_info = get_encoding_init_block(instructions[index:fin+1],sstack)
             else:
                 init_info = {}
+
+            if prev_pops != 0:
+                gas = gas+2*prev_pops
+                
             generate_json(preffix+rule.get_rule_name(),sstack,new_tstack,sstack_idx,gas,init_info,subblock=idx,simplification = simp)
             if simp:
                 write_instruction_block(rule.get_rule_name(),new_opcodes,subblock=idx)
             
-        return new_nexts
+        return new_nexts, pops2remove
     else:
-        return []
+        return [],0
 
             
 
@@ -2578,7 +2584,7 @@ def modify_next_block(next_block,pops2remove):
     return new_nextblock,idx2-pops2remove
     
     
-def translate_last_subblock(rule,block,sstack,sstack_idx,idx,isolated,preffix,simp):
+def translate_last_subblock(rule,block,sstack,sstack_idx,idx,isolated,preffix,simp, prev_pops):
     global max_instr_size
     global max_stack_size
     global num_pops
@@ -2640,6 +2646,10 @@ def translate_last_subblock(rule,block,sstack,sstack_idx,idx,isolated,preffix,si
                 init_info = get_encoding_init_block(block[index:fin+1],sstack)
             else:
                 init_info = {}
+
+            if prev_pops!=0:
+                gas+=2*prev_pops
+                
             generate_json(preffix+rule.get_rule_name(),sstack,tstack,sstack_idx,gas,init_info,subblock=idx,simplification = simp)
             if simp:
                 write_instruction_block(rule.get_rule_name(),new_opcodes,subblock=idx)
@@ -2760,6 +2770,7 @@ def generate_terminal_subblocks(rule,list_subblocks):
     source_stack_idx-=1
     i = 0
 
+    pops2remove = 0
     while(i < len(list_subblocks)-1):
         init_globals()
         block = list_subblocks[i]
@@ -2772,7 +2783,7 @@ def generate_terminal_subblocks(rule,list_subblocks):
         target_stack = list(map(lambda x: "s("+str(x)+")",seq))
         
 
-        new_nexts = translate_subblock(rule,block,source_stack,target_stack,source_stack_idx,i,list_subblocks[i+1])
+        new_nexts,pops2remove = translate_subblock(rule,block,source_stack,target_stack,source_stack_idx,i,list_subblocks[i+1], pops2remove)
 
         if new_nexts == []:
 

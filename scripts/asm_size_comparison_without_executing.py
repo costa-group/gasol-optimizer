@@ -8,11 +8,12 @@ import pandas as pd
 import subprocess
 import shlex
 import resource
-from global_params.paths import gasol_exec, log_file, oms_exec, project_path, smt_encoding_path, gasol_path
-import re
+from global_params.paths import project_path
+from sfs_generator.parser_asm import parse_asm
+from sfs_generator.utils import compute_number_of_instructions_in_asm_json_per_file
 
-parent_directory = project_path + "/examples/prueba"
-final_directory = project_path + "/results/"
+parent_directory = project_path + "/experiments/jsons_solc_noyul"
+final_directory = project_path + "/results_noyul/"
 
 def run_command(cmd):
     FNULL = open(os.devnull, 'w')
@@ -36,24 +37,17 @@ if __name__ == "__main__":
         contract_name = asm_json.split("/")[-1].rstrip(".json_solc")
         csv_row = {'name': contract_name}
         try:
-            run_command(gasol_exec + " " + asm_json + " -log ")
-            sol_output = run_command(gasol_exec + " " + asm_json + " " + "-optimize-gasol-from-log-file " +
-                                     gasol_path + contract_name + ".log")
-            _, oms_time = run_and_measure_command(oms_exec + " " + smt_encoding_path + "verify_oms.smt2")
-
-            if re.search("Solution generated from log file has been verified correctly", sol_output):
-                csv_row['log_verified'] = True
-            else:
-                csv_row['log_verified'] = False
-
-            csv_row['oms_time'] = round(oms_time, 3)
-
-            csv_row['log_size'] = os.path.getsize(log_file)
+            old_asm = parse_asm(asm_json)
+            new_asm = parse_asm(contract_name + "_optimized.json_solc")
+            csv_row['old_size'] = compute_number_of_instructions_in_asm_json_per_file(old_asm)
+            csv_row['new_size'] = compute_number_of_instructions_in_asm_json_per_file(new_asm)
+            csv_row['size_relation'] = round( 100*(1 - csv_row['new_size'] / csv_row['old_size']), 3)
             csv_row['correct'] = True
         except:
             csv_row['correct'] = False
 
         row_list.append(csv_row)
-    df = pd.DataFrame(row_list, columns=['name', 'log_size', 'oms_time', 'log_verified', 'correct'])
-    csv_file = final_directory + "log_comparison.csv"
+    df = pd.DataFrame(row_list, columns=['name', 'old_size', 'new_size', 'size_relation', 'correct'])
+
+    csv_file = final_directory + "size_comparison_only_size.csv"
     df.to_csv(csv_file)

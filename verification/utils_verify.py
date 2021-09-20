@@ -1,4 +1,4 @@
-import opcodes 
+import sfs_generator.opcodes as opcodes
 
 '''
 It takes the name of a file containing the optimized version of a
@@ -12,7 +12,6 @@ def get_block_id(file_name):
 
     block_id = file_name[p:end]
 
-    print(block_id)
     return block_id
 
 def get_contract_name(file_name):
@@ -31,11 +30,10 @@ def is_integer(num):
 
 def get_block_cost(opcodes_list):
     val = 0
-    print(opcodes_list)
     for op in opcodes_list:
         if op == "MULMOD":
             gas = 10
         else:
-            gas = opcodes.get_syrup_cost(op.strip())
+            gas = opcodes.get_ins_cost(op.strip())
         val+=gas
     return val
