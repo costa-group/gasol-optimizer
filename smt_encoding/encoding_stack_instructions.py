@@ -149,6 +149,41 @@ def _comm_function_constraints(b0, bs, comm_user_instr, theta_comm, first_positi
         for j in range(final_possible_idx, b0+initial_idx):
             write_encoding(add_assert(add_not(add_eq(t(j), theta_f))))
 
+
+def _store_stack_function_encoding(j, bs, o0, o1, theta_f):
+    left_term = add_eq(t(j), theta_f)
+    right_term = add_and(u(0,j), u(1,j), add_and(add_eq(x(0,j), o0), add_eq(x(1,j), o1)), u(0,j+1),
+                         move(j, 2, bs-1, -2), add_not(u(bs-1, j+1)), add_not(u(bs-2, j+1)))
+    write_encoding(add_assert(add_implies(left_term, right_term)))
+
+
+def _store_stack_constraints(b0, bs, comm_user_instr, theta_comm, first_position_instr_appears_dict,
+                               first_position_instr_cannot_appear_dict, initial_idx=0):
+    write_encoding("; Store constraints")
+    for instr in comm_user_instr:
+        o0 = instr['inpt_sk'][0]
+        o1 = instr['inpt_sk'][1]
+        theta_f = theta_comm[instr['id']]
+
+        # Only add the encoding for those positions that are possible. These
+        # dicts can be empty, so we use get method to ensure that a correct value is taken.
+        initial_possible_idx = first_position_instr_appears_dict.get(instr['id'], 0) + initial_idx
+        final_possible_idx = first_position_instr_cannot_appear_dict.get(instr['id'], b0) + initial_idx
+
+        # Instructions cannot appear in [0, first_position), so we add a statement to consider this situation.
+        for j in range(initial_idx, initial_possible_idx):
+            write_encoding(add_assert(add_not(add_eq(t(j), theta_f))))
+
+        # Instructions can appear in [initial_idx, final_idx), as initial_idx refers to the first position
+        # a instruction can appear and final_idx refers to the first position that instruction cannot appear.
+        # Note that last value can be b0 if it can appear at any point.
+        for j in range(initial_possible_idx, final_possible_idx):
+            _store_stack_function_encoding(j, bs, o0, o1, theta_f)
+
+        # Instructions cannot appear in [final_idx, b0), so we add a statement to consider this situation.
+        for j in range(final_possible_idx, b0+initial_idx):
+            write_encoding(add_assert(add_not(add_eq(t(j), theta_f))))
+
 # Methods for generating constraints for finding the target program
 
 def instructions_constraints(b0, bs, comm_instr, non_comm_instr, theta_stack, theta_comm, theta_non_comm,

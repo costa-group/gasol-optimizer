@@ -647,6 +647,7 @@ if __name__ == '__main__':
 
 
     args = ap.parse_args()
+
     if args.log_path is not None:
         with open(args.log_path) as path:
             log_dict = json.load(path)
