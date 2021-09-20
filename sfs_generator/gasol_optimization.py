@@ -1596,6 +1596,7 @@ def generate_sstore_info(sstore_elem):
     
     obj["gas"] = opcodes.get_ins_cost(instr_name)
     obj["commutative"] = False
+    obj["storage"] = True
     user_def_counter["SSTORE"]=idx+1
 
     return obj
@@ -1623,8 +1624,9 @@ def generate_mstore_info(sstore_elem):
     
     obj["gas"] = opcodes.get_ins_cost(instr_name)
     obj["commutative"] = False
+    obj["storage"] = True
     user_def_counter["MSTORE"]=idx+1
-
+    
     return obj
 
 
@@ -2163,6 +2165,7 @@ def generate_userdefname(u_var,funct,args,arity):
         obj["outpt_sk"] = [u_var]
         obj["gas"] = opcodes.get_ins_cost(instr_name)
         obj["commutative"] = True if instr_name in commutative_bytecodes else False
+        obj["storage"] = False #It is true only for MSTORE and SSTORE
         if instr_name in ["PUSHTAG","PUSH#[$]","PUSH[$]","PUSHDATA","PUSHIMMUTABLE"]:
             obj["value"] = args_aux
         user_def_counter[instr_name]=idx+1
