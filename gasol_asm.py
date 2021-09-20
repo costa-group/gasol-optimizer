@@ -297,7 +297,7 @@ def optimize_asm_block_from_log(sfs_dict, instr_sequence_dict):
                                         opcodes_theta_dict, instruction_theta_dict, gas_theta_dict)
 
 
-def optimize_asm(file_name, timeout=10):
+def optimize_asm(file_name, timeout=10, log_generation_enabled=False):
     asm = parse_asm(file_name)
     # csv_statistics = []
 
@@ -362,8 +362,10 @@ def optimize_asm(file_name, timeout=10):
     with open(csv_file,'w') as f:
         f.write("\n".join(csv_out))
 
-    with open(log_file, "w") as log_f:
-        json.dump(log_dicts, log_f)
+    if log_generation_enabled:
+        log_file = gasol_path + (file_name.split("/")[-1]).split(".")[-2] + ".log"
+        with open(log_file, "w") as log_f:
+            json.dump(log_dicts, log_f)
 
 
 def optimize_asm_from_log(file_name, json_log):
@@ -490,14 +492,18 @@ if __name__ == '__main__':
                     help="Timeout in seconds. By default, set to 10s per block.", default=10)
     ap.add_argument("-optimize-gasol-from-log-file", dest='log_path', action='store', metavar="log_file",
                         help="Generates the same optimized bytecode than the one associated to the log file")
+    ap.add_argument("--generate-log", help ="Enables the generation of a log file that records the "
+                                            "output from the optimization process", action = "store_true")
+
 
     args = ap.parse_args()
+
     if args.log_path is not None:
         with open(args.log_path) as path:
             log_dict = json.load(path)
             optimize_asm_from_log(args.input_path, log_dict)
     elif not args.block:
-        optimize_asm(args.input_path, args.tout)
+        optimize_asm(args.input_path, args.tout, args.generate_log)
     else:
         optimize_isolated_asm_block(args.input_path, args.tout)
 

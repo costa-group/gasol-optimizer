@@ -16,6 +16,4 @@ bclt_exec = project_path + "/bin/barcelogic"
 
 oms_exec = project_path + "/bin/optimathsat"
 
-log_file = gasol_path + "verification.log"
-
 csv_file = gasol_path + "solutions/statistics.csv"
