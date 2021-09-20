@@ -1474,7 +1474,9 @@ def generate_storage_info(instructions,source_stack):
     #print("STORAGE ORDER:")
     #print(storage_order)
 
+    remove_loads_instructions()
 
+    
         
 def generate_source_stack_variables(idx):
     ss_list = []
@@ -4107,6 +4109,34 @@ def is_identity_map(source_stack,target_stack):
             return False
 
     return True
+
+
+
+
+def remove_loads(storage,instruction):
+    new_storage = []
+    for s in storage:
+        if s[0][-1].find(instruction)!=-1:
+            if s in list(u_dict.values()) :
+                new_storage.append(s)
+        else:
+            new_storage.append(s)
+    return new_storage
+
+def remove_loads_instructions():
+    global storage_order
+    global memory_order
+
+    target_stack_content = variable_content.values()
+
+    sstore_instructions = filter(lambda x: x[0][-1].find("sstore")!=-1,storage_order)
+    sstore_vars = list(map(lambda x: x[0][0],sstore_instructions))
+    
+    mstore_instructions = filter(lambda x: x[0][-1].find("mstore")!=-1,memory_order)
+    mstore_vars = list(map(lambda x: x[0][0],mstore_instructions))
+                
+    storage_order = remove_loads(storage_order,"sload")
+    memory_order = remove_loads(memory_order,"mload")
 
 def independence_storage():
     pass
