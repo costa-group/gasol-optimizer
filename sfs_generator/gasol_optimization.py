@@ -1403,7 +1403,7 @@ def generate_encoding(instructions,variables,source_stack,simplification=True):
         variable_content[v] = s_dict[v]
 
 
-     if not split_sto:
+    if not split_sto:
         generate_storage_info(instructions,source_stack)
 
 def generate_storage_info(instructions,source_stack):
