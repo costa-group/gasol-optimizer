@@ -34,6 +34,10 @@ def t(i):
 def a(i):
     return var2str('a', i)
 
+
+def l(i):
+    return var2str('l', i)
+
 # Auxiliary methods for defining the constraints
 
 def move(j, alpha, beta, delta):
@@ -67,27 +71,34 @@ def generate_stack_theta(bs):
 def generate_uninterpreted_theta(user_instr, initial_index):
     theta_comm = {}
     theta_non_comm = {}
-    # We need to sort to ensure indexis are always generated following the same convention
+    theta_mem = {}
+
+    # We need to sort to ensure indexes are always generated following the same convention
     for instr in sorted(user_instr, key=lambda k: k['id']):
         if instr['commutative']:
             theta_comm[instr['id']] = initial_index
+        elif instr.get('is_mem', False):
+            theta_mem[instr['id']] = initial_index
         else:
             theta_non_comm[instr['id']] = initial_index
         initial_index += 1
-    return theta_comm, theta_non_comm
+    return theta_comm, theta_non_comm, theta_mem
 
 
 # Separates user instructions in two groups, according to whether they
 # are commutative or not.
-def separe_usr_instr(user_instr):
+def divide_usr_instr(user_instr):
     comm_functions = []
     non_comm_functions = []
+    mem_functions = []
     for instr in user_instr:
         if instr['commutative']:
             comm_functions.append(instr)
+        elif instr.get('is_mem', False):
+            mem_functions.append(instr)
         else:
             non_comm_functions.append(instr)
-    return comm_functions, non_comm_functions
+    return comm_functions, non_comm_functions, mem_functions
 
 
 # Generates an ordered dict that contains all instructions associated value of theta
@@ -310,11 +321,11 @@ def generate_disasm_map(user_instr, theta_instr):
 # as keys and its corresponding EVM opcode as values. Note that it is similar
 # to theta_comm and theta_non_comm, but instead of using id, we directly use
 # disasm field (i.e. intead of having 14 : ADD_0, we would have 14 : ADD)
-def generate_instr_map(user_instr, theta_stack, theta_comm, theta_non_comm):
+def generate_instr_map(user_instr, theta_stack, theta_comm, theta_non_comm, theta_mem):
 
     # We will consider in general the theta associated to instructions
     # in user instr structure
-    theta_uninterpreted = dict(theta_comm, **theta_non_comm)
+    theta_uninterpreted = dict(theta_comm, **theta_non_comm, **theta_mem)
 
     # We reverse the theta stack, to have the theta value as key,
     # and its corresponding instruction as values

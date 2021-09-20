@@ -157,13 +157,13 @@ def _store_stack_function_encoding(j, bs, o0, o1, theta_f):
     write_encoding(add_assert(add_implies(left_term, right_term)))
 
 
-def _store_stack_constraints(b0, bs, comm_user_instr, theta_comm, first_position_instr_appears_dict,
+def _store_stack_constraints(b0, bs, mem_instr, theta_mem, first_position_instr_appears_dict,
                                first_position_instr_cannot_appear_dict, initial_idx=0):
     write_encoding("; Store constraints")
-    for instr in comm_user_instr:
+    for instr in mem_instr:
         o0 = instr['inpt_sk'][0]
         o1 = instr['inpt_sk'][1]
-        theta_f = theta_comm[instr['id']]
+        theta_f = theta_mem[instr['id']]
 
         # Only add the encoding for those positions that are possible. These
         # dicts can be empty, so we use get method to ensure that a correct value is taken.
@@ -186,9 +186,9 @@ def _store_stack_constraints(b0, bs, comm_user_instr, theta_comm, first_position
 
 # Methods for generating constraints for finding the target program
 
-def instructions_constraints(b0, bs, comm_instr, non_comm_instr, theta_stack, theta_comm, theta_non_comm,
-                             first_position_instr_appears_dict, first_position_instr_cannot_appear_dict, initial_idx=0):
-    mi = len(theta_stack) + len(theta_comm) + len(theta_non_comm)
+def stack_constraints(b0, bs, comm_instr, non_comm_instr, mem_instr, theta_stack, theta_comm, theta_non_comm, theta_mem,
+                      first_position_instr_appears_dict, first_position_instr_cannot_appear_dict, initial_idx=0):
+    mi = len(theta_stack) + len(theta_comm) + len(theta_non_comm) + len(theta_mem)
     write_encoding("; Instructions constraints")
 
     for j in range(initial_idx, b0+initial_idx):
@@ -199,3 +199,5 @@ def instructions_constraints(b0, bs, comm_instr, non_comm_instr, theta_stack, th
                                first_position_instr_cannot_appear_dict, initial_idx)
     _non_comm_function_constraints(b0, bs, non_comm_instr, theta_non_comm, first_position_instr_appears_dict,
                                    first_position_instr_cannot_appear_dict, initial_idx)
+    _store_stack_constraints(b0, bs, mem_instr, theta_mem, first_position_instr_appears_dict,
+                             first_position_instr_cannot_appear_dict)

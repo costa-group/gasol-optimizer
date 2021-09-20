@@ -7,7 +7,7 @@ from encoding_initialize import initialize_variables, variables_assignment_const
     initial_stack_encoding, final_stack_encoding
 from encoding_cost import paper_soft_constraints, label_name, alternative_soft_constraints, \
     number_instructions_soft_constraints
-from encoding_instructions import instructions_constraints
+from encoding_stack_instructions import stack_constraints
 from encoding_redundant import *
 from encoding_files import write_encoding, write_opcode_map, write_instruction_map, write_gas_map
 from default_encoding import activate_default_encoding
@@ -121,11 +121,11 @@ def generate_smtlib_encoding(b0, bs, usr_instr, variables, initial_stack, final_
     current_cost = additional_info['current_cost']
     instr_seq = additional_info['instr_seq']
     theta_stack = generate_stack_theta(bs)
-    theta_comm, theta_non_comm = generate_uninterpreted_theta(usr_instr, len(theta_stack))
-    comm_instr, non_comm_instr = separe_usr_instr(usr_instr)
+    theta_comm, theta_non_comm, theta_mem = generate_uninterpreted_theta(usr_instr, len(theta_stack))
+    comm_instr, non_comm_instr, mem_instr = divide_usr_instr(usr_instr)
     dependency_graph, first_position_instr_appears_dict, first_position_instr_cannot_appear_dict = \
         generate_instruction_dicts(b0, usr_instr, final_stack, flags)
-    theta_dict = dict(theta_stack, **theta_comm, **theta_non_comm)
+    theta_dict = dict(theta_stack, **theta_comm, **theta_non_comm, **theta_mem)
 
     # Before generating the encoding, we activate the default encoding if its corresponding flag is activated
     if flags['default-encoding']:
@@ -136,8 +136,8 @@ def generate_smtlib_encoding(b0, bs, usr_instr, variables, initial_stack, final_
     generate_asserts_from_additional_info(additional_info)
     initialize_variables(variables, bs, b0)
     variables_assignment_constraint(variables)
-    instructions_constraints(b0, bs, comm_instr, non_comm_instr, theta_stack, theta_comm, theta_non_comm,
-                             first_position_instr_appears_dict, first_position_instr_cannot_appear_dict)
+    stack_constraints(b0, bs, comm_instr, non_comm_instr, mem_instr, theta_stack, theta_comm, theta_non_comm, theta_mem,
+                      first_position_instr_appears_dict, first_position_instr_cannot_appear_dict)
     initial_stack_encoding(initial_stack, bs)
     final_stack_encoding(final_stack, bs, b0)
     generate_redundant_constraints(flags, b0, usr_instr, theta_stack, theta_comm, theta_non_comm, final_stack,
@@ -156,8 +156,9 @@ def generate_smtlib_encoding(b0, bs, usr_instr, variables, initial_stack, final_
     write_encoding("; Stack: " + str(theta_stack))
     write_encoding("; Comm: " + str(theta_comm))
     write_encoding("; Non-Comm: " + str(theta_non_comm))
+    write_encoding("; Mem: " + str(theta_mem))
 
-    write_instruction_map(generate_instr_map(usr_instr, theta_stack, theta_comm, theta_non_comm))
+    write_instruction_map(generate_instr_map(usr_instr, theta_stack, theta_comm, theta_non_comm, theta_mem))
     write_opcode_map(generate_disasm_map(usr_instr, theta_dict))
     write_gas_map(generate_costs_ordered_dict(bs, usr_instr, theta_dict))
 
@@ -166,13 +167,13 @@ def generate_smtlib_encoding(b0, bs, usr_instr, variables, initial_stack, final_
 def generate_smtlib_encoding_appending(b0, bs, usr_instr, variables, initial_stack, final_stack,
                                        previous_solution, previous_idx):
     theta_stack = generate_stack_theta(bs)
-    theta_comm, theta_non_comm = generate_uninterpreted_theta(usr_instr, len(theta_stack))
-    comm_instr, non_comm_instr = separe_usr_instr(usr_instr)
+    theta_comm, theta_non_comm, theta_mem = generate_uninterpreted_theta(usr_instr, len(theta_stack))
+    comm_instr, non_comm_instr, mem_instr = divide_usr_instr(usr_instr)
 
     initialize_variables(variables, bs, b0, previous_idx)
     variables_assignment_constraint(variables, previous_idx)
-    instructions_constraints(b0, bs, comm_instr, non_comm_instr, theta_stack, theta_comm, theta_non_comm,
-                             {}, {}, previous_idx)
+    stack_constraints(b0, bs, comm_instr, non_comm_instr, mem_instr, theta_stack, theta_comm, theta_non_comm, theta_mem,
+                      {}, {}, previous_idx)
     initial_stack_encoding(initial_stack, bs, previous_idx)
     final_stack_encoding(final_stack, bs, b0, previous_idx)
     generate_encoding_from_log_json_dict(previous_solution, previous_idx)

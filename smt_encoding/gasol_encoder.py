@@ -143,9 +143,9 @@ def execute_syrup_backend_combined(sfs_dict, instr_sequence_dict, contract_name,
 # opcode associated to a theta value.
 def generate_theta_dict_from_sequence(bs, usr_instr):
     theta_stack = generate_stack_theta(bs)
-    theta_comm, theta_non_comm = generate_uninterpreted_theta(usr_instr, len(theta_stack))
-    theta_dict = dict(theta_stack, **theta_comm, **theta_non_comm)
-    instr_map = generate_instr_map(usr_instr, theta_stack, theta_comm, theta_non_comm)
+    theta_comm, theta_non_comm, theta_mem = generate_uninterpreted_theta(usr_instr, len(theta_stack))
+    theta_dict = dict(theta_stack, **theta_comm, **theta_non_comm, **theta_mem)
+    instr_map = generate_instr_map(usr_instr, theta_stack, theta_comm, theta_non_comm, theta_mem)
     disasm_map = generate_disasm_map(usr_instr, theta_dict)
     costs_map = generate_costs_ordered_dict(bs, usr_instr, theta_dict)
     return theta_dict, instr_map, disasm_map, costs_map
