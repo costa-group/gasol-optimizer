@@ -4114,8 +4114,6 @@ def is_identity_map(source_stack,target_stack):
     return True
 
 
-
-
 def remove_loads(storage,instruction):
     new_storage = []
     for s in storage:
@@ -4126,6 +4124,9 @@ def remove_loads(storage,instruction):
             new_storage.append(s)
     return new_storage
 
+# It removes from storage_order or memory_order the loads instructions
+# that are not used neither in the target stack nor the storage
+# operations
 def remove_loads_instructions():
     global storage_order
     global memory_order
@@ -4141,5 +4142,32 @@ def remove_loads_instructions():
     storage_order = remove_loads(storage_order,"sload")
     memory_order = remove_loads(memory_order,"mload")
 
-def independence_storage():
-    pass
+
+    
+#storage location may be storage_order or memory_order
+def generate_dependencies(storage_location):
+    storage_dependences = []
+
+    for i in range(len(storage_location)-2,-1,-1):
+        elem = storage_location[i]
+        var = elem[0][0]
+
+        j = 0
+        already = False
+        sub_list = storage_location[i+1::]
+        while((j<len(sub_list)) and (not already)):
+            rest = sub_list[j]
+            var_rest = rest[0][0]
+            if var == var_rest:
+                storage_dependences.append((i,i+j+1))
+            else:
+                if var.startswith("s") or var_rest.startswith("s"):
+                    storage_dependences.append((i,i+j+1))
+            
+            if len(list(filter(lambda x: x[0] == i+j+1, storage_dependences))) > 0:
+                # It means that the transitive things have been already computed
+                already = True
+            j+=1
+                                
+            
+    return storage_dependences
