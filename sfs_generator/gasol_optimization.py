@@ -4149,7 +4149,7 @@ def remove_store_recursive_dif(storage_location, location):
         
         if elem[0][-1].find(instruction)!=-1:
             var = elem[0][0]
-            rest = list(filter(lambda x: x[0][0] == var and x[0][-1].find(instruction)!=-1, storage_location[i+1::]))
+            rest = list(filter(lambda x: x[0][0] == var and x[0][-1].find(instruction)!=-1 and x!=elem, storage_location[i+1::]))
             if rest !=[]:
                 next_ins = rest[0]
                 pos = storage_location.index(next_ins)
@@ -4177,17 +4177,25 @@ def remove_store_recursive_eq(storage_location,location):
         elem = storage_location[i]
         
         if elem[0][-1].find(instruction)!=-1 and elem in storage_location[i+1::]:
-
-            pos = storage_location[i+1::].index(elem)
+            pos = storage_location[i+1::].index(elem)+i+1
             var = elem[0][0]
             subList = storage_location[i+1:pos]
             rest = list(filter(lambda x: x[0][0] == var and x[0][-1].find(instruction)!=-1, subList))
             if rest ==[]:
                 storage_location.pop(pos)
+                print(pos)
+                print("AQUI")
+                print(storage_location)
                 remove_store_recursive_eq(storage_location, location)
                 finish = True
         i+=1
-    
+
+
+
+
+
+
+        
 #storage location may be storage_order or memory_order
 def generate_dependencies(storage_location):
     storage_dependences = []
