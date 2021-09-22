@@ -440,19 +440,19 @@ def search_for_value_aux(var, instructions,source_stack,level,evaluate = True):
 
 
 
-#We need to store the order in which the load instructions are
-#executed in order to stablish an order with the storage instructions.
-def relative_pos_load(funct,exp,u_var):
-    global sload_relative_pos
-    global mload_relative_pos
+# #We need to store the order in which the load instructions are
+# #executed in order to stablish an order with the storage instructions.
+# def relative_pos_load(funct,exp,u_var):
+#     global sload_relative_pos
+#     global mload_relative_pos
 
-    if funct == "sload":
-        pos = len(sload_relative_pos)
-        sload_relative_pos.insert(0,u_var)
+#     if funct == "sload":
+#         pos = len(sload_relative_pos)
+#         sload_relative_pos.insert(0,u_var)
 
-    if funct == "mload":
-        pos = len(mload_relative_pos)
-        mload_relative_pos.insert(0,u_var)
+#     if funct == "mload":
+#         pos = len(mload_relative_pos)
+#         mload_relative_pos.insert(0,u_var)
 
 
             
@@ -477,6 +477,11 @@ def generate_sstore_mstore(store_ins,instructions,source_stack):
 def generate_sload_mload(load_ins,instructions,source_stack):
 
     level = 0
+
+    if load_ins.find("=")!=-1:
+        load_ins = load_ins.split("=")[-1]
+
+    
     new_vars, funct = get_involved_vars(load_ins,"")
     
         
@@ -582,8 +587,8 @@ def get_involved_vars(instr,var):
 
     elif instr.find("sload(")!=-1:
         instr_new = instr.strip("\n")
-        pos = instr_new.find("sload(")
-        arg0 = instr_new[pos+6:-1]
+        pos = instr_new.find("(")
+        arg0 = instr_new[pos+1:-1]
         var0 = arg0.strip()
         var_list.append(var0)
 
