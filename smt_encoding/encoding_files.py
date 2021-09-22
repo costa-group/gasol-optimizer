@@ -1,7 +1,10 @@
 import sys
 import pathlib
 import json
-from global_params.paths import smt_encoding_path
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))+"/global_params")
+
+from paths import smt_encoding_path
 
 def init():
 

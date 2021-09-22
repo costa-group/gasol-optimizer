@@ -644,6 +644,7 @@ if __name__ == '__main__':
     ap.add_argument("-log", "--generate-log", help ="Generate log file for Etherscan verification",
                     action = "store_true", dest='log_flag')
     ap.add_argument("-o", help="ASM output path", dest='output_path', action='store')
+    ap.add_argument( "-storage", "--storage", help="Split using SSTORE and MSTORE", action="store_true")
 
 
     args = ap.parse_args()
