@@ -5,5 +5,4 @@ store_instructions = {"SSTORE","MSTORE","MSTORE8"}
 
 def append_store_instructions_to_split():
     global split_block
-
-    split_block = split_block + store_instructions
+    split_block = split_block.union(store_instructions)
