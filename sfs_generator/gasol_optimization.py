@@ -470,7 +470,7 @@ def generate_sload_mload(load_ins,instructions,source_stack):
     level = 0
 
     if load_ins.find("=")!=-1:
-        load_ins = load_ins.split("=")[-1]
+        load_ins = load_ins.split("=")[-1].strip()
 
     
     new_vars, funct = get_involved_vars(load_ins,"")
@@ -4195,11 +4195,6 @@ def remove_store_recursive_eq(storage_location,location):
                 finish = True
         i+=1
 
-
-
-
-
-
         
 #storage location may be storage_order or memory_order
 def generate_dependencies(storage_location):
@@ -4215,16 +4210,21 @@ def generate_dependencies(storage_location):
         while((j<len(sub_list)) and (not already)):
             rest = sub_list[j]
             var_rest = rest[0][0]
-            if var == var_rest:
-                storage_dependences.append((i,i+j+1))
-            else:
-                if var.startswith("s") or var_rest.startswith("s"):
+            if (elem[0][-1] == rest[0][-1] and elem[0][-1] == "sstore") or (not elem[0][-1].startswith("sload") and not rest[0][-1].startswith("sload")):
+                if var == var_rest:
                     storage_dependences.append((i,i+j+1))
+                else:
+                    if var.startswith("s") or var_rest.startswith("s"):
+                        storage_dependences.append((i,i+j+1))
             
-            if len(list(filter(lambda x: x[0] == i+j+1, storage_dependences))) > 0:
-                # It means that the transitive things have been already computed
-                already = True
+                if len(list(filter(lambda x: x[0] == i+j+1, storage_dependences))) > 0:
+                    # It means that the transitive things have been already computed
+                    already = True
             j+=1
                                 
             
     return storage_dependences
+
+#It checks in which cases the loads are 
+def unify_loads_instructions():
+    pass

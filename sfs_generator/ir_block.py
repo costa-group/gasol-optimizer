@@ -86,6 +86,9 @@ def init_globals():
 
     global pc_cont
     pc_cont = 0
+
+    global sload_counter
+    sload_counter = 0
     
 '''
 Given a block it returns a list containingn the height of its
@@ -539,6 +542,7 @@ updated. It also updated the corresponding global variables.
 '''
 def translateOpcodes50(opcode, value, index_variables,block):
     global pc_cont
+    global sload_counter
     
     if opcode == "POP":        
         v1, updated_variables = get_consume_variable(index_variables)
@@ -565,7 +569,8 @@ def translateOpcodes50(opcode, value, index_variables,block):
         _ , updated_variables = get_consume_variable(index_variables)
         v1, updated_variables = get_new_variable(updated_variables)
 
-        instr = v1+" = sload("+v1+")"
+        instr = v1+" = sload"+str(sload_counter)+"("+v1+")"
+        sload_counter+=1
 
     elif opcode == "SSTORE":
         v0 , updated_variables = get_consume_variable(index_variables)
