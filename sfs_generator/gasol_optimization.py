@@ -1398,7 +1398,6 @@ def generate_encoding(instructions,variables,source_stack,simplification=True):
         search_for_value(v,instructions_reverse, source_stack,simplification)
         variable_content[v] = s_dict[v]
 
-
     if not split_sto:
         generate_storage_info(instructions,source_stack)
 
@@ -4222,6 +4221,71 @@ def generate_dependencies(storage_location):
             
     return storage_dependences
 
+
+def update_variables_loads(elem1, elem2, storage_location):
+    global variable_content
+    global u_dict
+
+
+    for v in u_dict:
+        elem = u_dict[v]
+        if elem == elem1:
+            var2keep = v
+        if elem == elem2:
+            var2replace = v
+
+
+    print(u_dict)
+    print(var2keep)
+    print(var2replace)
+            
+    #We remove the second sload
+    u_dict.pop(var2replace)
+
+    for v in u_dict:
+        elem = u_dict[v]
+        list_tuple = list(elem[0])
+        if var2replace in list_tuple:
+            pos = elem[0].index(var2replace)
+            list_tuple[pos] = var2keep
+            u_dict[v] = (tuple(list_tuple),elem[1])
+    
+    for var in variable_content:
+        if variable_content[var] == var2replace:
+            variable_content[var] = var2keep
+
+    for i in range(0,len(storage_location)):
+        elem = storage_location[i]
+        list_tuple = list(elem[0])
+        if var2replace in list_tuple:
+            pos = list_tuple.index(var2replace)
+            list_tuple[pos] = var2keep
+            storage_location[i] = (tuple(list_tuple),elem[1])
+
+
+    
 #It checks in which cases the loads are 
-def unify_loads_instructions():
-    pass
+def unify_loads_instructions(storage_location, location):
+    global variable_content
+
+    if location == "storage":
+        instruction = "sload"
+    elif location == "memory":
+        instruction = "mload"
+
+
+    i = 0
+    finished = False
+    while(i<len(storage_location) and not finished):
+        elem = storage_location[i]
+        if elem[0][-1].find(instruction)!=-1:
+            loads = list(filter(lambda x: x[0][0] == elem[0][0] and x[0][-1].find("sload")!=-1,storage_location[i+1::]))
+            if len(loads)>0:
+                load_ins = loads[0]
+                pos = storage_location.index(load_ins)
+                storage_location.pop(pos)
+                update_variables_loads(elem,load_ins,storage_location)
+                finished = True
+                
+            
+        i+=1
