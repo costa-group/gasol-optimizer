@@ -27,6 +27,7 @@ from copy import deepcopy
 from rebuild_asm import rebuild_asm
 from verification.sfs_verify import verify_block_from_list_of_sfs
 from sfs_generator.utils import compute_number_of_instructions_in_asm_json_per_file
+import global_params.constants as constants
 
 def clean_dir():
     ext = ["rbr", "csv", "sol", "bl", "disasm", "json"]
@@ -644,9 +645,14 @@ if __name__ == '__main__':
     ap.add_argument("-log", "--generate-log", help ="Generate log file for Etherscan verification",
                     action = "store_true", dest='log_flag')
     ap.add_argument("-o", help="ASM output path", dest='output_path', action='store')
+    ap.add_argument( "-storage", "--storage", help="Split using SSTORE, MSTORE and MSTORE8", action="store_true")
 
 
     args = ap.parse_args()
+
+    # If storage flag is activated, the blocks are splitted using store instructions
+    if args.storage:
+        constants.append_store_instructions_to_split()
 
     if args.log_path is not None:
         with open(args.log_path) as path:

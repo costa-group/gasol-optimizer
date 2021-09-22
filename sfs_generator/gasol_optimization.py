@@ -5,12 +5,9 @@ from sfs_generator.utils import is_integer,all_integers, find_sublist
 import  sfs_generator.opcodes as opcodes
 import os
 from global_params.paths import gasol_path, json_path
-
+import global_params.constants as constants
 
 terminate_block = ["ASSERTFAIL","RETURN","REVERT","SUICIDE","STOP"]
-
-global split_block
-split_block = ["LOG0","LOG1","LOG2","LOG3","LOG4","CALLDATACOPY","CODECOPY","EXTCODECOPY","RETURNDATACOPY","MSTORE8","CALL","STATICCALL","DELEGATECALL","CREATE","CREATE2","ASSIGNIMMUTABLE"]
 
 pre_defined_functions = ["PUSH","POP","SWAP","DUP"]
 
@@ -118,14 +115,8 @@ def init_globals():
     #it stores when the sloads are executed
     global mload_relative_pos
     mload_relative_pos = {}
-    
-def add_storage2split():
-    global split_block
-    global split_sto
 
-    split_sto = True
-    split_block+=["SSTORE","MSTORE"]
-    
+
 def filter_opcodes(rule):
     instructions = rule.get_instructions()
     rbr_ins_aux = list(filter(lambda x: x.find("nop(")==-1, instructions))
@@ -1418,6 +1409,8 @@ def generate_storage_info(instructions,source_stack):
     global mmstore_vars
     global sload_relative_pos
     global mload_relative_pos
+    global storage_order
+    global memory_order
     
     #print("SLOADS")
     #print(sload_relative_pos)
@@ -1725,7 +1718,7 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
 
     mem_objs = []
     for mem in mstore_seq:
-        x = generate_mstore_info(sto)
+        x = generate_mstore_info(mem)
         mem_objs.append(x)
 
 
@@ -2276,7 +2269,7 @@ def split_blocks(rule,opt = False,new_instr = []):
         if ins.startswith("nop("):
             nop = ins[4:-1]
             
-            if nop in split_block or nop in terminate_block:
+            if nop in constants.split_block or nop in terminate_block:
                 prev = ins_block[-2]
                 blocks.append(ins_block)
                 ins_block = [prev,ins]
@@ -2302,7 +2295,7 @@ def get_max_stackindex_set(instructions):
 
 def is_optimizable(opcode_instructions,instructions):
     ins_aux = list(map(lambda x: x.strip()[4:-1], opcode_instructions))
-    ins = list(filter(lambda x: x in split_block or x in terminate_block, ins_aux))
+    ins = list(filter(lambda x: x in constants.split_block or x in terminate_block, ins_aux))
 
     if ins_aux != [] and list(filter(lambda x: x.find("POP")==-1, ins_aux)) == []:
         return True
@@ -2762,7 +2755,7 @@ def split_terminal_block(rule):
         if ins.startswith("nop("):
             nop = ins[4:-1]
             
-            if nop in split_block+terminate_block:
+            if nop in constants.split_block+terminate_block:
                 prev = ins_block[-2]
                 blocks.append(ins_block)
                 ins_block = [prev,ins]
@@ -2911,10 +2904,7 @@ def smt_translate_block(rule,name,preffix,simplification=True):
     
     init_globals()
     sfs_contracts = {}
-    
 
-    add_storage2split()
-    
     blocks_json_dict = {}
     
     info_deploy = []

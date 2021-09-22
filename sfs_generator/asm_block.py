@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import sfs_generator.utils as utils
-from global_params.constants import split_block
+import global_params.constants as constants
 
 class AsmBlock():
     
@@ -64,7 +64,7 @@ class AsmBlock():
 
             # Three cases: either a instruction correspond to a jump/end or split instruction or neither of them.
             if instruction in ["JUMP","JUMPI","STOP","RETURN","REVERT","INVALID","JUMPDEST","tag"] \
-                    or instruction in split_block:
+                    or instruction in constants.split_block:
                 if current_sub_block:
                     sub_blocks.append(current_sub_block)
                     current_sub_block = []

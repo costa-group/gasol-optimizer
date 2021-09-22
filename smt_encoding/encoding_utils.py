@@ -77,7 +77,7 @@ def generate_uninterpreted_theta(user_instr, initial_index):
     for instr in sorted(user_instr, key=lambda k: k['id']):
         if instr['commutative']:
             theta_comm[instr['id']] = initial_index
-        elif instr.get('is_mem', False):
+        elif instr['storage']:
             theta_mem[instr['id']] = initial_index
         else:
             theta_non_comm[instr['id']] = initial_index
@@ -94,7 +94,7 @@ def divide_usr_instr(user_instr):
     for instr in user_instr:
         if instr['commutative']:
             comm_functions.append(instr)
-        elif instr.get('is_mem', False):
+        elif instr['storage']:
             mem_functions.append(instr)
         else:
             non_comm_functions.append(instr)
