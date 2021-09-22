@@ -103,6 +103,7 @@ def execute_syrup_backend(args_i,json_file = None, previous_solution_dict = None
     es.close()
 
 
+# Executes the gasol encoder combining different blocks in the same SMT problem
 def execute_syrup_backend_combined(sfs_dict, instr_sequence_dict, contract_name, solver):
     next_empty_idx = 0
     # Stores the number of previous stack variables to ensures there's no collision
