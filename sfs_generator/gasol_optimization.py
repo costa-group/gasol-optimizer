@@ -4188,9 +4188,6 @@ def remove_store_recursive_eq(storage_location,location):
             rest = list(filter(lambda x: x[0][0] == var and x[0][-1].find(instruction)!=-1, subList))
             if rest ==[]:
                 storage_location.pop(pos)
-                print(pos)
-                print("AQUI")
-                print(storage_location)
                 remove_store_recursive_eq(storage_location, location)
                 finish = True
         i+=1
