@@ -4143,6 +4143,60 @@ def remove_loads_instructions():
     memory_order = remove_loads(memory_order,"mload")
 
 
+
+def remove_store_recursive_dif(storage_location, location):
+
+    if location == "storage":
+        instruction = "sstore"
+    else:
+        instruction = "mstore"
+
+    i = 0
+    finish = False
+
+    while(i<len(storage_location) and not finish):
+        elem = storage_location[i]
+        
+        if elem[0][-1].find(instruction)!=-1:
+            var = elem[0][0]
+            rest = list(filter(lambda x: x[0][0] == var and x[0][-1].find(instruction)!=-1, storage_location[i+1::]))
+            if rest !=[]:
+                next_ins = rest[0]
+                pos = storage_location.index(next_ins)
+                sublist = storage_location[i+1:pos]
+                storage_instructions = list(filter(lambda x: x[0][0] == var,sublist)) #It checks for loads betweeen the stores
+                if len(storage_instructions) == 0:
+                    storage_location.pop(i)
+                    remove_store_recursive_dif(storage_location,location)
+                    finish = True
+        i+=1
+
+#Here it means that we have sloads between the sstores that are equals.
+#Otherwise it would have been removed with remove_store_recursive_dif
+def remove_store_recursive_eq(storage_location,location):
+
+    if location == "storage":
+        instruction = "sstore"
+    else:
+        instruction = "mstore"
+
+    i = 0
+    finish = False
+
+    while(i<len(storage_location) and not finish):
+        elem = storage_location[i]
+        
+        if elem[0][-1].find(instruction)!=-1 and elem in storage_location[i+1::]:
+
+            pos = storage_location[i+1::].index(elem)
+            var = elem[0][0]
+            subList = storage_location[i+1:pos]
+            rest = list(filter(lambda x: x[0][0] == var and x[0][-1].find(instruction)!=-1, subList))
+            if rest ==[]:
+                storage_location.pop(pos)
+                remove_store_recursive_eq(storage_location, location)
+                finish = True
+        i+=1
     
 #storage location may be storage_order or memory_order
 def generate_dependencies(storage_location):
