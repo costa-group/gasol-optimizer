@@ -52,18 +52,20 @@ def parse_data(json_path, var_initial_idx=0, with_simplifications=True):
 
     current_cost = data['current_cost']
     instr_seq = data.get('disasm_seq', [])
-    return b0, bs, new_user_instr, variables, initial_stack, final_stack, current_cost, instr_seq
+    mem_order = data.get('storage_dep', [])
+    return b0, bs, new_user_instr, variables, initial_stack, final_stack, current_cost, instr_seq, mem_order
 
 
-def initialize_flags_and_additional_info(args_i, current_cost, instr_seq, previous_solution_dict):
+
+def initialize_flags_and_additional_info(args_i, current_cost, instr_seq, previous_solution_dict, mem_order):
     if args_i is None:
         flags = {'at-most': False, 'pushed-at-least': False,
                  'instruction-order': False,
                  'no-output-before-pop': False, 'inequality-gas-model': False,
                  'initial-solution': False, 'default-encoding': False,
                  'number-instruction-gas-model': False}
-        additional_info = {'tout': 10, 'solver': "oms", 'current_cost': current_cost,
-                           'instr_seq': instr_seq, 'previous_solution': previous_solution_dict}
+        additional_info = {'tout': 10, 'solver': "oms", 'current_cost': current_cost, 'instr_seq': instr_seq,
+                           'previous_solution': previous_solution_dict, 'mem_order': mem_order}
     else:
         flags = {'at-most': args_i.at_most, 'pushed-at-least': args_i.pushed_once,
                  'instruction-order': args_i.instruction_order,
@@ -72,7 +74,7 @@ def initialize_flags_and_additional_info(args_i, current_cost, instr_seq, previo
                  'initial-solution': args_i.initial_solution, 'default-encoding': args_i.default_encoding,
                  'number-instruction-gas-model': args_i.number_instruction_gas_model}
         additional_info = {'tout': args_i.tout, 'solver': args_i.solver, 'current_cost': current_cost,
-                           'instr_seq': instr_seq, 'previous_solution': previous_solution_dict}
+                           'instr_seq': instr_seq, 'previous_solution': previous_solution_dict, 'mem_order': mem_order}
     return flags, additional_info
 
 
@@ -92,9 +94,9 @@ def execute_syrup_backend(args_i,json_file = None, previous_solution_dict = None
         solver = args_i.solver
         es = initialize_dir_and_streams(solver, json_path)
 
-    b0, bs, user_instr, variables, initial_stack, final_stack, current_cost, instr_seq = parse_data(json_path)
+    b0, bs, user_instr, variables, initial_stack, final_stack, current_cost, instr_seq, mem_order = parse_data(json_path)
 
-    flags, additional_info = initialize_flags_and_additional_info(args_i, current_cost, instr_seq, previous_solution_dict)
+    flags, additional_info = initialize_flags_and_additional_info(args_i, current_cost, instr_seq, previous_solution_dict, mem_order)
 
     additional_info['tout'] = timeout
 
@@ -119,11 +121,11 @@ def execute_syrup_backend_combined(sfs_dict, instr_sequence_dict, contract_name,
 
         log_dict = instr_sequence_dict[block]
 
-        b0, bs, user_instr, variables, initial_stack, final_stack, current_cost, instr_seq = parse_data(sfs_block,
-                                                                                                        next_var_idx)
+        b0, bs, user_instr, variables, initial_stack, final_stack, \
+            current_cost, instr_seq, mem_order = parse_data(sfs_block, next_var_idx)
 
         generate_smtlib_encoding_appending(b0, bs, user_instr, variables, initial_stack, final_stack,
-                                           log_dict, next_empty_idx)
+                                           log_dict, next_empty_idx, mem_order)
         next_empty_idx += b0 + 1
 
         # Next available index for assigning var values is equal to the maximum of previous ones

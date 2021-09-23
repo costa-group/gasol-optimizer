@@ -650,7 +650,7 @@ if __name__ == '__main__':
 
     args = ap.parse_args()
 
-    # If storage flag is activated, the blocks are splitted using store instructions
+    # If storage flag is activated, the blocks are split using store instructions
     if args.storage:
         constants.append_store_instructions_to_split()
 
