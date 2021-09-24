@@ -1679,6 +1679,18 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
 
     vars_list = compute_vars_set(new_ss,new_ts)
 
+    #Adding sstore seq
+    sto_objs = []
+    for sto in sstore_seq:
+        x = generate_sstore_info(sto)
+        sto_objs.append(x)
+
+    mem_objs = []
+    for mem in mstore_seq:
+        x = generate_mstore_info(mem)
+        mem_objs.append(x)
+
+    
     if simplification:
         new_user_defins,new_ts = apply_all_simp_rules(user_defins,vars_list,new_ts)
         apply_all_comparison(new_user_defins,new_ts)
@@ -1707,7 +1719,6 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
             idx = vars_list.index(s)
             vars_list.pop(idx)
 
-
     not_used = get_not_used_stack_variables(new_ss,new_ts,total_inpt_vars)
 
     num = check_all_pops(new_ss, new_ts, user_defins)
@@ -1715,17 +1726,6 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     if num !=-1:
         max_instr_size = num
         num_pops = num
-
-    #Adding sstore seq
-    sto_objs = []
-    for sto in sstore_seq:
-        x = generate_sstore_info(sto)
-        sto_objs.append(x)
-
-    mem_objs = []
-    for mem in mstore_seq:
-        x = generate_mstore_info(mem)
-        mem_objs.append(x)
 
     sto_dep, mem_dep = translate_dependences_sfs(new_user_defins)
         
@@ -1735,8 +1735,11 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     json_dict["vars"] = vars_list
     json_dict["src_ws"] = new_ss
     json_dict["tgt_ws"] = new_ts
-    json_dict["user_instrs"] = new_user_defins
+    json_dict["user_instrs"] = new_user_defins+sto_objs+mem_objs
     json_dict["current_cost"] = gas
+    json_dict["storage_dependences"] = sto_dep
+    json_dict["memory_dependences"]= mem_dep
+
     if not simplification:
         json_dict["init_info"] = opcodes_seq
 
