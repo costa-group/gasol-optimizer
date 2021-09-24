@@ -93,28 +93,20 @@ def init_globals():
     global sstore_seq
     sstore_seq = []
 
-    global sstore_vars
-    sstore_vars = {}
-
     global sstore_v_counter
     sstore_v_counter = 0
-
-    #it stores when the sloads are executed
-    global sload_relative_pos
-    sload_relative_pos = {}
 
     global mstore_seq
     mstore_seq = []
 
-    global mstore_vars
-    mstore_vars = {}
-
     global mstore_v_counter
     mstore_v_counter = 0
 
-    #it stores when the sloads are executed
-    global mload_relative_pos
-    mload_relative_pos = {}
+    global storage_dep
+    storage_dep = []
+
+    global memory_dep
+    memory_dep = []
 
 
 def filter_opcodes(rule):
@@ -1404,16 +1396,14 @@ def generate_encoding(instructions,variables,source_stack,simplification=True):
 def generate_storage_info(instructions,source_stack):
     global sstore_seq
     global mstore_seq
-    global sstore_vars
-    global mmstore_vars
-    global sload_relative_pos
-    global mload_relative_pos
     global storage_order
     global memory_order
     
-    #print("SLOADS")
-    #print(sload_relative_pos)
 
+    sload_relative_pos = {}
+    mload_relative_pos = {}
+
+    
     for x in range(0,len(instructions)):
         s_dict = {}
 
@@ -1472,6 +1462,28 @@ def generate_storage_info(instructions,source_stack):
     #print(storage_order)
 
     remove_loads_instructions()
+
+    print("*************")
+    remove_store_recursive_dif(storage_order,"storage")
+    print(storage_order)
+    remove_store_recursive_eq(storage_order,"storage")
+    print(storage_order)
+    stdep = generate_dependencies(storage_order)
+    print(storage_order)
+    print(stdep)
+
+    print("*************")
+    remove_store_recursive_dif(memory_order,"memory")
+    print(memory_order)
+    remove_store_recursive_eq(memory_order,"memory")
+    print(memory_order)
+    memdep = generate_dependencies(memory_order)
+    print(memory_order)
+    print(memdep)
+
+    
+    storage_dep = stdep
+    memory_dep = memdep
 
     
         
@@ -1586,10 +1598,9 @@ def generate_sstore_info(sstore_elem):
     obj["opcode"] = process_opcode(str(opcodes.get_opcode(instr_name)[0]))
     obj["disasm"] = instr_name
     obj["inpt_sk"] = [sstore_elem[0][0],sstore_elem[0][1]]
-    obj["sto_state"] = ["sto"+str(sstore_v_counter-1)] if sstore_v_counter != 0 else []
+    obj["sto_var"] = ["sto"+str(idx)]
 
-    out_var = create_new_sstorevar()
-    obj["out_sto"] = [out_var]
+    obj["out_sto"] = []
     
     obj["gas"] = opcodes.get_ins_cost(instr_name)
     obj["commutative"] = False
@@ -1708,19 +1719,15 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     #Adding sstore seq
     sto_objs = []
     for sto in sstore_seq:
-        # print("opopopopopopopoppppo")
-        # print(sto)
         x = generate_sstore_info(sto)
         sto_objs.append(x)
-        # print("STO")
-        # print(x)
 
     mem_objs = []
     for mem in mstore_seq:
         x = generate_mstore_info(mem)
         mem_objs.append(x)
 
-
+    sto_dep, mem_dep = translate_dependences_sfs(new_user_defins)
         
     json_dict["init_progr_len"] = max_instr_size-discount_op
     json_dict["max_progr_len"] = max_instr_size
@@ -4192,6 +4199,7 @@ def remove_store_recursive_eq(storage_location,location):
         i+=1
 
         
+        
 #storage location may be storage_order or memory_order
 def generate_dependencies(storage_location):
     storage_dependences = []
@@ -4206,8 +4214,16 @@ def generate_dependencies(storage_location):
         while((j<len(sub_list)) and (not already)):
             rest = sub_list[j]
             var_rest = rest[0][0]
-            if (elem[0][-1] == rest[0][-1] and elem[0][-1] == "sstore") or (not elem[0][-1].startswith("sload") and not rest[0][-1].startswith("sload")):
+            print(elem)
+            print(rest)
+
+            # if (elem[0][-1] == rest[0][-1] and (elem[0][-1] == "sstore" or rest[0][-1] == "sstore")): # or (not elem[0][-1].startswith("sload") and not rest[0][-1].startswith("sload")):
+            if (elem[0][-1] == "sstore" or rest[0][-1] == "sstore"):
+                print("YEEES")
+                print(var)
+                print(var_rest)
                 if var == var_rest:
+                    
                     storage_dependences.append((i,i+j+1))
                 else:
                     if var.startswith("s") or var_rest.startswith("s"):
@@ -4289,3 +4305,54 @@ def unify_loads_instructions(storage_location, location):
                 
             
         i+=1
+
+def compute_identifiers_storage_instructions(storage_location, location, new_user_defins):
+
+    if location == "storage":
+        store = "sstore"
+        store_up = "SSTORE"
+        load = "SLOAD"
+    else:
+        store = "mstore"
+        store_up = "MSTORE"
+        load = "MLOAD"
+    
+    store_count = 0
+
+    storage_identifiers = []
+
+    key_list = list(u_dict.keys())
+    values_list = list(u_dict.values())
+    
+    for i in range(0,len(storage_location)):
+        ins = storage_location[i]
+        if ins[0][-1] == store:
+            storage_identifiers.append(store_up+"_"+str(store_count))
+            store_count+=1
+        else: # loads instructions
+            pos = values_list.index(ins)
+            var = key_list[pos]
+            sload_ins = list(filter(lambda x: x["disasm"] == load and x["outpt_sk"] == [var],new_user_defins))
+            if len(sload_ins)!= 1:
+                raise Exception("Error in looking for load instruction")
+            else:
+                storage_identifiers.append(sload_ins[0]["id"])
+
+    return storage_identifiers
+
+def translate_dependences_sfs(new_user_defins):
+    new_storage_dep = []
+    new_memory_dep = []
+    
+    storage = compute_identifiers_storage_instructions(storage_order,"storage",new_user_defins)
+    memory = compute_identifiers_storage_instructions(memory_order,"memory",new_user_defins)
+
+    for e in storage_dep:
+        first, second = e
+        new_storage_dep.append((storage[first],storage[second]))
+
+    for e in memory_dep:
+        first, second = e
+        new_memory_dep.append((memory[first],memory[second]))
+
+    return new_storage_dep, new_memory_dep
