@@ -1600,7 +1600,7 @@ def generate_sstore_info(sstore_elem):
     obj["inpt_sk"] = [sstore_elem[0][0],sstore_elem[0][1]]
     obj["sto_var"] = ["sto"+str(idx)]
 
-    obj["out_sto"] = []
+    obj["out_sk"] = []
     
     obj["gas"] = opcodes.get_ins_cost(instr_name)
     obj["commutative"] = False
@@ -1625,10 +1625,9 @@ def generate_mstore_info(sstore_elem):
     obj["opcode"] = process_opcode(str(opcodes.get_opcode(instr_name)[0]))
     obj["disasm"] = instr_name
     obj["inpt_sk"] = [sstore_elem[0][0],sstore_elem[0][1]]
-    obj["mem_state"] = ["mem"+str(mstore_v_counter-1)] if mstore_v_counter != 0 else []
-
-    out_var = create_new_mstorevar()
-    obj["out_mem"] = [out_var]
+    obj["mem_var"] = ["mem"+str(idx)]
+        
+    obj["out_sk"] = []
     
     obj["gas"] = opcodes.get_ins_cost(instr_name)
     obj["commutative"] = False
