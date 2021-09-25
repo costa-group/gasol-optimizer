@@ -568,14 +568,14 @@ def get_involved_vars(instr,var):
 
         funct = "mload"
 
-    elif instr.find("sload(")!=-1:
+    elif instr.find("sload")!=-1:
         instr_new = instr.strip("\n")
         pos = instr_new.find("(")
         arg0 = instr_new[pos+1:-1]
         var0 = arg0.strip()
         var_list.append(var0)
 
-        funct = "sload"
+        funct = instr_new[:pos]
 
     elif instr.find("sstore(")!=-1:
         instr_new = instr.strip("\n")
@@ -1454,12 +1454,12 @@ def generate_storage_info(instructions,source_stack):
             mload_relative_pos[last_mload]=mstores.pop(0)
             memory_order.append(mload_relative_pos[last_mload])
             
-    #print("FINAL SSTORE:")
-    #print(sstore_seq)
-    #print("FINAL SLOAD:")
-    #print(sload_relative_pos)
-    #print("STORAGE ORDER:")
-    #print(storage_order)
+    print("FINAL SSTORE:")
+    print(sstore_seq)
+    print("FINAL SLOAD:")
+    print(sload_relative_pos)
+    print("STORAGE ORDER:")
+    print(storage_order)
 
     remove_loads_instructions()
 
@@ -1727,7 +1727,10 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
         max_instr_size = num
         num_pops = num
 
-    sto_dep, mem_dep = translate_dependences_sfs(new_user_defins)
+    if not split_sto:
+        sto_dep, mem_dep = translate_dependences_sfs(new_user_defins)
+    else:
+        sto_dep, mem_dep = [],[]
         
     json_dict["init_progr_len"] = max_instr_size-discount_op
     json_dict["max_progr_len"] = max_instr_size
@@ -2903,15 +2906,20 @@ def compute_max_program_len(opcodes, num_guard,block = None):
     return len(new_opcodes)
     
 
-def smt_translate_block(rule,name,preffix,simplification=True):
+def smt_translate_block(rule,name,preffix,simplification=True,storage = False):
     global s_counter
     global max_instr_size
     global int_not0
     global source_name
     global blocks_json_dict
     global sfs_contracts
+    global split_sto
     
     init_globals()
+
+    if storage:
+        split_sto = True
+
     sfs_contracts = {}
 
     blocks_json_dict = {}
@@ -2921,14 +2929,17 @@ def smt_translate_block(rule,name,preffix,simplification=True):
     source_name =  name
     
     int_not0 = [-1+2**256]#map(lambda x: -1+2**x, range(8,264,8))
-
     
     begin = dtimer()
     
     instructions = filter_opcodes(rule)
-    
+
     opcodes = get_opcodes(rule)
 
+    print(rule.get_rule_name())
+    print(instructions)
+    print("*******")
+    
     info = "INFO DEPLOY "+gasol_path+"ethir_OK_"+source_name+"_blocks_"+rule.get_rule_name()+" LENGTH="+str(len(opcodes))+" PUSH="+str(len(list(filter(lambda x: x.find("nop(PUSH")!=-1,opcodes))))
     info_deploy.append(info)
     
