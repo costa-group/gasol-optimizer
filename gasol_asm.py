@@ -87,7 +87,7 @@ def preprocess_instructions(bytecodes):
     return instructions
 
 
-def compute_original_sfs_with_simplifications(instructions, stack_size, cname, block_id, is_initial_block):
+def compute_original_sfs_with_simplifications(instructions, stack_size, cname, block_id, is_initial_block,storage):
     block_ins = list(filter(lambda x: x not in ["JUMP","JUMPI","JUMPDEST","tag","INVALID", "STOP","RETURN","INVALID"], instructions))
 
     block_data = {"instructions": block_ins, "input": stack_size}
@@ -98,7 +98,7 @@ def compute_original_sfs_with_simplifications(instructions, stack_size, cname, b
         prefix = ""
 
     exit_code = ir_block.evm2rbr_compiler(contract_name=cname, block=block_data, block_id=block_id,
-                                          preffix=prefix, simplification=True)
+                                          preffix=prefix, simplification=True,storage=storage)
 
     sfs_dict = get_sfs_dict()
 
@@ -132,7 +132,7 @@ def optimize_block(sfs_dict, timeout):
 # Given the log file loaded in json format, current block and the contract name, generates three dicts: one that
 # contains the sfs from each block, the second one contains the sequence of instructions and
 # the third one is a set that contains all block ids.
-def generate_sfs_dicts_from_log(block, contract_name, json_log):
+def generate_sfs_dicts_from_log(block, contract_name, json_log,storage):
     bytecodes = block.getInstructions()
     stack_size = block.getSourceStack()
     block_id = block.getBlockId()
@@ -141,7 +141,7 @@ def generate_sfs_dicts_from_log(block, contract_name, json_log):
     instructions = preprocess_instructions(bytecodes)
 
     sfs_dict = compute_original_sfs_with_simplifications(instructions, stack_size,
-                                                         contract_name, block_id, is_init_block)['syrup_contract']
+                                                         contract_name, block_id, is_init_block,storage)['syrup_contract']
 
     # Contains sfs blocks considered to check the SMT problem. Therefore, a block is added from
     # sfs_original iff solver could not find an optimized solution, and from sfs_dict otherwise.
@@ -306,7 +306,7 @@ def optimize_asm_from_log(file_name, json_log, output_file):
             print("Log file does not contain a valid solution")
 
 
-def optimize_isolated_asm_block(block_name, timeout=10):
+def optimize_isolated_asm_block(block_name, timeout=10,storage = False):
 
     with open(block_name,"r") as f:        
         instructions = f.readline().strip()
@@ -360,7 +360,7 @@ def optimize_isolated_asm_block(block_name, timeout=10):
     stack_size = compute_stack_size(opcodes)
     contract_name = block_name.split('/')[-1]
 
-    sfs_dict = compute_original_sfs_with_simplifications(opcodes, stack_size, contract_name, 0, False)["syrup_contract"]
+    sfs_dict = compute_original_sfs_with_simplifications(opcodes, stack_size, contract_name, 0, False,storage)["syrup_contract"]
     for solver_output, block_name, current_cost, current_length, user_instr \
         in optimize_block(sfs_dict, timeout):
 
@@ -429,7 +429,7 @@ def filter_optimized_blocks_by_intra_block_optimization(asm_sub_blocks, optimize
     return list(reversed(final_sub_blocks))
 
 # Given an asm_block and its contract name, returns the asm block after the optimization
-def optimize_asm_block_asm_format(block, contract_name, timeout):
+def optimize_asm_block_asm_format(block, contract_name, timeout, storage):
     bytecodes = block.getInstructions()
     stack_size = block.getSourceStack()
     block_id = block.getBlockId()
@@ -443,7 +443,7 @@ def optimize_asm_block_asm_format(block, contract_name, timeout):
 
     instructions = preprocess_instructions(bytecodes)
 
-    sfs_dict = compute_original_sfs_with_simplifications(instructions,stack_size,contract_name, block_id, is_init_block)["syrup_contract"]
+    sfs_dict = compute_original_sfs_with_simplifications(instructions,stack_size,contract_name, block_id, is_init_block,storage)["syrup_contract"]
 
     for solver_output, block_name, current_cost, current_length, user_instr \
             in optimize_block(sfs_dict, timeout):
@@ -525,19 +525,19 @@ def optimize_asm_block_asm_format(block, contract_name, timeout):
     return new_block, log_dicts
 
 
-def compare_asm_block_asm_format(old_block, new_block, contract_name="example"):
+def compare_asm_block_asm_format(old_block, new_block, contract_name="example",storage = False):
 
     old_instructions = preprocess_instructions(old_block.getInstructions())
 
     old_sfs_dict = compute_original_sfs_with_simplifications(old_instructions, old_block.getSourceStack(),
                                                              contract_name, old_block.getBlockId(),
-                                                             old_block.get_is_init_block())["syrup_contract"]
+                                                             old_block.get_is_init_block(),storage)["syrup_contract"]
     new_instructions = preprocess_instructions(new_block.getInstructions())
 
 
     new_sfs_dict = compute_original_sfs_with_simplifications(new_instructions, new_block.getSourceStack(),
                                                              contract_name, new_block.getBlockId(),
-                                                             new_block.get_is_init_block())["syrup_contract"]
+                                                             new_block.get_is_init_block(),storage)["syrup_contract"]
 
     final_comparison = verify_block_from_list_of_sfs(old_sfs_dict, new_sfs_dict)
 
@@ -549,7 +549,7 @@ def compare_asm_block_asm_format(old_block, new_block, contract_name="example"):
     return final_comparison and (intermediate_instructions_old == intermediate_instructions_new)
 
 
-def optimize_asm_in_asm_format(file_name, output_file, timeout=10, log=False):
+def optimize_asm_in_asm_format(file_name, output_file, timeout=10, log=False,storage= False):
     asm = parse_asm(file_name)
     log_dicts = {}
     contracts = []
@@ -579,7 +579,7 @@ def optimize_asm_in_asm_format(file_name, output_file, timeout=10, log=False):
         init_code_blocks = []
 
         for block in init_code:
-            asm_block, log_element = optimize_asm_block_asm_format(block, contract_name, timeout)
+            asm_block, log_element = optimize_asm_block_asm_format(block, contract_name, timeout, storage)
             log_dicts.update(log_element)
             init_code_blocks.append(asm_block)
 
@@ -599,7 +599,7 @@ def optimize_asm_in_asm_format(file_name, output_file, timeout=10, log=False):
 
             run_code_blocks = []
             for block in blocks:
-                asm_block, log_element = optimize_asm_block_asm_format(block, contract_name, timeout)
+                asm_block, log_element = optimize_asm_block_asm_format(block, contract_name, timeout, storage)
                 log_dicts.update(log_element)
                 run_code_blocks.append(asm_block)
 
@@ -659,7 +659,7 @@ if __name__ == '__main__':
             log_dict = json.load(path)
             optimize_asm_from_log(args.input_path, log_dict, args.output_path)
     elif not args.block:
-        optimize_asm_in_asm_format(args.input_path, args.output_path, args.tout, args.log_flag)
+        optimize_asm_in_asm_format(args.input_path, args.output_path, args.tout, args.log_flag,args.storage)
     else:
         optimize_isolated_asm_block(args.input_path, args.tout)
 
