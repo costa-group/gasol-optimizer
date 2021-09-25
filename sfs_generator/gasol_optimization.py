@@ -1600,7 +1600,7 @@ def generate_sstore_info(sstore_elem):
     obj["inpt_sk"] = [sstore_elem[0][0],sstore_elem[0][1]]
     obj["sto_var"] = ["sto"+str(idx)]
 
-    obj["out_sk"] = []
+    obj["outpt_sk"] = []
     
     obj["gas"] = opcodes.get_ins_cost(instr_name)
     obj["commutative"] = False
@@ -1627,7 +1627,7 @@ def generate_mstore_info(sstore_elem):
     obj["inpt_sk"] = [sstore_elem[0][0],sstore_elem[0][1]]
     obj["mem_var"] = ["mem"+str(idx)]
         
-    obj["out_sk"] = []
+    obj["outpt_sk"] = []
     
     obj["gas"] = opcodes.get_ins_cost(instr_name)
     obj["commutative"] = False
