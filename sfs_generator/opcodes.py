@@ -93,14 +93,15 @@ opcodes = {
     "KECCAK256": [0x20, 2, 1], #For evm it is representes as SHA3, for solc as KECCAK256
     "INVALID": [0xfe, 0, 0],  # Not an opcode use to cause an exception
     "SUICIDE": [0xff, 1, 0],
-    "ASSIGNIMMUTABLE": [0x00,2,0], #Yul opcode
-    "PUSHTAG": [0x00,0,1], #Yul opcode
-    "PUSH#[$]": [0x00,0,1], #Yul opcode
-    "PUSH[$]": [0x00,0,1], #Yul opcode
-    "PUSHDEPLOYADDRESS": [0x00,0,1], #Yul opcode
-    "PUSHDATA": [0x00,0,1], #Yul opcode
-    "PUSHSIZE": [0x00,0,1], #Yul opcode
-    "PUSHIMMUTABLE": [0x00,0,1], #Yul opcode
+    # See https://github.com/ethereum/solidity/blob/develop/libevmasm/Assembly.cpp for more information
+    "ASSIGNIMMUTABLE": [0x00,2,0], #Yul opcode. Assembly Item: AssignImmutable
+    "PUSHTAG": [0x00,0,1], #Yul opcode. Assembly Item: PushTag
+    "PUSH#[$]": [0x00,0,1], #Yul opcode. Assembly Item: PushSubSize
+    "PUSH[$]": [0x00,0,1], #Yul opcode. Assembly Item: PushSub
+    "PUSHDEPLOYADDRESS": [0x00,0,1], #Yul opcode. AssemblyItem: PushDeployTimeAddress
+    "PUSHDATA": [0x00,0,1], #Yul opcode. Assembly Item: PushData
+    "PUSHSIZE": [0x00,0,1], #Yul opcode. Assembly Item: PushProgramSize
+    "PUSHIMMUTABLE": [0x00,0,1], #Yul opcode. Assembly Item:PushImmutable
     "---END---": [0x00, 0, 0]
 }
 
