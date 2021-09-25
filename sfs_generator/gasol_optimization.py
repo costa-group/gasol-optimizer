@@ -477,7 +477,7 @@ def generate_sload_mload(load_ins,instructions,source_stack):
             val = new_vars[0]
             #update_unary_func(funct,var,new_vars[0])
 
-        elem = ((new_vars[0],func),1)
+        elem = ((new_vars[0],funct),1)
         new_uvar, defined = is_already_defined(elem)
         return new_uvar,elem
             
