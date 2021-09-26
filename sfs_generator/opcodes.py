@@ -105,6 +105,14 @@ opcodes = {
     "---END---": [0x00, 0, 0]
 }
 
+# Opcodes that have a blank character in their name are put together in our representation
+opcode_internal_representation_to_assembly_item = {
+    "PUSHTAG": "PUSH [tag]", #Yul opcode. Assembly Item: PushTag
+    "PUSH#[$]": "PUSH #[$]", #Yul opcode. Assembly Item: PushSubSize
+    "PUSH[$]": "PUSH [$]", #Yul opcode. Assembly Item: PushSub
+    "PUSHDATA": "PUSH data", #Yul opcode. Assembly Item: PushData
+}
+
 # TO BE UPDATED IF ETHEREUM VM CHANGES their fee structure
 
 GCOST = {

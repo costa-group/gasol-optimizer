@@ -26,7 +26,8 @@ from utils import isYulInstruction, compute_stack_size
 from copy import deepcopy
 from rebuild_asm import rebuild_asm
 from verification.sfs_verify import verify_block_from_list_of_sfs
-from sfs_generator.utils import compute_number_of_instructions_in_asm_json_per_file
+from statistics.measure_asm_json_properties import compute_number_of_instructions_in_asm_json_per_file, \
+    compute_bytecode_size_in_asm_json_per_file
 import global_params.constants as constants
 
 def clean_dir():
@@ -617,13 +618,16 @@ def optimize_asm_in_asm_format(file_name, output_file, timeout=10, log=False,sto
     if not verifier_error:
         print("Optimized bytecode has been checked successfully")
     else:
-        print("Error when generating the optimized bytecode")
+        print("The optimized bytecode could not be verified")
 
     new_asm = deepcopy(asm)
     new_asm.set_contracts(contracts)
 
-    print("Previous size:", compute_number_of_instructions_in_asm_json_per_file(asm))
-    print("New size:", compute_number_of_instructions_in_asm_json_per_file(new_asm))
+    print("Previous number of instructions:", compute_number_of_instructions_in_asm_json_per_file(asm))
+    print("New number of instructions:", compute_number_of_instructions_in_asm_json_per_file(new_asm))
+
+    print("Previous bytecode size:", compute_bytecode_size_in_asm_json_per_file(asm))
+    print("New bytecode size:", compute_bytecode_size_in_asm_json_per_file(new_asm))
 
     if log:
         with open(gasol_path + file_name_str + ".log" , "w") as log_f:

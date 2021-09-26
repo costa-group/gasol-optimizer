@@ -6,6 +6,7 @@ import pathlib
 
 from global_params.paths import gasol_path
 from sfs_generator.asm_bytecode import AsmBytecode
+from sfs_generator.opcodes import opcode_internal_representation_to_assembly_item
 
 def init():
     global instruction_json
@@ -29,29 +30,6 @@ def init():
     global gas_final_solution
     gas_final_solution = gasol_path + "gas.txt"
 
-# Push is determined by the number of bytes of pushed value
-def decide_push_type(elem):
-    return (len(bin(int(elem))[2:]) - 1) // 8 + 1
-
-
-def change_instr_push_type(position, instr, pushed_value):
-    if instr == "PUSH":
-        push_type = decide_push_type(pushed_value)
-        return position, "PUSH" + str(push_type)
-    return position, instr
-
-
-def change_opcode_push_type(position, opcode, pushed_value):
-    # Opcode 60 corresponds to PUSH (in fact, to PUSH1, but we use
-    # that value in general)
-    if opcode == "60":
-        hex_pushed_value = hex(int(pushed_value))[2:]
-        push_type = decide_push_type(pushed_value)
-        # Convert 59 hex number to decimal, add the length of the pushed value to
-        # obtain the corresponding value, transform it again to hex and append the pushed value also in hex
-        return position, hex(int("59",16) + int(str(push_type), 16))[2:] + hex_pushed_value
-    return position, opcode
-
 
 def generate_file_names(contract_name, block_name):
     global instruction_json
@@ -73,10 +51,6 @@ def generate_file_names(contract_name, block_name):
 # Given the sequence of instructions in disassembly format, in opcode format and the pushed values, returns
 # the same sequences well ordered and with the corresponding PUSHx value.
 def generate_ordered_structures(instr_sol, opcode_sol, pushed_values_decimal):
-
-    # We need to change PUSH instructions and opcode to the corresponding PUSHx version
-    instr_sol = dict(map(lambda pair: change_instr_push_type(pair[0], pair[1], pushed_values_decimal.get(pair[0], 0)), instr_sol.items()))
-    opcode_sol = dict(map(lambda pair: change_opcode_push_type(pair[0], pair[1], pushed_values_decimal.get(pair[0], 0)), opcode_sol.items()))
 
     # We order by position in the sequence in order to write them in the adequate order
     instr_sol = collections.OrderedDict(sorted(instr_sol.items(), key=lambda kv: kv[0]))
@@ -149,13 +123,10 @@ def generate_disasm_sol_from_output(solver_output, opcodes_theta_dict, instructi
 
     for position, instr in instr_sol.items():
 
-        # Push match refers to usual PUSH instructions that are introduced as basic operations
-        push_match = re.match(re.compile('PUSH([0-9]+)'), instr)
-
         # Basic stack instructions refer to those instruction that only manage the stack: SWAPk, POP or DUPk.
         # These instructions just initialize each field in the asm format to -1
         special_push_with_value_match = re.match(re.compile('PUSHIMMUTABLE|PUSHTAG|PUSH#\[\$]|PUSH\[\$]|PUSHDATA'), instr)
-        if push_match or special_push_with_value_match:
+        if instr == "PUSH" or special_push_with_value_match:
             value = hex(int(pushed_values_decimal[position]))[2:]
             opcode_list.append(instr + " 0x" + value)
         else:
@@ -226,21 +197,18 @@ def generate_sub_block_asm_representation_from_instructions(instr_sol, pushed_va
 
     for position, instr in instr_sol.items():
 
-        # Push match refers to usual PUSH instructions that are introduced as basic operations
-        push_match = re.match(re.compile('PUSH([0-9]+)'), instr)
-
         # Basic stack instructions refer to those instruction that only manage the stack: SWAPk, POP or DUPk.
         # These instructions just initialize each field in the asm format to -1
         special_push_with_value_match = re.match(re.compile('PUSHIMMUTABLE|PUSHTAG|PUSH#\[\$]|PUSH\[\$]|PUSHDATA'),
                                                  instr)
-        if push_match:
+
+        # If the instruction is a key in the opcode_... dict, then we need to rename it to fit the assembly format
+        assembly_name = opcode_internal_representation_to_assembly_item.get(instr, instr)
+        if instr == "PUSH" or special_push_with_value_match:
             value = hex(int(pushed_values_decimal[position]))[2:]
-            sub_block_instructions_asm.append(AsmBytecode(-1, -1, -1, "PUSH", value))
-        elif special_push_with_value_match:
-            value = hex(int(pushed_values_decimal[position]))[2:]
-            sub_block_instructions_asm.append(AsmBytecode(-1, -1, -1, instr, value))
+            sub_block_instructions_asm.append(AsmBytecode(-1, -1, -1, assembly_name, value))
         else:
-            sub_block_instructions_asm.append(AsmBytecode(-1, -1, -1, instr, None))
+            sub_block_instructions_asm.append(AsmBytecode(-1, -1, -1, assembly_name, None))
     return sub_block_instructions_asm
 
 
