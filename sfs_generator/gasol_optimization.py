@@ -570,13 +570,17 @@ def get_involved_vars(instr,var):
 
     elif instr.find("sload")!=-1:
         instr_new = instr.strip("\n")
+
         pos = instr_new.find("(")
         arg0 = instr_new[pos+1:-1]
         var0 = arg0.strip()
         var_list.append(var0)
 
-        funct = instr_new[:pos]
-
+        if not split_sto: 
+            funct = instr_new[:pos]
+        else:
+            funct = "sload"
+            
     elif instr.find("sstore(")!=-1:
         instr_new = instr.strip("\n")
         pos = instr_new.find("sstore(")
