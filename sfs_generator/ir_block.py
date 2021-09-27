@@ -67,7 +67,7 @@ def init_globals():
     opcodesZ = ["RETURNDATACOPY","RETURNDATASIZE"]
 
     global opcodesYul
-    opcodesYul = ["PUSHTAG","PUSH#[$]","PUSH[$]", "PUSHDATA", "PUSHDEPLOYADDRESS", "ASSIGNIMMUTABLE","PUSHSIZE","PUSHIMMUTABLE"]
+    opcodesYul = ["PUSHTAG","PUSH#[$]","PUSH[$]", "PUSHDATA", "PUSHDEPLOYADDRESS", "ASSIGNIMMUTABLE","PUSHSIZE","PUSHIMMUTABLE","PUSHLIB"]
     
     global current_local_var
     current_local_var = 0
@@ -908,6 +908,10 @@ def translateYulOpcodes(opcode, value, index_variables):
 
         elif opcode == "PUSHIMMUTABLE":
             instr = v1+" = pushimmutable(" + str(dec_value)+")"
+
+        elif opcode == "PUSHLIB":
+            instr = v1+" = pushlib(" + str(dec_value)+")"
+
             
     return instr, updated_variables
 
