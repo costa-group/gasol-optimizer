@@ -243,7 +243,7 @@ def get_encoding_init_block(instructions,source_stack):
             if instr.startswith("DUP") or instr.startswith("SWAP") or instr.startswith("PUSH") or instr.startswith("POP"):
                 if instr.startswith("PUSH") and instr.find("DEPLOYADDRESS") == -1 and instr.find("SIZE") ==-1:
                     value = instructions[i-1].split("=")[-1].strip()
-                    if value.find("pushtag")!=-1 or value.find("push#[$]")!=-1 or value.find("push[$]")!=-1 or value.find("pushdata")!=-1 or value.find("pushimmutable")!=-1:
+                    if value.find("pushtag")!=-1 or value.find("push#[$]")!=-1 or value.find("push[$]")!=-1 or value.find("pushdata")!=-1 or value.find("pushimmutable")!=-1 or value.find("pushlib")!=-1:
                         pos = value.find("(")
                         int_val = value[pos+1:-1]
                         # print(int_val)
@@ -1153,6 +1153,15 @@ def get_involved_vars(instr,var):
         var_list.append(var0)
 
         funct = "pushtag"
+
+    elif instr.startswith("pushlib("):
+        instr_new = instr.strip("\n")
+        pos = instr_new.find("pushlib(")
+        arg0 = instr[pos+8:-1]
+        var0 = arg0.strip()
+        var_list.append(var0)
+
+        funct = "pushlib"
 
 
     elif instr.startswith("push#[$]("):
@@ -2144,6 +2153,9 @@ def generate_userdefname(u_var,funct,args,arity):
     elif funct.find("pushimmutable")!=-1:
         instr_name = "PUSHIMMUTABLE"
 
+    elif funct.find("pushlib")!=-1:
+        instr_name = "PUSHLIB"
+
         
     #TODO: Add more opcodes
     
@@ -2174,12 +2186,12 @@ def generate_userdefname(u_var,funct,args,arity):
         obj["id"] = name
         obj["opcode"] = process_opcode(str(opcodes.get_opcode(instr_name)[0]))
         obj["disasm"] = instr_name
-        obj["inpt_sk"] = [] if arity==0 or instr_name in ["PUSHTAG","PUSH#[$]","PUSH[$]","PUSHDATA","PUSHIMMUTABLE"] else args_aux
+        obj["inpt_sk"] = [] if arity==0 or instr_name in ["PUSHTAG","PUSH#[$]","PUSH[$]","PUSHDATA","PUSHIMMUTABLE","PUSHLIB"] else args_aux
         obj["outpt_sk"] = [u_var]
         obj["gas"] = opcodes.get_ins_cost(instr_name)
         obj["commutative"] = True if instr_name in commutative_bytecodes else False
         obj["storage"] = False #It is true only for MSTORE and SSTORE
-        if instr_name in ["PUSHTAG","PUSH#[$]","PUSH[$]","PUSHDATA","PUSHIMMUTABLE"]:
+        if instr_name in ["PUSHTAG","PUSH#[$]","PUSH[$]","PUSHDATA","PUSHIMMUTABLE","PUSHLIB"]:
             obj["value"] = args_aux
         user_def_counter[instr_name]=idx+1
 
@@ -2235,7 +2247,7 @@ def check_inputs(instr_name,args_aux):
     
     for elem in user_defins:
         name = elem["disasm"]
-        if name == instr_name and name not in ["PUSHTAG","PUSH#[$]","PUSH[$]","PUSHDATA","PUSHIMMUTABLE"]:
+        if name == instr_name and name not in ["PUSHTAG","PUSH#[$]","PUSH[$]","PUSHDATA","PUSHIMMUTABLE","PUSHLIB"]:
             input_variables = elem["inpt_sk"]
             if instr_name in commutative_bytecodes:
                 if ((input_variables[0] == args[1]) and (input_variables[1] == args[0])) or ((input_variables[0] == args[0]) and (input_variables[1] == args[1])):
@@ -2253,7 +2265,7 @@ def check_inputs(instr_name,args_aux):
                 if equals:
                     return elem
 
-        elif name == instr_name and name in ["PUSHTAG","PUSH#[$]","PUSH[$]","PUSHDATA","PUSHIMMUTABLE"]:
+        elif name == instr_name and name in ["PUSHTAG","PUSH#[$]","PUSH[$]","PUSHDATA","PUSHIMMUTABLE","PUSHLIB"]:
             input_variables = elem["value"]
             i = 0
             equals = True
