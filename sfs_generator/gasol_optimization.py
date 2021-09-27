@@ -559,14 +559,17 @@ def get_involved_vars(instr,var):
     var_list = []
     funct = ""
 
-    if instr.find("mload(")!=-1:
+    if instr.find("mload")!=-1:
         instr_new = instr.strip("\n")
-        pos = instr_new.find("mload(")
-        arg0 = instr_new[pos+6:-1]
+        pos = instr_new.find("(")
+        arg0 = instr_new[pos+1:-1]
         var0 = arg0.strip()
         var_list.append(var0)
 
-        funct = "mload"
+        if not split_sto:
+            funct = instr_new[:pos]
+        else:
+            funct = "mload"
 
     elif instr.find("sload")!=-1:
         instr_new = instr.strip("\n")
@@ -1481,7 +1484,7 @@ def generate_storage_info(instructions,source_stack):
     print(storage_order)
     remove_store_recursive_eq(storage_order,"storage")
     print(storage_order)
-    stdep = generate_dependencies(storage_order)
+    stdep = generate_dependences(storage_order,"storage")
     print(storage_order)
     print(stdep)
 
@@ -1490,7 +1493,7 @@ def generate_storage_info(instructions,source_stack):
     print(memory_order)
     remove_store_recursive_eq(memory_order,"memory")
     print(memory_order)
-    memdep = generate_dependencies(memory_order)
+    memdep = generate_dependences(memory_order,"memory")
     print(memory_order)
     print(memdep)
 
@@ -4230,9 +4233,14 @@ def remove_store_recursive_eq(storage_location,location):
         
         
 #storage location may be storage_order or memory_order
-def generate_dependencies(storage_location):
+def generate_dependences(storage_location, location):
     storage_dependences = []
 
+    if location == "sotrage":
+        instruction = "sstore"
+    else:
+        instruction = "mstore"
+        
     for i in range(len(storage_location)-2,-1,-1):
         elem = storage_location[i]
         var = elem[0][0]
@@ -4243,20 +4251,23 @@ def generate_dependencies(storage_location):
         while((j<len(sub_list)) and (not already)):
             rest = sub_list[j]
             var_rest = rest[0][0]
-            print(elem)
-            print(rest)
+            # print(elem)
+            # print(rest)
 
             # if (elem[0][-1] == rest[0][-1] and (elem[0][-1] == "sstore" or rest[0][-1] == "sstore")): # or (not elem[0][-1].startswith("sload") and not rest[0][-1].startswith("sload")):
-            if (elem[0][-1] == "sstore" or rest[0][-1] == "sstore"):
-                print("YEEES")
-                print(var)
-                print(var_rest)
+            if (elem[0][-1] == instruction or rest[0][-1] == instruction):
+                
                 if var == var_rest:
                     
                     storage_dependences.append((i,i+j+1))
                 else:
                     if var.startswith("s") or var_rest.startswith("s"):
                         storage_dependences.append((i,i+j+1))
+
+                        if var.startswith("s") and not var_rest.startswith("s"):
+                            print("DEP: VAR and VALUE")
+                        else:
+                            print("DEP: DIFFERENT VARS")
             
                 if len(list(filter(lambda x: x[0] == i+j+1, storage_dependences))) > 0:
                     # It means that the transitive things have been already computed
