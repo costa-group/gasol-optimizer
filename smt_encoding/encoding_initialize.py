@@ -30,12 +30,18 @@ def _initialize_a_vars(b0, initial_idx=0):
         write_encoding(declare_intvar(a(i)))
 
 
-def initialize_variables(variables, bs, b0, initial_idx=0):
+def _initialize_l_vars(theta_mem):
+    for theta_value in theta_mem.values():
+        write_encoding(declare_intvar(l(theta_value)))
+
+
+def initialize_variables(variables, bs, b0, theta_mem, initial_idx=0):
     _initialize_s_vars(variables)
     _initialize_u_vars(bs, b0, initial_idx)
     _initialize_x_vars(bs, b0, initial_idx)
     _initialize_t_vars(b0, initial_idx)
     _initialize_a_vars(b0, initial_idx)
+    _initialize_l_vars(theta_mem)
 
 
 # Method for generating variable assignment (SV)

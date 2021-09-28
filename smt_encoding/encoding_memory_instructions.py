@@ -5,7 +5,7 @@ from encoding_files import write_encoding
 
 def _mem_variable_equivalence_constraint(j, theta_store):
     left_term = add_eq(t(j), theta_store)
-    right_term = add_and(l(theta_store), j)
+    right_term = add_eq(l(theta_store), j)
     write_encoding(add_assert(add_eq(left_term, right_term)))
 
 
@@ -29,13 +29,12 @@ def _load_store_order_constraint(j, theta_load, theta_store):
 
 
 def memory_model_constraints(b0, order_tuples, theta_dict, theta_mem, initial_idx=0):
-    mi = len(theta_dict)
     initial_possible_idx = initial_idx
     final_possible_idx = b0 + initial_idx
 
     write_encoding("; Memory constraints")
     for _, theta_store in theta_mem.items():
-        write_encoding(add_assert(add_and(add_leq(0, l(theta_store)), add_lt(l(theta_store), mi))))
+        write_encoding(add_assert(add_and(add_leq(initial_possible_idx, l(theta_store)), add_lt(l(theta_store), final_possible_idx))))
         for j in range(initial_possible_idx, final_possible_idx):
             _mem_variable_equivalence_constraint(j, theta_store)
 

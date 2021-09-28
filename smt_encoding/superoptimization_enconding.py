@@ -137,7 +137,7 @@ def generate_smtlib_encoding(b0, bs, usr_instr, variables, initial_stack, final_
     write_encoding(set_logic('QF_LIA'))
     generate_configuration_statements(solver_name)
     generate_asserts_from_additional_info(additional_info)
-    initialize_variables(variables, bs, b0)
+    initialize_variables(variables, bs, b0, theta_mem)
     variables_assignment_constraint(variables)
     stack_constraints(b0, bs, comm_instr, non_comm_instr, mem_instr, theta_stack, theta_comm, theta_non_comm, theta_mem,
                       first_position_instr_appears_dict, first_position_instr_cannot_appear_dict)
@@ -175,7 +175,7 @@ def generate_smtlib_encoding_appending(b0, bs, usr_instr, variables, initial_sta
     comm_instr, non_comm_instr, mem_instr = divide_usr_instr(usr_instr)
     theta_dict = dict(theta_stack, **theta_comm, **theta_non_comm, **theta_mem)
 
-    initialize_variables(variables, bs, b0, previous_idx)
+    initialize_variables(variables, bs, b0, theta_mem, previous_idx)
     variables_assignment_constraint(variables, previous_idx)
     stack_constraints(b0, bs, comm_instr, non_comm_instr, mem_instr, theta_stack, theta_comm, theta_non_comm, theta_mem,
                       {}, {}, previous_idx)
