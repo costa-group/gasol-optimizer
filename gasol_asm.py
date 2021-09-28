@@ -26,7 +26,7 @@ from utils import isYulInstruction, compute_stack_size
 from copy import deepcopy
 from rebuild_asm import rebuild_asm
 from verification.sfs_verify import verify_block_from_list_of_sfs
-from statistics.measure_asm_json_properties import compute_number_of_instructions_in_asm_json_per_file, \
+from statistics.properties_from_asm_json import compute_number_of_instructions_in_asm_json_per_file, \
     compute_bytecode_size_in_asm_json_per_file
 import global_params.constants as constants
 

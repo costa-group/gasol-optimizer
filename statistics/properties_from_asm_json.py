@@ -48,6 +48,10 @@ def bytes_required(asm_bytecode, address_length = 4):
         raise ValueError("Opcode not recognized")
 
 
+def compute_bytecode_size_in_asm_json_per_block(asm_block):
+    return sum([bytes_required(asm_bytecode) for asm_bytecode in asm_block.getInstructions()])
+
+
 # Computes the size of the bytecode given an ASM json object
 def compute_bytecode_size_in_asm_json_per_contract(asm_json):
     contract_counter_dict = {}
@@ -58,7 +62,7 @@ def compute_bytecode_size_in_asm_json_per_contract(asm_json):
         for identifier in c.getDataIds():
             blocks = c.getRunCodeOf(identifier)
             for block in blocks:
-                bytecode_size += sum([bytes_required(asm_bytecode) for asm_bytecode in block.getInstructions()])
+                bytecode_size += compute_bytecode_size_in_asm_json_per_block(block)
         contract_counter_dict[contract_name] = bytecode_size
     return contract_counter_dict
 
