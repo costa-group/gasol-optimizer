@@ -4296,7 +4296,30 @@ def remove_loads_stores(storage_location,location):
 
 
 
-        
+
+#It removes things of the type sstore(4,sload(4))
+def remove_store_loads(storage_location, location):
+    if storage_location == "storage":
+        store_ins = "sstore"
+        load_ins = "sload"
+    else:
+        store_ins = "mstore"
+        load_ins = "mload"
+
+    i = 0
+    finished = False
+    while(i<len(storage_location) and not finished):
+        elem = storage_location[i]
+        if elem[0][-1].find(store_ins)!=-1:
+            var = elem[0][0]
+            value = elem[0][1]
+            if value in u_dict:
+                symb_ins = u_dict[value]
+                if symb_ins[0][-1].find(load_ins)!=-1 and sym_ins[0][0] == var:
+                    storage_location.pop(i)
+                    finished = True
+                    remove_store_loads(storage_location,location)
+        i+=1
         
 #storage location may be storage_order or memory_order
 def generate_dependences(storage_location, location):
