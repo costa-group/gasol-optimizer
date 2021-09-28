@@ -1736,7 +1736,7 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
             vars_list.pop(idx)
 
     not_used = get_not_used_stack_variables(new_ss,new_ts,total_inpt_vars)
-
+    
     num = check_all_pops(new_ss, new_ts, user_defins)
 
     if num !=-1:
@@ -1877,13 +1877,13 @@ def build_userdef_instructions():
     global already_defined_userdef
     
     already_defined_userdef = []
-
+    
     u_dict_sort = sorted(u_dict.keys())
     for u_var in u_dict_sort:
         exp = u_dict[u_var]
         arity_exp = exp[1]
         args_exp = exp[0]
-
+        
         if arity_exp ==0 or arity_exp == 1:
             funct = args_exp[1]
             args = args_exp[0]
@@ -1892,7 +1892,10 @@ def build_userdef_instructions():
 
             
             if not is_new and funct not in ["gas","timestamp","returndatasize"]:
-                modified_svariable(u_var, obj["outpt_sk"][0])
+                if not split_sto and funct.find("sload")==-1 and funct.find("mload")==-1:
+                    user_defins.append(obj)
+                else:
+                    modified_svariable(u_var, obj["outpt_sk"][0])
 
             else:
                 user_defins.append(obj)
@@ -1962,7 +1965,8 @@ def build_userdef_instructions():
 
             else:
                 user_defins.append(obj)
-                
+
+            
 def generate_userdefname(u_var,funct,args,arity):
     global user_def_counter
     global already_defined_userdef
@@ -2166,7 +2170,10 @@ def generate_userdefname(u_var,funct,args,arity):
     #TODO: Add more opcodes
     
     if instr_name in already_defined_userdef:
-        defined = check_inputs(instr_name,args)
+        if not split_sto and instr_name in ["SLOAD","MLOAD"]:
+            defined = -1
+        else:
+            defined = check_inputs(instr_name,args)
     else:
         defined = -1
         # if instr_name not in ["PUSHTAG","PUSH#[$]","PUSH[$]","PUSHDATA"]:
