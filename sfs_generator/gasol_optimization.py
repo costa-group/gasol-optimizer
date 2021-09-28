@@ -1414,7 +1414,8 @@ def generate_storage_info(instructions,source_stack):
     global mstore_seq
     global storage_order
     global memory_order
-    
+    global storage_dep
+    global memory_dep
 
     sload_relative_pos = {}
     mload_relative_pos = {}
@@ -1744,6 +1745,8 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
 
     if not split_sto:
         sto_dep, mem_dep = translate_dependences_sfs(new_user_defins)
+        print(sto_dep)
+
     else:
         sto_dep, mem_dep = [],[]
         
@@ -4299,10 +4302,13 @@ def remove_loads_stores(storage_location,location):
 def generate_dependences(storage_location, location):
     storage_dependences = []
 
-    if location == "sotrage":
+    if location == "storage":
         instruction = "sstore"
     else:
         instruction = "mstore"
+
+    # print("\n\nAQUI")
+    # print(storage_location)
         
     for i in range(len(storage_location)-2,-1,-1):
         elem = storage_location[i]
@@ -4314,12 +4320,17 @@ def generate_dependences(storage_location, location):
         while((j<len(sub_list)) and (not already)):
             rest = sub_list[j]
             var_rest = rest[0][0]
+            # print("*********")
             # print(elem)
             # print(rest)
 
+            # print(elem[0][-1])
+            # print(rest[0][-1])
+            # print(elem[0][-1].find(instruction)!=-1)
+            # print(rest[0][-1].find(instruction) != -1)
             # if (elem[0][-1] == rest[0][-1] and (elem[0][-1] == "sstore" or rest[0][-1] == "sstore")): # or (not elem[0][-1].startswith("sload") and not rest[0][-1].startswith("sload")):
-            if (elem[0][-1] == instruction or rest[0][-1] == instruction):
-                
+            if (elem[0][-1].find(instruction)!=-1 or rest[0][-1].find(instruction) != -1):
+
                 if var == var_rest:
                     
                     storage_dependences.append((i,i+j+1))
@@ -4443,7 +4454,7 @@ def compute_identifiers_storage_instructions(storage_location, location, new_use
 
     return storage_identifiers
 
-def translate_dependences_sfs(new_user_defins):
+def translate_dependences_sfs(new_user_defins):    
     new_storage_dep = []
     new_memory_dep = []
     
@@ -4451,7 +4462,7 @@ def translate_dependences_sfs(new_user_defins):
     memory = compute_identifiers_storage_instructions(memory_order,"memory",new_user_defins)
 
     for e in storage_dep:
-        first, second = e
+        first, second = e    
         new_storage_dep.append((storage[first],storage[second]))
 
     for e in memory_dep:
