@@ -67,7 +67,7 @@ def init_globals():
     opcodesZ = ["RETURNDATACOPY","RETURNDATASIZE"]
 
     global opcodesYul
-    opcodesYul = ["PUSHTAG","PUSH#[$]","PUSH[$]", "PUSHDATA", "PUSHDEPLOYADDRESS", "ASSIGNIMMUTABLE","PUSHSIZE","PUSHIMMUTABLE"]
+    opcodesYul = ["PUSHTAG","PUSH#[$]","PUSH[$]", "PUSHDATA", "PUSHDEPLOYADDRESS", "ASSIGNIMMUTABLE","PUSHSIZE","PUSHIMMUTABLE","PUSHLIB"]
     
     global current_local_var
     current_local_var = 0
@@ -89,7 +89,10 @@ def init_globals():
 
     global sload_counter
     sload_counter = 0
-    
+
+    global mload_counter
+    mload_counter = 0
+
 '''
 Given a block it returns a list containingn the height of its
 stack when arriving and leaving the block.
@@ -543,6 +546,7 @@ updated. It also updated the corresponding global variables.
 def translateOpcodes50(opcode, value, index_variables,block):
     global pc_cont
     global sload_counter
+    global mload_counter
     
     if opcode == "POP":        
         v1, updated_variables = get_consume_variable(index_variables)
@@ -551,8 +555,9 @@ def translateOpcodes50(opcode, value, index_variables,block):
         _ , updated_variables = get_consume_variable(index_variables)
         v1, updated_variables = get_new_variable(updated_variables)
 
-        instr = v1+" = mload("+v1+")"
-             
+        instr = v1+" = mload"+str(mload_counter)+"("+v1+")"
+        mload_counter+=1
+        
     elif opcode == "MSTORE":
         v0 , updated_variables = get_consume_variable(index_variables)
         v1 , updated_variables = get_consume_variable(updated_variables)
@@ -908,6 +913,10 @@ def translateYulOpcodes(opcode, value, index_variables):
 
         elif opcode == "PUSHIMMUTABLE":
             instr = v1+" = pushimmutable(" + str(dec_value)+")"
+
+        elif opcode == "PUSHLIB":
+            instr = v1+" = pushlib(" + str(dec_value)+")"
+
             
     return instr, updated_variables
 

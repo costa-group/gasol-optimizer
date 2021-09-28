@@ -75,6 +75,9 @@ def preprocess_instructions(bytecodes):
 
             elif op.startswith("PUSH") and op.find("IMMUTABLE")!=-1:
                 op = "PUSHIMMUTABLE"+" 0x"+b.getValue()
+
+            elif op.startswith("PUSH") and op.find("LIB")!=-1:
+                op = "PUSHLIB"+" 0x"+b.getValue()
                 
             elif op.startswith("PUSH") and op.find("DEPLOYADDRESS") !=-1:
                 # Fixme: add ALL PUSH variants: PUSH data, PUSH DEPLOYADDRESS

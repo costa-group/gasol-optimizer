@@ -243,7 +243,7 @@ def get_encoding_init_block(instructions,source_stack):
             if instr.startswith("DUP") or instr.startswith("SWAP") or instr.startswith("PUSH") or instr.startswith("POP"):
                 if instr.startswith("PUSH") and instr.find("DEPLOYADDRESS") == -1 and instr.find("SIZE") ==-1:
                     value = instructions[i-1].split("=")[-1].strip()
-                    if value.find("pushtag")!=-1 or value.find("push#[$]")!=-1 or value.find("push[$]")!=-1 or value.find("pushdata")!=-1 or value.find("pushimmutable")!=-1:
+                    if value.find("pushtag")!=-1 or value.find("push#[$]")!=-1 or value.find("push[$]")!=-1 or value.find("pushdata")!=-1 or value.find("pushimmutable")!=-1 or value.find("pushlib")!=-1:
                         pos = value.find("(")
                         int_val = value[pos+1:-1]
                         # print(int_val)
@@ -559,24 +559,31 @@ def get_involved_vars(instr,var):
     var_list = []
     funct = ""
 
-    if instr.find("mload(")!=-1:
-        instr_new = instr.strip("\n")
-        pos = instr_new.find("mload(")
-        arg0 = instr_new[pos+6:-1]
-        var0 = arg0.strip()
-        var_list.append(var0)
-
-        funct = "mload"
-
-    elif instr.find("sload")!=-1:
+    if instr.find("mload")!=-1:
         instr_new = instr.strip("\n")
         pos = instr_new.find("(")
         arg0 = instr_new[pos+1:-1]
         var0 = arg0.strip()
         var_list.append(var0)
 
-        funct = instr_new[:pos]
+        if not split_sto:
+            funct = instr_new[:pos]
+        else:
+            funct = "mload"
 
+    elif instr.find("sload")!=-1:
+        instr_new = instr.strip("\n")
+
+        pos = instr_new.find("(")
+        arg0 = instr_new[pos+1:-1]
+        var0 = arg0.strip()
+        var_list.append(var0)
+
+        if not split_sto: 
+            funct = instr_new[:pos]
+        else:
+            funct = "sload"
+            
     elif instr.find("sstore(")!=-1:
         instr_new = instr.strip("\n")
         pos = instr_new.find("sstore(")
@@ -1150,6 +1157,15 @@ def get_involved_vars(instr,var):
 
         funct = "pushtag"
 
+    elif instr.startswith("pushlib("):
+        instr_new = instr.strip("\n")
+        pos = instr_new.find("pushlib(")
+        arg0 = instr[pos+8:-1]
+        var0 = arg0.strip()
+        var_list.append(var0)
+
+        funct = "pushlib"
+
 
     elif instr.startswith("push#[$]("):
         instr_new = instr.strip("\n")
@@ -1468,7 +1484,7 @@ def generate_storage_info(instructions,source_stack):
     print(storage_order)
     remove_store_recursive_eq(storage_order,"storage")
     print(storage_order)
-    stdep = generate_dependencies(storage_order)
+    stdep = generate_dependences(storage_order,"storage")
     print(storage_order)
     print(stdep)
 
@@ -1477,7 +1493,7 @@ def generate_storage_info(instructions,source_stack):
     print(memory_order)
     remove_store_recursive_eq(memory_order,"memory")
     print(memory_order)
-    memdep = generate_dependencies(memory_order)
+    memdep = generate_dependences(memory_order,"memory")
     print(memory_order)
     print(memdep)
 
@@ -2140,6 +2156,9 @@ def generate_userdefname(u_var,funct,args,arity):
     elif funct.find("pushimmutable")!=-1:
         instr_name = "PUSHIMMUTABLE"
 
+    elif funct.find("pushlib")!=-1:
+        instr_name = "PUSHLIB"
+
         
     #TODO: Add more opcodes
     
@@ -2170,12 +2189,12 @@ def generate_userdefname(u_var,funct,args,arity):
         obj["id"] = name
         obj["opcode"] = process_opcode(str(opcodes.get_opcode(instr_name)[0]))
         obj["disasm"] = instr_name
-        obj["inpt_sk"] = [] if arity==0 or instr_name in ["PUSHTAG","PUSH#[$]","PUSH[$]","PUSHDATA","PUSHIMMUTABLE"] else args_aux
+        obj["inpt_sk"] = [] if arity==0 or instr_name in ["PUSHTAG","PUSH#[$]","PUSH[$]","PUSHDATA","PUSHIMMUTABLE","PUSHLIB"] else args_aux
         obj["outpt_sk"] = [u_var]
         obj["gas"] = opcodes.get_ins_cost(instr_name)
         obj["commutative"] = True if instr_name in commutative_bytecodes else False
         obj["storage"] = False #It is true only for MSTORE and SSTORE
-        if instr_name in ["PUSHTAG","PUSH#[$]","PUSH[$]","PUSHDATA","PUSHIMMUTABLE"]:
+        if instr_name in ["PUSHTAG","PUSH#[$]","PUSH[$]","PUSHDATA","PUSHIMMUTABLE","PUSHLIB"]:
             obj["value"] = args_aux
         user_def_counter[instr_name]=idx+1
 
@@ -2231,7 +2250,7 @@ def check_inputs(instr_name,args_aux):
     
     for elem in user_defins:
         name = elem["disasm"]
-        if name == instr_name and name not in ["PUSHTAG","PUSH#[$]","PUSH[$]","PUSHDATA","PUSHIMMUTABLE"]:
+        if name == instr_name and name not in ["PUSHTAG","PUSH#[$]","PUSH[$]","PUSHDATA","PUSHIMMUTABLE","PUSHLIB"]:
             input_variables = elem["inpt_sk"]
             if instr_name in commutative_bytecodes:
                 if ((input_variables[0] == args[1]) and (input_variables[1] == args[0])) or ((input_variables[0] == args[0]) and (input_variables[1] == args[1])):
@@ -2249,7 +2268,7 @@ def check_inputs(instr_name,args_aux):
                 if equals:
                     return elem
 
-        elif name == instr_name and name in ["PUSHTAG","PUSH#[$]","PUSH[$]","PUSHDATA","PUSHIMMUTABLE"]:
+        elif name == instr_name and name in ["PUSHTAG","PUSH#[$]","PUSH[$]","PUSHDATA","PUSHIMMUTABLE","PUSHLIB"]:
             input_variables = elem["value"]
             i = 0
             equals = True
@@ -4214,9 +4233,14 @@ def remove_store_recursive_eq(storage_location,location):
         
         
 #storage location may be storage_order or memory_order
-def generate_dependencies(storage_location):
+def generate_dependences(storage_location, location):
     storage_dependences = []
 
+    if location == "sotrage":
+        instruction = "sstore"
+    else:
+        instruction = "mstore"
+        
     for i in range(len(storage_location)-2,-1,-1):
         elem = storage_location[i]
         var = elem[0][0]
@@ -4227,20 +4251,23 @@ def generate_dependencies(storage_location):
         while((j<len(sub_list)) and (not already)):
             rest = sub_list[j]
             var_rest = rest[0][0]
-            print(elem)
-            print(rest)
+            # print(elem)
+            # print(rest)
 
             # if (elem[0][-1] == rest[0][-1] and (elem[0][-1] == "sstore" or rest[0][-1] == "sstore")): # or (not elem[0][-1].startswith("sload") and not rest[0][-1].startswith("sload")):
-            if (elem[0][-1] == "sstore" or rest[0][-1] == "sstore"):
-                print("YEEES")
-                print(var)
-                print(var_rest)
+            if (elem[0][-1] == instruction or rest[0][-1] == instruction):
+                
                 if var == var_rest:
                     
                     storage_dependences.append((i,i+j+1))
                 else:
                     if var.startswith("s") or var_rest.startswith("s"):
                         storage_dependences.append((i,i+j+1))
+
+                        if var.startswith("s") and not var_rest.startswith("s"):
+                            print("DEP: VAR and VALUE")
+                        else:
+                            print("DEP: DIFFERENT VARS")
             
                 if len(list(filter(lambda x: x[0] == i+j+1, storage_dependences))) > 0:
                     # It means that the transitive things have been already computed

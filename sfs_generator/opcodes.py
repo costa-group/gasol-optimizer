@@ -96,6 +96,7 @@ opcodes = {
     # See https://github.com/ethereum/solidity/blob/develop/libevmasm/Assembly.cpp for more information
     "ASSIGNIMMUTABLE": [0x00,2,0], #Yul opcode. Assembly Item: AssignImmutable
     "PUSHTAG": [0x00,0,1], #Yul opcode. Assembly Item: PushTag
+    "PUSHLIB": [0x00,0,1], #Yul opcode. Assembly Item: PushLib
     "PUSH#[$]": [0x00,0,1], #Yul opcode. Assembly Item: PushSubSize
     "PUSH[$]": [0x00,0,1], #Yul opcode. Assembly Item: PushSub
     "PUSHDEPLOYADDRESS": [0x00,0,1], #Yul opcode. AssemblyItem: PushDeployTimeAddress
