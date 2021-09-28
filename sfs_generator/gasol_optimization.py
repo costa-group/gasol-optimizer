@@ -4230,6 +4230,69 @@ def remove_store_recursive_eq(storage_location,location):
                 finish = True
         i+=1
 
+
+
+#Here it means that we have sloads between the sstores that are equals.
+#Otherwise it would have been removed with remove_store_recursive_dif
+def remove_loads_stores(storage_location,location):
+
+    if location == "storage":
+        instruction = "sstore"
+        load_ins = "sload"
+    else:
+        instruction = "mstore"
+        load_ins = "mload"
+        
+    i = 0
+    finish = False
+
+    while(i<len(storage_location) and not finish):
+        elem = storage_location[i]
+        
+        if elem[0][-1].find(instruction)!=-1:
+            var = elem[0][0]
+            value = elem[0][1]
+            rest = list(filter(lambda x: x[0][0] == var and x[0][-1].find(load_ins)!=-1, storage_location[i+1::]))
+            if rest !=[]:
+                next_ins = rest[0]
+                pos = storage_location.index(next_ins)
+                sublist = storage_location[i+1:pos]
+                storage_instructions = list(filter(lambda x: x[0][0] == var,sublist)) #It checks for loads betweeen the stores
+                if len(storage_instructions) == 0:
+                    load_ins = storage_location.pop(pos)
+
+                    for v in u_dict:
+                        elem = u_dict[v]
+                        if elem == load_ins:
+                            var2replace = v
+
+                    for v in u_dict:
+                        elem = u_dict[v]
+                        list_tuple = list(elem[0])
+                        if var2replace in list_tuple:
+                            pos = elem[0].index(var2replace)
+                            list_tuple[pos] = value
+                            u_dict[v] = (tuple(list_tuple),elem[1])
+    
+                    for var in variable_content:
+                        if variable_content[var] == var2replace:
+                            variable_content[var] = value
+
+                    for i in range(0,len(storage_location)):
+                        elem = storage_location[i]
+                        list_tuple = list(elem[0])
+                        if var2replace in list_tuple:
+                            pos = list_tuple.index(var2replace)
+                            list_tuple[pos] = value
+                            storage_location[i] = (tuple(list_tuple),elem[1])
+
+                    
+                    remove_loads_stores(storage_location,location)
+                    finish = True
+        i+=1
+
+
+
         
         
 #storage location may be storage_order or memory_order
@@ -4291,9 +4354,9 @@ def update_variables_loads(elem1, elem2, storage_location):
             var2replace = v
 
 
-    print(u_dict)
-    print(var2keep)
-    print(var2replace)
+    # print(u_dict)
+    # print(var2keep)
+    # print(var2replace)
             
     #We remove the second sload
     u_dict.pop(var2replace)
