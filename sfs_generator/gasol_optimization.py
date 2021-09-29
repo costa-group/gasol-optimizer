@@ -4350,28 +4350,13 @@ def generate_dependences(storage_location, location):
         while((j<len(sub_list)) and (not already)):
             rest = sub_list[j]
             var_rest = rest[0][0]
-            # print("*********")
-            # print(elem)
-            # print(rest)
-
-            # print(elem[0][-1])
-            # print(rest[0][-1])
-            # print(elem[0][-1].find(instruction)!=-1)
-            # print(rest[0][-1].find(instruction) != -1)
-            # if (elem[0][-1] == rest[0][-1] and (elem[0][-1] == "sstore" or rest[0][-1] == "sstore")): # or (not elem[0][-1].startswith("sload") and not rest[0][-1].startswith("sload")):
+        
             if (elem[0][-1].find(instruction)!=-1 or rest[0][-1].find(instruction) != -1):
 
-                if var == var_rest:
-                    
+                dep = are_dependent(var,var_rest)
+   
+                if dep:
                     storage_dependences.append((i,i+j+1))
-                else:
-                    if var.startswith("s") or var_rest.startswith("s"):
-                        storage_dependences.append((i,i+j+1))
-
-                        if var.startswith("s") and not var_rest.startswith("s"):
-                            print("DEP: VAR and VALUE")
-                        else:
-                            print("DEP: DIFFERENT VARS")
             
                 if len(list(filter(lambda x: x[0] == i+j+1, storage_dependences))) > 0:
                     # It means that the transitive things have been already computed
@@ -4500,3 +4485,18 @@ def translate_dependences_sfs(new_user_defins):
         new_memory_dep.append((memory[first],memory[second]))
 
     return new_storage_dep, new_memory_dep
+
+def are_dependent(var1,var2):
+    dep = False
+    if var1 == var2:
+        dep = True
+        print("DEP: SAME VALUE")
+    else:
+        if var1.find(var2)!=-1 or var2.find(var1)!=-1:
+            dep = False
+            
+        elif var1.startswith("s") or var2.startswith("s"):
+            dep = True
+            print("DIFFERENT VALUES")
+
+    return dep
