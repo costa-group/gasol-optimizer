@@ -4187,93 +4187,41 @@ def remove_loads_instructions():
 
 
 
-def remove_store_recursive_dif(storage_location, location):
-
-    if location == "storage":
-        instruction = "sstore"
-    else:
-        instruction = "mstore"
-
-    i = 0
-    finish = False
-
-    while(i<len(storage_location) and not finish):
-        elem = storage_location[i]
-        
-        if elem[0][-1].find(instruction)!=-1:
-            var = elem[0][0]
-            rest = list(filter(lambda x: x[0][0] == var and x[0][-1].find(instruction)!=-1 and x!=elem, storage_location[i+1::]))
-            if rest !=[]:
-                next_ins = rest[0]
-                pos = storage_location.index(next_ins)
-                sublist = storage_location[i+1:pos]
-                storage_instructions = list(filter(lambda x: x[0][0] == var,sublist)) #It checks for loads betweeen the stores
-                if len(storage_instructions) == 0:
-                    storage_location.pop(i)
-                    remove_store_recursive_dif(storage_location,location)
-                    finish = True
-        i+=1
-
 #Here it means that we have sloads between the sstores that are equals.
 #Otherwise it would have been removed with remove_store_recursive_dif
-def remove_store_recursive_eq(storage_location,location):
-
+def replace_loads_by_sstored(storage_location, location):
+    global u_dict
+    global variable_content
+    
     if location == "storage":
-        instruction = "sstore"
-    else:
-        instruction = "mstore"
-
-    i = 0
-    finish = False
-
-    while(i<len(storage_location) and not finish):
-        elem = storage_location[i]
-        
-        if elem[0][-1].find(instruction)!=-1 and elem in storage_location[i+1::]:
-            pos = storage_location[i+1::].index(elem)+i+1
-            var = elem[0][0]
-            subList = storage_location[i+1:pos]
-            rest = list(filter(lambda x: x[0][0] == var and x[0][-1].find(instruction)!=-1, subList))
-            if rest ==[]:
-                storage_location.pop(pos)
-                remove_store_recursive_eq(storage_location, location)
-                finish = True
-        i+=1
-
-
-
-#Here it means that we have sloads between the sstores that are equals.
-#Otherwise it would have been removed with remove_store_recursive_dif
-def remove_loads_stores(storage_location,location):
-
-    if location == "storage":
-        instruction = "sstore"
+        store_ins = "sstore"
         load_ins = "sload"
     else:
-        instruction = "mstore"
+        store_ins = "mstore"
         load_ins = "mload"
-        
+
     i = 0
     finish = False
-
     while(i<len(storage_location) and not finish):
         elem = storage_location[i]
-        
-        if elem[0][-1].find(instruction)!=-1:
+
+        if elem[0][-1].find(store_ins) !=-1:
             var = elem[0][0]
             value = elem[0][1]
-            rest = list(filter(lambda x: x[0][0] == var and x[0][-1].find(load_ins)!=-1, storage_location[i+1::]))
-            if rest !=[]:
-                next_ins = rest[0]
-                pos = storage_location.index(next_ins)
-                sublist = storage_location[i+1:pos]
-                storage_instructions = list(filter(lambda x: x[0][0] == var,sublist)) #It checks for loads betweeen the stores
-                if len(storage_instructions) == 0:
-                    load_ins = storage_location.pop(pos)
+            l_ins = filter(lambda x: x[0][0] == var and x[0][-1].find(load_ins)!=-1,storage_location[i+1::])
+            if len(l_ins)>0:
+                load = l_ins[0]
+                pos = storage_location[i+1::].index(load)
+                rest_list = storage_location[i+1:i+pos+1]
+                dep = list(map(lambda x: are_dependent(var,x[0][0]),rest_list))
+                if True not in dep:
+                    print("[OPT]: Replaced sload by its value")
+                    storage_location.pop(i+pos+1)
+                    finish = True
 
-                    for v in u_dict:
+                     for v in u_dict:
                         elem = u_dict[v]
-                        if elem == load_ins:
+                        if elem == load:
                             var2replace = v
 
                     for v in u_dict:
@@ -4296,11 +4244,66 @@ def remove_loads_stores(storage_location,location):
                             list_tuple[pos] = value
                             storage_location[i] = (tuple(list_tuple),elem[1])
 
-                    
-                    remove_loads_stores(storage_location,location)
-                    finish = True
+                    del u_dict[var2replace]
+
+                    replace_loads_by_sstored(storage_location,location)
         i+=1
 
+    
+def remove_store_recursive_dif(storage_location, location):
+
+    if location == "storage":
+        instruction = "sstore"
+    else:
+        instruction = "mstore"
+
+    i = 0
+    finish = False
+
+    while(i<len(storage_location) and not finish):
+        elem = storage_location[i]
+        
+        if elem[0][-1].find(instruction)!=-1:
+            var = elem[0][0]
+            rest = list(filter(lambda x: x[0][0] == var and x[0][-1].find(instruction)!=-1, storage_location[i+1::]))
+            if rest !=[]:
+                next_ins = rest[0]
+                pos = storage_location[i+1::].index(next_ins)
+                sublist = storage_location[i+1:pos+i+1]
+                dep = list(map(lambda x: are_dependent(x[0][0],var),sublist)) #It checks for loads betweeen the stores
+                if True not in dep:
+                    storage_location.pop(i)
+                    print("[OPT]: Removed sstore sstore")
+                    remove_store_recursive_dif(storage_location,location)
+                    finish = True
+                    
+        i+=1
+
+# #Here it means that we have sloads between the sstores that are equals.
+# #Otherwise it would have been removed with remove_store_recursive_dif
+# def remove_store_recursive_eq(storage_location,location):
+
+#     if location == "storage":
+#         instruction = "sstore"
+#     else:
+#         instruction = "mstore"
+
+#     i = 0
+#     finish = False
+
+#     while(i<len(storage_location) and not finish):
+#         elem = storage_location[i]
+        
+#         if elem[0][-1].find(instruction)!=-1 and elem in storage_location[i+1::]:
+#             pos = storage_location[i+1::].index(elem)+i+1
+#             var = elem[0][0]
+#             subList = storage_location[i+1:pos]
+#             rest = list(filter(lambda x: x[0][0] == var and x[0][-1].find(instruction)!=-1, subList))
+#             if rest ==[]:
+#                 storage_location.pop(pos)
+#                 remove_store_recursive_eq(storage_location, location)
+#                 finish = True
+#         i+=1
 
 
 
@@ -4323,9 +4326,14 @@ def remove_store_loads(storage_location, location):
             if value in u_dict:
                 symb_ins = u_dict[value]
                 if symb_ins[0][-1].find(load_ins)!=-1 and sym_ins[0][0] == var:
-                    storage_location.pop(i)
-                    finished = True
-                    remove_store_loads(storage_location,location)
+                    pos = storage_location.index(symb_ins)
+                    rest_instructions = storage_location[i+1:pos]
+                    variables = list(map(lambda x: are_dependent(var,x[0][0]),rest_instructions))
+                    if True not in variables:
+                        storage_location.pop(i)
+                        finished = True
+                        print("[OPT]: OPTIMIZATION SSTORE OF SLOAD")
+                        remove_store_loads(storage_location,location)
         i+=1
         
 #storage location may be storage_order or memory_order
