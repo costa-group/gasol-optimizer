@@ -1495,6 +1495,7 @@ def generate_storage_info(instructions,source_stack):
     
     memdep = generate_dependences(memory_order,"memory")
     print(memory_order)
+    print("MEM DEP")
     print(memdep)
 
     
@@ -1745,6 +1746,7 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     if not split_sto:
         sto_dep, mem_dep = translate_dependences_sfs(new_user_defins)
         print(sto_dep)
+        print(mem_dep)
 
     else:
         sto_dep, mem_dep = [],[]
