@@ -608,6 +608,17 @@ def get_involved_vars(instr,var):
 
         funct = "mstore"
 
+    elif instr.find("mstore8(")!=-1:
+        instr_new = instr.strip("\n")
+        pos = instr_new.find("mstore8(")
+        arg01 = instr[pos+8:-1]
+        var01 = arg01.split(",")
+        var0 = var01[0].strip()
+        var1 = var01[1].strip()
+        var_list.append(var0)
+        var_list.append(var1)
+
+        funct = "mstore8"
         
     elif instr.find("timestamp")!=-1:
         var_list.append("timestamp")
@@ -1631,10 +1642,14 @@ def generate_mstore_info(sstore_elem):
     global mstore_v_counter
 
     obj = {}
-    idx  = user_def_counter.get("MSTORE",0)
-
-    instr_name = "MSTORE"
-    name = "MSTORE"+"_"+str(idx)
+    if sstore_elem[0][-1].find("mstore8")!=-1:
+        idx  = user_def_counter.get("MSTORE8",0)
+        instr_name = "MSTORE8"
+    else:
+        idx  = user_def_counter.get("MSTORE",0)
+        instr_name = "MSTORE"
+            
+    name = instr_name+"_"+str(idx)
 
     
     
@@ -1649,7 +1664,7 @@ def generate_mstore_info(sstore_elem):
     obj["gas"] = opcodes.get_ins_cost(instr_name)
     obj["commutative"] = False
     obj["storage"] = True
-    user_def_counter["MSTORE"]=idx+1
+    user_def_counter[instr_name]=idx+1
     
     return obj
 
