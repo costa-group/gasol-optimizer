@@ -4230,7 +4230,7 @@ def replace_loads_by_sstores(storage_location, location):
                 pos = storage_location[i+1::].index(load)
                 rest_list = storage_location[i+1:i+pos+1]
                 dep = list(map(lambda x: are_dependent(var,x[0][0]),rest_list))
-                if True not in dep:
+                if True not in dep and elem[0][-1].find("mstore8") == -1: #it does not work for mstore8
                     print("[OPT]: Replaced sload by its value")
                     storage_location.pop(i+pos+1)
                     finish = True
@@ -4279,9 +4279,9 @@ def remove_store_recursive_dif(storage_location, location):
     while(i<len(storage_location) and not finish):
         elem = storage_location[i]
         
-        if elem[0][-1].find(instruction)!=-1:
+        if elem[0][-1].find(instruction)!=-1: #it can be mstore8 or mstore but the second has to be mstore
             var = elem[0][0]
-            rest = list(filter(lambda x: x[0][0] == var and x[0][-1].find(instruction)!=-1, storage_location[i+1::]))
+            rest = list(filter(lambda x: x[0][0] == var and x[0][-1].find(instruction)!=-1 and x[0][-1].find("mstore8")==-1, storage_location[i+1::]))
             if rest !=[]:
                 next_ins = rest[0]
                 pos = storage_location[i+1::].index(next_ins)
