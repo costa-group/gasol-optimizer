@@ -1456,7 +1456,7 @@ def generate_storage_info(instructions,source_stack):
             #print(exp)
             storage_order.append(r)
             
-        elif instructions[x].find("sstore")!=-1 and last_sload != "" and sload_relative_pos.get(last_sload,[])==[]:
+        elif instructions[x].find("sstore")!=-1: #and last_sload != "" and sload_relative_pos.get(last_sload,[])==[]:
             sload_relative_pos[last_sload]=sstores.pop(0)
             storage_order.append(sload_relative_pos[last_sload])
             
@@ -1467,7 +1467,7 @@ def generate_storage_info(instructions,source_stack):
             #print(exp)
             memory_order.append(r)
             
-        elif instructions[x].find("mstore")!=-1 and last_mload != "" and mload_relative_pos.get(last_mload,[])==[]:
+        elif instructions[x].find("mstore")!=-1: #and last_mload != "" and mload_relative_pos.get(last_mload,[])==[]:
             mload_relative_pos[last_mload]=mstores.pop(0)
             memory_order.append(mload_relative_pos[last_mload])
             
@@ -1480,20 +1480,19 @@ def generate_storage_info(instructions,source_stack):
 
     remove_loads_instructions()
 
-    print("*************")
-    remove_store_recursive_dif(storage_order,"storage")
-    print(storage_order)
-    remove_store_recursive_eq(storage_order,"storage")
-    print(storage_order)
+
+    simp = True
+    while(simp):
+        simp = simplify_memory(storage_order,"storage")
+
     stdep = generate_dependences(storage_order,"storage")
     print(storage_order)
     print(stdep)
 
-    print("*************")
-    remove_store_recursive_dif(memory_order,"memory")
-    print(memory_order)
-    remove_store_recursive_eq(memory_order,"memory")
-    print(memory_order)
+    simp = True
+    while(simp):
+        simp = simplify_memory(memory_order,"memory")
+    
     memdep = generate_dependences(memory_order,"memory")
     print(memory_order)
     print(memdep)
@@ -4189,7 +4188,7 @@ def remove_loads_instructions():
 
 #Here it means that we have sloads between the sstores that are equals.
 #Otherwise it would have been removed with remove_store_recursive_dif
-def replace_loads_by_sstored(storage_location, location):
+def replace_loads_by_sstores(storage_location, location):
     global u_dict
     global variable_content
     
@@ -4208,7 +4207,7 @@ def replace_loads_by_sstored(storage_location, location):
         if elem[0][-1].find(store_ins) !=-1:
             var = elem[0][0]
             value = elem[0][1]
-            l_ins = filter(lambda x: x[0][0] == var and x[0][-1].find(load_ins)!=-1,storage_location[i+1::])
+            l_ins = list(filter(lambda x: x[0][0] == var and x[0][-1].find(load_ins)!=-1,storage_location[i+1::]))
             if len(l_ins)>0:
                 load = l_ins[0]
                 pos = storage_location[i+1::].index(load)
@@ -4219,7 +4218,7 @@ def replace_loads_by_sstored(storage_location, location):
                     storage_location.pop(i+pos+1)
                     finish = True
 
-                     for v in u_dict:
+                    for v in u_dict:
                         elem = u_dict[v]
                         if elem == load:
                             var2replace = v
@@ -4246,7 +4245,7 @@ def replace_loads_by_sstored(storage_location, location):
 
                     del u_dict[var2replace]
 
-                    replace_loads_by_sstored(storage_location,location)
+                    replace_loads_by_sstores(storage_location,location)
         i+=1
 
     
@@ -4335,6 +4334,29 @@ def remove_store_loads(storage_location, location):
                         print("[OPT]: OPTIMIZATION SSTORE OF SLOAD")
                         remove_store_loads(storage_location,location)
         i+=1
+
+
+
+
+def simplify_memory(storage_location,location):
+    old_storage_location = list(storage_location)
+    print("INIT")
+    print(storage_location)
+    
+    print("!1")
+    replace_loads_by_sstores(storage_location,location)
+    print(storage_location)
+    print("!2")
+    remove_store_recursive_dif(storage_location,location)
+    print(storage_location)
+    print("!3")
+    remove_store_loads(storage_location,location)
+    print(storage_location)
+    
+    if storage_location != old_storage_location:
+        return True
+    else:
+        return False
         
 #storage location may be storage_order or memory_order
 def generate_dependences(storage_location, location):
@@ -4508,3 +4530,6 @@ def are_dependent(var1,var2):
             print("DIFFERENT VALUES")
 
     return dep
+
+def get_variables(var1):
+    pass
