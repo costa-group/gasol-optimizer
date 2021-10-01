@@ -4400,7 +4400,7 @@ def generate_dependences(storage_location, location):
         
             if (elem[0][-1].find(instruction)!=-1 or rest[0][-1].find(instruction) != -1):
 
-                dep = are_dependent(var,var_rest)
+                dep = are_dependent(var,var_rest,elem[0][-1],rest[0][-1])
    
                 if dep:
                     if(elem[0][-1].find(instruction)!=-1 and rest[0][-1].find(instruction) != -1):
@@ -4538,23 +4538,36 @@ def translate_dependences_sfs(new_user_defins):
 
     return new_storage_dep, new_memory_dep
 
-def are_dependent(var1,var2):
+def are_dependent(var1,var2,ins1,ins2):
     dep = False
     if var1 == var2:
         dep = True
         print("DEP: SAME VALUE")
     else:
-        list1 = []
-        list2 = []
-        get_variables(var1,list1)
-        get_variables(var2,list2)
-        if var1 in list2 or var2 in list1:
-            dep = False
-            
+
+        if var1.startswith("s") and var2.startswith("s"):
+            list1 = []
+            list2 = []
+            get_variables(var1,list1)
+            get_variables(var2,list2)
+            if var1 in list2 or var2 in list1:
+                dep = False
+            else:
+                dep = True
+                print("DIFFERENT VARIABLES")
+                
         elif var1.startswith("s") or var2.startswith("s"):
             dep = True
-            print("DIFFERENT VALUES")
+            print("DIFFERENT VALUES 1 var 1 int")
 
+        else: #two int values
+            if ins1.find("mstore8")!=-1 and var1>=var2 and var1<var2+32:
+                dep = True
+            elif ins2.find("mstore8")!=-1 and var2>=var1 and var2<var1+32:
+                dep = True
+            else:
+                dep = False
+            
     return dep
 
 def get_variables(var1,list_variables):
