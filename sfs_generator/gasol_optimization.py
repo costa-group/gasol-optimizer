@@ -4388,7 +4388,12 @@ def generate_dependences(storage_location, location):
                 dep = are_dependent(var,var_rest)
    
                 if dep:
-                    storage_dependences.append((i,i+j+1))
+                    if(elem[0][-1].find(instruction)!=-1 and rest[0][-1].find(instruction) != -1):
+                        if elem[0][1] != rest[0][1]: #if the value is the same they are not dependent
+                            storage_dependences.append((i,i+j+1))
+
+                    else:
+                        storage_dependences.append((i,i+j+1))
             
                 if len(list(filter(lambda x: x[0] == i+j+1, storage_dependences))) > 0:
                     # It means that the transitive things have been already computed
@@ -4524,7 +4529,11 @@ def are_dependent(var1,var2):
         dep = True
         print("DEP: SAME VALUE")
     else:
-        if var1.find(var2)!=-1 or var2.find(var1)!=-1:
+        list1 = []
+        list2 = []
+        get_variables(var1,list1)
+        get_variables(var2,list2)
+        if var1 in list2 or var2 in list1:
             dep = False
             
         elif var1.startswith("s") or var2.startswith("s"):
@@ -4533,5 +4542,12 @@ def are_dependent(var1,var2):
 
     return dep
 
-def get_variables(var1):
-    pass
+def get_variables(var1,list_variables):
+    if var1 in u_dict:
+        values = list(u_dict[var1])
+
+        for v in values[:-1]:
+            get_variables(v,list_variables)
+        
+    else:
+        list_variables.append(var1)
