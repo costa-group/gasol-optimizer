@@ -1503,10 +1503,10 @@ def generate_storage_info(instructions,source_stack):
     simp = True
     while(simp):
         simp = simplify_memory(memory_order,"memory")
-    
+
     memdep = generate_dependences(memory_order,"memory")
-    print(memory_order)
     print("MEM DEP")
+    print(memory_order)
     print(memdep)
 
     
@@ -1712,22 +1712,25 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
 
     #Adding sstore seq
     sto_objs = []
-    for sto in sstore_seq:
+
+    sstore_ins = filter(lambda x: x[0][-1].find("sstore")!=-1,storage_order)
+    for sto in sstore_ins:
         x = generate_sstore_info(sto)
         sto_objs.append(x)
 
     mem_objs = []
-    for mem in mstore_seq:
+    mstore_ins = filter(lambda x: x[0][-1].find("mstore")!=-1,memory_order)
+    for mem in mstore_ins:
         x = generate_mstore_info(mem)
         mem_objs.append(x)
 
-    
+    all_user_defins = user_defins+sto_objs+mem_objs
+
     if simplification:
-        new_user_defins,new_ts = apply_all_simp_rules(user_defins,vars_list,new_ts)
+        new_user_defins,new_ts = apply_all_simp_rules(all_user_defins,vars_list,new_ts)
         apply_all_comparison(new_user_defins,new_ts)
     else:
-        new_user_defins = user_defins
-
+        new_user_defins = all_user_defins
 
     if simplification:
         vars_list = recompute_vars_set(new_ss,new_ts,new_user_defins,[])
@@ -1772,7 +1775,7 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     json_dict["vars"] = vars_list
     json_dict["src_ws"] = new_ss
     json_dict["tgt_ws"] = new_ts
-    json_dict["user_instrs"] = new_user_defins+sto_objs+mem_objs
+    json_dict["user_instrs"] = new_user_defins
     json_dict["current_cost"] = gas
     json_dict["storage_dependences"] = sto_dep
     json_dict["memory_dependences"]= mem_dep
@@ -1790,6 +1793,7 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
 
 
     if simplification:
+        print("CUCU")
         if "jsons" not in os.listdir(gasol_path):
             os.mkdir(json_path)
 
@@ -2432,8 +2436,9 @@ def translate_block(rule,instructions,opcodes,isolated,preffix,simp):
     build_userdef_instructions()
     gas = get_block_cost(opcodes,len(guards_op))
     max_stack_size = max_idx_used(instructions,t_vars)
-    
-    if  gas!=0 and not is_identity_map(source_stack,t_vars):
+
+    if  gas!=0 and not is_identity_map(source_stack,t_vars,instructions):
+        print("CUCU")
         gas_t+=get_cost(original_opcodes)
         
         new_opcodes = compute_opcodes2write(opcodes,num_guard)
@@ -2545,7 +2550,7 @@ def translate_subblock(rule,instrs,sstack,tstack,sstack_idx,idx,next_block,preff
         build_userdef_instructions()
         gas = get_block_cost(opcodes,0)
         max_stack_size = max_idx_used(instructions,tstack)
-        if max_stack_size!=0 and gas !=0 and not is_identity_map(sstack,tstack):
+        if max_stack_size!=0 and gas !=0 and not is_identity_map(sstack,tstack,instructions):
             compute_gast = True
             new_tstack,new_nexts = optimize_splitpop_block(tstack,sstack,next_block,opcodes)
             pops2remove = 0
@@ -2697,7 +2702,7 @@ def translate_last_subblock(rule,block,sstack,sstack_idx,idx,isolated,preffix,si
         build_userdef_instructions()
         gas = get_block_cost(opcodes,len(guards_op))
         max_stack_size = max_idx_used(instructions,tstack)
-        if gas!=0 and not is_identity_map(sstack,tstack):
+        if gas!=0 and not is_identity_map(sstack,tstack,instructions):
             compute_gast = True
             new_opcodes = compute_opcodes2write(opcodes,num_guard)
             if not simp:
@@ -2960,7 +2965,8 @@ def smt_translate_block(rule,name,preffix,simplification=True,storage = False):
     global split_sto
     
     init_globals()
-
+    
+    
     if storage:
         split_sto = True
 
@@ -4157,7 +4163,7 @@ def update_tstack_userdef(old_var, new_var,tstack, user_def_instrs):
 def get_sfs_dict():
     return sfs_contracts
 
-def is_identity_map(source_stack,target_stack):
+def is_identity_map(source_stack,target_stack,instructions):
 
     if len(user_defins) > 0:
         return False
@@ -4170,6 +4176,11 @@ def is_identity_map(source_stack,target_stack):
         if v != variable_content[v]:
             return False
 
+    storage_ins = list(filter(lambda x: x.find("mstore")!=-1 or x.find("sstore")!=-1,instructions))
+
+    if len(storage_ins)>0:
+        return False
+        
     return True
 
 
@@ -4290,6 +4301,7 @@ def remove_store_recursive_dif(storage_location, location):
                 if True not in dep:
                     storage_location.pop(i)
                     print("[OPT]: Removed sstore sstore")
+                    print(storage_location)
                     remove_store_recursive_dif(storage_location,location)
                     finish = True
                     
