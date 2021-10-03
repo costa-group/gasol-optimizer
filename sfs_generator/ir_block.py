@@ -1079,7 +1079,10 @@ def evm2rbr_compiler(contract_name = None,block = None, block_id = -1,preffix = 
         
         rule = compile_block(instructions,input_stack,block_id)
 
-            
+        storage = has_storage_ins(instructions)
+        if storage:
+            print("STORAGE BLOCK")
+        
         write_rbr(rule,block_id,contract_name)
         
         end = dtimer()
@@ -1101,3 +1104,9 @@ def evm2rbr_compiler(contract_name = None,block = None, block_id = -1,preffix = 
         else:    
             raise Exception("Error in RBR generation",4)
             
+
+def has_storage_ins(instructions):
+    if "MSTORE" in instructions or "SSTORE" in instructions or "MSTORE8" in instructions:
+        return True
+    else:
+        return False
