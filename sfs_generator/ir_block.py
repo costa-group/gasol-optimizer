@@ -1079,8 +1079,8 @@ def evm2rbr_compiler(contract_name = None,block = None, block_id = -1,preffix = 
         
         rule = compile_block(instructions,input_stack,block_id)
 
-        storage = has_storage_ins(instructions)
-        if storage:
+        has_sto = has_storage_ins(instructions)
+        if has_sto:
             print("STORAGE BLOCK")
         
         write_rbr(rule,block_id,contract_name)
