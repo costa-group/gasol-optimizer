@@ -4520,14 +4520,18 @@ def compute_identifiers_storage_instructions(storage_location, location, new_use
     values_list = list(u_dict.values())
 
     print(u_dict)
-    
+
     for i in range(0,len(storage_location)):
         ins = storage_location[i]
         if ins[0][-1].find(store)!=-1:
             storage_identifiers.append(store_up+"_"+str(store_count))
             store_count+=1
         else: # loads instructions
-            pos = values_list.index(ins)
+            load_ins = list(filter(lambda x: x[0][-1] == ins[0][-1],values_list))
+            if len(load_ins)!=1:
+                raise Exception("Error in looking load instruction")
+            
+            pos = values_list.index(load_ins[0])
             var = key_list[pos]
             sload_ins = list(filter(lambda x: x["disasm"] == load and x["outpt_sk"] == [var],new_user_defins))
             if len(sload_ins)!= 1:
