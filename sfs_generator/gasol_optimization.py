@@ -1408,7 +1408,9 @@ def generate_encoding(instructions,variables,source_stack,simplification=True):
     global s_dict
     global u_dict
     global variable_content
-
+    global memory_order
+    global storage_order
+    
     instructions_reverse = instructions[::-1]
     u_dict = {}
     variable_content = {}
@@ -1419,7 +1421,10 @@ def generate_encoding(instructions,variables,source_stack,simplification=True):
 
     if not split_sto:
         generate_storage_info(instructions,source_stack)
-
+    else:
+        memory_order = []
+        storage_order = []
+        
 def generate_storage_info(instructions,source_stack):
     global sstore_seq
     global mstore_seq
@@ -1620,8 +1625,6 @@ def generate_sstore_info(sstore_elem):
     instr_name = "SSTORE"
     name = "SSTORE"+"_"+str(idx)
 
-    
-    
     obj["id"] = name
     obj["opcode"] = process_opcode(str(opcodes.get_opcode(instr_name)[0]))
     obj["disasm"] = instr_name
