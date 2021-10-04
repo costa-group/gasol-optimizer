@@ -4518,10 +4518,12 @@ def compute_identifiers_storage_instructions(storage_location, location, new_use
 
     key_list = list(u_dict.keys())
     values_list = list(u_dict.values())
+
+    print(u_dict)
     
     for i in range(0,len(storage_location)):
         ins = storage_location[i]
-        if ins[0][-1] == store:
+        if ins[0][-1].find(store)!=-1:
             storage_identifiers.append(store_up+"_"+str(store_count))
             store_count+=1
         else: # loads instructions
