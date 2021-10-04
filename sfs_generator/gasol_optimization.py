@@ -4244,7 +4244,7 @@ def replace_loads_by_sstores(storage_location, location):
                 rest_list = storage_location[i+1:i+pos+1]
                 dep = list(map(lambda x: are_dependent(var,x[0][0],elem[0][-1],x[0][-1]),rest_list))
                 if True not in dep and elem[0][-1].find("mstore8") == -1: #it does not work for mstore8
-                    print("[OPT]: Replaced sload by its value")
+                    print("[OPT]: Replaced load by its value")
                     storage_location.pop(i+pos+1)
                     finish = True
 
@@ -4302,7 +4302,7 @@ def remove_store_recursive_dif(storage_location, location):
                 dep = list(map(lambda x: are_dependent(x[0][0],var,x[0][-1],elem[0][-1]),sublist)) #It checks for loads betweeen the stores
                 if True not in dep:
                     storage_location.pop(i)
-                    print("[OPT]: Removed sstore sstore")
+                    print("[OPT]: Removed store store")
                     print(storage_location)
                     remove_store_recursive_dif(storage_location,location)
                     finish = True
@@ -4362,7 +4362,7 @@ def remove_store_loads(storage_location, location):
                     if True not in variables:
                         storage_location.pop(i)
                         finished = True
-                        print("[OPT]: OPTIMIZATION SSTORE OF SLOAD")
+                        print("[OPT]: OPTIMIZATION STORE OF LOAD")
                         remove_store_loads(storage_location,location)
         i+=1
 
