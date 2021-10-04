@@ -147,3 +147,19 @@ def isYulInstruction(opcode):
         return False
     else:
         return True
+
+
+'''
+It returns true if the instruction generates a constant value
+'''
+
+def is_constant_instruction(ins):
+    constant = False
+    if ins.find("DUP")!=-1 or ins.find("PUSH")!=-1:
+        constant = True
+    elif ins in ["ADDRESS","ORIGIN","CALLER","CALLVALUE","CALLDATASIZE","CODESIZE","GASPRICE","COINBASE","TIMESTAMP","NUMBER","DIFFICULTY","GASLIMIT","CHAINID","SELFBALANCE","PC","MSIZE","GAS","TXEXECGAS"]:
+        constant = True
+    else:
+        constant = False
+
+    return constant
