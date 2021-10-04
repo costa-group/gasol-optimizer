@@ -1796,7 +1796,6 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
 
 
     if simplification:
-        print("CUCU")
         if "jsons" not in os.listdir(gasol_path):
             os.mkdir(json_path)
 
@@ -4243,7 +4242,7 @@ def replace_loads_by_sstores(storage_location, location):
                 load = l_ins[0]
                 pos = storage_location[i+1::].index(load)
                 rest_list = storage_location[i+1:i+pos+1]
-                dep = list(map(lambda x: are_dependent(var,x[0][0]),rest_list))
+                dep = list(map(lambda x: are_dependent(var,x[0][0],elem[0][-1],x[0][-1]),rest_list))
                 if True not in dep and elem[0][-1].find("mstore8") == -1: #it does not work for mstore8
                     print("[OPT]: Replaced sload by its value")
                     storage_location.pop(i+pos+1)
@@ -4300,7 +4299,7 @@ def remove_store_recursive_dif(storage_location, location):
                 next_ins = rest[0]
                 pos = storage_location[i+1::].index(next_ins)
                 sublist = storage_location[i+1:pos+i+1]
-                dep = list(map(lambda x: are_dependent(x[0][0],var),sublist)) #It checks for loads betweeen the stores
+                dep = list(map(lambda x: are_dependent(x[0][0],var,x[0][-1],elem[0][-1]),sublist)) #It checks for loads betweeen the stores
                 if True not in dep:
                     storage_location.pop(i)
                     print("[OPT]: Removed sstore sstore")
@@ -4356,10 +4355,10 @@ def remove_store_loads(storage_location, location):
             value = elem[0][1]
             if value in u_dict:
                 symb_ins = u_dict[value]
-                if symb_ins[0][-1].find(load_ins)!=-1 and sym_ins[0][0] == var:
+                if symb_ins[0][-1].find(load_ins)!=-1 and symb_ins[0][0] == var:
                     pos = storage_location.index(symb_ins)
                     rest_instructions = storage_location[i+1:pos]
-                    variables = list(map(lambda x: are_dependent(var,x[0][0]),rest_instructions))
+                    variables = list(map(lambda x: are_dependent(var,x[0][0],elem[0][-1],x[0][-1]),rest_instructions))
                     if True not in variables:
                         storage_location.pop(i)
                         finished = True
@@ -4559,8 +4558,9 @@ def are_dependent(var1,var2,ins1,ins2):
         dep = True
         print("DEP: SAME VALUE")
     else:
-
-        if var1.startswith("s") and var2.startswith("s"):
+        var1_str = str(var1)
+        var2_str = str(var2)
+        if var1_str.startswith("s") and var2_str.startswith("s"):
             list1 = []
             list2 = []
             get_variables(var1,list1)
@@ -4571,7 +4571,7 @@ def are_dependent(var1,var2,ins1,ins2):
                 dep = True
                 print("DIFFERENT VARIABLES")
                 
-        elif var1.startswith("s") or var2.startswith("s"):
+        elif var1_str.startswith("s") or var2_str.startswith("s"):
             dep = True
             print("DIFFERENT VALUES 1 var 1 int")
 
