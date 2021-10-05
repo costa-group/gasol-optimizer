@@ -108,6 +108,8 @@ def init_globals():
     global memory_dep
     memory_dep = []
 
+    global block_name
+    block_name = ""
 
 def filter_opcodes(rule):
     instructions = rule.get_instructions()
@@ -2440,7 +2442,7 @@ def translate_block(rule,instructions,opcodes,isolated,preffix,simp):
     max_stack_size = max_idx_used(instructions,t_vars)
 
     if  gas!=0 and not is_identity_map(source_stack,t_vars,instructions):
-        print("CUCU")
+       
         gas_t+=get_cost(original_opcodes)
         
         new_opcodes = compute_opcodes2write(opcodes,num_guard)
@@ -2965,6 +2967,7 @@ def smt_translate_block(rule,name,preffix,simplification=True,storage = False):
     global blocks_json_dict
     global sfs_contracts
     global split_sto
+    global block_name
     
     init_globals()
     
@@ -2979,7 +2982,7 @@ def smt_translate_block(rule,name,preffix,simplification=True,storage = False):
     info_deploy = []
 
     source_name =  name
-    
+
     int_not0 = [-1+2**256]#map(lambda x: -1+2**x, range(8,264,8))
     
     begin = dtimer()
@@ -2988,6 +2991,9 @@ def smt_translate_block(rule,name,preffix,simplification=True,storage = False):
 
     opcodes = get_opcodes(rule)
 
+
+    block_name = rule.get_rule_name()
+    
     print(rule.get_rule_name())
     print(instructions)
     print("*******")
@@ -4245,9 +4251,9 @@ def replace_loads_by_sstores(storage_location, location):
                 dep = list(map(lambda x: are_dependent(var,x[0][0],elem[0][-1],x[0][-1]),rest_list))
                 if True not in dep and elem[0][-1].find("mstore8") == -1: #it does not work for mstore8
                     if location == "storage":
-                        print("[OPT]: Replaced sload by its value")
+                        print("[OPT]: Replaced sload by its value "+str(block_name))
                     else:
-                        print("[OPT]: Replaced mload by its value")
+                        print("[OPT]: Replaced mload by its value "+str(block_name))
                     storage_location.pop(i+pos+1)
                     finish = True
 
@@ -4306,9 +4312,9 @@ def remove_store_recursive_dif(storage_location, location):
                 if True not in dep:
                     storage_location.pop(i)
                     if location == "storage":
-                        print("[OPT]: Removed sstore sstore")
+                        print("[OPT]: Removed sstore sstore "+str(block_name))
                     else:
-                        print("[OPT]: Removed mstore mstore")
+                        print("[OPT]: Removed mstore mstore "+str(block_name))
                     print(storage_location)
                     remove_store_recursive_dif(storage_location,location)
                     finish = True
@@ -4369,9 +4375,9 @@ def remove_store_loads(storage_location, location):
                         storage_location.pop(i)
                         finished = True
                         if storage_location == "storage":
-                            print("[OPT]: OPTIMIZATION SSTORE OF SLOAD")
+                            print("[OPT]: OPTIMIZATION sstore OF sload "+str(block_name))
                         else:
-                            print("[OPT]: OPTIMIZATION MSTORE OF MLOAD")
+                            print("[OPT]: OPTIMIZATION mstore OF mload "+str(block_name))
                         remove_store_loads(storage_location,location)
         i+=1
 
