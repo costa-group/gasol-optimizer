@@ -1081,9 +1081,15 @@ def evm2rbr_compiler(contract_name = None,block = None, block_id = -1,preffix = 
 
         has_sto = has_storage_ins(instructions)
         if has_sto:
-            print("STORAGE BLOCK")
-        
-        write_rbr(rule,block_id,contract_name)
+            if "MSTORE" in instructions or "MSTORE8" in instructions:
+                print("STORAGE BLOCK: MSTORE")
+            else:
+                print("STORAGE BLOCK: SSTORE")
+        else:
+            print("NO STORAGE BLOCK")
+        write_rbr(rule,block_id,preffix+contract_name)
+
+        print(preffix)
         
         end = dtimer()
         ethir_time = end-begin
