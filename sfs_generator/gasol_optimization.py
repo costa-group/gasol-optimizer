@@ -4524,11 +4524,14 @@ def compute_identifiers_storage_instructions(storage_location, location, new_use
         load = "SLOAD"
     else:
         store = "mstore"
+        store8 = "mstore8"
         store_up = "MSTORE"
+        store8_up = "MSTORE8"
         load = "MLOAD"
     
     store_count = 0
-
+    store8_count = 0
+    
     storage_identifiers = []
 
     key_list = list(u_dict.keys())
@@ -4539,8 +4542,12 @@ def compute_identifiers_storage_instructions(storage_location, location, new_use
     for i in range(0,len(storage_location)):
         ins = storage_location[i]
         if ins[0][-1].find(store)!=-1:
-            storage_identifiers.append(store_up+"_"+str(store_count))
-            store_count+=1
+            if storage_location !="storage" and ins[0][-1].find(store8)!=-1:
+                storage_identifiers.append(store8_up+"_"+str(store8_count))
+                store8_count+=1
+            else:
+                storage_identifiers.append(store_up+"_"+str(store_count))
+                store_count+=1
         else: # loads instructions
             load_ins = list(filter(lambda x: x[0][-1] == ins[0][-1],values_list))
             if len(load_ins)!=1:
