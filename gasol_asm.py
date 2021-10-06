@@ -22,7 +22,7 @@ from disasm_generation import generate_info_from_solution, generate_disasm_sol_f
     generate_sub_block_asm_representation_from_output
 from solver_solution_verify import check_solver_output_is_correct, generate_solution_dict
 from global_params.paths import *
-from utils import isYulInstruction, compute_stack_size, is_constant_instruction
+from utils import isYulInstruction, compute_stack_size, is_constant_instruction, isYulKeyword
 from copy import deepcopy
 from rebuild_asm import rebuild_asm
 from verification.sfs_verify import verify_block_from_list_of_sfs
@@ -149,7 +149,7 @@ def optimize_block(sfs_dict, timeout):
         current_size = sfs_block['max_progr_len']
         user_instr = sfs_block['user_instrs']
 
-        #execute_syrup_backend(None, sfs_block, block_name=block_name, timeout=timeout)
+        execute_syrup_backend(None, sfs_block, block_name=block_name, timeout=timeout)
 
         # At this point, solution is a string that contains the output directly
         # from the solver
@@ -345,26 +345,20 @@ def optimize_isolated_asm_block(block_name, timeout=10,storage = False, last_con
     opcodes = []
 
     ops = instructions.split(" ")
+    # We remove empty elements, as they obviously do not add any info on the sequence of opcodes
+    ops = list(filter(lambda x: x != '', ops))
     i = 0
-    #it builds the list of opcodes
-  
+
     while i<len(ops):
         op = ops[i]
         if not op.startswith("PUSH"):
             opcodes.append(op.strip())
         else:
-           
-            if  not isYulInstruction(op):
+
+           # If position t+1 is a Yul Keyword, then we need to analyze them separately
+            if  not isYulKeyword(ops[i+1]):
                 val = ops[i+1]
                 op = op+" 0x"+val if not val.startswith("0x") else op+" "+val
-                i=i+1
-            elif op.startswith("PUSH") and op.find("DEPLOYADDRESS") !=-1:
-                op = "PUSHDEPLOYADDRESS"
-            elif op.startswith("PUSH") and op.find("SIZE") !=-1:
-                op = "PUSHSIZE"
-            elif op.startswith("PUSH") and op.find("IMMUTABLE") !=-1:
-                val = ops[i+1]
-                op = "PUSHIMMUTABLE"+" 0x"+ val if not val.startswith("0x") else "PUSHIMMUTABLE "+val
                 i=i+1
             else:
                 t = ops[i+1]
@@ -386,7 +380,6 @@ def optimize_isolated_asm_block(block_name, timeout=10,storage = False, last_con
             opcodes.append(op)
 
         i+=1
-
     stack_size = compute_stack_size(opcodes)
     contract_name = block_name.split('/')[-1]
 

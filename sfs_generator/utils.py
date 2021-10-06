@@ -149,6 +149,15 @@ def isYulInstruction(opcode):
         return True
 
 
+# Returns true if opcode contains tag, #, $ or data, so that composed opcodes are identified
+def isYulKeyword(opcode):
+    if opcode.find("tag") ==-1 and opcode.find("#") ==-1 and opcode.find("$") ==-1 \
+            and opcode.find("data") ==-1:
+        return False
+    else:
+        return True
+
+
 '''
 It returns true if the instruction generates a constant value
 '''
