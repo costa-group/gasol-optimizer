@@ -40,7 +40,7 @@ global gas_saved_op
 gas_saved_op = 0
 
 global gas_store_op
-gas_sstore_op = 0
+gas_store_op = 0
 
 global gas_memory_op
 gas_memory_op = 0
@@ -4582,7 +4582,7 @@ def compute_identifiers_storage_instructions(storage_location, location, new_use
     for i in range(0,len(storage_location)):
         ins = storage_location[i]
         if ins[0][-1].find(store)!=-1:
-            if storage_location !="storage" and ins[0][-1].find(store8)!=-1:
+            if location !="storage" and ins[0][-1].find(store8)!=-1:
                 storage_identifiers.append(store8_up+"_"+str(store8_count))
                 store8_count+=1
             else:
