@@ -2959,11 +2959,12 @@ def compute_max_program_len(opcodes, num_guard,block = None):
     return len(new_opcodes)
     
 
-def smt_translate_block(rule,name,preffix,simplification=True,storage = False):
+def smt_translate_block(rule,file_name,name,preffix,simplification=True,storage = False):
     global s_counter
     global max_instr_size
     global int_not0
     global source_name
+    global cname
     global blocks_json_dict
     global sfs_contracts
     global split_sto
@@ -2981,7 +2982,8 @@ def smt_translate_block(rule,name,preffix,simplification=True,storage = False):
     
     info_deploy = []
 
-    source_name =  name
+    source_name = file_name
+    cname =  name
 
     int_not0 = [-1+2**256]#map(lambda x: -1+2**x, range(8,264,8))
     

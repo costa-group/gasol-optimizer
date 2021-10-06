@@ -126,7 +126,8 @@ def compute_original_sfs_with_simplifications(instructions, stack_size, cname, b
     else:
         prefix = ""
 
-    exit_code = ir_block.evm2rbr_compiler(contract_name=cname, block=block_data, block_id=block_id,
+    fname = args.input_path.split("/")[-1].split(".")[0]
+    exit_code = ir_block.evm2rbr_compiler(file_name = fname, contract_name=cname, block=block_data, block_id=block_id,
                                           preffix=prefix, simplification=True,storage=storage)
 
     sfs_dict = get_sfs_dict()
@@ -148,7 +149,7 @@ def optimize_block(sfs_dict, timeout):
         current_size = sfs_block['max_progr_len']
         user_instr = sfs_block['user_instrs']
 
-        execute_syrup_backend(None, sfs_block, block_name=block_name, timeout=timeout)
+        #execute_syrup_backend(None, sfs_block, block_name=block_name, timeout=timeout)
 
         # At this point, solution is a string that contains the output directly
         # from the solver
