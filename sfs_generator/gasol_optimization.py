@@ -4520,7 +4520,9 @@ def compute_identifiers_storage_instructions(storage_location, location, new_use
 
     if location == "storage":
         store = "sstore"
+        store8 = ""
         store_up = "SSTORE"
+        store8_up = ""
         load = "SLOAD"
     else:
         store = "mstore"
