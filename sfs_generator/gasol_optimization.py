@@ -1627,10 +1627,19 @@ def generate_sstore_info(sstore_elem):
     instr_name = "SSTORE"
     name = "SSTORE"+"_"+str(idx)
 
+    args_aux = []
+    for e in sstore_elem[0][0:-1]:
+        val = is_integer(e)
+        if val != -1:
+            args_aux.append(val)
+        else:
+            args_aux.append(e)
+
+    
     obj["id"] = name
     obj["opcode"] = process_opcode(str(opcodes.get_opcode(instr_name)[0]))
     obj["disasm"] = instr_name
-    obj["inpt_sk"] = [sstore_elem[0][0],sstore_elem[0][1]]
+    obj["inpt_sk"] = args_aux
     obj["sto_var"] = ["sto"+str(idx)]
 
     obj["outpt_sk"] = []
@@ -1656,12 +1665,19 @@ def generate_mstore_info(sstore_elem):
             
     name = instr_name+"_"+str(idx)
 
-    
+    args_aux = []
+    for e in sstore_elem[0][0:-1]:
+        val = is_integer(e)
+        if val != -1:
+            args_aux.append(val)
+        else:
+            args_aux.append(e)
+
     
     obj["id"] = name
     obj["opcode"] = process_opcode(str(opcodes.get_opcode(instr_name)[0]))
     obj["disasm"] = instr_name
-    obj["inpt_sk"] = [sstore_elem[0][0],sstore_elem[0][1]]
+    obj["inpt_sk"] = args_aux
     obj["mem_var"] = ["mem"+str(idx)]
         
     obj["outpt_sk"] = []
@@ -1670,7 +1686,7 @@ def generate_mstore_info(sstore_elem):
     obj["commutative"] = False
     obj["storage"] = True
     user_def_counter[instr_name]=idx+1
-    
+
     return obj
 
 
