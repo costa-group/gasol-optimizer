@@ -52,7 +52,7 @@ def parse_data(json_path, var_initial_idx=0, with_simplifications=True):
 
     current_cost = data['current_cost']
     instr_seq = data.get('disasm_seq', [])
-    mem_order = data.get('storage_dep', [])
+    mem_order = [*data['storage_dependences'], *data.get('memory_dependences')]
     return b0, bs, new_user_instr, variables, initial_stack, final_stack, current_cost, instr_seq, mem_order
 
 

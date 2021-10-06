@@ -141,7 +141,9 @@ def generate_smtlib_encoding(b0, bs, usr_instr, variables, initial_stack, final_
     variables_assignment_constraint(variables)
     stack_constraints(b0, bs, comm_instr, non_comm_instr, mem_instr, theta_stack, theta_comm, theta_non_comm, theta_mem,
                       first_position_instr_appears_dict, first_position_instr_cannot_appear_dict)
-    memory_model_constraints(b0, order_tuples, theta_dict, theta_mem)
+    print(usr_instr)
+    if order_tuples:
+        memory_model_constraints(b0, order_tuples, theta_dict, theta_mem)
     initial_stack_encoding(initial_stack, bs)
     final_stack_encoding(final_stack, bs, b0)
     generate_redundant_constraints(flags, b0, usr_instr, theta_stack, theta_comm, theta_non_comm, final_stack,

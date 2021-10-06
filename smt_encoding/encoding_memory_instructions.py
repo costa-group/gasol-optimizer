@@ -46,8 +46,9 @@ def memory_model_constraints(b0, order_tuples, theta_dict, theta_mem, initial_id
         is_store_1 = el1 in theta_dict.keys()
         is_store_2 = el2 in theta_dict.keys()
 
-        theta_val_1 = theta_dict[is_store_1]
-        theta_val_2 = theta_dict[is_store_2]
+        print(theta_dict)
+        theta_val_1 = theta_dict[el1]
+        theta_val_2 = theta_dict[el2]
 
         if is_store_1:
             # Case Store-Store:
