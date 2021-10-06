@@ -39,6 +39,12 @@ saved_push = 0
 global gas_saved_op
 gas_saved_op = 0
 
+global gas_store_op
+gas_sstore_op = 0
+
+global gas_memory_op
+gas_memory_op = 0
+
 global blocks_json_dict
 blocks_json_dict = {}
 
@@ -4245,6 +4251,8 @@ def remove_loads_instructions():
 def replace_loads_by_sstores(storage_location, location):
     global u_dict
     global variable_content
+    global gas_store_op
+    global gas_memory_op
     
     if location == "storage":
         store_ins = "sstore"
@@ -4270,8 +4278,10 @@ def replace_loads_by_sstores(storage_location, location):
                 if True not in dep and elem[0][-1].find("mstore8") == -1: #it does not work for mstore8
                     if location == "storage":
                         print("[OPT]: Replaced sload by its value "+str(block_name))
+                        gas_store_op+=200
                     else:
                         print("[OPT]: Replaced mload by its value "+str(block_name))
+                        gas_memory_op+=3
                     storage_location.pop(i+pos+1)
                     finish = True
 
@@ -4307,7 +4317,9 @@ def replace_loads_by_sstores(storage_location, location):
 
     
 def remove_store_recursive_dif(storage_location, location):
-
+    global gas_store_op
+    global gas_memory_op
+    
     if location == "storage":
         instruction = "sstore"
     else:
@@ -4331,8 +4343,10 @@ def remove_store_recursive_dif(storage_location, location):
                     storage_location.pop(i)
                     if location == "storage":
                         print("[OPT]: Removed sstore sstore "+str(block_name))
+                        gas_store_op+=5000
                     else:
                         print("[OPT]: Removed mstore mstore "+str(block_name))
+                        gas_memory_op+=3
                     print(storage_location)
                     remove_store_recursive_dif(storage_location,location)
                     finish = True
@@ -4369,6 +4383,10 @@ def remove_store_recursive_dif(storage_location, location):
 
 #It removes things of the type sstore(4,sload(4))
 def remove_store_loads(storage_location, location):
+    global gas_store_op
+    global gas_memory_op
+
+
     if storage_location == "storage":
         store_ins = "sstore"
         load_ins = "sload"
@@ -4394,8 +4412,10 @@ def remove_store_loads(storage_location, location):
                         finished = True
                         if storage_location == "storage":
                             print("[OPT]: OPTIMIZATION sstore OF sload "+str(block_name))
+                            gas_store_op+=5000
                         else:
                             print("[OPT]: OPTIMIZATION mstore OF mload "+str(block_name))
+                            gas_memory_op+=3
                         remove_store_loads(storage_location,location)
         i+=1
 
