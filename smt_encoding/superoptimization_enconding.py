@@ -105,6 +105,30 @@ def generate_instruction_dicts(b0, user_instr, final_stack, flags):
         return dict(), dict(), dict()
 
 
+# Determines how to encode the memory depending on the flags
+def generate_memory_constraints(flags, b0, theta_dict, theta_mem, order_tuples):
+    if flags['memory-encoding-with-store-auxiliary-variables']:
+        memory_model_constraints(b0, order_tuples, theta_dict, theta_mem)
+    elif flags['']:
+        pass
+    else:
+        pass
+
+
+# Determine which l variables must be initialized depending on the memory encoding
+def generate_l_theta_dict(flags, order_tuples, theta_dict, theta_mem):
+    # First case: only conflicting stores
+    if flags['']:
+        conflicting_dict = generate_conflicting_theta_dict(theta_dict, order_tuples)
+        return {instr: theta_dict[instr] for instr in set(conflicting_dict).intersection(set(theta_mem))}
+    # Second case: all conflicting instructions
+    elif flags['']:
+        return generate_conflicting_theta_dict(theta_dict, order_tuples)
+    # Third case: no l variables are used, then return an empty dict
+    else:
+        return dict()
+
+
 # Adding necessary statements after check_sat statement.
 # Barcelogic doesn't support (get-objectives) statement.
 def generate_final_statements(solver_name):
@@ -141,7 +165,7 @@ def generate_smtlib_encoding(b0, bs, usr_instr, variables, initial_stack, final_
     variables_assignment_constraint(variables)
     stack_constraints(b0, bs, comm_instr, non_comm_instr, mem_instr, theta_stack, theta_comm, theta_non_comm, theta_mem,
                       first_position_instr_appears_dict, first_position_instr_cannot_appear_dict)
-    print(usr_instr)
+
     if order_tuples:
         memory_model_constraints(b0, order_tuples, theta_dict, theta_mem)
     initial_stack_encoding(initial_stack, bs)

@@ -351,3 +351,11 @@ def generate_uninterpreted_push_map(user_instr, theta_dict):
             theta_uninterpreted_push_dict[theta_value] = value[0]
 
     return theta_uninterpreted_push_dict
+
+
+# Given the pairs of conflicting instructions, returns the identifiers of those instructions that
+# are conflicting
+def generate_conflicting_theta_dict(theta_dict, order_tuples):
+    conflicting_instr = set([instr for order_tuple in order_tuples for instr in order_tuple])
+    theta_conflicting = {instr: theta_dict[instr] for instr in conflicting_instr}
+    return theta_conflicting
