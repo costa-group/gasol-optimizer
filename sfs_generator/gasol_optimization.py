@@ -1835,6 +1835,8 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     json_dict["memory_dependences"]= mem_dep
 
     if not simplification:
+        op = opcodes_seq["non_inter"]
+        opcodes_seq["non_inter"] = op+sto_objs+mem_objs
         json_dict["init_info"] = opcodes_seq
 
         
@@ -1895,8 +1897,8 @@ def build_initblock_userdef(u_var,args_exp,arity_exp):
         # print(funct)
         # print(args)
         # print(arity_exp)
-        is_new, obj = generate_userdefname(u_var,funct,[args],arity_exp)
-
+        is_new, obj = generate_userdefname(u_var,funct,[args],arity_exp,True)
+        
         # print("*/*/*/*//*/*/*/*/*/**/")
         # print(obj)
         
@@ -1905,7 +1907,7 @@ def build_initblock_userdef(u_var,args_exp,arity_exp):
     elif arity_exp == 2:
         funct = args_exp[2]
         args = [args_exp[0],args_exp[1]]
-        is_new, obj = generate_userdefname(u_var,funct,args,arity_exp)
+        is_new, obj = generate_userdefname(u_var,funct,args,arity_exp,True)
         return [obj]
     
     elif arity_exp == 3:
@@ -1915,7 +1917,7 @@ def build_initblock_userdef(u_var,args_exp,arity_exp):
             
             new_uvar = create_new_svar()
             args01 = [args_exp[0],args_exp[1]]
-            is_new, obj = generate_userdefname(new_uvar,funct,args01,arity_exp)
+            is_new, obj = generate_userdefname(new_uvar,funct,args01,arity_exp,True)
             
             funct = "%"
             if not is_new:
@@ -1925,13 +1927,13 @@ def build_initblock_userdef(u_var,args_exp,arity_exp):
                 
             args = [u_var_aux,args_exp[2]]
 
-            is_new, obj1 = generate_userdefname(u_var,funct,args,arity_exp)
+            is_new, obj1 = generate_userdefname(u_var,funct,args,arity_exp,True)
             
             return [obj, obj1]
         else:
 
             args = [args_exp[0],args_exp[1],args_exp[2]]
-            is_new, obj = generate_userdefname(u_var,funct,args,arity_exp)
+            is_new, obj = generate_userdefname(u_var,funct,args,arity_exp,True)
             
             return [obj]
     else:
@@ -1940,7 +1942,7 @@ def build_initblock_userdef(u_var,args_exp,arity_exp):
         for v in args_exp[:-1]:
             args.append(v)
             
-        is_new, obj = generate_userdefname(u_var,funct,args,arity_exp)
+        is_new, obj = generate_userdefname(u_var,funct,args,arity_exp,True)
 
         return [obj]
 
@@ -2040,7 +2042,7 @@ def build_userdef_instructions():
                 user_defins.append(obj)
 
             
-def generate_userdefname(u_var,funct,args,arity):
+def generate_userdefname(u_var,funct,args,arity,init=False):
     global user_def_counter
     global already_defined_userdef
 
@@ -2243,7 +2245,7 @@ def generate_userdefname(u_var,funct,args,arity):
     #TODO: Add more opcodes
     
     if instr_name in already_defined_userdef:
-        if not split_sto and instr_name in ["SLOAD","MLOAD"]:
+        if not split_sto and not init and instr_name in ["SLOAD","MLOAD"]:
             defined = -1
         else:
             defined = check_inputs(instr_name,args)
