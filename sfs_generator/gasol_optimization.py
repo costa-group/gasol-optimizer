@@ -54,6 +54,8 @@ sfs_contracts = {}
 global split_sto
 split_sto = False
 
+global mem40_pattern
+mem40_pattern = False
 
 def init_globals():
     
@@ -234,9 +236,13 @@ def get_encoding_init_block(instructions,source_stack):
     global s_dict
     global u_dict
 
+    sstore_count = 0
+    mstore_count = 0
+    mstore8_count = 0
+    
     old_sdict = dict(s_dict)
     old_u_dict = dict(u_dict)
-
+    
     i = 0
     opcodes = []
     push_values = []
@@ -283,16 +289,30 @@ def get_encoding_init_block(instructions,source_stack):
                     opcodes.append(instr)
             else:
                 #non-interpreted function
-                var = instructions[i-1].split("=")[0].strip()
+                if instructions[i-1].find("=")!=-1:
+                    var = instructions[i-1].split("=")[0].strip()
 
-                instructions_without_nop = list(filter(lambda x: not x.startswith("nop("), instructions[:i]))
-                instructions_reverse = instructions_without_nop[::-1]
-                # print("EMPIEZO EL NUEVO")  
-                search_for_value(var,instructions_reverse, source_stack, False)
-                # print(s_dict)
-                # print(u_dict)
-                opcodes.append((s_dict[var],u_dict[s_dict[var]]))
-                # print(u_dict[s_dict[var]])
+                    instructions_without_nop = list(filter(lambda x: not x.startswith("nop("), instructions[:i]))
+                    instructions_reverse = instructions_without_nop[::-1]
+                    # print("EMPIEZO EL NUEVO")  
+                    search_for_value(var,instructions_reverse, source_stack, False)
+                    # print(s_dict)
+                    # print(u_dict)
+                    opcodes.append((s_dict[var],u_dict[s_dict[var]]))
+                    # print(u_dict[s_dict[var]])
+                else:
+                    exp = generate_sstore_mstore(instructions[i-1],instructions[i-2::-1],source_stack)
+                    if exp[0][-1] == "sstore":
+                        instr = "SSTORE_"+str(sstore_count)
+                        sstore_count+=1
+                    elif exp[0][-1] == "mstore":
+                        instr = "MSTORE_"+str(mstore_count)
+                        mstore_count+=1
+                    elif exp[0][-1] == "mstore8":
+                        instr = "MSTORE8_"+str(mstore8_count)
+                        mstore8_count+=1
+
+                    opcodes.append(instr)
         i+=1
 
     # print("ANTES")
@@ -337,7 +357,7 @@ def get_encoding_init_block(instructions,source_stack):
 def search_for_value(var, instructions,source_stack,evaluate = True):
     global s_counter
     global s_dict
-
+    
     search_for_value_aux(var,instructions,source_stack,0,evaluate)
 
     # print(s_dict)
@@ -367,6 +387,7 @@ def search_for_value_aux(var, instructions,source_stack,level,evaluate = True):
            
         i+=1
     level+=i
+
     if found:
         value = vars_instr[1].strip()
     else:
@@ -1509,6 +1530,8 @@ def generate_storage_info(instructions,source_stack):
     while(simp):
         simp = simplify_memory(storage_order,"storage")
 
+
+    unify_loads_instructions(storage_order, "storage")
     stdep = generate_dependences(storage_order,"storage")
     print(storage_order)
     print(stdep)
@@ -1517,6 +1540,7 @@ def generate_storage_info(instructions,source_stack):
     while(simp):
         simp = simplify_memory(memory_order,"memory")
 
+    unify_loads_instructions(memory_order, "memory")
     memdep = generate_dependences(memory_order,"memory")
     print("MEM DEP")
     print(memory_order)
@@ -4253,6 +4277,7 @@ def replace_loads_by_sstores(storage_location, location):
     global variable_content
     global gas_store_op
     global gas_memory_op
+    global discount_op
     
     if location == "storage":
         store_ins = "sstore"
@@ -4283,6 +4308,7 @@ def replace_loads_by_sstores(storage_location, location):
                         print("[OPT]: Replaced mload by its value "+str(block_name))
                         gas_memory_op+=3
                     storage_location.pop(i+pos+1)
+                    discount_op+=1
                     finish = True
 
                     for v in u_dict:
@@ -4319,7 +4345,7 @@ def replace_loads_by_sstores(storage_location, location):
 def remove_store_recursive_dif(storage_location, location):
     global gas_store_op
     global gas_memory_op
-    
+    global discount_op
     if location == "storage":
         instruction = "sstore"
     else:
@@ -4341,6 +4367,7 @@ def remove_store_recursive_dif(storage_location, location):
                 dep = list(map(lambda x: are_dependent(x[0][0],var,x[0][-1],elem[0][-1]),sublist)) #It checks for loads betweeen the stores
                 if True not in dep:
                     storage_location.pop(i)
+                    discount_op+=1
                     if location == "storage":
                         print("[OPT]: Removed sstore sstore "+str(block_name))
                         gas_store_op+=5000
@@ -4385,7 +4412,7 @@ def remove_store_recursive_dif(storage_location, location):
 def remove_store_loads(storage_location, location):
     global gas_store_op
     global gas_memory_op
-
+    global discount_op
 
     if storage_location == "storage":
         store_ins = "sstore"
@@ -4409,6 +4436,7 @@ def remove_store_loads(storage_location, location):
                     variables = list(map(lambda x: are_dependent(var,x[0][0],elem[0][-1],x[0][-1]),rest_instructions))
                     if True not in variables:
                         storage_location.pop(i)
+                        discount_op+=1
                         finished = True
                         if storage_location == "storage":
                             print("[OPT]: OPTIMIZATION sstore OF sload "+str(block_name))
@@ -4534,22 +4562,28 @@ def unify_loads_instructions(storage_location, location):
 
     if location == "storage":
         instruction = "sload"
+        store_ins = "sstore"
     elif location == "memory":
         instruction = "mload"
-
+        store_ins = "mstore"
 
     i = 0
     finished = False
     while(i<len(storage_location) and not finished):
         elem = storage_location[i]
         if elem[0][-1].find(instruction)!=-1:
-            loads = list(filter(lambda x: x[0][0] == elem[0][0] and x[0][-1].find("sload")!=-1,storage_location[i+1::]))
+            loads = list(filter(lambda x: x[0][0] == elem[0][0] and x[0][-1].find(instruction)!=-1,storage_location[i+1::]))
             if len(loads)>0:
                 load_ins = loads[0]
-                pos = storage_location.index(load_ins)
-                storage_location.pop(pos)
-                update_variables_loads(elem,load_ins,storage_location)
-                finished = True
+                pos_aux = storage_location[i+1::].index(load_ins)
+                rest_list = storage_location[i+1:i+pos_aux+1]
+                st_list = list(filter(lambda x: x[0][-1].find(store_ins)!=-1, rest_list))
+                dep = list(map(lambda x: are_dependent(elem[0][0],x[0][0],elem[0][-1],x[0][-1]),st_list))
+                if True not in dep:
+                    storage_location.pop(pos_aux+i+1)
+                    update_variables_loads(elem,load_ins,storage_location)
+                    unify_loads_instructions(storage_location,location)
+                    finished = True
                 
             
         i+=1
@@ -4640,8 +4674,15 @@ def are_dependent(var1,var2,ins1,ins2):
                 print("DIFFERENT VARIABLES")
                 
         elif var1_str.startswith("s") or var2_str.startswith("s"):
-            dep = True
-            print("DIFFERENT VALUES 1 var 1 int")
+            if mem40_pattern:
+                if (ins1.find("mload")!=-1 or ins1.find("mstore")!=-1) and (var1_str =="64" or var2_str == "64"):
+                    dep = False
+                    print("MEM64 pattern")
+                else:
+                    dep = True
+            else:
+                dep = True
+                print("DIFFERENT VALUES 1 var 1 int")
 
         else: #two int values
             if ins1.find("mstore8")!=-1 and var1>=var2 and var1<var2+32:
