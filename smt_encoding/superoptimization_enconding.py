@@ -67,6 +67,8 @@ def generate_soft_constraints(solver_name, b0, bs, usr_instr, theta_dict, flags,
         alternative_soft_constraints(b0, bs, usr_instr, theta_dict, is_barcelogic)
     elif flags['number-instruction-gas-model']:
         number_instructions_soft_constraints(b0, theta_dict['NOP'], is_barcelogic)
+    elif flags['number-instruction-gas-model']:
+        number_instructions_soft_constraints(b0, theta_dict['NOP'], is_barcelogic)
     else:
         paper_soft_constraints(b0, bs, usr_instr, theta_dict, is_barcelogic, instr_seq, weight)
 
@@ -107,9 +109,9 @@ def generate_instruction_dicts(b0, user_instr, final_stack, flags):
 
 # Determines how to encode the memory depending on the flags
 def generate_memory_constraints(flags, b0, theta_dict, theta_mem, order_tuples):
-    if flags['memory-encoding-with-store-auxiliary-variables']:
+    if flags['memory-encoding-store']:
         memory_model_constraints_l_variables_store(b0, order_tuples, theta_dict, theta_mem)
-    elif flags['']:
+    elif flags['memory-encoding-store']:
         pass
     else:
         pass
@@ -118,11 +120,11 @@ def generate_memory_constraints(flags, b0, theta_dict, theta_mem, order_tuples):
 # Determine which l variables must be initialized depending on the memory encoding
 def generate_l_theta_dict(flags, order_tuples, theta_dict, theta_mem):
     # First case: only conflicting stores
-    if flags['']:
+    if flags['memory-encoding-store']:
         conflicting_dict = generate_conflicting_theta_dict(theta_dict, order_tuples)
         return {instr: theta_dict[instr] for instr in set(conflicting_dict).intersection(set(theta_mem))}
     # Second case: all conflicting instructions
-    elif flags['']:
+    elif flags['memory-encoding-store']:
         return generate_conflicting_theta_dict(theta_dict, order_tuples)
     # Third case: no l variables are used, then return an empty dict
     else:
@@ -153,6 +155,7 @@ def generate_smtlib_encoding(b0, bs, usr_instr, variables, initial_stack, final_
     dependency_graph, first_position_instr_appears_dict, first_position_instr_cannot_appear_dict = \
         generate_instruction_dicts(b0, usr_instr, final_stack, flags)
     theta_dict = dict(theta_stack, **theta_comm, **theta_non_comm, **theta_mem)
+    l_theta_dict = generate_l_theta_dict(flags, order_tuples, theta_dict, theta_mem)
 
     # Before generating the encoding, we activate the default encoding if its corresponding flag is activated
     if flags['default-encoding']:
@@ -161,13 +164,12 @@ def generate_smtlib_encoding(b0, bs, usr_instr, variables, initial_stack, final_
     write_encoding(set_logic('QF_LIA'))
     generate_configuration_statements(solver_name)
     generate_asserts_from_additional_info(additional_info)
-    initialize_variables(variables, bs, b0, theta_mem)
+    initialize_variables(variables, bs, b0, l_theta_dict)
     variables_assignment_constraint(variables)
     stack_constraints(b0, bs, comm_instr, non_comm_instr, mem_instr, theta_stack, theta_comm, theta_non_comm, theta_mem,
                       first_position_instr_appears_dict, first_position_instr_cannot_appear_dict)
 
-    if order_tuples:
-        memory_model_constraints_l_variables_store(b0, order_tuples, theta_dict, theta_mem)
+    generate_memory_constraints(flags, b0, theta_dict, theta_mem, order_tuples)
     initial_stack_encoding(initial_stack, bs)
     final_stack_encoding(final_stack, bs, b0)
     generate_redundant_constraints(flags, b0, usr_instr, theta_stack, theta_comm, theta_non_comm, final_stack,

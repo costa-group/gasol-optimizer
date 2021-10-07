@@ -100,3 +100,42 @@ def number_instructions_soft_constraints(b0, theta_nop, is_barcelogic):
 
     for j in range(b0):
         write_encoding(add_assert_soft(add_eq(t(j), theta_nop), 1, label_name, is_barcelogic))
+
+
+# Method for generating the soft constraints in which the size of the bytecode is minimized.
+# NOP instructions have a 0 cost associated, PUSH-related instructions have a size of 2 associated,
+# and the remaining ones have cost 1 associated
+def byte_size_soft_constraints(b0, theta_dict, is_barcelogic=False):
+    w0 = {0: ["NOP"]}
+    w1 = {1: list(filter(lambda x: not x.startswith("PUSH") and x != "NOP", theta_dict.keys()))}
+    w2 = {2: list(filter(lambda x: x.startswith("PUSH"), theta_dict.keys()))}
+    disjoin_sets = dict(w0, **w1, **w2)
+
+    previous_cost = 0
+    or_variables = []
+    bool_variables = []
+
+    write_encoding("; Soft constraints for optimizing the size of the opcodes in bytes")
+
+    for gas_cost in disjoin_sets:
+        # We skip the first set of instructions, as they have
+        # no soft constraint associated. Nevertheless, we add
+        # opcodes with cost 0 to the set of variables till p
+        if gas_cost == 0:
+            for instr in disjoin_sets[gas_cost]:
+                or_variables.append(instr)
+            continue
+
+        wi = gas_cost - previous_cost
+
+        # Before adding current associated opcodes, we generate
+        # the constraints for each tj.
+        for j in range(b0):
+            write_encoding(
+                add_assert_soft(add_or(*[*bool_variables, *list(map(lambda var: add_eq(t(j), var), or_variables))]),
+                                wi, label_name, is_barcelogic))
+        for instr in disjoin_sets[gas_cost]:
+            or_variables.append(instr)
+
+        # We update previous_cost
+        previous_cost = gas_cost

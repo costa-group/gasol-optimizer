@@ -68,7 +68,8 @@ def initialize_flags_and_additional_info(args_i, current_cost, instr_seq, previo
                  'instruction-order': False,
                  'no-output-before-pop': False, 'inequality-gas-model': False,
                  'initial-solution': False, 'default-encoding': False,
-                 'number-instruction-gas-model': False}
+                 'number-instruction-gas-model': False, 'memory-encoding-conflicting': False,
+                 'memory-encoding-store': True}
         additional_info = {'tout': 10, 'solver': "oms", 'current_cost': current_cost, 'instr_seq': instr_seq,
                            'previous_solution': previous_solution_dict, 'mem_order': mem_order}
     else:
@@ -77,7 +78,8 @@ def initialize_flags_and_additional_info(args_i, current_cost, instr_seq, previo
                  'no-output-before-pop': args_i.no_output_before_pop,
                  'inequality-gas-model': args_i.inequality_gas_model,
                  'initial-solution': args_i.initial_solution, 'default-encoding': args_i.default_encoding,
-                 'number-instruction-gas-model': args_i.number_instruction_gas_model}
+                 'number-instruction-gas-model': args_i.number_instruction_gas_model,
+                 'memory-encoding-conflicting': False, 'memory-encoding-store': True }
         additional_info = {'tout': args_i.tout, 'solver': args_i.solver, 'current_cost': current_cost,
                            'instr_seq': instr_seq, 'previous_solution': previous_solution_dict, 'mem_order': mem_order}
     return flags, additional_info
@@ -200,7 +202,8 @@ if __name__ == "__main__":
              'instruction-order': args['instruction_order'], 'no-output-before-pop': args['no_output_before_pop'],
              'inequality-gas-model': args['inequality_gas_model'], 'initial-solution': args['initial_solution'],
              'default-encoding': args['default_encoding'],
-             'number-instruction-gas-model': args['number_instruction_gas_model']}
+             'number-instruction-gas-model': args['number_instruction_gas_model'],
+             'memory-encoding-store': True}
 
     if args['check_final_stack']:
         obtained_stack = compute_final_stack_from_solution(initial_stack, user_instr, instr_seq)
