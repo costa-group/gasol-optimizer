@@ -474,7 +474,7 @@ def search_for_value_aux(var, instructions,source_stack,level,evaluate = True):
 def generate_sstore_mstore(store_ins,instructions,source_stack):
     level = 0
     new_vars, funct = get_involved_vars(store_ins,"")
-
+    
     values = {}
     for v in new_vars:
 
@@ -1467,7 +1467,6 @@ def generate_storage_info(instructions,source_stack):
 
     sload_relative_pos = {}
     mload_relative_pos = {}
-
     
     for x in range(0,len(instructions)):
         s_dict = {}
@@ -1750,21 +1749,7 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
             new_ts.append(v)
         else:
             new_ts.append(new_v)
-
-    for user_ins in user_defins:
-        new_inpt_sk = []
-
-        for v in user_ins["inpt_sk"]:
-            new_v = compute_reverse_svar(v,max_ss_idx)
-            new_inpt_sk.append(new_v)
-
-        user_ins["inpt_sk"] = new_inpt_sk
-
-    remove_vars=[]
-
-    vars_list = compute_vars_set(new_ss,new_ts)
-
-    #Adding sstore seq
+            
     sto_objs = []
 
     sstore_ins = filter(lambda x: x[0][-1].find("sstore")!=-1,storage_order)
@@ -1778,7 +1763,24 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
         x = generate_mstore_info(mem)
         mem_objs.append(x)
 
+
     all_user_defins = user_defins+sto_objs+mem_objs
+        
+            
+    for user_ins in all_user_defins:
+        new_inpt_sk = []
+
+        for v in user_ins["inpt_sk"]:
+            new_v = compute_reverse_svar(v,max_ss_idx)
+            new_inpt_sk.append(new_v)
+
+        user_ins["inpt_sk"] = new_inpt_sk
+
+    remove_vars=[]
+
+    vars_list = compute_vars_set(new_ss,new_ts)
+
+    #Adding sstore seq
 
     if simplification:
         new_user_defins,new_ts = apply_all_simp_rules(all_user_defins,vars_list,new_ts)
