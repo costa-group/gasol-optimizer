@@ -42,11 +42,20 @@ def compute_final_stack_from_solution(initial_stack, user_instr, instr_seq):
             final_stack.pop(0)
         else:
             current_instr = list(filter(lambda x: x['id'] == instr, user_instr))[0]
-            for stack_elem in current_instr['inpt_sk']:
-                if stack_elem != final_stack[0]:
+            if current_instr['commutative']:
+                inpt_stack = current_instr['inpt_sk']
+                if (inpt_stack[0] != final_stack[0] or inpt_stack[1] != final_stack[1]) and\
+                        (inpt_stack[0] != final_stack[0] or inpt_stack[1] != final_stack[1]):
                     raise ValueError("Error with instruction " + str(instr) + " applied to stack " + str(final_stack))
                 else:
                     final_stack.pop(0)
+                    final_stack.pop(0)
+            else:
+                for stack_elem in current_instr['inpt_sk']:
+                    if stack_elem != final_stack[0]:
+                        raise ValueError("Error with instruction " + str(instr) + " applied to stack " + str(final_stack))
+                    else:
+                        final_stack.pop(0)
             if current_instr['outpt_sk']:
                 final_stack.insert(0, current_instr['outpt_sk'][0])
     return final_stack
