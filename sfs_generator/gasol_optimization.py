@@ -333,7 +333,10 @@ def get_encoding_init_block(instructions,source_stack):
             # print(already_defined_userdef)
             
             user_def = build_initblock_userdef(u_var,args_exp,arity_exp)
-            init_user_def+=user_def
+            for u in user_def:
+                if u not in init_user_def:
+                    init_user_def.append(u)
+
             for e in user_def:
                 new_opcodes.append(e["id"])
         else:
