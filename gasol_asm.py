@@ -674,6 +674,7 @@ if __name__ == '__main__':
     ap.add_argument("-o", help="ASM output path", dest='output_path', action='store')
     ap.add_argument("-storage", "--storage", help="Split using SSTORE, MSTORE and MSTORE8", action="store_true")
     ap.add_argument("-last-constants", "--last-constants", help="It removes the last instructions of a block when they generate a ocnstant value", dest="last_constants", action = "store_true")
+    ap.add_argument("-mem40", "--mem40", help="It assumes that pos 64 in memory is not dependant with variables", action = "store_true")
 
     args = ap.parse_args()
 
