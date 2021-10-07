@@ -21,6 +21,18 @@ def generate_previous_solution_statement(b0, theta_dict, instr_seq):
     write_encoding(add_assert(add_eq(previous_solution_var, add_and(*and_variables))))
 
 
+def generate_statement_from_previous_solutions(b0, theta_dict, instr_seq):
+    and_variables = []
+    for i, element in enumerate(instr_seq):
+        if type(element) == int:
+            and_variables.append(add_and(add_eq(t(i), theta_dict["PUSH"]), add_eq(a(i), element)))
+        else:
+            and_variables.append(add_eq(t(i), theta_dict[element]))
+    for i in range(len(instr_seq), b0):
+        and_variables.append(add_eq(t(i), theta_dict['NOP']))
+    return add_and(*and_variables)
+
+
 # Generates the soft constraints contained in the paper.
 def paper_soft_constraints(b0, bs, user_instr, theta_dict, is_barcelogic=False, instr_seq=None, previous_solution_weight=-1):
     if instr_seq is None:
@@ -32,11 +44,13 @@ def paper_soft_constraints(b0, bs, user_instr, theta_dict, is_barcelogic=False, 
     or_variables = []
     bool_variables = []
     if previous_solution_weight != -1:
-        bool_variables.append(previous_solution_var)
-        write_encoding(declare_boolvar(previous_solution_var))
-        generate_previous_solution_statement(b0, theta_dict, instr_seq)
-        write_encoding(add_assert_soft(add_not(previous_solution_var), previous_solution_weight, label_name,
-                                       is_barcelogic))
+        # bool_variables.append(previous_solution_var)
+        # write_encoding(declare_boolvar(previous_solution_var))
+        # generate_previous_solution_statement(b0, theta_dict, instr_seq)
+        # write_encoding(add_assert_soft(add_not(previous_solution_var), previous_solution_weight, label_name, is_barcelogic))
+        print(generate_statement_from_previous_solutions(b0, theta_dict, instr_seq))
+        write_encoding(add_assert_soft(generate_statement_from_previous_solutions(b0, theta_dict, instr_seq), 1, label_name, is_barcelogic))
+
     for gas_cost in disjoin_sets:
         # We skip the first set of instructions, as they have
         # no soft constraint associated. Neverthelss, we add

@@ -12,7 +12,7 @@ from encoding_redundant import *
 from encoding_files import write_encoding, write_opcode_map, write_instruction_map, write_gas_map
 from default_encoding import activate_default_encoding
 from encoding_reconstruct_solution import generate_encoding_from_log_json_dict
-from encoding_memory_instructions import memory_model_constraints
+from encoding_memory_instructions import memory_model_constraints_l_variables_store
 
 # Method to generate redundant constraints according to flags (at least once is included by default)
 def generate_redundant_constraints(flags, b0, user_instr, theta_stack, theta_comm, theta_non_comm, final_stack,
@@ -108,7 +108,7 @@ def generate_instruction_dicts(b0, user_instr, final_stack, flags):
 # Determines how to encode the memory depending on the flags
 def generate_memory_constraints(flags, b0, theta_dict, theta_mem, order_tuples):
     if flags['memory-encoding-with-store-auxiliary-variables']:
-        memory_model_constraints(b0, order_tuples, theta_dict, theta_mem)
+        memory_model_constraints_l_variables_store(b0, order_tuples, theta_dict, theta_mem)
     elif flags['']:
         pass
     else:
@@ -153,6 +153,7 @@ def generate_smtlib_encoding(b0, bs, usr_instr, variables, initial_stack, final_
     dependency_graph, first_position_instr_appears_dict, first_position_instr_cannot_appear_dict = \
         generate_instruction_dicts(b0, usr_instr, final_stack, flags)
     theta_dict = dict(theta_stack, **theta_comm, **theta_non_comm, **theta_mem)
+    print([(elem[1], elem[0]) for elem in sorted(theta_dict.items(), key= lambda x:x[1])])
 
     # Before generating the encoding, we activate the default encoding if its corresponding flag is activated
     if flags['default-encoding']:
@@ -167,7 +168,7 @@ def generate_smtlib_encoding(b0, bs, usr_instr, variables, initial_stack, final_
                       first_position_instr_appears_dict, first_position_instr_cannot_appear_dict)
 
     if order_tuples:
-        memory_model_constraints(b0, order_tuples, theta_dict, theta_mem)
+        memory_model_constraints_l_variables_store(b0, order_tuples, theta_dict, theta_mem)
     initial_stack_encoding(initial_stack, bs)
     final_stack_encoding(final_stack, bs, b0)
     generate_redundant_constraints(flags, b0, usr_instr, theta_stack, theta_comm, theta_non_comm, final_stack,
@@ -205,7 +206,7 @@ def generate_smtlib_encoding_appending(b0, bs, usr_instr, variables, initial_sta
     variables_assignment_constraint(variables, previous_idx)
     stack_constraints(b0, bs, comm_instr, non_comm_instr, mem_instr, theta_stack, theta_comm, theta_non_comm, theta_mem,
                       {}, {}, previous_idx)
-    memory_model_constraints(b0, order_tuples, theta_dict, theta_mem)
+    memory_model_constraints_l_variables_store(b0, order_tuples, theta_dict, theta_mem)
     initial_stack_encoding(initial_stack, bs, previous_idx)
     final_stack_encoding(final_stack, bs, b0, previous_idx)
     generate_encoding_from_log_json_dict(previous_solution, previous_idx)
