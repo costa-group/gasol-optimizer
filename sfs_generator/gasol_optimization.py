@@ -4253,6 +4253,7 @@ def replace_loads_by_sstores(storage_location, location):
     global variable_content
     global gas_store_op
     global gas_memory_op
+    global discount_op
     
     if location == "storage":
         store_ins = "sstore"
@@ -4283,6 +4284,7 @@ def replace_loads_by_sstores(storage_location, location):
                         print("[OPT]: Replaced mload by its value "+str(block_name))
                         gas_memory_op+=3
                     storage_location.pop(i+pos+1)
+                    discount_op+=1
                     finish = True
 
                     for v in u_dict:
@@ -4319,7 +4321,7 @@ def replace_loads_by_sstores(storage_location, location):
 def remove_store_recursive_dif(storage_location, location):
     global gas_store_op
     global gas_memory_op
-    
+    global discount_op
     if location == "storage":
         instruction = "sstore"
     else:
@@ -4341,6 +4343,7 @@ def remove_store_recursive_dif(storage_location, location):
                 dep = list(map(lambda x: are_dependent(x[0][0],var,x[0][-1],elem[0][-1]),sublist)) #It checks for loads betweeen the stores
                 if True not in dep:
                     storage_location.pop(i)
+                    discount_op+=1
                     if location == "storage":
                         print("[OPT]: Removed sstore sstore "+str(block_name))
                         gas_store_op+=5000
@@ -4385,7 +4388,7 @@ def remove_store_recursive_dif(storage_location, location):
 def remove_store_loads(storage_location, location):
     global gas_store_op
     global gas_memory_op
-
+    global discount_op
 
     if storage_location == "storage":
         store_ins = "sstore"
@@ -4409,6 +4412,7 @@ def remove_store_loads(storage_location, location):
                     variables = list(map(lambda x: are_dependent(var,x[0][0],elem[0][-1],x[0][-1]),rest_instructions))
                     if True not in variables:
                         storage_location.pop(i)
+                        discount_op+=1
                         finished = True
                         if storage_location == "storage":
                             print("[OPT]: OPTIMIZATION sstore OF sload "+str(block_name))
