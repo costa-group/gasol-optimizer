@@ -153,7 +153,6 @@ def generate_smtlib_encoding(b0, bs, usr_instr, variables, initial_stack, final_
     dependency_graph, first_position_instr_appears_dict, first_position_instr_cannot_appear_dict = \
         generate_instruction_dicts(b0, usr_instr, final_stack, flags)
     theta_dict = dict(theta_stack, **theta_comm, **theta_non_comm, **theta_mem)
-    print([(elem[1], elem[0]) for elem in sorted(theta_dict.items(), key= lambda x:x[1])])
 
     # Before generating the encoding, we activate the default encoding if its corresponding flag is activated
     if flags['default-encoding']:

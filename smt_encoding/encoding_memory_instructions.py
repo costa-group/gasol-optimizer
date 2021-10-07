@@ -43,8 +43,8 @@ def memory_model_constraints(b0, order_tuples, theta_dict, theta_mem, initial_id
 
         # In order to identify which constraint must be applied, we check whether each element
         # is a store or not (i.e. it belongs to the keys of theta mem)
-        is_store_1 = el1 in theta_dict.keys()
-        is_store_2 = el2 in theta_dict.keys()
+        is_store_1 = el1 in theta_mem.keys()
+        is_store_2 = el2 in theta_mem.keys()
 
         theta_val_1 = theta_dict[el1]
         theta_val_2 = theta_dict[el2]
@@ -78,8 +78,8 @@ def memory_model_constraints_l_variables_store(b0, order_tuples, theta_dict, the
 
         # In order to identify which constraint must be applied, we check whether each element
         # is a store or not (i.e. it belongs to the keys of theta mem)
-        is_store_1 = el1 in theta_dict.keys()
-        is_store_2 = el2 in theta_dict.keys()
+        is_store_1 = el1 in theta_mem.keys()
+        is_store_2 = el2 in theta_mem.keys()
 
         theta_val_1 = theta_dict[el1]
         theta_val_2 = theta_dict[el2]
