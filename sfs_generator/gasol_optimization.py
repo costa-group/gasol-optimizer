@@ -2260,7 +2260,7 @@ def generate_userdefname(u_var,funct,args,arity,init=False):
     #TODO: Add more opcodes
     
     if instr_name in already_defined_userdef:
-        if not split_sto and not init and instr_name in ["SLOAD","MLOAD"]:
+        if not split_sto and not init and instr_name in ["SLOAD","MLOAD","KECCAK256","SHA3"]:
             defined = -1
         else:
             defined = check_inputs(instr_name,args)
