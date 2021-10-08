@@ -116,7 +116,7 @@ def bytes_required(op_name, val, address_length = 4):
     if not op_name.startswith("PUSH") or op_name == "tag":
         return 1
     elif op_name == "PUSH":
-        return 1 + max(1, number_encoding_size(int(val)))
+        return 1 + max(1, number_encoding_size(int(val,16)))
     elif op_name == "PUSH#[$]" or op_name == "PUSHSIZE":
         return 1 + 4
     elif op_name == "PUSHTAG" or op_name == "PUSHDATA" or op_name == "PUSH[$]":
@@ -307,7 +307,6 @@ if __name__=="__main__":
 
                 with open(instruction_final_solution, 'r') as f:
                     instructions_disasm = f.read()
-                    print(instructions_disasm)
                     file_results['target_disasm'] = instructions_disasm
                     file_results['bytes_required'] = total_bytes(instructions_disasm)
                     # Check all those strings that are not numbers
@@ -332,7 +331,6 @@ if __name__=="__main__":
                 stack_size = compute_stack_size(opcodes)
 
                 block_data = {"instructions": opcodes, "input": stack_size}
-                print(block_data)
                 exit_code = ir_block.evm2rbr_compiler(file_name=contract_name, contract_name=contract_name, block=block_data,
                                                       block_id=block_id,
                                                       preffix="", simplification=True, storage=args.storage)
@@ -341,8 +339,6 @@ if __name__=="__main__":
                 data2 = sfs_dict["syrup_contract"]["block" + block_id]
 
                 file_results['result_is_correct'] = are_equals(data, data2)
-                print(data)
-                print(data2)
 
             rows_list.append(file_results)
 
