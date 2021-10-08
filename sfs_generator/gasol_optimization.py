@@ -1480,6 +1480,9 @@ def generate_storage_info(instructions,source_stack):
         # elif instructions[x].find("sload")!=-1:
         #     last_sload = sloads_aux[0]
         #     sloads_aux = sloads_aux[1::]
+
+        elif instructions[x].find("keccak")!=-1 or instructions[x].find("sha3")!=-1:
+            mstore_seq.append("keccak")
             
         elif instructions[x].find("mstore")!=-1:
             exp = generate_sstore_mstore(instructions[x],instructions[x-1::-1],source_stack)
@@ -1517,6 +1520,14 @@ def generate_storage_info(instructions,source_stack):
         elif instructions[x].find("mstore")!=-1: #and last_mload != "" and mload_relative_pos.get(last_mload,[])==[]:
             mload_relative_pos[last_mload]=mstores.pop(0)
             memory_order.append(mload_relative_pos[last_mload])
+
+        elif instructions[x].find("keccak")!=-1 or instructions[x].find("sha3")!=-1:
+            keccak = mstores.pop(0)
+            memory_order.append(keccak)
+
+
+    print("FINAL MSTORE")
+    print(memory_order)
             
     print("FINAL SSTORE:")
     print(sstore_seq)
@@ -1542,6 +1553,7 @@ def generate_storage_info(instructions,source_stack):
     while(simp):
         simp = simplify_memory(memory_order,"memory")
 
+    memory_order = list(filter(lambda x: type(x) == tuple, memory_order))    
     unify_loads_instructions(memory_order, "memory")
     memdep = generate_dependences(memory_order,"memory")
     print("MEM DEP")
@@ -1762,7 +1774,8 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     for mem in mstore_ins:
         x = generate_mstore_info(mem)
         mem_objs.append(x)
-
+        print(mem_objs)
+        
 
     all_user_defins = user_defins+sto_objs+mem_objs
         
@@ -3048,7 +3061,8 @@ def smt_translate_block(rule,file_name,name,preffix,simplification=True,storage 
 
 
     block_name = rule.get_rule_name()
-    
+
+    print(block_name)
     print(rule.get_rule_name())
     print(instructions)
     print("*******")
@@ -4372,7 +4386,7 @@ def remove_store_recursive_dif(storage_location, location):
                 pos = storage_location[i+1::].index(next_ins)
                 sublist = storage_location[i+1:pos+i+1]
                 dep = list(map(lambda x: are_dependent(x[0][0],var,x[0][-1],elem[0][-1]),sublist)) #It checks for loads betweeen the stores
-                if True not in dep:
+                if True not in dep and "keccak" not in sublist:
                     storage_location.pop(i)
                     discount_op+=1
                     if location == "storage":
@@ -4441,7 +4455,7 @@ def remove_store_loads(storage_location, location):
                     pos = storage_location.index(symb_ins)
                     rest_instructions = storage_location[i+1:pos]
                     variables = list(map(lambda x: are_dependent(var,x[0][0],elem[0][-1],x[0][-1]),rest_instructions))
-                    if True not in variables:
+                    if True not in variables and "keccak" not in rest_instructions:
                         storage_location.pop(i)
                         discount_op+=1
                         finished = True
