@@ -1,4 +1,4 @@
-import sfs_generator.opcodes as opcodes
+import opcodes
 
 '''
 It takes the name of a file containing the optimized version of a

@@ -4,9 +4,10 @@ import json
 import collections
 import pathlib
 
-from global_params.paths import gasol_path
-from sfs_generator.asm_bytecode import AsmBytecode
-from sfs_generator.opcodes import opcode_internal_representation_to_assembly_item
+from paths import gasol_path, solutions_path
+from asm_bytecode import AsmBytecode
+from opcodes import opcode_internal_representation_to_assembly_item
+from gasol_encoder import generate_theta_dict_from_sequence
 
 def init():
     global instruction_json
@@ -111,6 +112,35 @@ def generate_info_from_solution(solver_output, opcodes_theta_dict, instruction_t
 
     instr_sol, opcode_sol, pushed_values_decimal = generate_ordered_structures(instr_sol, opcode_sol, pushed_values_decimal)
     return instr_sol, opcode_sol, pushed_values_decimal, total_gas
+
+
+def generate_disasm_sol(contract_name, bs, user_instr, solver_output):
+    _, instruction_theta_dict, opcodes_theta_dict, gas_theta_dict, values_dict = generate_theta_dict_from_sequence(bs, user_instr)
+
+    instr_sol, opcode_sol, pushed_values_decimal, total_gas = \
+        generate_info_from_solution(solver_output, opcodes_theta_dict, instruction_theta_dict, gas_theta_dict)
+
+    pathlib.Path(solutions_path + contract_name + "/disasm/").mkdir(parents=True, exist_ok=True)
+    pathlib.Path(solutions_path + contract_name + "/evm/").mkdir(parents=True, exist_ok=True)
+    pathlib.Path(solutions_path + contract_name + "/total_gas/").mkdir(parents=True, exist_ok=True)
+
+
+    with open(opcodes_final_solution, 'w') as opcodes_file:
+        for position, opcode in opcode_sol.items():
+            push_match = re.match(re.compile('PUSH'), instr_sol[position])
+            if push_match:
+                opcodes_file.write(opcode + hex(int(pushed_values_decimal[position]))[2:])
+            else:
+                opcodes_file.write(opcode)
+    with open(instruction_final_solution, 'w') as instruction_file:
+        for position, instr in instr_sol.items():
+            if re.match(re.compile('PUSH'), instr):
+                instruction_file.write(instr + " " + pushed_values_decimal[position] + " ")
+            else:
+                instruction_file.write(instr + " ")
+
+    with open(gas_final_solution, 'w') as gas_file:
+        gas_file.write(str(total_gas))
 
 
 def generate_disasm_sol_from_output(solver_output, opcodes_theta_dict, instruction_theta_dict,

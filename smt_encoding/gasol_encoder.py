@@ -64,24 +64,21 @@ def parse_data(json_path, var_initial_idx=0, with_simplifications=True):
 
 def initialize_flags_and_additional_info(args_i, current_cost, instr_seq, previous_solution_dict, mem_order):
     if args_i is None:
-        flags = {'at-most': False, 'pushed-at-least': False,
-                 'instruction-order': False,
-                 'no-output-before-pop': False, 'inequality-gas-model': False,
-                 'initial-solution': False, 'default-encoding': False,
-                 'number-instruction-gas-model': False, 'memory-encoding-conflicting': False,
-                 'memory-encoding-store': True}
-        additional_info = {'tout': 10, 'solver': "oms", 'current_cost': current_cost, 'instr_seq': instr_seq,
-                           'previous_solution': previous_solution_dict, 'mem_order': mem_order}
-    else:
-        flags = {'at-most': args_i.at_most, 'pushed-at-least': args_i.pushed_once,
-                 'instruction-order': args_i.instruction_order,
-                 'no-output-before-pop': args_i.no_output_before_pop,
-                 'inequality-gas-model': args_i.inequality_gas_model,
-                 'initial-solution': args_i.initial_solution, 'default-encoding': args_i.default_encoding,
-                 'number-instruction-gas-model': args_i.number_instruction_gas_model,
-                 'memory-encoding-conflicting': False, 'memory-encoding-store': True }
-        additional_info = {'tout': args_i.tout, 'solver': args_i.solver, 'current_cost': current_cost,
-                           'instr_seq': instr_seq, 'previous_solution': previous_solution_dict, 'mem_order': mem_order}
+        args_i = argparse.Namespace()
+    args_i_dict = vars(args_i)
+
+    flags = {'at-most': args_i_dict.get('at_most', False), 'pushed-at-least': args_i_dict.get('pushed_once', False),
+             'instruction-order': args_i_dict.get('instruction_order', False),
+             'no-output-before-pop': args_i_dict.get('no_output_before_pop', False),
+             'inequality-gas-model': args_i_dict.get('inequality_gas_model', False),
+             'initial-solution': args_i_dict.get('initial_solution', False),
+             'default-encoding': args_i_dict.get('default_encoding', False),
+             'number-instruction-gas-model': args_i_dict.get('number_instruction_gas_model',False),
+             'memory-encoding-conflicting': args_i_dict.get('memory_encoding_conflicting',False),
+             'memory-encoding-store': args_i_dict.get('memory_encoding_store',False)}
+    additional_info = {'tout': args_i_dict.get('tout', 10), 'solver': args_i_dict.get('solver', "oms"),
+                       'current_cost': current_cost, 'instr_seq': instr_seq,
+                       'previous_solution': previous_solution_dict, 'mem_order': mem_order}
     return flags, additional_info
 
 
