@@ -336,50 +336,55 @@ def optimize_asm_from_log(file_name, json_log, output_file):
             print("Log file does not contain a valid solution")
 
 
+def preprocess_instructions_plain_text(instructions):
+    ops = instructions.split(" ")
+    # We remove empty elements, as they obviously do not add any info on the sequence of opcodes
+    ops = list(filter(lambda x: x != '', ops))
+    opcodes = []
+    i = 0
+
+    while i < len(ops):
+        op = ops[i]
+        if not op.startswith("PUSH"):
+            opcodes.append(op.strip())
+        else:
+
+            # If position t+1 is a Yul Keyword, then we need to analyze them separately
+            if not isYulKeyword(ops[i + 1]):
+                val = ops[i + 1]
+                op = op + " 0x" + val if not val.startswith("0x") else op + " " + val
+                i = i + 1
+            else:
+                t = ops[i + 1]
+                val = ops[i + 2]
+
+                if op.startswith("PUSH") and t.find("tag") != -1:
+                    op = "PUSHTAG" + " 0x" + val if not val.startswith("0x") else "PUSHTAG " + val
+
+                elif op.startswith("PUSH") and t.find("#[$]") != -1:
+                    op = "PUSH#[$]" + " 0x" + val if not val.startswith("0x") else "PUSH#[$] " + val
+
+                elif op.startswith("PUSH") and t.find("[$]") != -1:
+                    op = "PUSH[$]" + " 0x" + val if not val.startswith("0x") else "PUSH[$] " + val
+
+                elif op.startswith("PUSH") and t.find("data") != -1:
+                    op = "PUSHDATA" + " 0x" + val if not val.startswith("0x") else "PUSHDATA " + val
+
+                i += 2
+            opcodes.append(op)
+
+        i += 1
+    return opcodes
+
+
 def optimize_isolated_asm_block(block_name, timeout=10,storage = False, last_const = False):
 
     with open(block_name,"r") as f:        
         instructions = f.readline().strip()
     f.close()
     
-    opcodes = []
+    opcodes = preprocess_instructions_plain_text(instructions)
 
-    ops = instructions.split(" ")
-    # We remove empty elements, as they obviously do not add any info on the sequence of opcodes
-    ops = list(filter(lambda x: x != '', ops))
-    i = 0
-
-    while i<len(ops):
-        op = ops[i]
-        if not op.startswith("PUSH"):
-            opcodes.append(op.strip())
-        else:
-
-           # If position t+1 is a Yul Keyword, then we need to analyze them separately
-            if  not isYulKeyword(ops[i+1]):
-                val = ops[i+1]
-                op = op+" 0x"+val if not val.startswith("0x") else op+" "+val
-                i=i+1
-            else:
-                t = ops[i+1]
-                val = ops[i+2]
-                
-                if op.startswith("PUSH") and t.find("tag")!=-1:
-                    op = "PUSHTAG"+" 0x"+val if not val.startswith("0x") else "PUSHTAG "+val
-
-                elif op.startswith("PUSH") and t.find("#[$]")!=-1:
-                    op = "PUSH#[$]"+" 0x"+val if not val.startswith("0x") else "PUSH#[$] "+val
-                    
-                elif op.startswith("PUSH") and t.find("[$]")!=-1:
-                    op = "PUSH[$]"+" 0x"+val if not val.startswith("0x") else "PUSH[$] "+val
-
-                elif op.startswith("PUSH") and t.find("data")!=-1:
-                    op = "PUSHDATA"+" 0x"+val if not val.startswith("0x") else "PUSHDATA "+val
-
-                i+=2
-            opcodes.append(op)
-
-        i+=1
     stack_size = compute_stack_size(opcodes)
     contract_name = block_name.split('/')[-1]
 
