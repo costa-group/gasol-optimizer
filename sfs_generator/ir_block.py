@@ -4,7 +4,7 @@ from timeit import default_timer as dtimer
 
 from rbr_rule import RBRRule
 from gasol_optimization import smt_translate_block
-from global_params.paths import *
+from paths import *
 
 
 '''

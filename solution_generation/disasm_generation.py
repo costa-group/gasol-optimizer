@@ -98,7 +98,7 @@ def generate_info_from_solution(solver_output, opcodes_theta_dict, instruction_t
             instr_sol[instruction_position] = instruction_theta_dict[instruction_theta]
             opcode_sol[instruction_position] = opcodes_theta_dict[instruction_theta]
             total_gas += gas_theta_dict[instruction_theta]
-            if values_dict.get(instruction_theta, None) is not None:
+            if values_dict is not None and values_dict.get(instruction_theta, None) is not None:
                 pushed_values_decimal[instruction_position] = values_dict[instruction_theta]
 
         for match in re.finditer(pattern2, line):
@@ -114,11 +114,14 @@ def generate_info_from_solution(solver_output, opcodes_theta_dict, instruction_t
     return instr_sol, opcode_sol, pushed_values_decimal, total_gas
 
 
-def generate_disasm_sol(contract_name, bs, user_instr, solver_output):
+def generate_disasm_sol(contract_name, block_name, bs, user_instr, solver_output):
+    init()
+    generate_file_names(contract_name, block_name)
+
     _, instruction_theta_dict, opcodes_theta_dict, gas_theta_dict, values_dict = generate_theta_dict_from_sequence(bs, user_instr)
 
     instr_sol, opcode_sol, pushed_values_decimal, total_gas = \
-        generate_info_from_solution(solver_output, opcodes_theta_dict, instruction_theta_dict, gas_theta_dict)
+        generate_info_from_solution(solver_output, opcodes_theta_dict, instruction_theta_dict, gas_theta_dict, values_dict)
 
     pathlib.Path(solutions_path + contract_name + "/disasm/").mkdir(parents=True, exist_ok=True)
     pathlib.Path(solutions_path + contract_name + "/evm/").mkdir(parents=True, exist_ok=True)

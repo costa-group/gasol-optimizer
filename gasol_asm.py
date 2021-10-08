@@ -11,6 +11,9 @@ sys.path.append(os.path.dirname(os.path.realpath(__file__))+"/smt_encoding")
 sys.path.append(os.path.dirname(os.path.realpath(__file__))+"/sfs_generator/")
 sys.path.append(os.path.dirname(os.path.realpath(__file__))+"/solution_generation")
 sys.path.append(os.path.dirname(os.path.realpath(__file__))+"/verification")
+sys.path.append(os.path.dirname(os.path.realpath(__file__))+"/statistics")
+sys.path.append(os.path.dirname(os.path.realpath(__file__))+"/global_params")
+
 
 from parser_asm import parse_asm
 import ir_block
@@ -26,7 +29,7 @@ from utils import isYulInstruction, compute_stack_size, is_constant_instruction,
 from copy import deepcopy
 from rebuild_asm import rebuild_asm
 from verification.sfs_verify import verify_block_from_list_of_sfs
-from statistics.properties_from_asm_json import compute_number_of_instructions_in_asm_json_per_file, \
+from properties_from_asm_json import compute_number_of_instructions_in_asm_json_per_file, \
     compute_bytecode_size_in_asm_json_per_file
 import global_params.constants as constants
 

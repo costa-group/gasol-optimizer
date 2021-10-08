@@ -12,16 +12,22 @@ import sys
 import resource
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))+"/global_params")
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))+"/sfs_generator")
-
+from utils import compute_stack_size
 from paths import project_path, oms_exec, gasol_path, smt_encoding_path, json_path, z3_exec, bclt_exec, solutions_path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))+"/smt_encoding")
 from encoding_utils import generate_phi_dict
 from gasol_encoder import execute_syrup_backend
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))+"/verification")
+from sfs_verify import are_equals
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))+"/scripts")
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))+"/solution_generation")
 from disasm_generation import generate_disasm_sol
+import ir_block
+from gasol_optimization import get_sfs_dict
 import traceback
+sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+from gasol_asm import preprocess_instructions_plain_text, compute_original_sfs_with_simplifications
+
 
 
 def modifiable_path_files_init():
@@ -49,6 +55,8 @@ def modifiable_path_files_init():
                     help="Disable the constraints added for the default encoding")
     parser.add_argument("-instruction-order", help='add a constraint representing the order among instructions',
                     action='store_true', dest='instruction_order')
+    parser.add_argument("-storage", "--storage", help="Split using SSTORE, MSTORE and MSTORE8", action="store_true")
+
 
     global args
     args = parser.parse_args()
@@ -128,10 +136,11 @@ def bytes_required(op_name, val, address_length = 4):
 
 def total_bytes(instructions_disasm):
     instructions = list(filter(lambda x: x != '', instructions_disasm.split(' ')))
+    print(instructions)
     i, new_instr = 0, []
     bytes = 0
     while i < len(instructions):
-        if re.match(re.compile('PUSH([0-9]+)'), instructions[i]):
+        if instructions[i] == "PUSH":
             bytes += bytes_required("PUSH", instructions[i+1])
             i += 2
         else:
@@ -294,7 +303,7 @@ if __name__=="__main__":
                 with open(solver_output_file, 'w') as f:
                     f.write(solution)
 
-                generate_disasm_sol(contract_name, bs, user_instr, solution)
+                generate_disasm_sol(contract_name, block_id, bs, user_instr, solution)
                 instruction_final_solution = solutions_path + contract_name + "/disasm/" + block_id + "_optimized.disasm_opt"
                 gas_final_solution = solutions_path + contract_name + "/total_gas/" + block_id + "_real_gas.txt"
 
@@ -319,18 +328,20 @@ if __name__=="__main__":
                     # It cannot be negative
                     file_results['saved_gas'] = max(0, file_results['source_gas_cost'] - int(file_results['real_gas']))
 
-                # args_sfs_generation = argparse.Namespace()
-                # args_sfs_generation.source = final_disasm_blk_path
-                # args_sfs_generation.storage = True
-                #
-                # analyze_isolate_block(args_i=args_sfs_generation)
-                #
-                # with open(final_json_path) as path:
-                #     data2 = json.load(path)
-                #     start = timer()
-                #     file_results['result_is_correct'] = are_equals(data, data2)
-                #     end = timer()
-                #     file_results['verifier_time'] = end-start
+                opcodes = preprocess_instructions_plain_text(instructions_disasm)
+
+                stack_size = compute_stack_size(opcodes)
+
+                block_data = {"instructions": opcodes, "input": stack_size}
+
+                exit_code = ir_block.evm2rbr_compiler(file_name=contract_name, contract_name=contract_name, block=block_data,
+                                                      block_id=block_id,
+                                                      preffix="", simplification=True, storage=args.storage)
+
+                sfs_dict = get_sfs_dict()
+                data2 = sfs_dict["syrup_contract"]["block" + block_id]
+
+                file_results['result_is_correct'] = are_equals(data, data2)
 
 
             rows_list.append(file_results)
@@ -340,5 +351,5 @@ if __name__=="__main__":
                                               'solver_time_in_sec', 'target_disasm', 'init_progr_len',
                                               'final_progr_len',
                                               'number_of_necessary_uninterpreted_instructions',
-                                              'number_of_necessary_push', 'bytes_required'])
+                                              'number_of_necessary_push', 'bytes_required', 'result_is_correct'])
         df.to_csv(csv_file)

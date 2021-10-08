@@ -1,6 +1,6 @@
 # Module that contains methods for determining different properties from an AsmJSON object
 
-from statistics.statistics_utils import number_encoding_size
+from statistics_utils import number_encoding_size
 
 # Computes the number of bytecodes given an ASM json object
 def compute_number_of_instructions_in_asm_json_per_contract(asm_json):
