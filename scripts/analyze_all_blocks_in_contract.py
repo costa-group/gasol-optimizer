@@ -130,13 +130,11 @@ def bytes_required(op_name, val, address_length = 4):
         m_immutableOccurrences = 1
         return 1 + (3 + 32) * m_immutableOccurrences
     else:
-        print(op_name)
         raise ValueError("Opcode not recognized")
 
 
 def total_bytes(instructions_disasm):
     instructions = list(filter(lambda x: x != '', instructions_disasm.split(' ')))
-    print(instructions)
     i, new_instr = 0, []
     bytes = 0
     while i < len(instructions):
@@ -309,6 +307,7 @@ if __name__=="__main__":
 
                 with open(instruction_final_solution, 'r') as f:
                     instructions_disasm = f.read()
+                    print(instructions_disasm)
                     file_results['target_disasm'] = instructions_disasm
                     file_results['bytes_required'] = total_bytes(instructions_disasm)
                     # Check all those strings that are not numbers
@@ -333,7 +332,7 @@ if __name__=="__main__":
                 stack_size = compute_stack_size(opcodes)
 
                 block_data = {"instructions": opcodes, "input": stack_size}
-
+                print(block_data)
                 exit_code = ir_block.evm2rbr_compiler(file_name=contract_name, contract_name=contract_name, block=block_data,
                                                       block_id=block_id,
                                                       preffix="", simplification=True, storage=args.storage)
@@ -342,7 +341,8 @@ if __name__=="__main__":
                 data2 = sfs_dict["syrup_contract"]["block" + block_id]
 
                 file_results['result_is_correct'] = are_equals(data, data2)
-
+                print(data)
+                print(data2)
 
             rows_list.append(file_results)
 

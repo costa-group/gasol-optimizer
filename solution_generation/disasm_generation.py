@@ -138,7 +138,7 @@ def generate_disasm_sol(contract_name, block_name, bs, user_instr, solver_output
     with open(instruction_final_solution, 'w') as instruction_file:
         for position, instr in instr_sol.items():
             if re.match(re.compile('PUSH'), instr):
-                instruction_file.write(instr + " " + pushed_values_decimal[position] + " ")
+                instruction_file.write(instr + " " + hex(int(pushed_values_decimal[position]))[2:] + " ")
             else:
                 instruction_file.write(instr + " ")
 

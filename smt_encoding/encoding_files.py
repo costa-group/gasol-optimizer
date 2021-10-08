@@ -55,7 +55,6 @@ def close_encoding():
 
 
 def write_instruction_map(theta_instr):
-    print(instr_map_file)
     with open(smt_encoding_path + instr_map_file, 'w') as f:
         f.write(json.dumps(theta_instr))
 

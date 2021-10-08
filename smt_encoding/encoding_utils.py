@@ -75,7 +75,6 @@ def generate_uninterpreted_theta(user_instr, initial_index):
 
     # We need to sort to ensure indexes are always generated following the same convention
     for instr in sorted(user_instr, key=lambda k: k['id']):
-        print(initial_index, instr['id'])
         if instr['commutative']:
             theta_comm[instr['id']] = initial_index
         elif instr['storage']:

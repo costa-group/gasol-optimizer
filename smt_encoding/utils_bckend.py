@@ -29,7 +29,6 @@ def generate_generic_push_instruction(string):
 def compute_final_stack_from_solution(initial_stack, user_instr, instr_seq):
     final_stack = copy.deepcopy(initial_stack)
     for instr in instr_seq:
-        print(final_stack, instr)
         if type(instr) == int:
             final_stack.insert(0, instr)
         elif instr.startswith("SWAP"):

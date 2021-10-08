@@ -48,7 +48,6 @@ def paper_soft_constraints(b0, bs, user_instr, theta_dict, is_barcelogic=False, 
         # write_encoding(declare_boolvar(previous_solution_var))
         # generate_previous_solution_statement(b0, theta_dict, instr_seq)
         # write_encoding(add_assert_soft(add_not(previous_solution_var), previous_solution_weight, label_name, is_barcelogic))
-        print(generate_statement_from_previous_solutions(b0, theta_dict, instr_seq))
         write_encoding(add_assert_soft(generate_statement_from_previous_solutions(b0, theta_dict, instr_seq), 1, label_name, is_barcelogic))
 
     for gas_cost in disjoin_sets:
