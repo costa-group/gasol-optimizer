@@ -74,8 +74,10 @@ def initialize_flags_and_additional_info(args_i, current_cost, instr_seq, previo
              'initial-solution': args_i_dict.get('initial_solution', False),
              'default-encoding': args_i_dict.get('default_encoding', False),
              'number-instruction-gas-model': args_i_dict.get('number_instruction_gas_model',False),
+             'bytecode-size-soft-constraints': args_i_dict.get('bytecode_size_soft_constraints', False),
              'memory-encoding-conflicting': args_i_dict.get('memory_encoding_conflicting',False),
              'memory-encoding-store': args_i_dict.get('memory_encoding_store',False)}
+
     additional_info = {'tout': args_i_dict.get('tout', 10), 'solver': args_i_dict.get('solver', "oms"),
                        'current_cost': current_cost, 'instr_seq': instr_seq,
                        'previous_solution': previous_solution_dict, 'mem_order': mem_order}

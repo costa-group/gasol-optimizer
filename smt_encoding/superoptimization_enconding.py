@@ -6,13 +6,13 @@ from encoding_utils import *
 from encoding_initialize import initialize_variables, variables_assignment_constraint, \
     initial_stack_encoding, final_stack_encoding
 from encoding_cost import paper_soft_constraints, label_name, alternative_soft_constraints, \
-    number_instructions_soft_constraints
+    number_instructions_soft_constraints, byte_size_soft_constraints
 from encoding_stack_instructions import stack_constraints
 from encoding_redundant import *
 from encoding_files import write_encoding, write_opcode_map, write_instruction_map, write_gas_map
 from default_encoding import activate_default_encoding
 from encoding_reconstruct_solution import generate_encoding_from_log_json_dict
-from encoding_memory_instructions import memory_model_constraints_l_variables_store
+from encoding_memory_instructions import memory_model_constraints_l_variables_store, memory_model_constraints_l_conflicting
 
 # Method to generate redundant constraints according to flags (at least once is included by default)
 def generate_redundant_constraints(flags, b0, user_instr, theta_stack, theta_comm, theta_non_comm, final_stack,
@@ -68,7 +68,7 @@ def generate_soft_constraints(solver_name, b0, bs, usr_instr, theta_dict, flags,
     elif flags['number-instruction-gas-model']:
         number_instructions_soft_constraints(b0, theta_dict['NOP'], is_barcelogic)
     elif flags['number-instruction-gas-model']:
-        number_instructions_soft_constraints(b0, theta_dict['NOP'], is_barcelogic)
+        byte_size_soft_constraints(b0, theta_dict, is_barcelogic)
     else:
         paper_soft_constraints(b0, bs, usr_instr, theta_dict, is_barcelogic, instr_seq, weight)
 
@@ -109,12 +109,15 @@ def generate_instruction_dicts(b0, user_instr, final_stack, flags):
 
 # Determines how to encode the memory depending on the flags
 def generate_memory_constraints(flags, b0, theta_dict, theta_mem, order_tuples):
+    # First case: only conflicting stores
     if flags['memory-encoding-store']:
         memory_model_constraints_l_variables_store(b0, order_tuples, theta_dict, theta_mem)
-    elif flags['memory-encoding-store']:
-        pass
+    # Second case: all conflicting instructions
+    elif flags['memory-encoding-conflicting']:
+        memory_model_constraints_l_conflicting(b0, order_tuples, theta_dict, theta_mem)
+    # Third case: no l variables are used, then return an empty dict
     else:
-        pass
+        return dict()
 
 
 # Determine which l variables must be initialized depending on the memory encoding
@@ -124,7 +127,7 @@ def generate_l_theta_dict(flags, order_tuples, theta_dict, theta_mem):
         conflicting_dict = generate_conflicting_theta_dict(theta_dict, order_tuples)
         return {instr: theta_dict[instr] for instr in set(conflicting_dict).intersection(set(theta_mem))}
     # Second case: all conflicting instructions
-    elif flags['memory-encoding-store']:
+    elif flags['memory-encoding-conflicting']:
         return generate_conflicting_theta_dict(theta_dict, order_tuples)
     # Third case: no l variables are used, then return an empty dict
     else:

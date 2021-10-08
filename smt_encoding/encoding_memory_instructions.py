@@ -28,6 +28,13 @@ def _load_store_order_constraint(j, theta_load, theta_store):
     write_encoding(add_assert(add_implies(left_term, right_term)))
 
 
+# Given two conflicting instructions, returns a general constraint that avoids an incorrect order between them
+def _direct_order_constraint(j, b0, theta_conflicting1, theta_conflicting2):
+    left_term = add_eq(t(j), theta_conflicting2)
+    right_term = add_and([add_not(add_eq(t(i), theta_conflicting1)) for i in range(j+1, b0)])
+    write_encoding(add_assert(add_implies(left_term, right_term)))
+
+
 def memory_model_constraints_l_conflicting(b0, order_tuples, theta_dict, theta_mem, initial_idx=0):
     initial_possible_idx = initial_idx
     final_possible_idx = b0 + initial_idx
@@ -81,3 +88,18 @@ def memory_model_constraints_l_variables_store(b0, order_tuples, theta_dict, the
         else:
             for j in range(initial_possible_idx, final_possible_idx):
                 _load_store_order_constraint(j, theta_val_1, theta_val_2)
+
+
+def memory_model_constraints_l_direct(b0, order_tuples, theta_dict, initial_idx=0):
+    initial_possible_idx = initial_idx
+    final_possible_idx = b0 + initial_idx
+
+    write_encoding("; Memory constraints using l variables for stores")
+    # Order tuples contains those elements that are related
+    for el1, el2 in order_tuples:
+
+        theta_val_1 = theta_dict[el1]
+        theta_val_2 = theta_dict[el2]
+
+        for j in range(initial_possible_idx, final_possible_idx-1):
+            _direct_order_constraint(j, theta_val_1, theta_val_2, final_possible_idx)
