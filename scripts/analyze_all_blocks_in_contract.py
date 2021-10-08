@@ -56,7 +56,12 @@ def modifiable_path_files_init():
     parser.add_argument("-instruction-order", help='add a constraint representing the order among instructions',
                     action='store_true', dest='instruction_order')
     parser.add_argument("-storage", "--storage", help="Split using SSTORE, MSTORE and MSTORE8", action="store_true")
-
+    parser.add_argument("-bytecode-size-soft-constraints", dest='bytecode_size_soft_constraints', action='store_true',
+                    help="")
+    parser.add_argument("-memory-encoding-conflicting", dest='memory_encoding_conflicting', action='store_true',
+                        help="")
+    parser.add_argument("-memory-encoding-store", dest='memory_encoding_store', action='store_true',
+                        help="")
 
     global args
     args = parser.parse_args()
