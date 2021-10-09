@@ -188,6 +188,12 @@ if __name__ == "__main__":
                              "returned by the solver")
     ap.add_argument("-check-final-stack", dest='check_final_stack', action='store_true',
                     help="Check final stack when executing a solution matches the expected solution")
+    ap.add_argument("-bytecode-size-soft-constraints", dest='bytecode_size_soft_constraints', action='store_true',
+                        help="")
+    ap.add_argument("-memory-encoding-conflicting", dest='memory_encoding_conflicting', action='store_true',
+                        help="")
+    ap.add_argument("-memory-encoding-store", dest='memory_encoding_store', action='store_true',
+                        help="")
 
     args = vars(ap.parse_args())
 

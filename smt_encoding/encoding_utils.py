@@ -245,7 +245,8 @@ def generate_dependency_graph(user_instr):
             # We search for another instruction that generates the
             # stack elem as an output and add it to the set
             if type(stack_elem) == str:
-                previous_instr = list(filter(lambda instruction: instruction['outpt_sk'][0] == stack_elem, user_instr))
+                previous_instr = list(filter(lambda instruction: len(instruction['outpt_sk']) == 1 and
+                                                                 instruction['outpt_sk'][0] == stack_elem, user_instr))
 
                 # It might be in the initial stack, so the list can be empty
                 if previous_instr:

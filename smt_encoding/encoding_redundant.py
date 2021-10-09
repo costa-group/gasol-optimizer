@@ -32,11 +32,11 @@ def each_function_is_used_at_most_once(b0, valid_theta):
 
 # Only a pop can be performed if no instruction introducing a value in the stack was performed just before.
 # At this point, this means only pop and swap instructions are valid before a pop.
-def no_output_before_pop(b0, theta_stack):
+def no_output_before_pop(b0, theta_stack, theta_mem):
     write_encoding("; If we push or dup a value, the following instruction cannot be a pop")
     theta_pop = theta_stack["POP"]
     theta_swaps = [v for k,v in theta_stack.items() if k.startswith('SWAP')]
-    no_output_instr_theta = [theta_pop, *theta_swaps]
+    no_output_instr_theta = [theta_pop, *theta_swaps, *theta_mem.values()]
     for j in range(b0-1):
         write_encoding(add_assert(add_implies(add_eq(t(j+1), theta_pop),
                          add_or(*list(map(lambda instr: add_eq(t(j), instr), no_output_instr_theta))))))
