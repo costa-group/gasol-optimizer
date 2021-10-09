@@ -7,6 +7,8 @@ def _mem_variable_equivalence_constraint(j, theta_store):
     left_term = add_eq(t(j), theta_store)
     right_term = add_eq(l(theta_store), j)
     write_encoding(add_assert(add_eq(left_term, right_term)))
+    # write_encoding(add_assert(add_implies(left_term, right_term)))
+    # write_encoding(add_assert(add_implies(right_term, left_term)))
 
 
 # Note that the instructions must verify store1 < store2
@@ -79,13 +81,16 @@ def memory_model_constraints_l_variables_store(b0, order_tuples, theta_dict, the
         if is_store_1:
             # Case Store-Store:
             if is_store_2:
+                write_encoding("; Store-Store Pair")
                 _store_store_order_constraint(theta_val_1, theta_val_2)
             # Case Store-Load:
             else:
+                write_encoding("; Store-Load Pair")
                 for j in range(initial_possible_idx, final_possible_idx):
                     _store_load_order_constraint(j, theta_val_1, theta_val_2)
         # Case Load-Store:
         else:
+            write_encoding("; Load-Store Pair")
             for j in range(initial_possible_idx, final_possible_idx):
                 _load_store_order_constraint(j, theta_val_1, theta_val_2)
 
