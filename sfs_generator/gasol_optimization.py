@@ -57,6 +57,10 @@ split_sto = False
 global mem40_pattern
 mem40_pattern = False
 
+global original_ins
+original_ins = []
+
+
 def init_globals():
     
     global u_counter
@@ -1848,7 +1852,9 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     json_dict["current_cost"] = gas
     json_dict["storage_dependences"] = sto_dep
     json_dict["memory_dependences"]= mem_dep
+    json_dict["original_instrs"] = original_ins
 
+    
     if not simplification:
         op = opcodes_seq["non_inter"]
         opcodes_seq["non_inter"] = op+sto_objs+mem_objs
@@ -3035,6 +3041,7 @@ def smt_translate_block(rule,file_name,name,preffix,simplification=True,storage 
     global sfs_contracts
     global split_sto
     global block_name
+    global original_ins
     
     init_globals()
     
@@ -3056,9 +3063,11 @@ def smt_translate_block(rule,file_name,name,preffix,simplification=True,storage 
     begin = dtimer()
     
     instructions = filter_opcodes(rule)
-
+    
     opcodes = get_opcodes(rule)
-
+    ops = list(map(lambda x: x[4:-1],opcodes))
+    original_ins = ops
+    
 
     block_name = rule.get_rule_name()
 
@@ -4497,39 +4506,122 @@ def generate_dependences(storage_location, location):
 
     if location == "storage":
         instruction = "sstore"
+        load_instruction = "sload"
     else:
         instruction = "mstore"
+        load_instruction = "mload"
 
-    # print("\n\nAQUI")
-    # print(storage_location)
+    if location == "memory":
+        print("\n\nAQUI")
         
-    for i in range(len(storage_location)-2,-1,-1):
+        
+    for i in range(len(storage_location)-1,-1,-1):
         elem = storage_location[i]
         var = elem[0][0]
 
-        j = 0
-        already = False
-        sub_list = storage_location[i+1::]
-        while((j<len(sub_list)) and (not already)):
-            rest = sub_list[j]
-            var_rest = rest[0][0]
-        
-            if (elem[0][-1].find(instruction)!=-1 or rest[0][-1].find(instruction) != -1):
+        if elem[0][-1].find(instruction)!=-1:
+            predecessor = storage_location[:i]
 
-                dep = are_dependent(var,var_rest,elem[0][-1],rest[0][-1])
-   
-                if dep:
-                    if(elem[0][-1].find(instruction)!=-1 and rest[0][-1].find(instruction) != -1):
-                        if elem[0][1] != rest[0][1]: #if the value is the same they are not dependent
+            j = len(predecessor)-1
+            already = False
+            while((j>=0) and not already):
+                store = predecessor[j]
+                if store[0][-1].find(instruction)!=-1:
+                    var_rest = store[0][0]
+                    dep = are_dependent(var,var_rest,elem[0][-1],store[0][-1])
+                    if dep:
+                        if elem[0][1] != store[0][1]: #if the value is the same they are not dependent
+                            storage_dependences.append((j,i))
+                            print("THEY ARE")
+                            already = True
+                        else:
+                            if str(var) == str(var_rest) and location == "memory":
+                                storage_dependences.append((j,i))
+                                print("THEY ARE")
+                                already = True
+                                
+                j-=1
+        else: #loads
+            predecessor = storage_location[:i]
+            successor = storage_location[i+1:]
+
+            #pre
+            j = len(predecessor)-1
+            already = False
+            while((j>=0) and not already):
+                store = predecessor[j]
+                if store[0][-1].find(instruction)!=-1:
+                    var_rest = store[0][0]
+                    dep = are_dependent(var,var_rest,elem[0][-1],store[0][-1])
+                    if dep:
+                        if elem[0][1] != store[0][1]: #if the value is the same they are not dependent
+                            storage_dependences.append((j,i))
+                            print("THEY ARE1")
+                            print(storage_dependences)
+                            already = True
+                        else:
+                            if str(var) == str(var_rest) and location == "memory":
+                                storage_dependences.append((j,i))
+                                print("THEY ARE2")
+                                already = True
+                j-=1
+
+            j = 0
+            already = False
+            while(j<len(successor) and not already):
+                store = successor[j]
+                if store[0][-1].find(instruction)!=-1:
+                    var_rest = store[0][0]
+                    dep = are_dependent(var,var_rest,elem[0][-1],store[0][-1])
+                    if dep:
+                        if elem[0][1] != store[0][1]: #if the value is the same they are not dependent
                             storage_dependences.append((i,i+j+1))
+                            print("THEY ARE")
+                            already = True
+                        else:
+                            if str(var) == str(var_rest) and location == "memory":
+                                storage_dependences.append((i,i+j+1))
+                                print("THEY ARE")
+                                already = True
+                j+=1
+        # j = 0
+        # already_store = False
+        # already_load = False
+        # sub_list = storage_location[i+1::]
 
-                    else:
-                        storage_dependences.append((i,i+j+1))
-            
-                if len(list(filter(lambda x: x[0] == i+j+1, storage_dependences))) > 0:
-                    # It means that the transitive things have been already computed
-                    already = True
-            j+=1
+        # if location == "memory":
+        #     print("*******")
+        #     print(elem)
+        
+        # while((j<len(sub_list)) and not (already_store and already_load)):
+        #     rest = sub_list[j]
+        #     var_rest = rest[0][0]
+        #     if location == "memory":
+        #         print(rest)
+        #     if (elem[0][-1].find(instruction)!=-1 or rest[0][-1].find(instruction) != -1):
+
+        #         dep = are_dependent(var,var_rest,elem[0][-1],rest[0][-1])
+   
+        #         if dep:
+        #             if(elem[0][-1].find(instruction)!=-1 and rest[0][-1].find(instruction) != -1) and not already_store:
+        #                 if elem[0][1] != rest[0][1]: #if the value is the same they are not dependent
+        #                     storage_dependences.append((i,i+j+1))
+        #                     print("THEY ARE")
+        #                     already_store = True
+        #                 else:
+        #                     if str(var) == str(var_rest) and location == "memory":
+        #                         storage_dependences.append((i,i+j+1))
+        #                         print("THEY ARE")
+        #                         already_store = True
+        #             else:
+        #                 if not already_load:
+        #                     storage_dependences.append((i,i+j+1))
+        #                     already_load = True
+        #                     print("THEY ARE")
+        #         # if len(list(filter(lambda x: x[0] == i+j+1, storage_dependences))) > 0:
+        #         #     # It means that the transitive things have been already computed
+        #         #     already = True
+        #     j+=1
                                 
             
     return storage_dependences
@@ -4677,7 +4769,7 @@ def translate_dependences_sfs(new_user_defins):
 
 def are_dependent(var1,var2,ins1,ins2):
     dep = False
-    if var1 == var2:
+    if str(var1) == str(var2):
         dep = True
         print("DEP: SAME VALUE")
     else:
