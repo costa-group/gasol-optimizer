@@ -267,6 +267,9 @@ if __name__=="__main__":
             continue
 
         for file in glob.glob(contract_path + "/*.json"):
+            with open(results_dir + "report.txt", 'w') as f:
+                f.write("Last analyzed file: " + file)
+
             file_results = dict()
             block_id = file.split('/')[-1].rstrip(".json")
             file_results['block_id'] = block_id
@@ -281,6 +284,8 @@ if __name__=="__main__":
                 final_stack = data['tgt_ws']
                 file_results['number_of_necessary_uninterpreted_instructions'] = len(user_instr)
                 file_results['number_of_necessary_push'] = len(generate_phi_dict(user_instr, final_stack))
+                original_instrs = data['original_instrs']
+                file_results['original_instrs'] = original_instrs
                 initial_stack = data['src_ws']
 
             execute_syrup_backend(args, file)
@@ -350,7 +355,7 @@ if __name__=="__main__":
         df = pd.DataFrame(rows_list, columns=['block_id', 'target_gas_cost', 'real_gas',
                                               'shown_optimal', 'no_model_found', 'source_gas_cost', 'saved_gas',
                                               'solver_time_in_sec', 'target_disasm', 'init_progr_len',
-                                              'final_progr_len',
-                                              'number_of_necessary_uninterpreted_instructions',
-                                              'number_of_necessary_push', 'bytes_required', 'result_is_correct'])
+                                              'final_progr_len', 'number_of_necessary_uninterpreted_instructions',
+                                              'number_of_necessary_push', 'bytes_required', 'result_is_correct',
+                                              'original_instrs'])
         df.to_csv(csv_file)
