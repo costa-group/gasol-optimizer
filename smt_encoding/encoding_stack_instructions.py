@@ -152,7 +152,7 @@ def _comm_function_constraints(b0, bs, comm_user_instr, theta_comm, first_positi
 
 def _store_stack_function_encoding(j, bs, o0, o1, theta_f):
     left_term = add_eq(t(j), theta_f)
-    right_term = add_and(u(0,j), u(1,j), add_and(add_eq(x(0,j), o0), add_eq(x(1,j), o1)), u(0,j+1),
+    right_term = add_and(u(0,j), u(1,j), add_and(add_eq(x(0,j), o0), add_eq(x(1,j), o1)),
                          move(j, 2, bs-1, -2), add_not(u(bs-1, j+1)), add_not(u(bs-2, j+1)))
     write_encoding(add_assert(add_implies(left_term, right_term)))
 

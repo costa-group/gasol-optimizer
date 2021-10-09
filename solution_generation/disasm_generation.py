@@ -130,14 +130,16 @@ def generate_disasm_sol(contract_name, block_name, bs, user_instr, solver_output
 
     with open(opcodes_final_solution, 'w') as opcodes_file:
         for position, opcode in opcode_sol.items():
-            push_match = re.match(re.compile('PUSH'), instr_sol[position])
-            if push_match:
+            instr = instr_sol[position]
+            if instr.startswith("PUSH") and not instr.startswith("PUSHDEPLOYADDRESS") \
+                and not instr.startswith("ASSIGNIMMUTABLE") and not instr.startswith("PUSHSIZE") :
                 opcodes_file.write(opcode + hex(int(pushed_values_decimal[position]))[2:])
             else:
                 opcodes_file.write(opcode)
     with open(instruction_final_solution, 'w') as instruction_file:
         for position, instr in instr_sol.items():
-            if re.match(re.compile('PUSH'), instr):
+            if instr.startswith("PUSH") and not instr.startswith("PUSHDEPLOYADDRESS") \
+                    and not instr.startswith("ASSIGNIMMUTABLE") and not instr.startswith("PUSHSIZE"):
                 instruction_file.write(instr + " " + hex(int(pushed_values_decimal[position]))[2:] + " ")
             else:
                 instruction_file.write(instr + " ")
