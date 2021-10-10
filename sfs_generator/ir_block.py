@@ -5,6 +5,7 @@ from timeit import default_timer as dtimer
 from rbr_rule import RBRRule
 from gasol_optimization import smt_translate_block
 from paths import *
+from utils import get_push_number
 
 
 '''
@@ -874,7 +875,6 @@ def translateOpcodesZ(opcode, index_variables,block):
 
     return instr, updated_variables
 
-
 def translateYulOpcodes(opcode, value, index_variables):
 
     if opcode == "ASSIGNIMMUTABLE":
@@ -917,7 +917,6 @@ def translateYulOpcodes(opcode, value, index_variables):
         elif opcode == "PUSHLIB":
             instr = v1+" = pushlib(" + str(dec_value)+")"
 
-            
     return instr, updated_variables
 
 '''
@@ -963,6 +962,7 @@ def compile_instr(rule,evm_opcode,variables,list_jumps,cond):
             rule.add_instr(value)
     elif opcode_name[:4] in opcodes60 and not isYulInstruction(opcode_name):
         value, index_variables = translateOpcodes60(opcode_name[:4], opcode_rest, variables)
+        pushid = get_push_number(opcode_rest)
         rule.add_instr(value)
     elif opcode_name[:3] in opcodes80:
         value, index_variables = translateOpcodes80(opcode_name[:3], opcode_name[3:], variables)
@@ -991,8 +991,10 @@ def compile_instr(rule,evm_opcode,variables,list_jumps,cond):
         index_variables = variables
         rule.add_instr(value)
 
-    rule.add_instr("nop("+opcode_name+")")
-    
+    if opcode_name[:4] in opcodes60 and not isYulInstruction(opcode_name):
+        rule.add_instr("nop("+opcode_name+str(pushid)+")")
+    else:
+        rule.add_instr("nop("+opcode_name+")")
     return index_variables
 
 
@@ -1027,6 +1029,8 @@ def compile_block(instrs,input_stack,blockId):
 
     
     while not(finish) and cont< len(l_instr):
+        if l_instr[cont].find("KECCAK")!=-1 and l_instr[cont-1].find("MSTORE")!=-1:
+            print("KECCYES")
         index_variables = compile_instr(rule,l_instr[cont],index_variables,[],True)        
         cont+=1
 
@@ -1094,7 +1098,6 @@ def evm2rbr_compiler(file_name = None, contract_name = None,block = None, block_
         end = dtimer()
         ethir_time = end-begin
         #print("Build RBR: "+str(ethir_time)+"s")
-               
         smt_translate_block(rule,file_name,contract_name,preffix,simplification,storage)
                 
         return 0
