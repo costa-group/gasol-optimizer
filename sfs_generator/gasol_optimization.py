@@ -1744,7 +1744,7 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     global max_instr_size
     global num_pops
     global blocks_json_dict
-    
+
     max_ss_idx = compute_max_idx(max_ss_idx1,ss)
     
     json_dict = {}
@@ -1828,12 +1828,12 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
 
     not_used = get_not_used_stack_variables(new_ss,new_ts,total_inpt_vars)
     
-    num = check_all_pops(new_ss, new_ts, user_defins)
+    num = check_all_pops(new_ss, new_ts, new_user_defins)
 
     if num !=-1:
         max_instr_size = num
         num_pops = num
-
+        
     if not split_sto:
         sto_dep, mem_dep = translate_dependences_sfs(new_user_defins)
         print(sto_dep)
@@ -2468,7 +2468,7 @@ def translate_block(rule,instructions,opcodes,isolated,preffix,simp):
         max_instr_size = len(opcodes)-num_guard
 
     max_instr_size = compute_max_program_len(opcodes, num_guard)
-
+    
     if not isolated:
         pops = list(filter(lambda x: x.find("nop(POP)")!=-1,opcodes))
         num_pops = len(pops)
@@ -2755,6 +2755,7 @@ def translate_last_subblock(rule,block,sstack,sstack_idx,idx,isolated,preffix,si
     
     opcodes = list(filter(lambda x: x.find("nop(")!=-1,block))
     max_instr_size = compute_max_program_len(opcodes, num_guard)
+    
     if opcodes != []:
 
         pops = list(filter(lambda x: x.find("nop(POP)")!=-1,opcodes))
