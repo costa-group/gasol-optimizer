@@ -4405,8 +4405,8 @@ def remove_store_recursive_dif(storage_location, location):
                 pos = storage_location[i+1::].index(next_ins)
                 sublist = storage_location[i+1:pos+i+1]
                 dep = list(map(lambda x: are_dependent(x[0][0],var,x[0][-1],elem[0][-1]),sublist)) #It checks for loads betweeen the stores
-                if True not in dep:
-                    print("[OPT] keccak "+str(location)+" "+str(sublist)) 
+                # if True not in dep:
+                #     print("[OPT] keccak "+str(location)+" "+str(sublist)) 
                 if True not in dep and "keccak" not in sublist:
                     storage_location.pop(i)
                     discount_op+=1
