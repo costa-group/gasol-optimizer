@@ -1487,7 +1487,7 @@ def generate_storage_info(instructions,source_stack):
 
         elif instructions[x].find("keccak")!=-1 or instructions[x].find("sha3")!=-1:
             mstore_seq.append("keccak")
-            
+            sstore_seq.append("keccak")
         elif instructions[x].find("mstore")!=-1:
             exp = generate_sstore_mstore(instructions[x],instructions[x-1::-1],source_stack)
             #print("ESTO GUARDO EN MSTORE")
@@ -1527,8 +1527,9 @@ def generate_storage_info(instructions,source_stack):
 
         elif instructions[x].find("keccak")!=-1 or instructions[x].find("sha3")!=-1:
             keccak = mstores.pop(0)
+            keccak1 = sstores.pop(0)
             memory_order.append(keccak)
-
+            storage_order.append(keccak)
 
     print("FINAL MSTORE")
     print(memory_order)
@@ -1547,7 +1548,7 @@ def generate_storage_info(instructions,source_stack):
     while(simp):
         simp = simplify_memory(storage_order,"storage")
 
-
+    storage_order = list(filter(lambda x: type(x) == tuple, storage_order))
     unify_loads_instructions(storage_order, "storage")
     stdep = generate_dependences(storage_order,"storage")
     print(storage_order)
@@ -4404,6 +4405,8 @@ def remove_store_recursive_dif(storage_location, location):
                 pos = storage_location[i+1::].index(next_ins)
                 sublist = storage_location[i+1:pos+i+1]
                 dep = list(map(lambda x: are_dependent(x[0][0],var,x[0][-1],elem[0][-1]),sublist)) #It checks for loads betweeen the stores
+                if True not in dep:
+                    print("[OPT] keccak "+str(location)+" "+str(sublist)) 
                 if True not in dep and "keccak" not in sublist:
                     storage_location.pop(i)
                     discount_op+=1
