@@ -4826,3 +4826,41 @@ def get_variables(var1,list_variables):
         
     else:
         list_variables.append(var1)
+
+def compute_clousure(deps):
+    clousure = {}
+    for e in deps:
+        f = e[0]
+        visited = compute_clousure_dir(f,[])
+        clousure[f] = visited
+
+    return clousure
+
+def compute_clousure_dir(v,visited):
+    candidates = list(filter(lambda x: x[0] == v, deps))
+    for c in candidates:
+        if c[1] not in visited:
+            visited.append(c[1])
+            compute_clousure_dir(c[1],visited)
+    return visited
+        
+    
+def get_dependencies_balance(sto_dep,mem_dep):
+    storage_balance = {}
+    memory_balance = {}
+    
+    for e in sto_dep:
+        f,s = e
+        pre = storage_balance.get(f,0)
+        post = storage_balance.get(s,0)
+
+        storage_balance[f] = pre+1
+        storage_balance[s] = post+1
+
+    for e in mem_dep:
+        f,s = e
+        pre = memory_balance.get(f,0)
+        post = memory_balance.get(s,0)
+
+        memory_balance[f] = pre+1
+        memory_balance[s] = post+1
