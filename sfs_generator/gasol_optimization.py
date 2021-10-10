@@ -2394,7 +2394,7 @@ def split_blocks(rule,opt = False,new_instr = []):
     blocks = []
     
     ins_block = []
-
+    
     if opt:
         instructions = new_instr
     else:
@@ -2601,6 +2601,7 @@ def translate_subblock(rule,instrs,sstack,tstack,sstack_idx,idx,next_block,preff
     global max_stack_size
     global num_pops
     global compute_gast
+    global original_ins
     
     if idx == 0:
         instructions = instrs[:-2]
@@ -2636,6 +2637,9 @@ def translate_subblock(rule,instrs,sstack,tstack,sstack_idx,idx,next_block,preff
                 max_instr_size+=pops2remove
 
             new_opcodes = compute_opcodes2write(opcodes,0)
+            new_ops = list(map(lambda x: x[4:-1],new_opcodes))
+            original_ins = new_ops
+
             if not simp:
                 index, fin = find_sublist(instructions,new_opcodes)
                 init_info = get_encoding_init_block(instructions[index:fin+1],sstack)
@@ -2729,6 +2733,7 @@ def translate_last_subblock(rule,block,sstack,sstack_idx,idx,isolated,preffix,si
     global max_stack_size
     global num_pops
     global compute_gast
+    global original_ins
     
     init_globals()
     
@@ -2781,6 +2786,9 @@ def translate_last_subblock(rule,block,sstack,sstack_idx,idx,isolated,preffix,si
         if gas!=0 and not is_identity_map(sstack,tstack,instructions):
             compute_gast = True
             new_opcodes = compute_opcodes2write(opcodes,num_guard)
+            new_ops = list(map(lambda x: x[4:-1],new_opcodes))
+            original_ins = new_ops
+
             if not simp:
                 index, fin = find_sublist(block,new_opcodes)
                 init_info = get_encoding_init_block(block[index:fin+1],sstack)
@@ -3064,10 +3072,7 @@ def smt_translate_block(rule,file_name,name,preffix,simplification=True,storage 
     
     instructions = filter_opcodes(rule)
     
-    opcodes = get_opcodes(rule)
-    ops = list(map(lambda x: x[4:-1],opcodes))
-    original_ins = ops
-    
+    opcodes = get_opcodes(rule)    
 
     block_name = rule.get_rule_name()
 
@@ -3082,6 +3087,9 @@ def smt_translate_block(rule,file_name,name,preffix,simplification=True,storage 
 
     res = is_optimizable(opcodes,instructions)
     if res:
+        ops = list(map(lambda x: x[4:-1],opcodes))
+        original_ins = ops
+
         translate_block(rule,instructions,opcodes,True,preffix,simplification)
 
     else: #we need to split the blocks into subblocks
@@ -4723,8 +4731,6 @@ def compute_identifiers_storage_instructions(storage_location, location, new_use
 
     key_list = list(u_dict.keys())
     values_list = list(u_dict.values())
-
-    print(u_dict)
 
     for i in range(0,len(storage_location)):
         ins = storage_location[i]
