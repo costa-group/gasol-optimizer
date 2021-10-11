@@ -87,10 +87,12 @@ def generate_configuration_statements(solver_name):
 # dependency graph, first_position_instr_appears_dict and first_position_instr_cannot_appear_dict.
 # If not, it returns empty dicts that simulates the behaviour of these structures. There's no problem
 # with being empty, as they are accessed using get method with the corresponding correct values by default.
-def generate_instruction_dicts(b0, user_instr, final_stack, flags):
+def generate_instruction_dicts(b0, user_instr, final_stack, flags, order_tuples):
     if flags['instruction-order']:
         # We obtain the id of those instructions whose output is in the final stack
         final_stack_instrs = list(filter(lambda instr: instr['outpt_sk'] and (instr['outpt_sk'][0] in final_stack),user_instr))
+
+        mem_instrs = list(map(lambda instr: instr['id'],filter(lambda instr: instr['storage'],user_instr)))
 
         index_map = {v: i for i, v in enumerate(final_stack)}
 
@@ -101,7 +103,7 @@ def generate_instruction_dicts(b0, user_instr, final_stack, flags):
 
         # We check if any the top element in the stack corresponds to the output of an uninterpreted function
         top_elem_is_instruction = any([0 == index_map[instr['outpt_sk'][0]] for instr in final_stack_instrs])
-        return generate_instruction_order_structures(b0, user_instr, final_stack_ids, top_elem_is_instruction)
+        return generate_instruction_order_structures(b0, user_instr, final_stack_ids, top_elem_is_instruction, mem_instrs, order_tuples)
     else:
         return dict(), dict(), dict()
 
@@ -155,10 +157,10 @@ def generate_smtlib_encoding(b0, bs, usr_instr, variables, initial_stack, final_
     theta_comm, theta_non_comm, theta_mem = generate_uninterpreted_theta(usr_instr, len(theta_stack))
     comm_instr, non_comm_instr, mem_instr = divide_usr_instr(usr_instr)
     dependency_graph, first_position_instr_appears_dict, first_position_instr_cannot_appear_dict = \
-        generate_instruction_dicts(b0, usr_instr, final_stack, flags)
+        generate_instruction_dicts(b0, usr_instr, final_stack, flags, order_tuples)
     theta_dict = dict(theta_stack, **theta_comm, **theta_non_comm, **theta_mem)
     l_theta_dict = generate_l_theta_dict(flags, order_tuples, theta_dict, theta_mem)
-    additional_info['tout'] = additional_info['tout'] * (len(theta_mem) + 1)
+    # additional_info['tout'] = additional_info['tout'] * (len(theta_mem) + 1)
 
     # Before generating the encoding, we activate the default encoding if its corresponding flag is activated
     if flags['default-encoding']:

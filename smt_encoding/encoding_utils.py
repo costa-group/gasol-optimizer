@@ -210,7 +210,7 @@ def update_with_tree_level(b0, dependency_theta_graph, current_idx, instr, first
 
 # Generates a dict that given b0, returns the first position in which a instruction cannot appear
 # due to dependencies with other instructions.
-def generate_first_position_instr_cannot_appear(b0, final_stack_instr, dependency_graph, top_elem_is_instruction):
+def generate_first_position_instr_cannot_appear(b0, final_stack_instr, dependency_graph, mem_instr, top_elem_is_instruction):
     first_position_instr_cannot_appear = {'PUSH': b0}
 
     # We consider instructions in the final stack, as they determine which position is the last possible one (following
@@ -230,13 +230,17 @@ def generate_first_position_instr_cannot_appear(b0, final_stack_instr, dependenc
 
         # If it isn't top of the stack, another instruction must go before it (SWAP or DUP). Only works once
         b0_aux = b0 - 1
+
+    for final_instr in mem_instr:
+        update_with_tree_level(b0, dependency_graph, b0, final_instr, first_position_instr_cannot_appear)
+
     return first_position_instr_cannot_appear
 
 
 # We generate a dict that given the id of an instruction, returns the
 # the id of instructions that must be executed to obtain its input and the corresponding
 # aj. Note that aj must be only assigned when push, in other cases we just set aj value to -1.
-def generate_dependency_graph(user_instr):
+def generate_dependency_graph(user_instr, order_tuples):
     dependency_theta_graph = {}
     for instr in user_instr:
         instr_id = instr['id']
@@ -256,17 +260,23 @@ def generate_dependency_graph(user_instr):
             else:
                 dependency_theta_graph[instr_id].append(('PUSH', stack_elem))
 
+    # We need to consider also the order given by the tuples
+    for id1, id2 in order_tuples:
+        if not list(filter(lambda x: x[0] == id1, dependency_theta_graph[id2])):
+            dependency_theta_graph[id2].append((id1, -1))
+
+
     return dependency_theta_graph
 
 
 # Method that returns all necessary structures for generating constraints related to
 # instruction order: dependency graph, first_position_instr_appears_dict and first_position_instr_cannot_appear_dict.
 # Read the corresponding methods for more info.
-def generate_instruction_order_structures(b0, user_instr, final_stack_ids, top_elem_is_instruction):
-    dependency_graph = generate_dependency_graph(user_instr)
+def generate_instruction_order_structures(b0, user_instr, final_stack_ids, top_elem_is_instruction, mem_instr, order_tuples):
+    dependency_graph = generate_dependency_graph(user_instr, order_tuples)
     first_position_instr_appears_dict = generate_number_of_previous_instr_dict(dependency_graph)
     first_position_instr_cannot_appear_dict = generate_first_position_instr_cannot_appear(b0, final_stack_ids,
-                                                                                          dependency_graph, top_elem_is_instruction)
+                                                                                          dependency_graph, mem_instr, top_elem_is_instruction)
     return dependency_graph, first_position_instr_appears_dict, first_position_instr_cannot_appear_dict
 
 
