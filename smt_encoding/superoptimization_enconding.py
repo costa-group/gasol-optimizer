@@ -12,7 +12,8 @@ from encoding_redundant import *
 from encoding_files import write_encoding, write_opcode_map, write_instruction_map, write_gas_map
 from default_encoding import activate_default_encoding
 from encoding_reconstruct_solution import generate_encoding_from_log_json_dict
-from encoding_memory_instructions import memory_model_constraints_l_variables_store, memory_model_constraints_l_conflicting
+from encoding_memory_instructions import memory_model_constraints_l_variables_store, \
+    memory_model_constraints_l_conflicting, memory_model_constraints_l_direct
 
 # Method to generate redundant constraints according to flags (at least once is included by default)
 def generate_redundant_constraints(flags, b0, user_instr, theta_stack, theta_comm, theta_non_comm, final_stack,
@@ -118,7 +119,7 @@ def generate_memory_constraints(flags, b0, theta_dict, theta_mem, order_tuples):
         memory_model_constraints_l_conflicting(b0, order_tuples, theta_dict, theta_mem)
     # Third case: no l variables are used, then return an empty dict
     else:
-        return dict()
+        memory_model_constraints_l_direct(b0, order_tuples, theta_dict)
 
 
 # Determine which l variables must be initialized depending on the memory encoding
