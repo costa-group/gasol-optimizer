@@ -94,6 +94,9 @@ def generate_instruction_dicts(b0, user_instr, final_stack, flags, order_tuples)
 
         mem_instrs = list(map(lambda instr: instr['id'],filter(lambda instr: instr['storage'],user_instr)))
 
+        comm_instrs = list(map(lambda instr: instr['id'],filter(lambda instr: instr['commutative'],user_instr)))
+
+
         index_map = {v: i for i, v in enumerate(final_stack)}
 
         # We order instructions according to its position in the final stack. This is important to generate
@@ -103,7 +106,8 @@ def generate_instruction_dicts(b0, user_instr, final_stack, flags, order_tuples)
 
         # We check if any the top element in the stack corresponds to the output of an uninterpreted function
         top_elem_is_instruction = any([0 == index_map[instr['outpt_sk'][0]] for instr in final_stack_instrs])
-        return generate_instruction_order_structures(b0, user_instr, final_stack_ids, top_elem_is_instruction, mem_instrs, order_tuples)
+        return generate_instruction_order_structures(b0, user_instr, final_stack_ids, top_elem_is_instruction,
+                                                     comm_instrs, mem_instrs, order_tuples)
     else:
         return dict(), dict(), dict()
 

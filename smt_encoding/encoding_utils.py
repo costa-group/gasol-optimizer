@@ -199,30 +199,39 @@ def generate_number_of_previous_instr_dict(dependency_theta_graph):
 
 # First time an instruction cannot appear is b0-h, where h is the tree height. We recursively obtain this value,
 # taking into account that we may have different trees and the final value is the min for all possible ones
-def update_with_tree_level(b0, dependency_theta_graph, current_idx, instr, first_position_instr_cannot_appear):
-    # We don't consider push instructions
-    if instr == 'PUSH':
+def update_with_tree_level(b0, input_stacks_dict, dependency_theta_graph, current_idx, instr, first_position_instr_cannot_appear, theta_comm):
+    # Neither we consider push instructions nor instructions that already have appeared and appear before the best
+    # result so far. On the other hand, if current index > already considered index, we need to traverse the tree in order to
+    # update the values, as we neet to consider the biggest position in which the instruction cannot appear
+    if instr == 'PUSH' or (instr in first_position_instr_cannot_appear and
+                           current_idx <= first_position_instr_cannot_appear[instr]) :
         return
 
-    # First we check whether the instruction already has been considered or not
-    if instr in first_position_instr_cannot_appear:
-        # If current index > already considerd index, we need to traverse the tree in order to update the values, as
-        # we neet to consider the biggest position in which the instruction cannot appear
-        if current_idx > first_position_instr_cannot_appear[instr]:
-            first_position_instr_cannot_appear[instr] = current_idx
-            for prev_instr, _ in dependency_theta_graph[instr]:
-                update_with_tree_level(b0, dependency_theta_graph, current_idx - 1, prev_instr,
-                                       first_position_instr_cannot_appear)
-    else:
-        # If it has not been considered, we assign it and check its children
-        first_position_instr_cannot_appear[instr] = current_idx
-        for prev_instr, _ in dependency_theta_graph[instr]:
-            update_with_tree_level(b0, dependency_theta_graph, current_idx-1, prev_instr, first_position_instr_cannot_appear)
+    first_position_instr_cannot_appear[instr] = current_idx
+
+    # If a instruction is not commutative, then only topmost previous element can be obtained
+    # just before and the remaining ones need at least a SWAP to be placed in their position
+    dependent_instr = {dependency[0] for dependency in dependency_theta_graph[instr]}
+    previous_idx = current_idx - 1
+    for prev_instr in input_stacks_dict[instr]:
+        if prev_instr is not None:
+            update_with_tree_level(b0, input_stacks_dict, dependency_theta_graph, previous_idx, prev_instr,
+                                   first_position_instr_cannot_appear, theta_comm)
+        # If a instruction is not commutative, then only topmost previous element can be obtained
+        # just before and the remaining ones need at least a SWAP to be placed in their position
+        if prev_instr not in theta_comm:
+            previous_idx = current_idx - 2
+
+    # There can be other related instructions that are not considered before. As we do not know exactly
+    # where they can appear, we assume worst case (current_idx - 1)
+    for prev_instr in dependent_instr.difference(set(input_stacks_dict[instr])):
+        update_with_tree_level(b0, input_stacks_dict, dependency_theta_graph, current_idx - 1, prev_instr,
+                               first_position_instr_cannot_appear, theta_comm)
 
 
 # Generates a dict that given b0, returns the first position in which a instruction cannot appear
 # due to dependencies with other instructions.
-def generate_first_position_instr_cannot_appear(b0, final_stack_instr, dependency_graph, mem_instr, top_elem_is_instruction):
+def generate_first_position_instr_cannot_appear(b0, input_stacks_dict, final_stack_instr, dependency_graph, mem_ids, comm_ids, top_elem_is_instruction):
     first_position_instr_cannot_appear = {'PUSH': b0}
 
     # We consider instructions in the final stack, as they determine which position is the last possible one (following
@@ -238,13 +247,13 @@ def generate_first_position_instr_cannot_appear(b0, final_stack_instr, dependenc
         b0_aux = b0 - 1
 
     for final_instr in final_stack_instr:
-        update_with_tree_level(b0, dependency_graph, b0_aux, final_instr, first_position_instr_cannot_appear)
+        update_with_tree_level(b0, input_stacks_dict, dependency_graph, b0_aux, final_instr, first_position_instr_cannot_appear, comm_ids)
 
         # If it isn't top of the stack, another instruction must go before it (SWAP or DUP). Only works once
         b0_aux = b0 - 1
 
-    for final_instr in mem_instr:
-        update_with_tree_level(b0, dependency_graph, b0, final_instr, first_position_instr_cannot_appear)
+    for final_instr in mem_ids:
+        update_with_tree_level(b0, input_stacks_dict, dependency_graph, b0, final_instr, first_position_instr_cannot_appear, comm_ids)
 
     return first_position_instr_cannot_appear
 
@@ -281,14 +290,26 @@ def generate_dependency_graph(user_instr, order_tuples):
     return dependency_theta_graph
 
 
+# Generates a dict that contains a stack element as a key and its corresponding id as a value
+def generate_stack_elements_dict(user_instr):
+    stack_element_ids = dict()
+    for instr in user_instr:
+        if len(instr['outpt_sk']) == 0:
+            continue
+        stack_element_ids[instr['outpt_sk'][0]] = instr['id']
+    return stack_element_ids
+
 # Method that returns all necessary structures for generating constraints related to
 # instruction order: dependency graph, first_position_instr_appears_dict and first_position_instr_cannot_appear_dict.
 # Read the corresponding methods for more info.
-def generate_instruction_order_structures(b0, user_instr, final_stack_ids, top_elem_is_instruction, mem_instr, order_tuples):
+def generate_instruction_order_structures(b0, user_instr, final_stack_ids, top_elem_is_instruction, comm_instr_ids, mem_instr_ids, order_tuples):
+    stack_elements_ids = generate_stack_elements_dict(user_instr)
+    input_stacks_dict = {instr['id']: list(map(lambda stack_elem: None if stack_elem not in stack_elements_ids else stack_elements_ids[stack_elem], instr['inpt_sk'])) for instr in user_instr }
     dependency_graph = generate_dependency_graph(user_instr, order_tuples)
     first_position_instr_appears_dict = generate_number_of_previous_instr_dict(dependency_graph)
-    first_position_instr_cannot_appear_dict = generate_first_position_instr_cannot_appear(b0, final_stack_ids,
-                                                                                          dependency_graph, mem_instr, top_elem_is_instruction)
+    first_position_instr_cannot_appear_dict = \
+        generate_first_position_instr_cannot_appear(b0, input_stacks_dict, final_stack_ids, dependency_graph, mem_instr_ids,
+                                                    comm_instr_ids, top_elem_is_instruction)
     return dependency_graph, first_position_instr_appears_dict, first_position_instr_cannot_appear_dict
 
 
