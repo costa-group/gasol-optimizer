@@ -27,11 +27,18 @@ from solver_solution_verify import check_solver_output_is_correct, generate_solu
 from global_params.paths import *
 from utils import isYulInstruction, compute_stack_size, is_constant_instruction, isYulKeyword
 from copy import deepcopy
+import opcodes as op
 from rebuild_asm import rebuild_asm
 from verification.sfs_verify import verify_block_from_list_of_sfs
 from properties_from_asm_json import compute_number_of_instructions_in_asm_json_per_file, \
     compute_bytecode_size_in_asm_json_per_file
 import global_params.constants as constants
+
+
+
+def init():
+    global total_gas
+    total_gas = 0
 
 def clean_dir():
     ext = ["rbr", "csv", "sol", "bl", "disasm", "json"]
@@ -114,6 +121,16 @@ def preprocess_instructions(bytecodes):
 
 
 def compute_original_sfs_with_simplifications(instructions, stack_size, cname, block_id, is_initial_block,storage, last_const):
+    global total_gas
+    
+    gas = 0
+    for i in instructions:
+        if not isYulInstruction(i):
+            print(i)
+            gas+=op.get_ins_cost(i)
+
+    total_gas+=gas
+            
     block_ins = list(filter(lambda x: x not in ["JUMP","JUMPI","JUMPDEST","tag", "STOP","RETURN","INVALID","REVERT"], instructions))
     
     if last_const:
@@ -669,6 +686,9 @@ def optimize_asm_in_asm_format(file_name, output_file, timeout=10, log=False,sto
 
 
 if __name__ == '__main__':
+    global total_gas
+
+    init()
     clean_dir()
     ap = argparse.ArgumentParser(description='Backend of GASOL tool')
     ap.add_argument('input_path', help='Path to input file that contains the asm')
@@ -686,6 +706,8 @@ if __name__ == '__main__':
 
     args = ap.parse_args()
 
+
+    total_gas = 0
     # If storage flag is activated, the blocks are split using store instructions
     if args.storage:
         constants.append_store_instructions_to_split()
@@ -699,3 +721,5 @@ if __name__ == '__main__':
     else:
         optimize_isolated_asm_block(args.input_path, args.tout)
 
+
+    print("TOTAL GAS EXECUTED: "+str(total_gas))
