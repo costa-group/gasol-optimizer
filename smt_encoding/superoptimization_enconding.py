@@ -29,11 +29,10 @@ def generate_redundant_constraints(flags, b0, user_instr, theta_stack, theta_com
     if flags['no-output-before-pop']:
         no_output_before_pop(b0, theta_stack, theta_mem)
     if flags['instruction-order']:
-        final_stack_instrs = list(filter(lambda instr: instr['outpt_sk'] and (instr['outpt_sk'][0] in final_stack), user_instr))
-        final_stack_dict = {instr['id']: theta_dict[instr['id']] for instr in final_stack_instrs}
-        each_instruction_in_final_stack_is_used_at_least_once(b0, final_stack_dict,
-                                                              first_position_instr_appears_dict,
-                                                              first_position_instr_cannot_appear_dict)
+        theta_non_stack_dict = dict(theta_comm, **theta_non_comm, **theta_mem)
+        each_instruction_is_used_at_least_once_with_instruction_order(b0, theta_non_stack_dict,
+                                                                      first_position_instr_appears_dict,
+                                                                      first_position_instr_cannot_appear_dict)
         restrain_instruction_order(dependency_graph, first_position_instr_appears_dict,
                                    first_position_instr_cannot_appear_dict, theta_dict)
 

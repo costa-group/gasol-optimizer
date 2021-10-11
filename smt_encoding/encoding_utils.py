@@ -203,9 +203,21 @@ def update_with_tree_level(b0, dependency_theta_graph, current_idx, instr, first
     # We don't consider push instructions
     if instr == 'PUSH':
         return
-    first_position_instr_cannot_appear[instr] = min(current_idx, first_position_instr_cannot_appear.get(instr, b0))
-    for prev_instr, _ in dependency_theta_graph[instr]:
-        update_with_tree_level(b0, dependency_theta_graph, current_idx-1, prev_instr, first_position_instr_cannot_appear)
+
+    # First we check whether the instruction already has been considered or not
+    if instr in first_position_instr_cannot_appear:
+        # If current index > already considerd index, we need to traverse the tree in order to update the values, as
+        # we neet to consider the biggest position in which the instruction cannot appear
+        if current_idx > first_position_instr_cannot_appear[instr]:
+            first_position_instr_cannot_appear[instr] = current_idx
+            for prev_instr, _ in dependency_theta_graph[instr]:
+                update_with_tree_level(b0, dependency_theta_graph, current_idx - 1, prev_instr,
+                                       first_position_instr_cannot_appear)
+    else:
+        # If it has not been considered, we assign it and check its children
+        first_position_instr_cannot_appear[instr] = current_idx
+        for prev_instr, _ in dependency_theta_graph[instr]:
+            update_with_tree_level(b0, dependency_theta_graph, current_idx-1, prev_instr, first_position_instr_cannot_appear)
 
 
 # Generates a dict that given b0, returns the first position in which a instruction cannot appear

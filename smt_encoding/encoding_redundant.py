@@ -113,10 +113,10 @@ def restrain_instruction_order(depencency_graph, first_position_instr_appears_di
                                                    add_eq(a(position), aj)))
 
 # Each uninterpreted function is used at least once
-def each_instruction_in_final_stack_is_used_at_least_once(b0, final_stack_theta_dict, first_position_instr_appears_dict,
-                                        first_position_instr_cannot_appear_dict):
+def each_instruction_is_used_at_least_once_with_instruction_order(b0, theta_dict, first_position_instr_appears_dict,
+                                                                  first_position_instr_cannot_appear_dict):
     write_encoding("; All uninterpreted functions in the final stack are eventually used")
-    for instr_id, theta_instr in final_stack_theta_dict.items():
+    for instr_id, theta_instr in theta_dict.items():
         or_variables = []
 
         initial_idx = first_position_instr_appears_dict.get(instr_id,0)
