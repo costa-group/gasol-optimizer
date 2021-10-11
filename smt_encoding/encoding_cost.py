@@ -105,10 +105,9 @@ def number_instructions_soft_constraints(b0, theta_nop, is_barcelogic):
 # NOP instructions have a 0 cost associated, PUSH-related instructions have a size of 2 associated,
 # and the remaining ones have cost 1 associated
 def byte_size_soft_constraints(b0, theta_dict, is_barcelogic=False):
-    w0 = {0: ["NOP"]}
-    w1 = {1: list(filter(lambda x: not x.startswith("PUSH") and x != "NOP", theta_dict.keys()))}
-    w2 = {2: list(filter(lambda x: x.startswith("PUSH"), theta_dict.keys()))}
-    disjoin_sets = dict(w0, **w1, **w2)
+    disjoin_sets = {0: [theta_dict["NOP"]],
+                    1: list(map(lambda y: theta_dict[y], filter(lambda x: not x.startswith("PUSH") and x != "NOP", theta_dict.keys()))),
+                    2: list(map(lambda y: theta_dict[y], filter(lambda x: x.startswith("PUSH"), theta_dict.keys())))}
 
     previous_cost = 0
     or_variables = []

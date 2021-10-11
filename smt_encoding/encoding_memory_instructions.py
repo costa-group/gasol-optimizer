@@ -37,12 +37,14 @@ def _direct_order_constraint(j, b0, theta_conflicting1, theta_conflicting2):
     write_encoding(add_assert(add_implies(left_term, right_term)))
 
 
-def memory_model_constraints_l_conflicting(b0, order_tuples, theta_dict, theta_mem, initial_idx=0):
-    initial_possible_idx = initial_idx
-    final_possible_idx = b0 + initial_idx
-
+def memory_model_constraints_l_conflicting(b0, order_tuples, theta_dict, theta_mem, first_position_instr_appears_dict,
+                               first_position_instr_cannot_appear_dict, initial_idx=0):
     write_encoding("; Memory constraints using l variables for conflicting operation")
-    for _, theta_store in theta_mem.items():
+
+    for id, theta_store in theta_mem.items():
+        initial_possible_idx = first_position_instr_appears_dict.get(id, 0) + initial_idx
+        final_possible_idx = first_position_instr_cannot_appear_dict.get(id, b0) + initial_idx
+
         write_encoding(add_assert(add_and(add_leq(initial_possible_idx, l(theta_store)), add_lt(l(theta_store), final_possible_idx))))
         for j in range(initial_possible_idx, final_possible_idx):
             _mem_variable_equivalence_constraint(j, theta_store)
