@@ -1,4 +1,5 @@
 import opcodes
+import math
 
 def toInt(a):
     elem = a.split("_")
@@ -166,9 +167,14 @@ def is_constant_instruction(ins):
     constant = False
     if ins.find("DUP")!=-1 or ins.find("PUSH")!=-1:
         constant = True
-    elif ins in ["ADDRESS","ORIGIN","CALLER","CALLVALUE","CALLDATASIZE","CODESIZE","GASPRICE","COINBASE","TIMESTAMP","NUMBER","DIFFICULTY","GASLIMIT","CHAINID","SELFBALANCE","PC","MSIZE","GAS","TXEXECGAS"]:
+    elif ins in ["ADDRESS","ORIGIN","CALLER","CALLVALUE","CALLDATASIZE","CODESIZE","GASPRICE","COINBASE","TIMESTAMP","NUMBER","DIFFICULTY","GASLIMIT","CHAINID","SELFBALANCE","PC","MSIZE","GAS","TXEXECGAS","STOP","RETURN","INVALID","REVERT"]:
         constant = True
     else:
         constant = False
 
     return constant
+
+def get_push_number(val):
+    
+    x = len(val[2:])
+    return math.ceil(x/2.0)
