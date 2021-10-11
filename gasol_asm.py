@@ -115,8 +115,6 @@ def preprocess_instructions(bytecodes):
 
 def compute_original_sfs_with_simplifications(instructions, stack_size, cname, block_id, is_initial_block,storage, last_const):
     block_ins = list(filter(lambda x: x not in ["JUMP","JUMPI","JUMPDEST","tag", "STOP","RETURN","INVALID","REVERT"], instructions))
-
-    print(block_ins)
     
     if last_const:
         new_stack_size , rest_instructions = remove_last_constant_instructions(block_ins)
@@ -154,7 +152,7 @@ def optimize_block(sfs_dict, timeout):
         current_size = sfs_block['max_progr_len']
         user_instr = sfs_block['user_instrs']
 
-        #execute_syrup_backend(None, sfs_block, block_name=block_name, timeout=timeout)
+        execute_syrup_backend(None, sfs_block, block_name=block_name, timeout=timeout)
 
         # At this point, solution is a string that contains the output directly
         # from the solver
