@@ -123,6 +123,12 @@ def init_globals():
     global block_name
     block_name = ""
 
+    global memory_opt
+    memory_opt = [False,False,False]
+
+    global storage_opt
+    storage_opt = [False, False, False]
+
 def filter_opcodes(rule):
     instructions = rule.get_instructions()
     rbr_ins_aux = list(filter(lambda x: x.find("nop(")==-1, instructions))
@@ -1746,6 +1752,8 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     global num_pops
     global blocks_json_dict
 
+    split_by = False
+    
     max_ss_idx = compute_max_idx(max_ss_idx1,ss)
     
     json_dict = {}
@@ -1842,6 +1850,11 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
 
     else:
         sto_dep, mem_dep = [],[]
+
+
+    # if XXX:
+    #     split_by = True
+    #     return split_by,ins
         
     json_dict["init_progr_len"] = max_instr_size-discount_op
     json_dict["max_progr_len"] = max_instr_size
@@ -1877,6 +1890,7 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
         with open(json_path+"/"+source_name+"_"+cname+"_"+block_nm+"_input.json","w") as json_file:
             json.dump(json_dict,json_file)
 
+    return split_by,""
 
 def get_not_used_stack_variables(new_ss,new_ts,total_inpt_vars):
     not_used = []
@@ -4493,19 +4507,46 @@ def remove_store_loads(storage_location, location):
 
 
 def simplify_memory(storage_location,location):
+    global memory_opt
+    global storage_opt
+
     old_storage_location = list(storage_location)
     print("INIT")
     print(storage_location)
     
     print("!1")
     replace_loads_by_sstores(storage_location,location)
+
+    if old_storage_location != storage_location:
+        if location == "storage":
+            storage_opt[0] = True
+        else:
+            memory_opt[0] = True
+
     print(storage_location)
     print("!2")
+    old_storage_location2 = list(storage_location)
     remove_store_recursive_dif(storage_location,location)
+
+    if old_storage_location2 != storage_location:
+        if location == "storage":
+            storage_opt[1] = True
+        else:
+            memory_opt[1] = True
+
+    
     print(storage_location)
     print("!3")
+    old_storage_location3 = list(storage_location)
     remove_store_loads(storage_location,location)
     print(storage_location)
+
+    if old_storage_location3 != storage_location:
+        if location == "storage":
+            storage_opt[2] = True
+        else:
+            memory_opt[2] = True
+
     
     if storage_location != old_storage_location:
         return True
@@ -4864,3 +4905,63 @@ def get_dependencies_balance(sto_dep,mem_dep):
 
         memory_balance[f] = pre+1
         memory_balance[s] = post+1
+
+def split_by(ins, pos, instructions):
+    blocks = []
+    for e in instructions:
+        pass
+
+
+
+def generate_subblocks_splitby(rule,list_subblocks,preffix,simplification):
+    global gas_t
+
+    isolated = True
+    
+    source_stack_idx = get_stack_variables(rule)
+    source_stack = generate_source_stack_variables(source_stack_idx)
+
+    source_stack_idx-=1
+    i = 0
+
+    pops2remove = 0
+    while(i < len(list_subblocks)-1):
+
+        init_globals()
+        block = list_subblocks[i]
+        nop_instr = block[-1]
+        last_instr = block[-2]
+
+        ts_idx = compute_target_stack_subblock(last_instr,nop_instr)
+
+        seq = range(ts_idx,-1,-1)
+        target_stack = list(map(lambda x: "s("+str(x)+")",seq))
+
+        new_nexts, pops2remove = translate_subblock(rule,block,source_stack,target_stack,source_stack_idx,i,list_subblocks[i+1],preffix,simplification,pops2remove)
+
+        if new_nexts == []:
+        #We update the source stack for the new block
+            source_stack, source_stack_idx = get_new_source_stack(last_instr,nop_instr,ts_idx)
+        else:
+            new_block = new_nexts[0]
+
+            new_idxstack= new_nexts[1] #it returns the last index of sstore
+
+            list_subblocks[i+1] = new_block
+            source_stack_idx = new_idxstack
+            seq = range(source_stack_idx-1,-1,-1)
+            source_stack = list(map(lambda x: "s("+str(x)+")",seq))
+            
+        i+=1
+
+    instrs = list_subblocks[-1]
+
+    if source_stack == []:
+        source_stack_idx = -1
+
+    block = instrs[2:]
+    if block != []:
+        translate_last_subblock(rule,block,source_stack,source_stack_idx,i,isolated,preffix,simplification,pops2remove)
+
+    if compute_gast:
+        gas_t+=get_cost(original_opcodes)
