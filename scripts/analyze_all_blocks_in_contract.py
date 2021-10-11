@@ -138,6 +138,27 @@ def bytes_required(op_name, val, address_length = 4):
         raise ValueError("Opcode not recognized")
 
 
+def bytes_required_initial(op_name, address_length = 4):
+    push_match = re.match(re.compile('PUSH([0-9]+)'), op_name)
+    if push_match:
+        return 1 + max(1, int(push_match.group(1)))
+    elif not op_name.startswith("PUSH") or op_name == "tag":
+        return 1
+    elif op_name == "PUSH#[$]" or op_name == "PUSHSIZE":
+        return 1 + 4
+    elif op_name == "PUSHTAG" or op_name == "PUSHDATA" or op_name == "PUSH[$]":
+        return 1 + address_length
+    elif op_name == "PUSHLIB" or op_name == "PUSHDEPLOYADDRESS":
+        return 1 + 20
+    elif op_name == "PUSHIMMUTABLE":
+        return 1 + 32
+    elif op_name == "ASSIGNIMMUTABLE":
+        # Number of PushImmutable's with the same hash. Assume 1 (?)
+        m_immutableOccurrences = 1
+        return 1 + (3 + 32) * m_immutableOccurrences
+    else:
+        raise ValueError("Opcode not recognized")
+
 def total_bytes(instructions_disasm):
     instructions = list(filter(lambda x: x != '', instructions_disasm.split(' ')))
     i, new_instr = 0, []
@@ -286,7 +307,11 @@ if __name__=="__main__":
                 file_results['number_of_necessary_push'] = len(generate_phi_dict(user_instr, final_stack))
                 original_instrs = data['original_instrs']
                 file_results['original_instrs'] = original_instrs
+                file_results['original_bytes'] = sum([bytes_required_initial(instr) for instr in original_instrs])
                 initial_stack = data['src_ws']
+
+            if init_program_length > 100:
+                continue
 
             execute_syrup_backend(args, file)
             smt_exec_command = get_solver_to_execute(block_id)
@@ -319,6 +344,7 @@ if __name__=="__main__":
                     instructions_disasm = f.read()
                     file_results['target_disasm'] = instructions_disasm
                     file_results['bytes_required'] = total_bytes(instructions_disasm)
+                    file_results['saved_bytes'] = file_results['original_bytes'] - total_bytes(instructions_disasm)
                     # Check all those strings that are not numbers
                     number_of_instructions = len(list(filter(lambda elem: not elem.isnumeric() and elem != '',
                                                              instructions_disasm.split(' '))))
@@ -347,7 +373,6 @@ if __name__=="__main__":
 
                 sfs_dict = get_sfs_dict()
                 data2 = sfs_dict["syrup_contract"]["block" + block_id]
-
                 file_results['result_is_correct'] = are_equals(data, data2)
 
             rows_list.append(file_results)
@@ -357,5 +382,5 @@ if __name__=="__main__":
                                               'solver_time_in_sec', 'target_disasm', 'init_progr_len',
                                               'final_progr_len', 'number_of_necessary_uninterpreted_instructions',
                                               'number_of_necessary_push', 'bytes_required', 'result_is_correct',
-                                              'original_instrs'])
+                                              'original_instrs', 'original_bytes', 'saved_bytes'])
         df.to_csv(csv_file)
