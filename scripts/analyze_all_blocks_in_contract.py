@@ -320,9 +320,14 @@ if __name__=="__main__":
             tout_pattern = get_tout_found_per_solver(solution)
 
             if tout_pattern:
+                if re.search(re.compile("unsat"), solution):
+                    with open(results_dir + "unsat.txt", 'a') as f:
+                        print(file,file=f)
+
                 file_results['no_model_found'] = True
                 file_results['shown_optimal'] = False
                 file_results['solver_time_in_sec'] = executed_time
+
             else:
 
                 file_results['no_model_found'] = False
