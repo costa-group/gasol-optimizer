@@ -117,14 +117,16 @@ def generate_memory_constraints(flags, b0, theta_dict, theta_mem, order_tuples, 
                                    first_position_instr_cannot_appear_dict):
     # First case: only conflicting stores
     if flags['memory-encoding-store']:
-        memory_model_constraints_l_variables_store(b0, order_tuples, theta_dict, theta_mem)
+        memory_model_constraints_l_variables_store(b0, order_tuples, theta_dict, theta_mem, first_position_instr_appears_dict,
+                                   first_position_instr_cannot_appear_dict)
     # Second case: all conflicting instructions
     elif flags['memory-encoding-conflicting']:
         memory_model_constraints_l_conflicting(b0, order_tuples, theta_dict, theta_mem, first_position_instr_appears_dict,
                                    first_position_instr_cannot_appear_dict)
     # Third case: no l variables are used, then return an empty dict
     else:
-        memory_model_constraints_l_direct(b0, order_tuples, theta_dict)
+        memory_model_constraints_l_direct(b0, order_tuples, theta_dict, first_position_instr_appears_dict,
+                                   first_position_instr_cannot_appear_dict)
 
 
 # Determine which l variables must be initialized depending on the memory encoding
