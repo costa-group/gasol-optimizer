@@ -180,6 +180,9 @@ def get_push_number(val):
     return math.ceil(x/2.0)
 
 def get_num_bytes(val):
-    bits = math.ceil(math.log(val,2))
-    b = bits/8
-    return b
+    if val == 0:
+        return 1
+    else:
+        bits = math.ceil(math.log(val,2))
+        b = bits/8
+        return b
