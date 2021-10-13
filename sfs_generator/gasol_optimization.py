@@ -15,6 +15,8 @@ zero_ary = ["origin","caller","callvalue","address","number","gasprice","difficu
 
 commutative_bytecodes = ["ADD","MUL","EQ","AND","OR","XOR"]
 
+max_bound = 22
+
 global original_opcodes
 original_opcodes = []
 
@@ -60,6 +62,8 @@ mem40_pattern = False
 global original_ins
 original_ins = []
 
+global max_l
+max_l = 0
 
 def init_globals():
     
@@ -128,6 +132,12 @@ def init_globals():
 
     global storage_opt
     storage_opt = [False, False, False]
+
+    global mem_delete_pos
+    mem_delete_pos = []
+
+    global sto_delete_pos
+    sto_delete_pos = []
 
 def filter_opcodes(rule):
     instructions = rule.get_instructions()
@@ -311,7 +321,7 @@ def get_encoding_init_block(instructions,source_stack):
                     opcodes.append((s_dict[var],u_dict[s_dict[var]]))
                     # print(u_dict[s_dict[var]])
                 else:
-                    exp = generate_sstore_mstore(instructions[i-1],instructions[i-2::-1],source_stack)
+                    exp = generate_sstore_mstore(instructions[i-1],instructions[i-2::-1],source_stack,len(instructions)-(i-1))
                     if exp[0][-1] == "sstore":
                         instr = "SSTORE_"+str(sstore_count)
                         sstore_count+=1
@@ -481,16 +491,21 @@ def search_for_value_aux(var, instructions,source_stack,level,evaluate = True):
 
 
             
-def generate_sstore_mstore(store_ins,instructions,source_stack):
+def generate_sstore_mstore(store_ins,instructions,source_stack,pos):
     level = 0
     new_vars, funct = get_involved_vars(store_ins,"")
     
     values = {}
+
+    pre = already_considered 
+
     for v in new_vars:
 
-        search_for_value_aux(v,instructions,source_stack,level)
+        search_for_value_aux(v,instructions,source_stack,pos)
     
         values[v] = s_dict[v]
+
+    post = already_considered
 
     exp_join = rebuild_expression(new_vars,funct,values,level)
 
@@ -499,9 +514,9 @@ def generate_sstore_mstore(store_ins,instructions,source_stack):
 
     return exp_join[1],exp_join[2]
 
-def generate_sload_mload(load_ins,instructions,source_stack):
+def generate_sload_mload(load_ins,instructions,source_stack,pos):
 
-    level = 0
+    level = pos
 
     if load_ins.find("=")!=-1:
         load_ins = load_ins.split("=")[-1].strip()
@@ -1309,8 +1324,7 @@ def compute_binary(expression,level):
     global discount_op
     global saved_push
     global gas_saved_op
-    global already_considered
-
+    global already_considered    
     
     v0 = expression[0]
     v1 = expression[1]
@@ -1335,11 +1349,11 @@ def compute_binary(expression,level):
 
             saved_push+=2
             
-            if (funct in ["+","*","and","or","xor","eq"]) and (exp_str_comm not in already_considered):
+            if (funct in ["+","*","and","or","xor","eq","shl","shr","sar"]) and (exp_str not in already_considered):
                 discount_op+=2
                 print("[RULE]: Evaluate expression "+str(expression))
 
-            elif funct not in ["+","*","and","or","xor","eq"]:
+            elif funct not in ["+","*","and","or","xor","eq","shl","shr","sar"]:
                 discount_op+=2
                 print("[RULE]: Evaluate expression "+str(expression))
 
@@ -1381,6 +1395,7 @@ def rebuild_expression(vars_input,funct,values,level,evaluate = True):
         v1 = values[vars_input[1]]
         expression = (v0, v1, funct)
         if evaluate:
+            print(expression)
             r, expression = compute_binary(expression,level)
         else:
             r = False
@@ -1458,6 +1473,7 @@ def generate_encoding(instructions,variables,source_stack,simplification=True):
     variable_content = {}
     for v in variables:
         s_dict = {}
+        print(v)
         search_for_value(v,instructions_reverse, source_stack,simplification)
         variable_content[v] = s_dict[v]
 
@@ -1477,12 +1493,13 @@ def generate_storage_info(instructions,source_stack):
 
     sload_relative_pos = {}
     mload_relative_pos = {}
-    
+
+    print("STARTING STORE")
     for x in range(0,len(instructions)):
         s_dict = {}
 
         if instructions[x].find("sstore")!=-1:
-            exp = generate_sstore_mstore(instructions[x],instructions[x-1::-1],source_stack)
+            exp = generate_sstore_mstore(instructions[x],instructions[x-1::-1],source_stack,len(instructions)-x)
             #print("ESTO GUARDO EN SSTORE")
             #print(exp)
             sstore_seq.append(exp)
@@ -1495,7 +1512,7 @@ def generate_storage_info(instructions,source_stack):
             mstore_seq.append("keccak")
             sstore_seq.append("keccak")
         elif instructions[x].find("mstore")!=-1:
-            exp = generate_sstore_mstore(instructions[x],instructions[x-1::-1],source_stack)
+            exp = generate_sstore_mstore(instructions[x],instructions[x-1::-1],source_stack,len(instructions)-x)
             #print("ESTO GUARDO EN MSTORE")
             #print(exp)
             mstore_seq.append(exp)
@@ -1510,7 +1527,7 @@ def generate_storage_info(instructions,source_stack):
     
     for x in range(0,len(instructions)):
         if instructions[x].find("sload")!=-1:
-            exp,r = generate_sload_mload(instructions[x],instructions[x-1::-1],source_stack)
+            exp,r = generate_sload_mload(instructions[x],instructions[x-1::-1],source_stack,len(instructions)-x)
             last_sload = exp
             #print("MIRA UN SLOAD")
             #print(exp)
@@ -1521,7 +1538,7 @@ def generate_storage_info(instructions,source_stack):
             storage_order.append(sload_relative_pos[last_sload])
             
         elif instructions[x].find("mload")!=-1:
-            exp,r = generate_sload_mload(instructions[x],instructions[x-1::-1],source_stack)
+            exp,r = generate_sload_mload(instructions[x],instructions[x-1::-1],source_stack,len(instructions)-x)
             last_mload = exp
             #print("MIRA UN MLOAD")
             #print(exp)
@@ -1571,6 +1588,12 @@ def generate_storage_info(instructions,source_stack):
     print(memory_order)
     print(memdep)
 
+
+    print("CLAUSURA")
+    s1= compute_clousure(stdep)
+    m1 = compute_clousure(memdep)
+
+    get_best_storage(s1, len(storage_order))
     
     storage_dep = stdep
     memory_dep = memdep
@@ -2637,6 +2660,10 @@ def translate_subblock(rule,instrs,sstack,tstack,sstack_idx,idx,next_block,preff
     
     if instr!=[]:
         get_s_counter(sstack,tstack)
+
+        print("SUBBLOCK")
+        print(instr)
+        print(tstack)
         
         generate_encoding(instr,tstack,sstack,simp)
         build_userdef_instructions()
@@ -2951,6 +2978,9 @@ def generate_terminal_subblocks(rule,list_subblocks):
 
         if new_nexts == []:
 
+            print("NEXT STACK")
+            print(last_instr)
+            print(nop_instr)
             source_stack, source_stack_idx = get_new_source_stack(last_instr,nop_instr,ts_idx)
         else:
             new_block = new_nexts[0]
@@ -3066,13 +3096,15 @@ def smt_translate_block(rule,file_name,name,preffix,simplification=True,storage 
     global split_sto
     global block_name
     global original_ins
+    global max_l
     
     init_globals()
     
     
     if storage:
         split_sto = True
-
+        constants.append_store_instructions_to_split()
+        
     sfs_contracts = {}
 
     blocks_json_dict = {}
@@ -3096,6 +3128,7 @@ def smt_translate_block(rule,file_name,name,preffix,simplification=True,storage 
     print(rule.get_rule_name())
     print(instructions)
     print("*******")
+
     
     info = "INFO DEPLOY "+gasol_path+"ethir_OK_"+source_name+"_blocks_"+rule.get_rule_name()+" LENGTH="+str(len(opcodes))+" PUSH="+str(len(list(filter(lambda x: x.find("nop(PUSH")!=-1,opcodes))))
     info_deploy.append(info)
@@ -3106,14 +3139,54 @@ def smt_translate_block(rule,file_name,name,preffix,simplification=True,storage 
         ops = list(map(lambda x: x[4:-1],opcodes))
         original_ins = ops
 
-        translate_block(rule,instructions,opcodes,True,preffix,simplification)
+        # if len(opcodes) > max_bound and not split_sto:
+        #     stores_pos = compute_position_stores(opcodes)
+        #     print(stores_pos)
+        #     where2split = split_by_numbers(stores_pos)
 
+        #     if where2split == []:
+        #         translate_block(rule,instructions,opcodes,True,preffix,simplification)
+
+        #     else:
+        #         subblocks = split_blocks_by_number(rule.get_instructions(),where2split)
+        #         generate_subblocks(rule,subblocks,True,preffix,simplification)
+        # else:
+        translate_block(rule,instructions,opcodes,True,preffix,simplification)
     else: #we need to split the blocks into subblocks
         r = False
         new_instructions = []
 
         subblocks = split_blocks(rule,r,new_instructions)
-        generate_subblocks(rule,subblocks,True,preffix,simplification)
+
+        end_subblocks = []
+        print("SUBBLOCKS")
+        print(subblocks)
+        for s in subblocks:
+            o = list(filter(lambda x:x.find("nop(")!=-1,s))
+
+            if split_sto:
+                stores_pos = []
+            else:
+                stores_pos = compute_position_stores(o)
+                
+            if len(o)> max_bound and stores_pos !=[]:
+                print("ES MAYOOR")
+                print(o)
+                print(len(o))
+                where2split = split_by_numbers(stores_pos)
+                if where2split == []:
+                    end_subblocks.append(s)
+                else:
+                    subblocks_aux = split_blocks_by_number(s,where2split)
+                    print(subblocks_aux)
+                    end_subblocks+=subblocks_aux
+            else:
+                end_subblocks.append(s)
+
+        # print("FINAL")
+        # print(subblocks)
+        # print(len(subblocks))
+        generate_subblocks(rule,end_subblocks,True,preffix,simplification)
 
     end = dtimer()
     # for f in info_deploy:
@@ -3122,6 +3195,7 @@ def smt_translate_block(rule,file_name,name,preffix,simplification=True,storage 
     end = dtimer()
 
     print("RULES  : "+str(gas_saved_op))
+    print("MAX L : "+str(max_l))
     #print("Blocks Generation SYRUP: "+str(end-begin)+"s")
 
 def apply_transform(instr):
@@ -4509,15 +4583,23 @@ def remove_store_loads(storage_location, location):
 def simplify_memory(storage_location,location):
     global memory_opt
     global storage_opt
+    global mem_delete_pos
+    global sto_delete_pos
 
+    del_pos = []
     old_storage_location = list(storage_location)
     print("INIT")
     print(storage_location)
     
     print("!1")
     replace_loads_by_sstores(storage_location,location)
-
+    
     if old_storage_location != storage_location:
+        old_storage_location = list(filter(lambda x: type(x)==tuple, old_storage_location))
+        storage_location1 = list(filter(lambda x: type(x)==tuple, storage_location))
+        pos = compute_delete_positions(old_storage_location, storage_location1)
+        
+        del_pos+=pos
         if location == "storage":
             storage_opt[0] = True
         else:
@@ -4528,7 +4610,17 @@ def simplify_memory(storage_location,location):
     old_storage_location2 = list(storage_location)
     remove_store_recursive_dif(storage_location,location)
 
+    
+    
     if old_storage_location2 != storage_location:
+
+        old_storage_location2 = list(filter(lambda x: type(x)==tuple, old_storage_location2))
+        storage_location2 = list(filter(lambda x: type(x)==tuple, storage_location))
+        pos = compute_delete_positions(old_storage_location2, storage_location2)
+        del_pos+=pos
+        print(pos)
+
+        
         if location == "storage":
             storage_opt[1] = True
         else:
@@ -4542,12 +4634,25 @@ def simplify_memory(storage_location,location):
     print(storage_location)
 
     if old_storage_location3 != storage_location:
+
+        old_storage_location3 = list(filter(lambda x: type(x)==tuple, old_storage_location3))
+        storage_location3 = list(filter(lambda x: type(x)==tuple, storage_location))
+        pos = compute_delete_positions(old_storage_location3, storage_location3)
+        del_pos+=pos
+        print(pos)
+        
         if location == "storage":
             storage_opt[2] = True
         else:
             memory_opt[2] = True
 
-    
+
+    if location == "storage":
+        sto_delete_pos = del_pos
+    else:
+        mem_delete_pos = del_pos
+
+        
     if storage_location != old_storage_location:
         return True
     else:
@@ -4872,17 +4977,17 @@ def compute_clousure(deps):
     clousure = {}
     for e in deps:
         f = e[0]
-        visited = compute_clousure_dir(f,[])
+        visited = compute_clousure_dir(f,deps,[])
         clousure[f] = visited
 
     return clousure
 
-def compute_clousure_dir(v,visited):
+def compute_clousure_dir(v,deps,visited):
     candidates = list(filter(lambda x: x[0] == v, deps))
     for c in candidates:
         if c[1] not in visited:
             visited.append(c[1])
-            compute_clousure_dir(c[1],visited)
+            compute_clousure_dir(c[1],deps,visited)
     return visited
         
     
@@ -4906,62 +5011,157 @@ def get_dependencies_balance(sto_dep,mem_dep):
         memory_balance[f] = pre+1
         memory_balance[s] = post+1
 
-def split_by(ins, pos, instructions):
-    blocks = []
-    for e in instructions:
-        pass
+def get_best_storage(clousure, ins_number):
+    half = ins_number/2
+    best = -1
 
-
-
-def generate_subblocks_splitby(rule,list_subblocks,preffix,simplification):
-    global gas_t
-
-    isolated = True
+    dep = {}
     
-    source_stack_idx = get_stack_variables(rule)
-    source_stack = generate_source_stack_variables(source_stack_idx)
+    for b in clousure:
+        back = len(clousure[b])
+        pre = len(list(filter(lambda x: b in x,clousure.values())))
+        dep[b] = (pre,back)
 
-    source_stack_idx-=1
+    print(dep)
+        
+
+def compute_delete_positions(old_storage, storage):
+    delete_positions = []
+
     i = 0
+    j = 0
+    while(i<len(old_storage) and j<len(storage)):
+        old = old_storage[i]
+        new = storage[j]
 
-    pops2remove = 0
-    while(i < len(list_subblocks)-1):
-
-        init_globals()
-        block = list_subblocks[i]
-        nop_instr = block[-1]
-        last_instr = block[-2]
-
-        ts_idx = compute_target_stack_subblock(last_instr,nop_instr)
-
-        seq = range(ts_idx,-1,-1)
-        target_stack = list(map(lambda x: "s("+str(x)+")",seq))
-
-        new_nexts, pops2remove = translate_subblock(rule,block,source_stack,target_stack,source_stack_idx,i,list_subblocks[i+1],preffix,simplification,pops2remove)
-
-        if new_nexts == []:
-        #We update the source stack for the new block
-            source_stack, source_stack_idx = get_new_source_stack(last_instr,nop_instr,ts_idx)
-        else:
-            new_block = new_nexts[0]
-
-            new_idxstack= new_nexts[1] #it returns the last index of sstore
-
-            list_subblocks[i+1] = new_block
-            source_stack_idx = new_idxstack
-            seq = range(source_stack_idx-1,-1,-1)
-            source_stack = list(map(lambda x: "s("+str(x)+")",seq))
+        if old != new:
+            if i !=0 and old == old_storage[i-1]:
+                delete_positions.append(i-1)
+            else:
+                delete_positions.append(i)
+            i+=1
             
+        else:
+            i+=1
+            j+=1
+
+    if i ==j: #the last element
+        if i !=0 and old_storage[i] == old_storage[i-1]:
+            delete_positions.append(i-1)
+        else:
+            delete_positions.append(i)
+
+    return delete_positions
+
+
+def compute_position_stores(instructions):
+
+    stores_pos = []
+    cont = 0
+    
+    for ins in instructions:
+        if ins.startswith("nop("):
+            nop = ins[4:-1]
+            if nop.find("SSTORE")!=-1 or nop.find("MSTORE")!=-1:
+                stores_pos.append(cont)
+            cont +=1       
+    
+    return stores_pos
+
+def get_sequence(split_list):
+    i = 0
+    split = []
+    if split_list == []:
+        return spllit
+
+
+    print("VEAMOS")
+    print(split_list)
+    print(i)
+    
+    while (i<len(split_list) and split_list[i]<max_bound):
+
+        print(split_list[i])
+        split.append(split_list[i])
         i+=1
 
-    instrs = list_subblocks[-1]
+    for i in split:
+        split_list.pop(0)
+        
+    return split
 
-    if source_stack == []:
-        source_stack_idx = -1
 
-    block = instrs[2:]
-    if block != []:
-        translate_last_subblock(rule,block,source_stack,source_stack_idx,i,isolated,preffix,simplification,pops2remove)
+def split_by_numbers(stores):
+    s = 0
+    last = 0
+    split_list = []
+    count = 0
+    remove = 0
 
-    if compute_gast:
-        gas_t+=get_cost(original_opcodes)
+    next_split = ""
+    while(stores!=[]):
+
+        split = get_sequence(stores)
+        if split == []:
+            next_element = stores.pop(0)
+            split_list.append(next_element+last)
+            last= split_list[-1]
+            stores = list(map(lambda x: x-next_element,stores))
+        else:
+            split_list.append(split[-1]+last)
+            last = split_list[-1]
+            stores = list(map(lambda x: x-split[-1],stores))
+            
+        
+        # if new <max_bound and stores[0]-new<max_bound:
+        #     last = new
+        # elif new<max_bound and stores[0]-new>=max_bound:
+            
+        # else:
+        #     split_list.append(new+remove)
+        #     remove = last
+        #     stores = list(map(lambda x: x-remove, stores))
+            
+    # while(s<len(stores)):
+        
+    #     if stores[s]<= max_bound:
+    #         s+=1
+    #     else:
+    #         print("MIRA")
+
+    #         split_list.append(stores[s-1]+remove)
+    #         print(split_list)
+    #         print("OLD STORES")
+    #         print(stores)
+    #         remove = stores[s-1]
+    #         print(remove)
+    #         stores = stores[last:s-1]+list(map(lambda x: x-max_bound, stores[s:]))
+    #         print(stores)
+    #         last = s-1
+    #         count+=1
+    #         s+=1
+
+    # print("RETURN LIST")
+    # print(split_list)
+    return split_list
+    
+
+def split_blocks_by_number(instructions,where2split):
+    blocks = []        
+    ins_block = []
+    cont = -1
+    
+    for ins in instructions:
+        ins_block.append(ins)
+        if ins.startswith("nop("):
+            nop = ins[4:-1]
+            cont+=1                    
+            if where2split != [] and cont == where2split[0]:
+                where2split.pop(0)
+                prev = ins_block[-2]
+                blocks.append(ins_block)
+                ins_block = [prev,ins]
+                
+    blocks.append(ins_block)
+    
+    return blocks
