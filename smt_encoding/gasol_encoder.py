@@ -203,12 +203,17 @@ if __name__ == "__main__":
 
     b0, bs, user_instr, variables, initial_stack, final_stack, current_cost, instr_seq, mem_order = parse_data(json_path, 0, True)
 
-    flags = {'at-most': args['at_most'], 'pushed-at-least': args['pushed_once'],
-             'instruction-order': args['instruction_order'], 'no-output-before-pop': args['no_output_before_pop'],
-             'inequality-gas-model': args['inequality_gas_model'], 'initial-solution': args['initial_solution'],
-             'default-encoding': args['default_encoding'],
-             'number-instruction-gas-model': args['number_instruction_gas_model'],
-             'memory-encoding-store': True}
+    flags = {'at-most': args.get('at_most', False), 'pushed-at-least': args.get('pushed_once', False),
+             'instruction-order': args.get('instruction_order', False),
+             'no-output-before-pop': args.get('no_output_before_pop', False),
+             'inequality-gas-model': args.get('inequality_gas_model', False),
+             'initial-solution': args.get('initial_solution', False),
+             'default-encoding': args.get('default_encoding', False),
+             'number-instruction-gas-model': args.get('number_instruction_gas_model', False),
+             'bytecode-size-soft-constraints': args.get('bytecode_size_soft_constraints', False),
+             'memory-encoding-conflicting': args.get('memory_encoding_conflicting', False),
+             'memory-encoding-store': args.get('memory_encoding_store', False)}
+
 
     if args['check_final_stack']:
         obtained_stack = compute_final_stack_from_solution(initial_stack, user_instr, instr_seq)

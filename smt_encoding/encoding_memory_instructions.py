@@ -31,9 +31,15 @@ def _load_store_order_constraint(j, theta_load, theta_store):
 
 
 # Given two conflicting instructions, returns a general constraint that avoids an incorrect order between them
-def _direct_order_constraint(j, b0, theta_conflicting1, theta_conflicting2):
+def _direct_order_constraint(j, theta_conflicting1, theta_conflicting2, initial_idx, final_idx):
+    idx_for_and = max(j+1, initial_idx)
+
+    if idx_for_and >= final_idx:
+        print(initial_idx, final_idx, j+1)
+        return
+
     left_term = add_eq(t(j), theta_conflicting2)
-    right_term = add_and([add_not(add_eq(t(i), theta_conflicting1)) for i in range(j+1, b0)])
+    right_term = add_and([add_not(add_eq(t(i), theta_conflicting1)) for i in range(j+1, final_idx)])
     write_encoding(add_assert(add_implies(left_term, right_term)))
 
 
@@ -59,12 +65,14 @@ def memory_model_constraints_l_conflicting(b0, order_tuples, theta_dict, theta_m
         _store_store_order_constraint(theta_val_1, theta_val_2)
 
 
-def memory_model_constraints_l_variables_store(b0, order_tuples, theta_dict, theta_mem, initial_idx=0):
-    initial_possible_idx = initial_idx
-    final_possible_idx = b0 + initial_idx
+def memory_model_constraints_l_variables_store(b0, order_tuples, theta_dict, theta_mem, first_position_instr_appears_dict,
+                               first_position_instr_cannot_appear_dict, initial_idx=0):
 
     write_encoding("; Memory constraints using l variables for stores")
     for _, theta_store in theta_mem.items():
+        initial_possible_idx = first_position_instr_appears_dict.get(id, 0) + initial_idx
+        final_possible_idx = first_position_instr_cannot_appear_dict.get(id, b0) + initial_idx
+
         write_encoding(add_assert(add_and(add_leq(initial_possible_idx, l(theta_store)), add_lt(l(theta_store), final_possible_idx))))
         for j in range(initial_possible_idx, final_possible_idx):
             _mem_variable_equivalence_constraint(j, theta_store)
@@ -87,19 +95,22 @@ def memory_model_constraints_l_variables_store(b0, order_tuples, theta_dict, the
                 _store_store_order_constraint(theta_val_1, theta_val_2)
             # Case Store-Load:
             else:
+                initial_possible_idx = first_position_instr_appears_dict.get(el2, 0) + initial_idx
+                final_possible_idx = first_position_instr_cannot_appear_dict.get(el2, b0) + initial_idx
                 write_encoding("; Store-Load Pair")
                 for j in range(initial_possible_idx, final_possible_idx):
                     _store_load_order_constraint(j, theta_val_1, theta_val_2)
         # Case Load-Store:
         else:
+            initial_possible_idx = first_position_instr_appears_dict.get(el1, 0) + initial_idx
+            final_possible_idx = first_position_instr_cannot_appear_dict.get(el1, b0) + initial_idx
             write_encoding("; Load-Store Pair")
             for j in range(initial_possible_idx, final_possible_idx):
                 _load_store_order_constraint(j, theta_val_1, theta_val_2)
 
 
-def memory_model_constraints_l_direct(b0, order_tuples, theta_dict, initial_idx=0):
-    initial_possible_idx = initial_idx
-    final_possible_idx = b0 + initial_idx
+def memory_model_constraints_l_direct(b0, order_tuples, theta_dict, first_position_instr_appears_dict,
+                               first_position_instr_cannot_appear_dict, initial_idx=0):
 
     write_encoding("; Memory constraints using l variables for stores")
     # Order tuples contains those elements that are related
@@ -108,5 +119,12 @@ def memory_model_constraints_l_direct(b0, order_tuples, theta_dict, initial_idx=
         theta_val_1 = theta_dict[el1]
         theta_val_2 = theta_dict[el2]
 
-        for j in range(initial_possible_idx, final_possible_idx-1):
-            _direct_order_constraint(j, theta_val_1, theta_val_2, final_possible_idx)
+        initial_possible_idx_el1 = first_position_instr_appears_dict.get(el1, 0) + initial_idx
+        final_possible_idx_el1 = first_position_instr_cannot_appear_dict.get(el1, b0) + initial_idx
+
+        initial_possible_idx_el2 = first_position_instr_appears_dict.get(el1, 0) + initial_idx
+        final_possible_idx_el2 = first_position_instr_cannot_appear_dict.get(el1, b0) + initial_idx
+
+
+        for j in range(initial_possible_idx_el1, final_possible_idx_el1):
+            _direct_order_constraint(j, theta_val_1, theta_val_2, initial_possible_idx_el2, final_possible_idx_el2)
