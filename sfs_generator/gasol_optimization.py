@@ -1,7 +1,7 @@
 import json
 import math
 from timeit import default_timer as dtimer
-from utils import is_integer,all_integers, find_sublist
+from utils import is_integer,all_integers, find_sublist, get_num_bytes
 import  opcodes as opcodes
 import os
 from paths import gasol_path, json_path
@@ -583,13 +583,38 @@ def update_unary_func(func,var,val,evaluate):
             if func == "not":
                 val_end = ~(int(val))+2**256
                 gas_saved_op+=3
+                s_dict[var] = val_end
+                # v0 = int(val)
+
+                # bytes_v0 = get_num_bytes(v0)
+                # bytes_sol = get_num_bytes(val_end)
+                                
+                # if bytes_sol <= bytes_v0+1:
+                #     s_dict[var] = val_end
+                #     gas_saved_op+=3
+                # else:
+                #     u_var = create_new_svar()
+
+                #     if val in zero_ary:
+                #         arity = 0
+                #     else:
+                #         arity = 1
+
+                #     elem = ((val,func),arity)
+                #     new_uvar, defined = is_already_defined(elem)
+                #     if defined:
+                #         s_dict[var] = new_uvar
+                #         #relative_pos_load(func,elem,new_uvar)
+                #     else:
+                #         u_dict[u_var] = elem
+                #         s_dict[var] = u_var
                 
             elif func == "iszero":
                 aux = int(val)
                 val_end = 1 if aux == 0 else 0
                 gas_saved_op+=3
-                
-            s_dict[var] = val_end
+                s_dict[var] = val_end
+
                 
         else:
         
@@ -1339,7 +1364,11 @@ def compute_binary(expression,level):
 
         val = evaluate_expression(funct,vals[0],vals[1])
 
+        # r, exp = check_size(expression,val)
 
+        # if exp == expression:
+        #     return False, expression
+        
         if exp_str not in already_considered:
 
             if funct in ["*","/","%"]:
@@ -1387,18 +1416,35 @@ def compute_ternary(expression):
     else:
         return False, expression
 
+def check_size(exp_without, expression):
+    
+    if exp_without != expression:
+        v0 = int(exp_without[0])
+        v1 = int(exp_without[1])
+        bytes_v0 = get_num_bytes(v0)
+        bytes_v1 = get_num_bytes(v1)
 
+        bytes_sol = get_num_bytes(expression)
+
+        if bytes_sol <= bytes_v0+bytes_v1+2:
+            return True,expression
+        else:
+            return False,exp_without
+
+    else:
+        return False,exp_without
+    
 def rebuild_expression(vars_input,funct,values,level,evaluate = True):
 
     if len(vars_input) == 2:
         v0 = values[vars_input[0]]
         v1 = values[vars_input[1]]
-        expression = (v0, v1, funct)
+        expression_without_simp = (v0, v1, funct)
         if evaluate:
-            print(expression)
-            r, expression = compute_binary(expression,level)
+            r, expression = compute_binary(expression_without_simp,level)
         else:
             r = False
+            expression = expression_without_simp
         arity = 2
     elif len(vars_input) == 3: #len == 3
         v0 = values[vars_input[0]]
@@ -1406,7 +1452,7 @@ def rebuild_expression(vars_input,funct,values,level,evaluate = True):
         v2 = values[vars_input[2]]
         expression = (v0,v1,v2,funct)
         if evaluate:
-            r, expression = compute_ternary(expression)
+            r, expression = compute_ternary(expression_without_simp)
         else:
             r = False
         arity = 3
@@ -3139,19 +3185,19 @@ def smt_translate_block(rule,file_name,name,preffix,simplification=True,storage 
         ops = list(map(lambda x: x[4:-1],opcodes))
         original_ins = ops
 
-        # if len(opcodes) > max_bound and not split_sto:
-        #     stores_pos = compute_position_stores(opcodes)
-        #     print(stores_pos)
-        #     where2split = split_by_numbers(stores_pos)
+        if len(opcodes) > max_bound and not split_sto:
+            stores_pos = compute_position_stores(opcodes)
+            print(stores_pos)
+            where2split = split_by_numbers(stores_pos)
 
-        #     if where2split == []:
-        #         translate_block(rule,instructions,opcodes,True,preffix,simplification)
+            if where2split == []:
+                translate_block(rule,instructions,opcodes,True,preffix,simplification)
 
-        #     else:
-        #         subblocks = split_blocks_by_number(rule.get_instructions(),where2split)
-        #         generate_subblocks(rule,subblocks,True,preffix,simplification)
-        # else:
-        translate_block(rule,instructions,opcodes,True,preffix,simplification)
+            else:
+                subblocks = split_blocks_by_number(rule.get_instructions(),where2split)
+                generate_subblocks(rule,subblocks,True,preffix,simplification)
+        else:
+            translate_block(rule,instructions,opcodes,True,preffix,simplification)
     else: #we need to split the blocks into subblocks
         r = False
         new_instructions = []
@@ -3429,10 +3475,22 @@ def apply_transform(instr):
         if r:
             val_end = ~(int(val[0]))+2**256
 
+            # v0 = int(val[0])
+            # bytes_v0 = get_num_bytes(v0)
+            # bytes_sol = get_num_bytes(val_end)
+
+            # if bytes_sol <= bytes_v0+1:    
+            #     saved_push+=1
+            #     gas_saved_op+=3
+
+            #     return val_end
+            # else:
+            #     return -1
+
             saved_push+=1
             gas_saved_op+=3
-
             return val_end
+            
         else:
             return -1
         
