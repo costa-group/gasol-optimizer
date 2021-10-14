@@ -582,33 +582,33 @@ def update_unary_func(func,var,val,evaluate):
         if is_integer(val)!=-1 and (func=="not" or func=="iszero") and evaluate:
             if func == "not":
                 val_end = ~(int(val))+2**256
-                # gas_saved_op+=3
-                # s_dict[var] = val_end
+                gas_saved_op+=3
+                s_dict[var] = val_end
 
-                v0 = int(val)
+                # v0 = int(val)
 
-                bytes_v0 = get_num_bytes(v0)
-                bytes_sol = get_num_bytes(val_end)
+                # bytes_v0 = get_num_bytes(v0)
+                # bytes_sol = get_num_bytes(val_end)
                                 
-                if bytes_sol <= bytes_v0+1:
-                    s_dict[var] = val_end
-                    gas_saved_op+=3
-                else:
-                    u_var = create_new_svar()
+                # if bytes_sol <= bytes_v0+1:
+                #     s_dict[var] = val_end
+                #     gas_saved_op+=3
+                # else:
+                #     u_var = create_new_svar()
 
-                    if val in zero_ary:
-                        arity = 0
-                    else:
-                        arity = 1
+                #     if val in zero_ary:
+                #         arity = 0
+                #     else:
+                #         arity = 1
 
-                    elem = ((val,func),arity)
-                    new_uvar, defined = is_already_defined(elem)
-                    if defined:
-                        s_dict[var] = new_uvar
-                        #relative_pos_load(func,elem,new_uvar)
-                    else:
-                        u_dict[u_var] = elem
-                        s_dict[var] = u_var
+                #     elem = ((val,func),arity)
+                #     new_uvar, defined = is_already_defined(elem)
+                #     if defined:
+                #         s_dict[var] = new_uvar
+                #         #relative_pos_load(func,elem,new_uvar)
+                #     else:
+                #         u_dict[u_var] = elem
+                #         s_dict[var] = u_var
                 
             elif func == "iszero":
                 aux = int(val)
@@ -1365,10 +1365,10 @@ def compute_binary(expression,level):
 
         val = evaluate_expression(funct,vals[0],vals[1])
 
-        r, exp = check_size(expression,val)
+        # r, exp = check_size(expression,val)
 
-        if exp == expression:
-            return False, expression
+        # if exp == expression:
+        #     return False, expression
         
         if exp_str not in already_considered:
 
@@ -3198,54 +3198,54 @@ def smt_translate_block(rule,file_name,name,preffix,simplification=True,storage 
         ops = list(map(lambda x: x[4:-1],opcodes))
         original_ins = ops
 
-        if len(opcodes) > max_bound and not split_sto:
-            stores_pos = compute_position_stores(opcodes)
-            print(stores_pos)
-            where2split = split_by_numbers(stores_pos)
+        # if len(opcodes) > max_bound and not split_sto:
+        #     stores_pos = compute_position_stores(opcodes)
+        #     print(stores_pos)
+        #     where2split = split_by_numbers(stores_pos)
 
-            if where2split == []:
-                translate_block(rule,instructions,opcodes,True,preffix,simplification)
+        #     if where2split == []:
+        #         translate_block(rule,instructions,opcodes,True,preffix,simplification)
 
-            else:
-                subblocks = split_blocks_by_number(rule.get_instructions(),where2split)
-                generate_subblocks(rule,subblocks,True,preffix,simplification)
-        else:
-            translate_block(rule,instructions,opcodes,True,preffix,simplification)
+        #     else:
+        #         subblocks = split_blocks_by_number(rule.get_instructions(),where2split)
+        #         generate_subblocks(rule,subblocks,True,preffix,simplification)
+        # else:
+        translate_block(rule,instructions,opcodes,True,preffix,simplification)
     else: #we need to split the blocks into subblocks
         r = False
         new_instructions = []
 
         subblocks = split_blocks(rule,r,new_instructions)
 
-        end_subblocks = []
-        print("SUBBLOCKS")
-        print(subblocks)
-        for s in subblocks:
-            o = list(filter(lambda x:x.find("nop(")!=-1,s))
+        # end_subblocks = []
+        # print("SUBBLOCKS")
+        # print(subblocks)
+        # for s in subblocks:
+        #     o = list(filter(lambda x:x.find("nop(")!=-1,s))
 
-            if split_sto:
-                stores_pos = []
-            else:
-                stores_pos = compute_position_stores(o)
+        #     if split_sto:
+        #         stores_pos = []
+        #     else:
+        #         stores_pos = compute_position_stores(o)
                 
-            if len(o)> max_bound and stores_pos !=[]:
-                print("ES MAYOOR")
-                print(o)
-                print(len(o))
-                where2split = split_by_numbers(stores_pos)
-                if where2split == []:
-                    end_subblocks.append(s)
-                else:
-                    subblocks_aux = split_blocks_by_number(s,where2split)
-                    print(subblocks_aux)
-                    end_subblocks+=subblocks_aux
-            else:
-                end_subblocks.append(s)
+        #     if len(o)> max_bound and stores_pos !=[]:
+        #         print("ES MAYOOR")
+        #         print(o)
+        #         print(len(o))
+        #         where2split = split_by_numbers(stores_pos)
+        #         if where2split == []:
+        #             end_subblocks.append(s)
+        #         else:
+        #             subblocks_aux = split_blocks_by_number(s,where2split)
+        #             print(subblocks_aux)
+        #             end_subblocks+=subblocks_aux
+        #     else:
+        #         end_subblocks.append(s)
 
         # print("FINAL")
         # print(subblocks)
         # print(len(subblocks))
-        generate_subblocks(rule,end_subblocks,True,preffix,simplification)
+        generate_subblocks(rule,subblocks,True,preffix,simplification)
 
     end = dtimer()
     # for f in info_deploy:
@@ -3488,21 +3488,21 @@ def apply_transform(instr):
         if r:
             val_end = ~(int(val[0]))+2**256
 
-            v0 = int(val[0])
-            bytes_v0 = get_num_bytes(v0)
-            bytes_sol = get_num_bytes(val_end)
+            # v0 = int(val[0])
+            # bytes_v0 = get_num_bytes(v0)
+            # bytes_sol = get_num_bytes(val_end)
 
-            if bytes_sol <= bytes_v0+1:    
-                saved_push+=1
-                gas_saved_op+=3
+            # if bytes_sol <= bytes_v0+1:    
+            #     saved_push+=1
+            #     gas_saved_op+=3
 
-                return val_end
-            else:
-                return -1
+            #     return val_end
+            # else:
+            #     return -1
 
-            # saved_push+=1
-            # gas_saved_op+=3
-            # return val_end
+            saved_push+=1
+            gas_saved_op+=3
+            return val_end
             
         else:
             return -1
