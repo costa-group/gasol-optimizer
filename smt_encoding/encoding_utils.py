@@ -1,5 +1,6 @@
 # Module that contains parameter declarations and
 # other auxiliary methods to generate the encoding
+import copy
 
 from smtlib_utils import *
 from collections import OrderedDict
@@ -126,6 +127,28 @@ def generate_disjoint_sets_from_cost(ordered_costs):
         else:
             disjoint_set[gas_cost] = [id]
     return OrderedDict(sorted(disjoint_set.items(), key=lambda t: t[0]))
+
+
+def generate_dot_from_block(current_instr, diagram, ids, f):
+    # The label of a node includes the block id associated to that node and the corresponding instruction.
+    current_id = ids[current_instr]
+    f.write("n_%s [color=blue,label=\"%s\"];\n" % (current_id, current_instr))
+    for prev_instr, _ in diagram[current_instr]:
+        prev_id = ids[prev_instr]
+        f.write("n_%s -> n_%s;\n" % (prev_id, current_id))
+
+
+# Given the blocks corresponding to the CFG of a program, and the string containing the input program,
+# generates a graphical representation of the CFG as a .dot file.
+def generate_CFG_dot(dependency_theta_graph):
+    diagram = copy.deepcopy(dependency_theta_graph)
+    diagram['PUSH'] = []
+    ids = {instr: str(i) for i, instr in enumerate(diagram)}
+    with open('cfg.dot', 'w') as f:
+        f.write("digraph G {\n")
+        for instr in diagram:
+            generate_dot_from_block(instr, diagram, ids, f)
+        f.write("}\n")
 
 
 # Given a instruction, a dict that links each instruction to a lower bound to the number of instructions

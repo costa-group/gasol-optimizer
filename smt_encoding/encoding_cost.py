@@ -104,10 +104,12 @@ def number_instructions_soft_constraints(b0, theta_nop, is_barcelogic):
 # Method for generating the soft constraints in which the size of the bytecode is minimized.
 # NOP instructions have a 0 cost associated, PUSH-related instructions have a size of 2 associated,
 # and the remaining ones have cost 1 associated
-def byte_size_soft_constraints(b0, theta_dict, is_barcelogic=False):
+def byte_size_soft_constraints_simple(b0, theta_dict, is_barcelogic=False):
     disjoin_sets = {0: [theta_dict["NOP"]],
-                    1: list(map(lambda y: theta_dict[y], filter(lambda x: not x.startswith("PUSH") and x != "NOP", theta_dict.keys()))),
-                    2: list(map(lambda y: theta_dict[y], filter(lambda x: x.startswith("PUSH"), theta_dict.keys())))}
+                    1: list(map(lambda y: theta_dict[y], filter(lambda x: not x.startswith("PUSH") and x != "NOP" and
+                                                                          x != "ASSIGNIMMUTABLE", theta_dict.keys()))),
+                    5: list(map(lambda y: theta_dict[y], filter(lambda x: x.startswith("PUSH") or x == "ASSIGNIMMUTABLE",
+                                                                theta_dict.keys())))}
 
     previous_cost = 0
     or_variables = []
@@ -134,6 +136,81 @@ def byte_size_soft_constraints(b0, theta_dict, is_barcelogic=False):
                                 wi, label_name, is_barcelogic))
         for instr in disjoin_sets[gas_cost]:
             or_variables.append(instr)
+
+        # We update previous_cost
+        previous_cost = gas_cost
+
+
+def byte_cost_yul_operations(theta_id, theta_value):
+    if theta_id == "NOP":
+        return theta_value, 0
+    elif theta_id.startswith("ASSIGNIMMUTABLE"):
+        return theta_value, 36
+    elif not theta_id.startswith("PUSH") or theta_id.startswith("tag"):
+        return theta_value, 1
+    elif theta_id.startswith("PUSH#[$]") or theta_id.startswith("PUSHSIZE") \
+            or theta_id.startswith("PUSHDATA") or theta_id.startswith("PUSH[$]") or theta_id.startswith("PUSHTAG"):
+        return theta_value, 5
+    elif theta_id.startswith("PUSHLIB") or theta_id.startswith("PUSHDEPLOYADDRESS"):
+        return theta_value, 21
+    elif theta_id.startswith("PUSHIMMUTABLE"):
+        return theta_value, 32
+
+
+def generate_statement_for_push(j, idx, theta_push):
+    if idx == 1:
+        lb = 0
+    else:
+        lb = 1 << (8 * (idx - 1))
+    ub = (1 << (8 * idx))
+    return add_and(add_eq(t(j), theta_push), add_leq(lb, a(j)), add_lt(a(j), ub))
+
+# Method for generating the soft constraints in which the size of the bytecode is minimized.
+# NOP instructions have a 0 cost associated, PUSH-related instructions have a size of 2 associated,
+# and the remaining ones have cost 1 associated
+def byte_size_soft_constraints_complex(b0, theta_dict, is_barcelogic=False):
+    byte_tuples = filter(lambda x: x is not None, [byte_cost_yul_operations(theta_id, theta_value) for theta_id, theta_value in theta_dict.items()])
+    cost_dict = dict(byte_tuples)
+    for i in range(1, 33):
+        cost_dict['PUSH' + str(i)] = i + 1
+    ordered_cost_dict = OrderedDict(sorted(cost_dict.items(), key=lambda t: t[1]))
+    disjoin_sets = dict(generate_disjoint_sets_from_cost(ordered_cost_dict))
+    previous_cost = 0
+    or_variables = []
+    push_instructions = []
+
+    write_encoding("; Soft constraints for optimizing the size of the opcodes in bytes")
+
+    for gas_cost in disjoin_sets:
+        # We skip the first set of instructions, as they have
+        # no soft constraint associated. Nevertheless, we add
+        # opcodes with cost 0 to the set of variables till p
+        if gas_cost == 0:
+            for instr in disjoin_sets[gas_cost]:
+                if type(instr) == int:
+                    or_variables.append(instr)
+                else:
+                    push_match = re.match(re.compile("PUSH([0-9]+)"), instr)
+                    push_instructions.append(int(push_match.group(1)))
+            continue
+
+        wi = gas_cost - previous_cost
+
+        # Before adding current associated opcodes, we generate
+        # the constraints for each tj.
+        for j in range(b0):
+            or_statements = list(map(lambda var: add_eq(t(j), var), or_variables))
+            push_statements = list(map(lambda idx: generate_statement_for_push(j, idx, theta_dict["PUSH"]), push_instructions))
+            write_encoding(
+                add_assert_soft(add_or(*[*push_statements, *or_statements]),
+                                wi, label_name, is_barcelogic))
+
+        for instr in disjoin_sets[gas_cost]:
+            if type(instr) == int:
+                or_variables.append(instr)
+            else:
+                push_match = re.match(re.compile("PUSH([0-9]+)"), instr)
+                push_instructions.append(int(push_match.group(1)))
 
         # We update previous_cost
         previous_cost = gas_cost

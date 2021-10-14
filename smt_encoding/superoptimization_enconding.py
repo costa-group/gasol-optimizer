@@ -6,7 +6,7 @@ from encoding_utils import *
 from encoding_initialize import initialize_variables, variables_assignment_constraint, \
     initial_stack_encoding, final_stack_encoding
 from encoding_cost import paper_soft_constraints, label_name, alternative_soft_constraints, \
-    number_instructions_soft_constraints, byte_size_soft_constraints
+    number_instructions_soft_constraints, byte_size_soft_constraints_simple, byte_size_soft_constraints_complex
 from encoding_stack_instructions import stack_constraints
 from encoding_redundant import *
 from encoding_files import write_encoding, write_opcode_map, write_instruction_map, write_gas_map
@@ -67,7 +67,9 @@ def generate_soft_constraints(solver_name, b0, bs, usr_instr, theta_dict, flags,
     elif flags['number-instruction-gas-model']:
         number_instructions_soft_constraints(b0, theta_dict['NOP'], is_barcelogic)
     elif flags['bytecode-size-soft-constraints']:
-        byte_size_soft_constraints(b0, theta_dict, is_barcelogic)
+        byte_size_soft_constraints_simple(b0, theta_dict, is_barcelogic)
+    elif flags['complex-bytecode-size-soft-constraints']:
+        byte_size_soft_constraints_complex(b0, theta_dict, is_barcelogic)
     else:
         paper_soft_constraints(b0, bs, usr_instr, theta_dict, is_barcelogic, instr_seq, weight)
 
