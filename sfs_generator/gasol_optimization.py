@@ -4502,7 +4502,7 @@ def replace_loads_by_sstores(storage_location, location):
                 if True not in dep and elem[0][-1].find("mstore8") == -1: #it does not work for mstore8
                     if location == "storage":
                         print("[OPT]: Replaced sload by its value "+str(block_name))
-                        gas_store_op+=200
+                        gas_store_op+=700
                     else:
                         print("[OPT]: Replaced mload by its value "+str(block_name))
                         gas_memory_op+=3
