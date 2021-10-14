@@ -76,7 +76,8 @@ def initialize_flags_and_additional_info(args_i, current_cost, instr_seq, previo
              'number-instruction-gas-model': args_i_dict.get('number_instruction_gas_model',False),
              'bytecode-size-soft-constraints': args_i_dict.get('bytecode_size_soft_constraints', False),
              'memory-encoding-conflicting': args_i_dict.get('memory_encoding_conflicting',False),
-             'memory-encoding-store': args_i_dict.get('memory_encoding_store',False)}
+             'memory-encoding-store': args_i_dict.get('memory_encoding_store',False),
+             'complex-bytecode-size-soft-constraints' : args_i_dict.get('complex_bytecode_size_soft_constraints',False)}
 
     additional_info = {'tout': args_i_dict.get('tout', 10), 'solver': args_i_dict.get('solver', "oms"),
                        'current_cost': current_cost, 'instr_seq': instr_seq,
@@ -194,6 +195,8 @@ if __name__ == "__main__":
                         help="")
     ap.add_argument("-memory-encoding-store", dest='memory_encoding_store', action='store_true',
                         help="")
+    ap.add_argument("-complex-bytecode-size-soft-constraints", dest='complex_bytecode_size_soft_constraints', action='store_true',
+                        help="")
 
     args = vars(ap.parse_args())
 
@@ -212,7 +215,8 @@ if __name__ == "__main__":
              'number-instruction-gas-model': args.get('number_instruction_gas_model', False),
              'bytecode-size-soft-constraints': args.get('bytecode_size_soft_constraints', False),
              'memory-encoding-conflicting': args.get('memory_encoding_conflicting', False),
-             'memory-encoding-store': args.get('memory_encoding_store', False)}
+             'memory-encoding-store': args.get('memory_encoding_store', False),
+             'complex-bytecode-size-soft-constraints' : args.get('complex_bytecode_size_soft_constraints',False)}
 
 
     if args['check_final_stack']:

@@ -62,6 +62,8 @@ def modifiable_path_files_init():
                         help="")
     parser.add_argument("-memory-encoding-store", dest='memory_encoding_store', action='store_true',
                         help="")
+    parser.add_argument("-complex-bytecode-size-soft-constraints", dest='complex_bytecode_size_soft_constraints', action='store_true',
+                        help="")
 
     global args
     args = parser.parse_args()
@@ -118,7 +120,11 @@ def number_encoding_size(number):
 
 
 def bytes_required(op_name, val, address_length = 4):
-    if not op_name.startswith("PUSH") or op_name == "tag":
+    if op_name == "ASSIGNIMMUTABLE":
+        # Number of PushImmutable's with the same hash. Assume 1 (?)
+        m_immutableOccurrences = 1
+        return 1 + (3 + 32) * m_immutableOccurrences
+    elif not op_name.startswith("PUSH") or op_name == "tag":
         return 1
     elif op_name == "PUSH":
         return 1 + max(1, number_encoding_size(int(val,16)))
@@ -130,10 +136,6 @@ def bytes_required(op_name, val, address_length = 4):
         return 1 + 20
     elif op_name == "PUSHIMMUTABLE":
         return 1 + 32
-    elif op_name == "ASSIGNIMMUTABLE":
-        # Number of PushImmutable's with the same hash. Assume 1 (?)
-        m_immutableOccurrences = 1
-        return 1 + (3 + 32) * m_immutableOccurrences
     else:
         raise ValueError("Opcode not recognized")
 
@@ -142,6 +144,10 @@ def bytes_required_initial(op_name, address_length = 4):
     push_match = re.match(re.compile('PUSH([0-9]+)'), op_name)
     if push_match:
         return 1 + max(1, int(push_match.group(1)))
+    elif op_name == "ASSIGNIMMUTABLE":
+        # Number of PushImmutable's with the same hash. Assume 1 (?)
+        m_immutableOccurrences = 1
+        return 1 + (3 + 32) * m_immutableOccurrences
     elif not op_name.startswith("PUSH") or op_name == "tag":
         return 1
     elif op_name == "PUSH#[$]" or op_name == "PUSHSIZE":
@@ -152,20 +158,19 @@ def bytes_required_initial(op_name, address_length = 4):
         return 1 + 20
     elif op_name == "PUSHIMMUTABLE":
         return 1 + 32
-    elif op_name == "ASSIGNIMMUTABLE":
-        # Number of PushImmutable's with the same hash. Assume 1 (?)
-        m_immutableOccurrences = 1
-        return 1 + (3 + 32) * m_immutableOccurrences
     else:
         raise ValueError("Opcode not recognized")
 
 def total_bytes(instructions_disasm):
     instructions = list(filter(lambda x: x != '', instructions_disasm.split(' ')))
-    i, new_instr = 0, []
-    bytes = 0
+    i, bytes = 0, 0
     while i < len(instructions):
         if instructions[i] == "PUSH":
             bytes += bytes_required("PUSH", instructions[i+1])
+            i += 2
+        elif instructions[i].startswith("PUSH") and not instructions[i].startswith("PUSHDEPLOYADDRESS") \
+                    and not instructions[i].startswith("PUSHSIZE"):
+            bytes += bytes_required(instructions[i], None)
             i += 2
         else:
             bytes += bytes_required(instructions[i], None)
@@ -310,10 +315,19 @@ if __name__=="__main__":
                 file_results['original_bytes'] = sum([bytes_required_initial(instr) for instr in original_instrs])
                 initial_stack = data['src_ws']
 
-            if init_program_length > 100:
+            if init_program_length > 40:
+                file_results['no_model_found'] = True
+                file_results['shown_optimal'] = False
+                file_results['solver_time_in_sec'] = 10 * ( 1 + sum([1 if instr['storage'] else 0 for instr in user_instr]))
                 continue
 
-            execute_syrup_backend(args, file)
+            try:
+                execute_syrup_backend(args, file)
+            except:
+                with open(results_dir + "incorrect.txt", 'a') as f:
+                    print(file,file=f)
+                continue
+
             smt_exec_command = get_solver_to_execute(block_id)
             solution, executed_time = run_and_measure_command(smt_exec_command)
             executed_time = round(executed_time, 3)
@@ -335,7 +349,7 @@ if __name__=="__main__":
 
                 target_gas_cost, shown_optimal = analyze_file(solution)
                 # Sometimes, solution reached is not good enough
-                file_results['target_gas_cost'] = min(target_gas_cost, file_results['source_gas_cost'])
+                file_results['target_gas_cost'] = target_gas_cost
                 file_results['shown_optimal'] = shown_optimal
 
                 with open(solver_output_file, 'w') as f:
@@ -365,7 +379,7 @@ if __name__=="__main__":
                 with open(gas_final_solution, 'r') as f:
                     file_results['real_gas'] = f.read()
                     # It cannot be negative
-                    file_results['saved_gas'] = max(0, file_results['source_gas_cost'] - int(file_results['real_gas']))
+                    file_results['saved_gas'] = file_results['source_gas_cost'] - int(file_results['real_gas'])
 
                 opcodes = preprocess_instructions_plain_text(instructions_disasm)
 
