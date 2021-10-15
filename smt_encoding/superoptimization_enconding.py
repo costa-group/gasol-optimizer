@@ -18,7 +18,7 @@ from encoding_memory_instructions import memory_model_constraints_l_variables_st
 # Method to generate redundant constraints according to flags (at least once is included by default)
 def generate_redundant_constraints(flags, b0, user_instr, theta_stack, theta_comm, theta_non_comm, final_stack,
                                    dependency_graph, first_position_instr_appears_dict,
-                                   first_position_instr_cannot_appear_dict, theta_dict, theta_mem):
+                                   first_position_instr_cannot_appear_dict, theta_dict, theta_mem, theta_l_dict):
     if flags['at-most']:
         valid_theta = list(map(lambda instr: theta_comm[instr['id']] if instr['commutative'] else theta_non_comm[instr['id']],
                              filter(lambda instr: instr['gas'] > 2, user_instr)))
@@ -30,11 +30,13 @@ def generate_redundant_constraints(flags, b0, user_instr, theta_stack, theta_com
         no_output_before_pop(b0, theta_stack, theta_mem)
     if flags['instruction-order']:
         theta_non_stack_dict = dict(theta_comm, **theta_non_comm, **theta_mem)
-        each_instruction_is_used_at_least_once_with_instruction_order(b0, theta_non_stack_dict,
+        non_used_variables = set(theta_non_stack_dict.keys()).difference(set(theta_l_dict.keys()))
+        theta_non_l = {instr: theta_non_stack_dict[instr] for instr in non_used_variables}
+        each_instruction_is_used_at_least_once_with_instruction_order(b0, theta_non_l,
                                                                       first_position_instr_appears_dict,
                                                                       first_position_instr_cannot_appear_dict)
-        restrain_instruction_order(dependency_graph, first_position_instr_appears_dict,
-                                   first_position_instr_cannot_appear_dict, theta_dict)
+        restrain_instruction_order(b0, dependency_graph, first_position_instr_appears_dict,
+                               first_position_instr_cannot_appear_dict, theta_l_dict, theta_dict)
 
     # If flag isn't set, then we use by default the generation for each function used at least once in each position
     else:
@@ -132,14 +134,15 @@ def generate_memory_constraints(flags, b0, theta_dict, theta_mem, order_tuples, 
 
 
 # Determine which l variables must be initialized depending on the memory encoding
-def generate_l_theta_dict(flags, order_tuples, theta_dict, theta_mem):
+def generate_l_theta_dict(flags, theta_dict, user_instr):
     # First case: only conflicting stores
     if flags['memory-encoding-store']:
-        conflicting_dict = generate_conflicting_theta_dict(theta_dict, order_tuples)
-        return {instr: theta_dict[instr] for instr in set(conflicting_dict).intersection(set(theta_mem))}
+        return dict((map(lambda instr: (instr['id'], theta_dict[instr['id']]),
+                         filter(lambda instr: len(instr['inpt_sk']) > 0, user_instr))))
     # Second case: all conflicting instructions
     elif flags['memory-encoding-conflicting']:
-        return generate_conflicting_theta_dict(theta_dict, order_tuples)
+        return dict((map(lambda instr: (instr['id'], theta_dict[instr['id']]),
+                         filter(lambda instr: len(instr['inpt_sk']) > 0, user_instr))))
     # Third case: no l variables are used, then return an empty dict
     else:
         return dict()
@@ -169,8 +172,8 @@ def generate_smtlib_encoding(b0, bs, usr_instr, variables, initial_stack, final_
     dependency_graph, first_position_instr_appears_dict, first_position_instr_cannot_appear_dict = \
         generate_instruction_dicts(b0, usr_instr, final_stack, flags, order_tuples)
     theta_dict = dict(theta_stack, **theta_comm, **theta_non_comm, **theta_mem)
-    l_theta_dict = generate_l_theta_dict(flags, order_tuples, theta_dict, theta_mem)
-    additional_info['tout'] = additional_info['tout'] * (len(theta_mem) + 1)
+    l_theta_dict = generate_l_theta_dict(flags, theta_dict, usr_instr)
+    additional_info['tout'] = additional_info['tout'] * 100 * (len(theta_mem) + 1)
 
     # Before generating the encoding, we activate the default encoding if its corresponding flag is activated
     if flags['default-encoding']:
@@ -184,14 +187,19 @@ def generate_smtlib_encoding(b0, bs, usr_instr, variables, initial_stack, final_
     stack_constraints(b0, bs, comm_instr, non_comm_instr, mem_instr, theta_stack, theta_comm, theta_non_comm, theta_mem,
                       first_position_instr_appears_dict, first_position_instr_cannot_appear_dict)
 
-    generate_memory_constraints(flags, b0, theta_dict, l_theta_dict, order_tuples, first_position_instr_appears_dict,
-                                   first_position_instr_cannot_appear_dict)
     initial_stack_encoding(initial_stack, bs)
     final_stack_encoding(final_stack, bs, b0)
     generate_redundant_constraints(flags, b0, usr_instr, theta_stack, theta_comm, theta_non_comm, final_stack,
                                    dependency_graph, first_position_instr_appears_dict,
-                                   first_position_instr_cannot_appear_dict, theta_dict, theta_mem)
-    generate_soft_constraints(solver_name, b0, bs, usr_instr, theta_dict, flags, current_cost, instr_seq)
+                                   first_position_instr_cannot_appear_dict, theta_dict, theta_mem, l_theta_dict)
+    new_user_instr = []
+    for instr in usr_instr:
+        new_instr = copy.deepcopy(instr)
+        if new_instr['gas'] > 2:
+            new_instr['gas'] = 0
+        new_user_instr.append(new_instr)
+
+    generate_soft_constraints(solver_name, b0, bs, new_user_instr, theta_dict, flags, current_cost, instr_seq)
     generate_cost_functions(solver_name)
     if additional_info['previous_solution'] is not None:
         generate_encoding_from_log_json_dict(additional_info['previous_solution'])

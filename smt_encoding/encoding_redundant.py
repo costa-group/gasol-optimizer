@@ -1,5 +1,6 @@
 from encoding_utils import *
 from encoding_files import write_encoding
+from encoding_memory_instructions import _store_store_order_constraint, _mem_variable_equivalence_constraint
 
 # Aditional contraints
 
@@ -55,14 +56,29 @@ def push_each_element_at_least_once(b0, theta_push, pushed_elements):
 
 # We can generate a graph that represents the dependencies between different opcodes
 # (input). Then, we can assume that each one has to follow that restriction.
-def restrain_instruction_order(depencency_graph, first_position_instr_appears_dict, first_position_instr_cannot_appear_dict, theta):
-    write_encoding("; Constraints that reflect the order among instructions")
-    for instr, previous_instrs in depencency_graph.items():
+def restrain_instruction_order(b0, dependency_graph, first_position_instr_appears_dict,
+                               first_position_instr_cannot_appear_dict, theta_conflicting, theta_dict, initial_idx = 0):
+    write_encoding("; Constraints using l variables")
+
+    for id, theta_store in theta_conflicting.items():
+        initial_possible_idx = first_position_instr_appears_dict.get(id, 0) + initial_idx
+        final_possible_idx = first_position_instr_cannot_appear_dict.get(id, b0) + initial_idx
+
+        write_encoding(add_assert(add_and(add_leq(initial_possible_idx, l(theta_store)), add_lt(l(theta_store), final_possible_idx))))
+        for j in range(initial_possible_idx, final_possible_idx):
+            _mem_variable_equivalence_constraint(j, theta_store)
+
+    for instr, previous_instrs in dependency_graph.items():
 
         # We only consider instructions that have a dependency with at least other instruction
         # (could be push)
         if not previous_instrs:
             continue
+
+        for previous_instr_name, aj in previous_instrs:
+            if previous_instr_name in theta_conflicting and instr in theta_conflicting :
+                _store_store_order_constraint(theta_conflicting[previous_instr_name], theta_conflicting[instr])
+                continue
 
         # Previous values stores possible values previous instructions may have, represented
         # as tj = theta_instr. It will be a dict where keys are the instruction id and values are a list
@@ -77,24 +93,24 @@ def restrain_instruction_order(depencency_graph, first_position_instr_appears_di
             # We add a clause for each possible position in which previous equation may appear before current one.
             # This means that we have to take the min between current position or last position previous instruction
             # could occur.
-            for previous_position in range(first_position_instr_appears_dict[previous_instr_name],
-                                           min(first_position_instr_appears_dict[instr],
-                                               first_position_instr_cannot_appear_dict[previous_instr_name])):
+            for previous_position in range(first_position_instr_appears_dict.get(previous_instr_name,0),
+                                           min(first_position_instr_appears_dict.get(instr,0),
+                                               first_position_instr_cannot_appear_dict.get(previous_instr_name, b0))):
                 # If aj == -1, then we don't need to consider to assign aj
                 if aj == -1:
-                    previous_values[previous_instr_name].append(add_eq(t(previous_position), theta[previous_instr_name]))
+                    previous_values[previous_instr_name].append(add_eq(t(previous_position), theta_dict[previous_instr_name]))
                 else:
-                    previous_values[previous_instr_name].append(add_and(add_eq(t(previous_position), theta[previous_instr_name]),
+                    previous_values[previous_instr_name].append(add_and(add_eq(t(previous_position), theta_dict[previous_instr_name]),
                                                    add_eq(a(previous_position), aj)))
 
         # We add a clause for every position the instruction may appear.
-        for position in range(first_position_instr_appears_dict[instr], first_position_instr_cannot_appear_dict[instr]):
+        for position in range(first_position_instr_appears_dict.get(instr,0), first_position_instr_cannot_appear_dict.get(instr, b0)):
 
             # If current instruction is chosen for position j, then previous instructions must be places in previous
             # positions. This means that (tj = theta) => and_{instr in prev_instr}
             # (or_{i in possible_positions}(ti = instr))
             or_instr = [add_or(*possible_equalities) for possible_equalities in previous_values.values()]
-            write_encoding(add_assert(add_implies(add_eq(t(position), theta[instr]), add_and(*or_instr))))
+            write_encoding(add_assert(add_implies(add_eq(t(position), theta_dict[instr]), add_and(*or_instr))))
 
             # We update previous values list to add the possibility that previous instructions could be
             # executed in current position
@@ -102,14 +118,14 @@ def restrain_instruction_order(depencency_graph, first_position_instr_appears_di
 
                 # If first position an instruction cannot appear is less or equal than current position, then
                 # we don't need to consider adding it to current clause
-                if first_position_instr_cannot_appear_dict[previous_instr_name] <= position:
+                if first_position_instr_cannot_appear_dict.get(previous_instr_name, b0) <= position:
                     continue
 
                 # If aj == -1, then we don't need to consider to assign aj
                 if aj == -1:
-                    previous_values[previous_instr_name].append(add_eq(t(position), theta[previous_instr_name]))
+                    previous_values[previous_instr_name].append(add_eq(t(position), theta_dict[previous_instr_name]))
                 else:
-                    previous_values[previous_instr_name].append(add_and(add_eq(t(position), theta[previous_instr_name]),
+                    previous_values[previous_instr_name].append(add_and(add_eq(t(position), theta_dict[previous_instr_name]),
                                                    add_eq(a(position), aj)))
 
 # Each uninterpreted function is used at least once
