@@ -315,10 +315,11 @@ if __name__=="__main__":
                 file_results['original_bytes'] = sum([bytes_required_initial(instr) for instr in original_instrs])
                 initial_stack = data['src_ws']
 
-            if init_program_length > 40:
+            if init_program_length > 200:
                 file_results['no_model_found'] = True
                 file_results['shown_optimal'] = False
                 file_results['solver_time_in_sec'] = 10 * ( 1 + sum([1 if instr['storage'] else 0 for instr in user_instr]))
+                rows_list.append(file_results)
                 continue
 
             try:
