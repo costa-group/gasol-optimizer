@@ -703,7 +703,8 @@ if __name__ == '__main__':
     ap.add_argument("-storage", "--storage", help="Split using SSTORE, MSTORE and MSTORE8", action="store_true")
     ap.add_argument("-last-constants", "--last-constants", help="It removes the last instructions of a block when they generate a ocnstant value", dest="last_constants", action = "store_true")
     ap.add_argument("-mem40", "--mem40", help="It assumes that pos 64 in memory is not dependant with variables", action = "store_true")
-
+    ap.add_argument("-size","--size",help="It enables size cost model. The simplification rules are applied only if they improve the size",action="store_true")
+    ap.add_argument("-partition","--partition",help="It enables the partition in blocks of 24 instructions",action="store_true")
     args = ap.parse_args()
 
 
