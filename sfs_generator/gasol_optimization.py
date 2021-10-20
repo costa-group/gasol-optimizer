@@ -139,6 +139,9 @@ def init_globals():
     global sto_delete_pos
     sto_delete_pos = []
 
+    global size_flag
+    size_flag = False
+
 def filter_opcodes(rule):
     instructions = rule.get_instructions()
     rbr_ins_aux = list(filter(lambda x: x.find("nop(")==-1, instructions))
@@ -582,34 +585,37 @@ def update_unary_func(func,var,val,evaluate):
         if is_integer(val)!=-1 and (func=="not" or func=="iszero") and evaluate:
             if func == "not":
                 val_end = ~(int(val))+2**256
-                gas_saved_op+=3
-                s_dict[var] = val_end
 
-                # v0 = int(val)
+                if size_flag:
 
-                # bytes_v0 = get_num_bytes(v0)
-                # bytes_sol = get_num_bytes(val_end)
+                    v0 = int(val)
+
+                    bytes_v0 = get_num_bytes(v0)
+                    bytes_sol = get_num_bytes(val_end)
                                 
-                # if bytes_sol <= bytes_v0+1:
-                #     s_dict[var] = val_end
-                #     gas_saved_op+=3
-                # else:
-                #     u_var = create_new_svar()
+                    if bytes_sol <= bytes_v0+1:
+                        s_dict[var] = val_end
+                        gas_saved_op+=3
+                    else:
+                        u_var = create_new_svar()
 
-                #     if val in zero_ary:
-                #         arity = 0
-                #     else:
-                #         arity = 1
+                        if val in zero_ary:
+                            arity = 0
+                        else:
+                            arity = 1
 
-                #     elem = ((val,func),arity)
-                #     new_uvar, defined = is_already_defined(elem)
-                #     if defined:
-                #         s_dict[var] = new_uvar
-                #         #relative_pos_load(func,elem,new_uvar)
-                #     else:
-                #         u_dict[u_var] = elem
-                #         s_dict[var] = u_var
-                
+                        elem = ((val,func),arity)
+                        new_uvar, defined = is_already_defined(elem)
+                        if defined:
+                            s_dict[var] = new_uvar
+                            #relative_pos_load(func,elem,new_uvar)
+                        else:
+                            u_dict[u_var] = elem
+                            s_dict[var] = u_var
+                else:
+                    gas_saved_op+=3
+                    s_dict[var] = val_end
+
             elif func == "iszero":
                 aux = int(val)
                 val_end = 1 if aux == 0 else 0
@@ -1365,10 +1371,11 @@ def compute_binary(expression,level):
 
         val = evaluate_expression(funct,vals[0],vals[1])
 
-        # r, exp = check_size(expression,val)
+        if size_flag:
+            r, exp = check_size(expression,val)
 
-        # if exp == expression:
-        #     return False, expression
+            if exp == expression:
+                return False, expression
         
         if exp_str not in already_considered:
 
@@ -3144,7 +3151,7 @@ def compute_max_program_len(opcodes, num_guard,block = None):
     return len(new_opcodes)
     
 
-def smt_translate_block(rule,file_name,name,preffix,simplification=True,storage = False):
+def smt_translate_block(rule,file_name,name,preffix,simplification=True,storage = False, size = False, part = False):
     global s_counter
     global max_instr_size
     global int_not0
@@ -3156,13 +3163,15 @@ def smt_translate_block(rule,file_name,name,preffix,simplification=True,storage 
     global block_name
     global original_ins
     global max_l
+    global size_flag
     
     init_globals()
-    
     
     if storage:
         split_sto = True
         constants.append_store_instructions_to_split()
+
+    size_flag = size
         
     sfs_contracts = {}
 
@@ -3188,7 +3197,6 @@ def smt_translate_block(rule,file_name,name,preffix,simplification=True,storage 
     print(instructions)
     print("*******")
 
-    
     info = "INFO DEPLOY "+gasol_path+"ethir_OK_"+source_name+"_blocks_"+rule.get_rule_name()+" LENGTH="+str(len(opcodes))+" PUSH="+str(len(list(filter(lambda x: x.find("nop(PUSH")!=-1,opcodes))))
     info_deploy.append(info)
     
@@ -3197,54 +3205,57 @@ def smt_translate_block(rule,file_name,name,preffix,simplification=True,storage 
     if res:
         ops = list(map(lambda x: x[4:-1],opcodes))
         original_ins = ops
+        if part:
+            if len(opcodes) > max_bound and not split_sto:
+                stores_pos = compute_position_stores(opcodes)
+                # print(stores_pos)
+                where2split = split_by_numbers(stores_pos)
 
-        # if len(opcodes) > max_bound and not split_sto:
-        #     stores_pos = compute_position_stores(opcodes)
-        #     print(stores_pos)
-        #     where2split = split_by_numbers(stores_pos)
+                if where2split == []:
+                    translate_block(rule,instructions,opcodes,True,preffix,simplification)
 
-        #     if where2split == []:
-        #         translate_block(rule,instructions,opcodes,True,preffix,simplification)
-
-        #     else:
-        #         subblocks = split_blocks_by_number(rule.get_instructions(),where2split)
-        #         generate_subblocks(rule,subblocks,True,preffix,simplification)
-        # else:
-        translate_block(rule,instructions,opcodes,True,preffix,simplification)
+                else:
+                    subblocks = split_blocks_by_number(rule.get_instructions(),where2split)
+                    generate_subblocks(rule,subblocks,True,preffix,simplification)
+            else:
+                translate_block(rule,instructions,opcodes,True,preffix,simplification) 
+        else:
+            translate_block(rule,instructions,opcodes,True,preffix,simplification) 
     else: #we need to split the blocks into subblocks
         r = False
         new_instructions = []
 
         subblocks = split_blocks(rule,r,new_instructions)
 
-        # end_subblocks = []
-        # print("SUBBLOCKS")
-        # print(subblocks)
-        # for s in subblocks:
-        #     o = list(filter(lambda x:x.find("nop(")!=-1,s))
+        if part:
+            end_subblocks = []
+            # print("SUBBLOCKS")
+            # print(subblocks)
+            for s in subblocks:
+                o = list(filter(lambda x:x.find("nop(")!=-1,s))
 
-        #     if split_sto:
-        #         stores_pos = []
-        #     else:
-        #         stores_pos = compute_position_stores(o)
+            if split_sto:
+                stores_pos = []
+            else:
+                stores_pos = compute_position_stores(o)
                 
-        #     if len(o)> max_bound and stores_pos !=[]:
-        #         print("ES MAYOOR")
-        #         print(o)
-        #         print(len(o))
-        #         where2split = split_by_numbers(stores_pos)
-        #         if where2split == []:
-        #             end_subblocks.append(s)
-        #         else:
-        #             subblocks_aux = split_blocks_by_number(s,where2split)
-        #             print(subblocks_aux)
-        #             end_subblocks+=subblocks_aux
-        #     else:
-        #         end_subblocks.append(s)
-
-        # print("FINAL")
-        # print(subblocks)
-        # print(len(subblocks))
+            if len(o)> max_bound and stores_pos !=[]:
+                    # print("ES MAYOOR")
+                    # print(o)
+                    # print(len(o))
+                where2split = split_by_numbers(stores_pos)
+                if where2split == []:
+                    end_subblocks.append(s)
+                else:
+                    subblocks_aux = split_blocks_by_number(s,where2split)
+                    # print(subblocks_aux)
+                    end_subblocks+=subblocks_aux
+            else:
+                end_subblocks.append(s)
+            subblocks = end_subblocks
+            # print("FINAL")
+            # print(subblocks)
+            # print(len(subblocks))
         generate_subblocks(rule,subblocks,True,preffix,simplification)
 
     end = dtimer()
@@ -3488,21 +3499,23 @@ def apply_transform(instr):
         if r:
             val_end = ~(int(val[0]))+2**256
 
-            # v0 = int(val[0])
-            # bytes_v0 = get_num_bytes(v0)
-            # bytes_sol = get_num_bytes(val_end)
+            if size_flag:
+                v0 = int(val[0])
+                bytes_v0 = get_num_bytes(v0)
+                bytes_sol = get_num_bytes(val_end)
 
-            # if bytes_sol <= bytes_v0+1:    
-            #     saved_push+=1
-            #     gas_saved_op+=3
+                if bytes_sol <= bytes_v0+1:    
+                    saved_push+=1
+                    gas_saved_op+=3
 
-            #     return val_end
-            # else:
-            #     return -1
+                    return val_end
+                else:
+                    return -1
 
-            saved_push+=1
-            gas_saved_op+=3
-            return val_end
+            else:
+                saved_push+=1
+                gas_saved_op+=3
+                return val_end
             
         else:
             return -1
