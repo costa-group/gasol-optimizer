@@ -165,7 +165,9 @@ def generate_smtlib_encoding(b0, bs, usr_instr, variables, initial_stack, final_
     current_cost = additional_info['current_cost']
     instr_seq = additional_info['instr_seq']
     order_tuples = additional_info['mem_order']
-
+    initial_idx = max(map(lambda x: int(re.search('\d+', x).group()), variables)) + 20
+    usr_instr, final_stack = generate_instr_for_push(usr_instr, final_stack, initial_idx)
+    print(usr_instr)
     theta_stack = generate_stack_theta(bs)
     theta_comm, theta_non_comm, theta_mem = generate_uninterpreted_theta(usr_instr, len(theta_stack))
     comm_instr, non_comm_instr, mem_instr = divide_usr_instr(usr_instr)
@@ -173,7 +175,7 @@ def generate_smtlib_encoding(b0, bs, usr_instr, variables, initial_stack, final_
         generate_instruction_dicts(b0, usr_instr, final_stack, flags, order_tuples)
     theta_dict = dict(theta_stack, **theta_comm, **theta_non_comm, **theta_mem)
     l_theta_dict = generate_l_theta_dict(flags, theta_dict, usr_instr)
-    additional_info['tout'] = additional_info['tout'] * 100 * (len(theta_mem) + 1)
+    additional_info['tout'] = additional_info['tout'] * (len(theta_mem) + 1)
 
     # Before generating the encoding, we activate the default encoding if its corresponding flag is activated
     if flags['default-encoding']:
@@ -192,14 +194,8 @@ def generate_smtlib_encoding(b0, bs, usr_instr, variables, initial_stack, final_
     generate_redundant_constraints(flags, b0, usr_instr, theta_stack, theta_comm, theta_non_comm, final_stack,
                                    dependency_graph, first_position_instr_appears_dict,
                                    first_position_instr_cannot_appear_dict, theta_dict, theta_mem, l_theta_dict)
-    new_user_instr = []
-    for instr in usr_instr:
-        new_instr = copy.deepcopy(instr)
-        if new_instr['gas'] > 2:
-            new_instr['gas'] = 0
-        new_user_instr.append(new_instr)
 
-    generate_soft_constraints(solver_name, b0, bs, new_user_instr, theta_dict, flags, current_cost, instr_seq)
+    generate_soft_constraints(solver_name, b0, bs, usr_instr, theta_dict, flags, current_cost, instr_seq)
     generate_cost_functions(solver_name)
     if additional_info['previous_solution'] is not None:
         generate_encoding_from_log_json_dict(additional_info['previous_solution'])
@@ -208,7 +204,7 @@ def generate_smtlib_encoding(b0, bs, usr_instr, variables, initial_stack, final_
     # get_model()
     for j in range(b0):
         write_encoding(get_value(t(j)))
-        write_encoding(get_value(a(j)))
+
     write_encoding("; Stack: " + str(theta_stack))
     write_encoding("; Comm: " + str(theta_comm))
     write_encoding("; Non-Comm: " + str(theta_non_comm))

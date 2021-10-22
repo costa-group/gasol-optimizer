@@ -114,11 +114,11 @@ def generate_info_from_solution(solver_output, opcodes_theta_dict, instruction_t
     return instr_sol, opcode_sol, pushed_values_decimal, total_gas
 
 
-def generate_disasm_sol(contract_name, block_name, bs, user_instr, solver_output):
+def generate_disasm_sol(contract_name, block_name, bs, user_instr, solver_output, variables, final_stack):
     init()
     generate_file_names(contract_name, block_name)
 
-    _, instruction_theta_dict, opcodes_theta_dict, gas_theta_dict, values_dict = generate_theta_dict_from_sequence(bs, user_instr)
+    _, instruction_theta_dict, opcodes_theta_dict, gas_theta_dict, values_dict = generate_theta_dict_from_sequence(bs, user_instr, final_stack, variables)
 
     instr_sol, opcode_sol, pushed_values_decimal, total_gas = \
         generate_info_from_solution(solver_output, opcodes_theta_dict, instruction_theta_dict, gas_theta_dict, values_dict)
@@ -131,14 +131,15 @@ def generate_disasm_sol(contract_name, block_name, bs, user_instr, solver_output
     with open(opcodes_final_solution, 'w') as opcodes_file:
         for position, opcode in opcode_sol.items():
             instr = instr_sol[position]
-            if instr.startswith("PUSH") and not instr.startswith("PUSHDEPLOYADDRESS") \
+            if instr.startswith("PUSH") and not re.match(re.compile("PUSH([0-9]+)"), instr) and not instr.startswith("PUSHDEPLOYADDRESS") \
                 and not instr.startswith("ASSIGNIMMUTABLE") and not instr.startswith("PUSHSIZE") :
                 opcodes_file.write(opcode + hex(int(pushed_values_decimal[position]))[2:])
             else:
                 opcodes_file.write(opcode)
     with open(instruction_final_solution, 'w') as instruction_file:
         for position, instr in instr_sol.items():
-            if instr.startswith("PUSH") and not instr.startswith("PUSHDEPLOYADDRESS") \
+            if instr.startswith("PUSH") and not re.match(re.compile("PUSH([0-9]+)"), instr) \
+                    and not instr.startswith("PUSHDEPLOYADDRESS") \
                     and not instr.startswith("ASSIGNIMMUTABLE") and not instr.startswith("PUSHSIZE"):
                 instruction_file.write(instr + " " + hex(int(pushed_values_decimal[position]))[2:] + " ")
             else:

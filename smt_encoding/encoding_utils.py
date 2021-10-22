@@ -2,6 +2,7 @@
 # other auxiliary methods to generate the encoding
 import copy
 
+from utils_bckend import number_encoding_size
 from smtlib_utils import *
 from collections import OrderedDict
 import re
@@ -351,6 +352,57 @@ def generate_phi_dict(user_instr, final_stack):
             phi[elem] = idx
             idx += 1
     return phi
+
+
+# Generate a dict that contains the real value as a key, and
+# its associated index as a value.
+def generate_instr_for_push(user_instr, final_stack, initial_idx):
+    instrs = []
+    current_push = {}
+    idx = initial_idx + 1
+    print("Initial", idx)
+    for instr in user_instr:
+        stack = []
+        for elem in instr['inpt_sk']:
+            if type(elem) == int:
+                if elem not in current_push:
+                    stack_var = "|s(" + str(idx)  + ")|"
+                    new_instr = {"id": "PUSH_" + str(elem), "opcode": "60",
+                                 "disasm": "PUSH" + str(max(1,number_encoding_size(elem))) + " " + hex(elem)[2:],
+                                 "inpt_sk": [], "outpt_sk": [stack_var], "gas": 3, "commutative": False, "storage": False}
+                    current_push[elem] = stack_var
+                    instrs.append(new_instr)
+                    idx += 1
+                    stack.append(stack_var)
+                else:
+                    stack.append(current_push[elem])
+            else:
+                stack.append(elem)
+
+        instr['inpt_sk'] = stack
+
+    stack = []
+    for elem in final_stack:
+
+        if type(elem) == int:
+            if elem not in current_push:
+                stack_var = "|s(" + str(idx) + ")|"
+                new_instr = {"id": "PUSH_" + str(elem), "opcode": "60",
+                             "disasm": "PUSH" + str(max(1,number_encoding_size(elem))) + " " + hex(elem)[2:],
+                             "inpt_sk": [], "outpt_sk": [stack_var], "gas": 3, "commutative": False, "storage": False}
+                current_push[elem] = stack_var
+                instrs.append(new_instr)
+                idx += 1
+                stack.append(stack_var)
+            else:
+                stack.append(current_push[elem])
+        else:
+            stack.append(elem)
+
+    final_user_instr = [*user_instr, *instrs]
+    print("Final", idx)
+
+    return final_user_instr, stack
 
 
 # Generate a dict that contains the theta associated to a

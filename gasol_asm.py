@@ -368,9 +368,13 @@ def preprocess_instructions_plain_text(instructions):
         if not op.startswith("PUSH"):
             opcodes.append(op.strip())
         else:
-
+            if op.startswith("PUSH") and op.find("DEPLOYADDRESS") != -1:
+            # Fixme: add ALL PUSH variants: PUSH data, PUSH DEPLOYADDRESS
+                op = "PUSHDEPLOYADDRESS"
+            elif op.startswith("PUSH") and op.find("SIZE") != -1:
+                op = "PUSHSIZE"
             # If position t+1 is a Yul Keyword, then we need to analyze them separately
-            if not isYulKeyword(ops[i + 1]):
+            elif not isYulKeyword(ops[i + 1]):
                 val = ops[i + 1]
                 op = op + " 0x" + val if not val.startswith("0x") else op + " " + val
                 i = i + 1

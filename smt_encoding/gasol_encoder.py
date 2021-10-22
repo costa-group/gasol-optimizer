@@ -9,7 +9,7 @@ from encoding_files import initialize_dir_and_streams, write_encoding
 from smtlib_utils import set_logic, check_sat
 import re
 from encoding_utils import generate_disasm_map, generate_costs_ordered_dict, generate_stack_theta, generate_instr_map, \
-    generate_uninterpreted_theta, generate_uninterpreted_push_map
+    generate_uninterpreted_theta, generate_uninterpreted_push_map, generate_instr_for_push
 import copy
 
 def parse_data(json_path, var_initial_idx=0, with_simplifications=True):
@@ -146,7 +146,9 @@ def execute_syrup_backend_combined(sfs_dict, instr_sequence_dict, contract_name,
 # one for the conversion of an opcode id to the corresponding theta value, other for the disasm associated
 # to the theta value, another for the bytecode associated to the theta value, and finally, the cost of each
 # opcode associated to a theta value.
-def generate_theta_dict_from_sequence(bs, usr_instr):
+def generate_theta_dict_from_sequence(bs, usr_instr, final_stack, variables):
+    initial_idx = max(map(lambda x: int(re.search('\d+', x).group()), variables)) + 1
+    usr_instr, final_stack = generate_instr_for_push(usr_instr, final_stack, initial_idx)
     theta_stack = generate_stack_theta(bs)
     theta_comm, theta_non_comm, theta_mem = generate_uninterpreted_theta(usr_instr, len(theta_stack))
     theta_dict = dict(theta_stack, **theta_comm, **theta_non_comm, **theta_mem)

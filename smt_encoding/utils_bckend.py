@@ -59,3 +59,9 @@ def compute_final_stack_from_solution(initial_stack, user_instr, instr_seq):
                 final_stack.insert(0, current_instr['outpt_sk'][0])
     return final_stack
 
+def number_encoding_size(number):
+    i = 0
+    while number != 0:
+        i += 1
+        number = number >> 8
+    return i

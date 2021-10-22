@@ -40,7 +40,7 @@ def initialize_variables(variables, bs, b0, theta_mem, initial_idx=0):
     _initialize_u_vars(bs, b0, initial_idx)
     _initialize_x_vars(bs, b0, initial_idx)
     _initialize_t_vars(b0, initial_idx)
-    _initialize_a_vars(b0, initial_idx)
+    # _initialize_a_vars(b0, initial_idx)
     _initialize_l_vars(theta_mem)
 
 

@@ -1,53 +1,70 @@
 #!/usr/bin/env python3
 import os
 import sys
-sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))) + global_params)
 import glob
-import pathlib
-import pandas as pd
-import subprocess
-import shlex
-import resource
-from global_params.paths import project_path
-from sfs_generator.parser_asm import parse_asm
-from sfs_generator.utils import compute_number_of_instructions_in_asm_json_per_file
+from paths import project_path
+from parser_asm import parse_asm
 
-parent_directory = project_path + "/experiments/jsons_solc_noyul"
-final_directory = project_path + "/results_noyul/"
+parent_directory = project_path + "/experiments/jsons-solc"
 
-def run_command(cmd):
-    FNULL = open(os.devnull, 'w')
-    solc_p = subprocess.Popen(shlex.split(cmd), stdout=subprocess.PIPE,
-                              stderr=FNULL)
-    return solc_p.communicate()[0].decode()
+def number_encoding_size(number):
+    i = 0
+    while number != 0:
+        i += 1
+        number = number >> 8
+    return i
+
+def bytes_required(asm_bytecode, address_length = 4):
+    op_name = asm_bytecode.getDisasm()
+    if not op_name.startswith("PUSH") or op_name == "tag":
+        return 1
+    elif op_name == "PUSH":
+        return 1 + max(1, number_encoding_size(int(asm_bytecode.getValue(), 16)))
+    elif op_name == "PUSH #[$]" or op_name == "PUSHSIZE":
+        return 1 + 4
+    elif op_name == "PUSH [tag]" or op_name == "PUSH data" or op_name == "PUSH [$]":
+        return 1 + address_length
+    elif op_name == "PUSHLIB" or op_name == "PUSHDEPLOYADDRESS":
+        return 1 + 20
+    elif op_name == "PUSHIMMUTABLE":
+        return 1 + 32
+    elif op_name == "ASSIGNIMMUTABLE":
+        # Number of PushImmutable's with the same hash. Assume 1 (?)
+        m_immutableOccurrences = 1
+        return 1 + (3 + 32) * m_immutableOccurrences
+    else:
+        raise ValueError("Opcode not recognized")
 
 
-def run_and_measure_command(cmd):
-    usage_start = resource.getrusage(resource.RUSAGE_CHILDREN)
-    solution = run_command(cmd)
-    usage_stop = resource.getrusage(resource.RUSAGE_CHILDREN)
-    return solution, usage_stop.ru_utime + usage_stop.ru_stime - usage_start.ru_utime - usage_start.ru_stime
+def compute_bytecode_size_in_asm_json_per_block(asm_block):
+    return sum([bytes_required(asm_bytecode) for asm_bytecode in asm_block.getInstructions()])
+
+
+# Computes the size of the bytecode given an ASM json object
+def compute_bytecode_size_in_asm_json_per_contract(asm_json):
+    contract_counter_dict = {}
+    for c in asm_json.getContracts():
+        bytecode_size = 0
+        contract_name = (c.getContractName().split("/")[-1]).split(":")[-1]
+
+        for identifier in c.getDataIds():
+            blocks = c.getRunCodeOf(identifier)
+            for block in blocks:
+                bytecode_size += compute_bytecode_size_in_asm_json_per_block(block)
+        contract_counter_dict[contract_name] = bytecode_size
+    return contract_counter_dict
+
+
+# Computes the number of bytecodes given an ASM json object
+def compute_bytecode_size_in_asm_json_per_file(asm_json):
+    contract_counter_dict = compute_bytecode_size_in_asm_json_per_contract(asm_json)
+    return sum(contract_counter_dict.values())
 
 if __name__ == "__main__":
-
-    pathlib.Path(final_directory).mkdir(parents=True, exist_ok=True)
-
-    row_list = []
+    sol = 0
     for asm_json in glob.glob(parent_directory + "/*.json_solc"):
         contract_name = asm_json.split("/")[-1].rstrip(".json_solc")
-        csv_row = {'name': contract_name}
-        try:
-            old_asm = parse_asm(asm_json)
-            new_asm = parse_asm(contract_name + "_optimized.json_solc")
-            csv_row['old_size'] = compute_number_of_instructions_in_asm_json_per_file(old_asm)
-            csv_row['new_size'] = compute_number_of_instructions_in_asm_json_per_file(new_asm)
-            csv_row['size_relation'] = round( 100*(1 - csv_row['new_size'] / csv_row['old_size']), 3)
-            csv_row['correct'] = True
-        except:
-            csv_row['correct'] = False
-
-        row_list.append(csv_row)
-    df = pd.DataFrame(row_list, columns=['name', 'old_size', 'new_size', 'size_relation', 'correct'])
-
-    csv_file = final_directory + "size_comparison_only_size.csv"
-    df.to_csv(csv_file)
+        old_asm = parse_asm(asm_json)
+        sol += compute_bytecode_size_in_asm_json_per_contract(old_asm)
+    print(sol)

@@ -165,11 +165,13 @@ def total_bytes(instructions_disasm):
     instructions = list(filter(lambda x: x != '', instructions_disasm.split(' ')))
     i, bytes = 0, 0
     while i < len(instructions):
-        if instructions[i] == "PUSH":
-            bytes += bytes_required("PUSH", instructions[i+1])
+        if re.match(re.compile("PUSH([0-9]+)"), instructions[i]):
+
+            bytes += int(instructions[i].lstrip("PUSH")) + 1
             i += 2
         elif instructions[i].startswith("PUSH") and not instructions[i].startswith("PUSHDEPLOYADDRESS") \
                     and not instructions[i].startswith("PUSHSIZE"):
+
             bytes += bytes_required(instructions[i], None)
             i += 2
         else:
@@ -314,8 +316,9 @@ if __name__=="__main__":
                 file_results['original_instrs'] = original_instrs
                 file_results['original_bytes'] = sum([bytes_required_initial(instr) for instr in original_instrs])
                 initial_stack = data['src_ws']
+                variables = data['vars']
 
-            if init_program_length > 200:
+            if init_program_length > 40:
                 file_results['no_model_found'] = True
                 file_results['shown_optimal'] = False
                 file_results['solver_time_in_sec'] = 10 * ( 1 + sum([1 if instr['storage'] else 0 for instr in user_instr]))
@@ -356,7 +359,7 @@ if __name__=="__main__":
                 with open(solver_output_file, 'w') as f:
                     f.write(solution)
 
-                generate_disasm_sol(contract_name, block_id, bs, user_instr, solution)
+                generate_disasm_sol(contract_name, block_id, bs, user_instr, solution, variables, final_stack)
                 instruction_final_solution = solutions_path + contract_name + "/disasm/" + block_id + "_optimized.disasm_opt"
                 gas_final_solution = solutions_path + contract_name + "/total_gas/" + block_id + "_real_gas.txt"
 

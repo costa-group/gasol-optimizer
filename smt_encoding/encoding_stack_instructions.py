@@ -48,7 +48,7 @@ def _stack_constraints(b0, bs, theta, initial_idx=0):
     write_encoding("; Stack contraints")
     _fromnop_encoding(b0, theta["NOP"], initial_idx)
     for j in range(initial_idx, b0 + initial_idx):
-        _push_encoding(j, bs, theta["PUSH"])
+        # _push_encoding(j, bs, theta["PUSH"])
         _pop_encoding(j, bs, theta["POP"])
         _nop_encoding(j, bs, theta["NOP"])
 
