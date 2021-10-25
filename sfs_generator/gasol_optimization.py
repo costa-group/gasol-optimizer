@@ -1655,7 +1655,6 @@ def generate_storage_info(instructions,source_stack):
     print(memdep)
 
 
-    print("CLAUSURA")
     s1= compute_clousure(stdep)
     m1 = compute_clousure(memdep)
 
@@ -3234,24 +3233,24 @@ def smt_translate_block(rule,file_name,name,preffix,simplification=True,storage 
             for s in subblocks:
                 o = list(filter(lambda x:x.find("nop(")!=-1,s))
 
-            if split_sto:
-                stores_pos = []
-            else:
-                stores_pos = compute_position_stores(o)
+                if split_sto:
+                    stores_pos = []
+                else:
+                    stores_pos = compute_position_stores(o)
                 
-            if len(o)> max_bound and stores_pos !=[]:
+                if len(o)> max_bound and stores_pos !=[]:
                     # print("ES MAYOOR")
                     # print(o)
                     # print(len(o))
-                where2split = split_by_numbers(stores_pos)
-                if where2split == []:
-                    end_subblocks.append(s)
+                    where2split = split_by_numbers(stores_pos)
+                    if where2split == []:
+                        end_subblocks.append(s)
+                    else:
+                        subblocks_aux = split_blocks_by_number(s,where2split)
+                        # print(subblocks_aux)
+                        end_subblocks+=subblocks_aux
                 else:
-                    subblocks_aux = split_blocks_by_number(s,where2split)
-                    # print(subblocks_aux)
-                    end_subblocks+=subblocks_aux
-            else:
-                end_subblocks.append(s)
+                    end_subblocks.append(s)
             subblocks = end_subblocks
             # print("FINAL")
             # print(subblocks)
@@ -4876,22 +4875,15 @@ def generate_dependences(storage_location, location):
 
 def simplify_dependencies(dep):
     new_dep = list(dep)
-    print("HOLA DEP")
     for d in dep:
         second = d[1]
-        print(second)
         pre = list(filter(lambda x: x[1] == second, dep))
         post = list(filter(lambda x: x[0] == second, dep))
-        print(pre)
-        print(post)
         for i in pre:
             for j in post:
-                print(i[0],j[1])
-                print((i[0],j[1]) in new_dep)
                 if (i[0],j[1]) in new_dep:
                     pos = new_dep.index((i[0],j[1]))
                     new_dep.pop(pos)
-        print("*/*/*/**/**/*/*/*/*/*")
 
     return new_dep
 def update_variables_loads(elem1, elem2, storage_location):
