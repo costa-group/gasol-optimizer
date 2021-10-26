@@ -58,12 +58,8 @@ def modifiable_path_files_init():
     parser.add_argument("-storage", "--storage", help="Split using SSTORE, MSTORE and MSTORE8", action="store_true")
     parser.add_argument("-bytecode-size-soft-constraints", dest='bytecode_size_soft_constraints', action='store_true',
                     help="")
-    parser.add_argument("-memory-encoding-conflicting", dest='memory_encoding_conflicting', action='store_true',
-                        help="")
-    parser.add_argument("-memory-encoding-store", dest='memory_encoding_store', action='store_true',
-                        help="")
-    parser.add_argument("-complex-bytecode-size-soft-constraints", dest='complex_bytecode_size_soft_constraints', action='store_true',
-                        help="")
+    parser.add_argument("-memory-encoding", help="Choose the memory encoding model", choices = ["l_vars","direct"], default="l_vars")
+
 
     global args
     args = parser.parse_args()

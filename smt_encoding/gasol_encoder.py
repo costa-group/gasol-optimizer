@@ -74,13 +74,11 @@ def initialize_flags_and_additional_info(args_i, current_cost, instr_seq, previo
              'default-encoding': args_i_dict.get('default_encoding', False),
              'number-instruction-gas-model': args_i_dict.get('number_instruction_gas_model',False),
              'bytecode-size-soft-constraints': args_i_dict.get('bytecode_size_soft_constraints', False),
-             'memory-encoding-conflicting': args_i_dict.get('memory_encoding_conflicting',False),
-             'memory-encoding-store': args_i_dict.get('memory_encoding_store',False),
              'complex-bytecode-size-soft-constraints' : args_i_dict.get('complex_bytecode_size_soft_constraints',False)}
 
     additional_info = {'tout': args_i_dict.get('tout', 10), 'solver': args_i_dict.get('solver', "oms"),
-                       'current_cost': current_cost, 'instr_seq': instr_seq,
-                       'previous_solution': previous_solution_dict, 'mem_order': mem_order}
+                       'current_cost': current_cost, 'instr_seq': instr_seq, 'previous_solution': previous_solution_dict,
+                       'mem_order': mem_order, 'memory_encoding': args_i_dict.get('memory_encoding', "l_vars")}
     return flags, additional_info
 
 
@@ -190,18 +188,17 @@ if __name__ == "__main__":
                     help="Check final stack when executing a solution matches the expected solution")
     ap.add_argument("-bytecode-size-soft-constraints", dest='bytecode_size_soft_constraints', action='store_true',
                         help="")
-    ap.add_argument("-memory-encoding-conflicting", dest='memory_encoding_conflicting', action='store_true',
-                        help="")
-    ap.add_argument("-memory-encoding-store", dest='memory_encoding_store', action='store_true',
-                        help="")
     ap.add_argument("-complex-bytecode-size-soft-constraints", dest='complex_bytecode_size_soft_constraints', action='store_true',
                         help="")
+    ap.add_argument("-memory-encoding", help="Choose the memory encoding model", choices = ["l_vars","direct"], default="l_vars")
+
 
     args = vars(ap.parse_args())
 
     json_path = args['json_path']
     solver = args['solver']
     timeout = args['tout']
+    memory_model = args['memory_encoding']
 
     b0, bs, user_instr, variables, initial_stack, final_stack, current_cost, instr_seq, mem_order = parse_data(json_path, 0, True)
 
@@ -232,7 +229,7 @@ if __name__ == "__main__":
         with open(args['log_path'], 'r') as log_path:
             log_dict = json.load(log_path)
     additional_info = {'tout': args['tout'], 'solver': solver, 'current_cost': current_cost, 'instr_seq': instr_seq,
-                       'previous_solution': log_dict, 'mem_order': mem_order}
+                       'previous_solution': log_dict, 'mem_order': mem_order, 'memory_encoding': memory_model}
     es = initialize_dir_and_streams(solver, json_path)
 
     generate_smtlib_encoding(b0, bs, user_instr, variables, initial_stack, final_stack, flags, additional_info)

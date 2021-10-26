@@ -1,6 +1,6 @@
 from encoding_utils import *
 from encoding_files import write_encoding
-from encoding_memory_instructions import _store_store_order_constraint, _mem_variable_equivalence_constraint
+from encoding_memory_instructions import _l_variable_order_constraint, _mem_variable_equivalence_constraint
 
 # Aditional contraints
 
@@ -77,7 +77,7 @@ def restrain_instruction_order(b0, dependency_graph, first_position_instr_appear
 
         for previous_instr_name, aj in previous_instrs:
             if previous_instr_name in theta_conflicting and instr in theta_conflicting :
-                _store_store_order_constraint(theta_conflicting[previous_instr_name], theta_conflicting[instr])
+                _l_variable_order_constraint(theta_conflicting[previous_instr_name], theta_conflicting[instr])
                 continue
 
         # Previous values stores possible values previous instructions may have, represented
