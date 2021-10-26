@@ -116,9 +116,11 @@ def generate_instruction_dicts(b0, user_instr, final_stack, flags, order_tuples)
 
 
 # Determines how to encode the memory depending on the flags
-def generate_memory_constraints(memory_encoding, b0, theta_dict, theta_mem, order_tuples, first_position_instr_appears_dict,
+def generate_memory_constraints(flags, memory_encoding, b0, theta_dict, theta_mem, order_tuples, first_position_instr_appears_dict,
                                    first_position_instr_cannot_appear_dict):
-    if memory_encoding == "l_vars":
+    # If instruction-order flag is enabled, memory constraints are considered as part of the encoding of uninterpreted functions
+    # so it is not needed to encode at this point
+    if memory_encoding == "l_vars" and not flags['instruction-order']:
         memory_model_constraints_l_conflicting(b0, order_tuples, theta_dict, theta_mem, first_position_instr_appears_dict,
                                    first_position_instr_cannot_appear_dict)
     else:
@@ -127,10 +129,22 @@ def generate_memory_constraints(memory_encoding, b0, theta_dict, theta_mem, orde
 
 
 # Determine which l variables must be initialized depending on the memory encoding
-def generate_l_theta_dict(memory_encoding, theta_dict, user_instr):
+def generate_l_theta_dict(flags, memory_encoding, theta_dict, user_instr, order_tuples):
     if memory_encoding == "l_vars":
-        return dict((map(lambda instr: (instr['id'], theta_dict[instr['id']]),
-                         filter(lambda instr: len(instr['inpt_sk']) > 0, user_instr))))
+        # First case: if instruction-order flag is enabled then all uninterpreted functions without input parameters
+        # are considered for l variables
+        if flags['instruction-order']:
+            return dict((map(lambda instr: (instr['id'], theta_dict[instr['id']]),
+                             filter(lambda instr: len(instr['inpt_sk']) > 0, user_instr))))
+
+        # Otherwise, only conflicting memory instructions are considered
+        else:
+            conflicting_instructions_ids = set()
+            for pair in order_tuples:
+                conflicting_instructions_ids.add(pair[0])
+                conflicting_instructions_ids.add(pair[1])
+            return dict((map(lambda instr: (instr['id'], theta_dict[instr['id']]),
+                             filter(lambda instr: instr['id'] in conflicting_instructions_ids , user_instr))))
     # No l variables are used, then return an empty dict
     else:
         return dict()
@@ -153,7 +167,7 @@ def generate_smtlib_encoding(b0, bs, usr_instr, variables, initial_stack, final_
     current_cost = additional_info['current_cost']
     instr_seq = additional_info['instr_seq']
     order_tuples = additional_info['mem_order']
-    memory_encoding_model = additional_info['memory_encoding']
+    memory_encoding = additional_info['memory_encoding']
 
     theta_stack = generate_stack_theta(bs)
     theta_comm, theta_non_comm, theta_mem = generate_uninterpreted_theta(usr_instr, len(theta_stack))
@@ -161,7 +175,7 @@ def generate_smtlib_encoding(b0, bs, usr_instr, variables, initial_stack, final_
     dependency_graph, first_position_instr_appears_dict, first_position_instr_cannot_appear_dict = \
         generate_instruction_dicts(b0, usr_instr, final_stack, flags, order_tuples)
     theta_dict = dict(theta_stack, **theta_comm, **theta_non_comm, **theta_mem)
-    l_theta_dict = generate_l_theta_dict(memory_encoding_model, theta_dict, usr_instr)
+    l_theta_dict = generate_l_theta_dict(flags, memory_encoding, theta_dict, usr_instr, order_tuples)
     additional_info['tout'] = additional_info['tout'] * (len(theta_mem) + 1)
 
     # Before generating the encoding, we activate the default encoding if its corresponding flag is activated
@@ -178,6 +192,8 @@ def generate_smtlib_encoding(b0, bs, usr_instr, variables, initial_stack, final_
 
     initial_stack_encoding(initial_stack, bs)
     final_stack_encoding(final_stack, bs, b0)
+    generate_memory_constraints(flags, memory_encoding, b0, theta_dict, theta_mem, order_tuples, first_position_instr_appears_dict,
+                                first_position_instr_cannot_appear_dict)
     generate_redundant_constraints(flags, b0, usr_instr, theta_stack, theta_comm, theta_non_comm, final_stack,
                                    dependency_graph, first_position_instr_appears_dict,
                                    first_position_instr_cannot_appear_dict, theta_dict, theta_mem, l_theta_dict)
@@ -202,6 +218,7 @@ def generate_smtlib_encoding(b0, bs, usr_instr, variables, initial_stack, final_
     write_encoding("; Comm: " + str(theta_comm))
     write_encoding("; Non-Comm: " + str(theta_non_comm))
     write_encoding("; Mem: " + str(theta_mem))
+    write_encoding("; L dict: " + str(l_theta_dict))
 
     write_instruction_map(generate_instr_map(usr_instr, theta_stack, theta_comm, theta_non_comm, theta_mem))
     write_opcode_map(generate_disasm_map(usr_instr, theta_dict))

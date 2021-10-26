@@ -15,15 +15,9 @@ def _l_variable_order_constraint(theta_uninterpreted_1, theta_uninterpreted_2):
 
 
 # Given two conflicting instructions, returns a general constraint that avoids an incorrect order between them
-def _direct_order_constraint(j, theta_conflicting1, theta_conflicting2, initial_idx, final_idx):
-    idx_for_and = max(j+1, initial_idx)
-
-    if idx_for_and >= final_idx:
-        print(initial_idx, final_idx, j+1)
-        return
-
+def _direct_order_constraint(j, theta_conflicting1, theta_conflicting2, final_idx):
     left_term = add_eq(t(j), theta_conflicting2)
-    right_term = add_and([add_not(add_eq(t(i), theta_conflicting1)) for i in range(j+1, final_idx)])
+    right_term = add_and(*[add_not(add_eq(t(i), theta_conflicting1)) for i in range(j+1, final_idx)])
     write_encoding(add_assert(add_implies(left_term, right_term)))
 
 
@@ -62,9 +56,8 @@ def memory_model_constraints_direct(b0, order_tuples, theta_dict, first_position
         initial_possible_idx_el1 = first_position_instr_appears_dict.get(el1, 0) + initial_idx
         final_possible_idx_el1 = first_position_instr_cannot_appear_dict.get(el1, b0) + initial_idx
 
-        initial_possible_idx_el2 = first_position_instr_appears_dict.get(el1, 0) + initial_idx
         final_possible_idx_el2 = first_position_instr_cannot_appear_dict.get(el1, b0) + initial_idx
 
 
         for j in range(initial_possible_idx_el1, final_possible_idx_el1):
-            _direct_order_constraint(j, theta_val_1, theta_val_2, initial_possible_idx_el2, final_possible_idx_el2)
+            _direct_order_constraint(j, theta_val_1, theta_val_2, final_possible_idx_el2)
