@@ -75,58 +75,71 @@ def restrain_instruction_order(b0, dependency_graph, first_position_instr_appear
         if not previous_instrs:
             continue
 
+        # Previous values stores possible values previous instructions may have for functions without l, represented
+        # as tj = theta_instr. It will be a dict where keys are the instruction id and values are a list
+        # of equalities of the form tj= theta_instr
+        # previous_values = dict()
+
+        # Instructions that have no l associated and thus, need to be considered for non-l constraints
+        # instructions_without_l = []
+
         for previous_instr_name, aj in previous_instrs:
+
+            # At this step, we only consider instructions related with l variables associated. The remaining ones
+            # are PUSH or similar instructions
             if previous_instr_name in theta_conflicting and instr in theta_conflicting :
                 _l_variable_order_constraint(theta_conflicting[previous_instr_name], theta_conflicting[instr])
                 continue
 
-        # Previous values stores possible values previous instructions may have, represented
-        # as tj = theta_instr. It will be a dict where keys are the instruction id and values are a list
-        # of equalities of the form tj= theta_instr
-        previous_values = {}
-        for previous_instr_name, aj in previous_instrs:
-
-            # If previous instruction doesn't appear in previous_values, we initialize to empty list
-            if previous_instr_name not in previous_values:
-                previous_values[previous_instr_name] = []
-
-            # We add a clause for each possible position in which previous equation may appear before current one.
-            # This means that we have to take the min between current position or last position previous instruction
-            # could occur.
-            for previous_position in range(first_position_instr_appears_dict.get(previous_instr_name,0),
-                                           min(first_position_instr_appears_dict.get(instr,0),
-                                               first_position_instr_cannot_appear_dict.get(previous_instr_name, b0))):
-                # If aj == -1, then we don't need to consider to assign aj
-                if aj == -1:
-                    previous_values[previous_instr_name].append(add_eq(t(previous_position), theta_dict[previous_instr_name]))
-                else:
-                    previous_values[previous_instr_name].append(add_and(add_eq(t(previous_position), theta_dict[previous_instr_name]),
-                                                   add_eq(a(previous_position), aj)))
-
-        # We add a clause for every position the instruction may appear.
-        for position in range(first_position_instr_appears_dict.get(instr,0), first_position_instr_cannot_appear_dict.get(instr, b0)):
-
-            # If current instruction is chosen for position j, then previous instructions must be places in previous
-            # positions. This means that (tj = theta) => and_{instr in prev_instr}
-            # (or_{i in possible_positions}(ti = instr))
-            or_instr = [add_or(*possible_equalities) for possible_equalities in previous_values.values()]
-            write_encoding(add_assert(add_implies(add_eq(t(position), theta_dict[instr]), add_and(*or_instr))))
-
-            # We update previous values list to add the possibility that previous instructions could be
-            # executed in current position
-            for previous_instr_name, aj in previous_instrs:
-
-                # If first position an instruction cannot appear is less or equal than current position, then
-                # we don't need to consider adding it to current clause
-                if first_position_instr_cannot_appear_dict.get(previous_instr_name, b0) <= position:
-                    continue
-
-                # If aj == -1, then we don't need to consider to assign aj
-                if aj == -1:
-                    previous_values[previous_instr_name].append(add_eq(t(position), theta_dict[previous_instr_name]))
-                else:
-                    previous_values[previous_instr_name].append(add_and(add_eq(t(position), theta_dict[previous_instr_name]),
-                                                   add_eq(a(position), aj)))
+        #     # If previous instruction doesn't appear in previous_values, we initialize to empty list
+        #     if previous_instr_name not in previous_values:
+        #         previous_values[previous_instr_name] = []
+        #
+        #         # Only add those instructions that do not respect the condition before
+        #         instructions_without_l.append([previous_instr_name, aj])
+        #
+        #     # We add a clause for each possible position in which previous equation may appear before current one.
+        #     # This means that we have to take the min between current position or last position previous instruction
+        #     # could occur.
+        #     for previous_position in range(first_position_instr_appears_dict.get(previous_instr_name,0),
+        #                                    min(first_position_instr_appears_dict.get(instr,0),
+        #                                        first_position_instr_cannot_appear_dict.get(previous_instr_name, b0))):
+        #         # If aj == -1, then we don't need to consider to assign aj
+        #         if aj == -1:
+        #             previous_values[previous_instr_name].append(add_eq(t(previous_position), theta_dict[previous_instr_name]))
+        #         else:
+        #             previous_values[previous_instr_name].append(add_and(add_eq(t(previous_position), theta_dict[previous_instr_name]),
+        #                                            add_eq(a(previous_position), aj)))
+        #
+        # continue
+        # # If no variable without l has appeared, then we simply ignore the encoding
+        # if not instructions_without_l:
+        #     continue
+        #
+        # # We add a clause for every position the instruction may appear.
+        # for position in range(first_position_instr_appears_dict.get(instr,0), first_position_instr_cannot_appear_dict.get(instr, b0)):
+        #
+        #     # If current instruction is chosen for position j, then previous instructions must be places in previous
+        #     # positions. This means that (tj = theta) => and_{instr in prev_instr}
+        #     # (or_{i in possible_positions}(ti = instr))
+        #     or_instr = [add_or(*possible_equalities) for possible_equalities in previous_values.values()]
+        #     write_encoding(add_assert(add_implies(add_eq(t(position), theta_dict[instr]), add_and(*or_instr))))
+        #
+        #     # We update previous values list to add the possibility that previous instructions could be
+        #     # executed in current position
+        #     for previous_instr_name, aj in instructions_without_l:
+        #
+        #         # If first position an instruction cannot appear is less or equal than current position, then
+        #         # we don't need to consider adding it to current clause
+        #         if first_position_instr_cannot_appear_dict.get(previous_instr_name, b0) <= position:
+        #             continue
+        #
+        #         # If aj == -1, then we don't need to consider to assign aj
+        #         if aj == -1:
+        #             previous_values[previous_instr_name].append(add_eq(t(position), theta_dict[previous_instr_name]))
+        #         else:
+        #             previous_values[previous_instr_name].append(add_and(add_eq(t(position), theta_dict[previous_instr_name]),
+        #                                            add_eq(a(position), aj)))
 
 # Each uninterpreted function is used at least once
 def each_instruction_is_used_at_least_once_with_instruction_order(b0, theta_dict, first_position_instr_appears_dict,
