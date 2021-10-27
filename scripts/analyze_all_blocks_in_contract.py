@@ -24,9 +24,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))+"/s
 from disasm_generation import generate_disasm_sol
 import ir_block
 from gasol_optimization import get_sfs_dict
-import traceback
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-from gasol_asm import preprocess_instructions_plain_text, compute_original_sfs_with_simplifications
+from gasol_asm import preprocess_instructions_plain_text
 
 
 
@@ -159,8 +158,9 @@ def bytes_required_initial(op_name, address_length = 4):
 
 def total_bytes(instructions_disasm):
     instructions = list(filter(lambda x: x != '', instructions_disasm.split(' ')))
-    i, bytes = 0, 0
+    i, bytes, j = 0, 0, 0
     while i < len(instructions):
+        j += 1
         if instructions[i] == "PUSH":
             bytes += bytes_required("PUSH", instructions[i+1])
             i += 2
@@ -171,7 +171,7 @@ def total_bytes(instructions_disasm):
         else:
             bytes += bytes_required(instructions[i], None)
             i += 1
-    return bytes
+    return bytes, j
 
 
 def init():
@@ -311,6 +311,7 @@ if __name__=="__main__":
                 file_results['original_bytes'] = sum([bytes_required_initial(instr) for instr in original_instrs])
                 initial_stack = data['src_ws']
 
+            # When init_progr_length > 40, we assume a timeout is produced
             if init_program_length > 40:
                 file_results['no_model_found'] = True
                 file_results['shown_optimal'] = False
@@ -359,11 +360,9 @@ if __name__=="__main__":
                 with open(instruction_final_solution, 'r') as f:
                     instructions_disasm = f.read()
                     file_results['target_disasm'] = instructions_disasm
-                    file_results['bytes_required'] = total_bytes(instructions_disasm)
-                    file_results['saved_bytes'] = file_results['original_bytes'] - total_bytes(instructions_disasm)
-                    # Check all those strings that are not numbers
-                    number_of_instructions = len(list(filter(lambda elem: not elem.isnumeric() and elem != '',
-                                                             instructions_disasm.split(' '))))
+                    number_bytes, number_of_instructions = total_bytes(instructions_disasm)
+                    file_results['bytes_required'] = number_bytes
+                    file_results['saved_bytes'] = file_results['original_bytes'] - number_bytes
                     file_results['final_progr_len'] = number_of_instructions
 
                     # Generate the disasm_blk file, including the size of the initial stack in the first
