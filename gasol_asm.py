@@ -168,8 +168,8 @@ def optimize_block(sfs_dict, timeout):
         current_cost = sfs_block['current_cost']
         current_size = sfs_block['max_progr_len']
         user_instr = sfs_block['user_instrs']
-
-        execute_syrup_backend(None, sfs_block, block_name=block_name, timeout=timeout)
+        if args.backend:
+            execute_syrup_backend(None, sfs_block, block_name=block_name, timeout=timeout)
 
         # At this point, solution is a string that contains the output directly
         # from the solver
@@ -509,17 +509,20 @@ def optimize_asm_block_asm_format(block, contract_name, timeout, storage, last_c
 
         _, instruction_theta_dict, opcodes_theta_dict, gas_theta_dict, values_dict = generate_theta_dict_from_sequence(bs, user_instr)
 
-        instruction_output, _, pushed_output, optimized_cost = \
-            generate_info_from_solution(solver_output, opcodes_theta_dict, instruction_theta_dict,
+
+        if args.backend:
+        
+            instruction_output, _, pushed_output, optimized_cost = \
+                generate_info_from_solution(solver_output, opcodes_theta_dict, instruction_theta_dict,
                                         gas_theta_dict, values_dict)
 
-        if current_cost > optimized_cost:
-            new_sub_block = generate_sub_block_asm_representation_from_output(solver_output, opcodes_theta_dict, instruction_theta_dict,
+            if current_cost > optimized_cost:
+                new_sub_block = generate_sub_block_asm_representation_from_output(solver_output, opcodes_theta_dict, instruction_theta_dict,
                                                               gas_theta_dict, values_dict)
-            optimized_blocks[block_name] = new_sub_block
-            log_dicts[contract_name + '_' + block_name] = generate_solution_dict(solver_output)
-        else:
-            optimized_blocks[block_name] = None
+                optimized_blocks[block_name] = new_sub_block
+                log_dicts[contract_name + '_' + block_name] = generate_solution_dict(solver_output)
+            else:
+                optimized_blocks[block_name] = None
 
     if is_init_block:
         block_name = "initial_block" + str(block_id)
@@ -543,36 +546,36 @@ def optimize_asm_block_asm_format(block, contract_name, timeout, storage, last_c
 
         optimized_blocks_list_with_intra_block_consideration = list(optimized_blocks.values())
 
-    # Case more than one sub blocks: several intermediate sub blocks may have been skipped.
-    # They can be identified from those sub blocks numbers that are not present in the sfs dict
-    else:
-        number_of_asm_sub_blocks = len(asm_sub_blocks)
+    # # Case more than one sub blocks: several intermediate sub blocks may have been skipped.
+    # # They can be identified from those sub blocks numbers that are not present in the sfs dict
+    # else:
+    #     number_of_asm_sub_blocks = len(asm_sub_blocks)
 
-        # If no key in the sfs dict contains i, it means that we have totally simplified that block and it didn't
-        # appear in the sfs. Thus, we need to add it to the corresponding key
-        # Note that sfs_dict keys are always of the form block_name_index, so we can obtain the generic name
-        if number_of_asm_sub_blocks != len(sfs_dict.keys()):
-            ids_in_dict = set(map(lambda x: int(x.replace(block_name + ".", '')), sfs_dict.keys()))
-            ids_not_in_dict = set(range(number_of_asm_sub_blocks)).difference(ids_in_dict)
-            for elem in ids_not_in_dict:
-                optimized_blocks[block_name + "." + str(elem)] = []
-                log_dicts[contract_name + '_' + block_name + "." + str(elem)] = []
+    #     # If no key in the sfs dict contains i, it means that we have totally simplified that block and it didn't
+    #     # appear in the sfs. Thus, we need to add it to the corresponding key
+    #     # Note that sfs_dict keys are always of the form block_name_index, so we can obtain the generic name
+    #     if number_of_asm_sub_blocks != len(sfs_dict.keys()):
+    #         ids_in_dict = set(map(lambda x: int(x.replace(block_name + ".", '')), sfs_dict.keys()))
+    #         ids_not_in_dict = set(range(number_of_asm_sub_blocks)).difference(ids_in_dict)
+    #         for elem in ids_not_in_dict:
+    #             optimized_blocks[block_name + "." + str(elem)] = []
+    #             log_dicts[contract_name + '_' + block_name + "." + str(elem)] = []
 
-        optimized_blocks_list = list(collections.OrderedDict(
-            sorted(optimized_blocks.items(), key=lambda kv: int((kv[0]).replace(block_name + ".", '')))).values())
+    #     optimized_blocks_list = list(collections.OrderedDict(
+    #         sorted(optimized_blocks.items(), key=lambda kv: int((kv[0]).replace(block_name + ".", '')))).values())
 
-        # We sort by block id and obtain the associated values in order
-        optimized_blocks_list_with_intra_block_consideration = \
-            filter_optimized_blocks_by_intra_block_optimization(asm_sub_blocks, optimized_blocks_list)
+    #     # We sort by block id and obtain the associated values in order
+    #     optimized_blocks_list_with_intra_block_consideration = \
+    #         filter_optimized_blocks_by_intra_block_optimization(asm_sub_blocks, optimized_blocks_list)
 
-        # If a sub block was optimized but finally we have to skip that optimization, we have to remove the corresponding
-        # sub block information from the log dict. These sub blocks correspond to those that appeared at the log dict
-        # but its corresponding block optimized in the list is not None
-        log_dicts = {k : v for k,v in log_dicts.items() if optimized_blocks_list_with_intra_block_consideration[int(k.split(".")[-1])] is not None}
+    #     # If a sub block was optimized but finally we have to skip that optimization, we have to remove the corresponding
+    #     # sub block information from the log dict. These sub blocks correspond to those that appeared at the log dict
+    #     # but its corresponding block optimized in the list is not None
+    #     log_dicts = {k : v for k,v in log_dicts.items() if optimized_blocks_list_with_intra_block_consideration[int(k.split(".")[-1])] is not None}
 
 
-    new_block.set_instructions_from_sub_blocks(optimized_blocks_list_with_intra_block_consideration)
-    new_block.compute_stack_size()
+    # new_block.set_instructions_from_sub_blocks(optimized_blocks_list_with_intra_block_consideration)
+    # new_block.compute_stack_size()
 
     return new_block, log_dicts
 
@@ -694,7 +697,7 @@ if __name__ == '__main__':
 
     init()
     clean_dir()
-    ap = argparse.ArgumentParser(description='Backend of GASOL tool')
+    ap = argparse.ArgumentParser(description='GASOL tool')
     ap.add_argument('input_path', help='Path to input file that contains the asm')
     ap.add_argument("-bl", "--block", help ="Enable analysis of a single asm block", action = "store_true")
     ap.add_argument("-tout", metavar='timeout', action='store', type=int,
@@ -709,6 +712,7 @@ if __name__ == '__main__':
     ap.add_argument("-mem40", "--mem40", help="It assumes that pos 64 in memory is not dependant with variables", action = "store_true")
     ap.add_argument("-size","--size",help="It enables size cost model. The simplification rules are applied only if they improve the size",action="store_true")
     ap.add_argument("-partition","--partition",help="It enables the partition in blocks of 24 instructions",action="store_true")
+    ap.add_argument("-backend","--backend",help="Enables backend",action="store_true")
     args = ap.parse_args()
 
 
