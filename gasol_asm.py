@@ -171,10 +171,10 @@ def optimize_block(sfs_dict, timeout):
         if args.backend:
             execute_syrup_backend(None, sfs_block, block_name=block_name, timeout=timeout)
 
-        # At this point, solution is a string that contains the output directly
-        # from the solver
-        solver_output = obtain_solver_output(block_name, "oms", timeout)
-        block_solutions.append((solver_output, block_name, current_cost, current_size, user_instr))
+            # At this point, solution is a string that contains the output directly
+            # from the solver
+            solver_output = obtain_solver_output(block_name, "oms", timeout)
+            block_solutions.append((solver_output, block_name, current_cost, current_size, user_instr))
 
     return block_solutions
 
@@ -509,20 +509,18 @@ def optimize_asm_block_asm_format(block, contract_name, timeout, storage, last_c
 
         _, instruction_theta_dict, opcodes_theta_dict, gas_theta_dict, values_dict = generate_theta_dict_from_sequence(bs, user_instr)
 
-
-        if args.backend:
         
-            instruction_output, _, pushed_output, optimized_cost = \
-                generate_info_from_solution(solver_output, opcodes_theta_dict, instruction_theta_dict,
+        instruction_output, _, pushed_output, optimized_cost = \
+            generate_info_from_solution(solver_output, opcodes_theta_dict, instruction_theta_dict,
                                         gas_theta_dict, values_dict)
 
-            if current_cost > optimized_cost:
-                new_sub_block = generate_sub_block_asm_representation_from_output(solver_output, opcodes_theta_dict, instruction_theta_dict,
+        if current_cost > optimized_cost:
+            new_sub_block = generate_sub_block_asm_representation_from_output(solver_output, opcodes_theta_dict, instruction_theta_dict,
                                                               gas_theta_dict, values_dict)
-                optimized_blocks[block_name] = new_sub_block
-                log_dicts[contract_name + '_' + block_name] = generate_solution_dict(solver_output)
-            else:
-                optimized_blocks[block_name] = None
+            optimized_blocks[block_name] = new_sub_block
+            log_dicts[contract_name + '_' + block_name] = generate_solution_dict(solver_output)
+        else:
+            optimized_blocks[block_name] = None
 
     if is_init_block:
         block_name = "initial_block" + str(block_id)
