@@ -120,9 +120,10 @@ def generate_memory_constraints(flags, memory_encoding, b0, theta_dict, theta_me
                                    first_position_instr_cannot_appear_dict):
     # If instruction-order flag is enabled, memory constraints are considered as part of the encoding of uninterpreted functions
     # so it is not needed to encode at this point
-    if memory_encoding == "l_vars" and not flags['instruction-order']:
-        memory_model_constraints_l_conflicting(b0, order_tuples, theta_dict, theta_mem, first_position_instr_appears_dict,
-                                   first_position_instr_cannot_appear_dict)
+    if memory_encoding == "l_vars":
+        if not flags['instruction-order']:
+            memory_model_constraints_l_conflicting(b0, order_tuples, theta_dict, theta_mem, first_position_instr_appears_dict,
+                                                   first_position_instr_cannot_appear_dict)
     else:
         memory_model_constraints_direct(b0, order_tuples, theta_dict, first_position_instr_appears_dict,
                                         first_position_instr_cannot_appear_dict)
