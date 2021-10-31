@@ -65,6 +65,10 @@ original_ins = []
 global max_l
 max_l = 0
 
+global size_flag
+size_flag = False
+
+
 def init_globals():
     
     global u_counter
@@ -138,9 +142,6 @@ def init_globals():
 
     global sto_delete_pos
     sto_delete_pos = []
-
-    global size_flag
-    size_flag = False
 
 def filter_opcodes(rule):
     instructions = rule.get_instructions()
