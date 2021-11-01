@@ -28,5 +28,4 @@ if __name__ == "__main__":
         old_asm = parse_asm(asm_json)
         total_size += compute_bytecode_size_in_asm_json_per_file(old_asm)
 
-    print(total_size)
     exit(total_size)

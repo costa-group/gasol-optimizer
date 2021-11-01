@@ -288,13 +288,17 @@ if __name__=="__main__":
         if csv_file in already_analyzed_contracts:
             continue
 
-        for file in glob.glob(contract_path + "/*.json"):
+        for file in glob.glob(contract_path + "/jsons/*.json"):
             with open(results_dir + "report.txt", 'w') as f:
                 f.write("Last analyzed file: " + file)
 
             file_results = dict()
             block_id = file.split('/')[-1].rstrip(".json")
             file_results['block_id'] = block_id
+
+            print("Optimizing block " + block_id + "...")
+            print("")
+
             with open(file) as path:
                 data = json.load(path)
                 source_gas_cost = data['current_cost']
@@ -377,25 +381,11 @@ if __name__=="__main__":
                     # It cannot be negative
                     file_results['saved_gas'] = file_results['source_gas_cost'] - int(file_results['real_gas'])
 
-                opcodes = preprocess_instructions_plain_text(instructions_disasm)
-
-                stack_size = compute_stack_size(opcodes)
-
-                block_data = {"instructions": opcodes, "input": stack_size}
-                exit_code = ir_block.evm2rbr_compiler(file_name=contract_name, contract_name=contract_name, block=block_data,
-                                                      block_id=block_id,
-                                                      preffix="", simplification=True, storage=args.storage)
-
-                sfs_dict = get_sfs_dict()
-                data2 = sfs_dict["syrup_contract"]["block" + block_id]
-                file_results['result_is_correct'] = are_equals(data, data2)
-
             rows_list.append(file_results)
 
         df = pd.DataFrame(rows_list, columns=['block_id', 'target_gas_cost', 'real_gas',
                                               'shown_optimal', 'no_model_found', 'source_gas_cost', 'saved_gas',
                                               'solver_time_in_sec', 'target_disasm', 'init_progr_len',
                                               'final_progr_len', 'number_of_necessary_uninterpreted_instructions',
-                                              'number_of_necessary_push', 'bytes_required', 'result_is_correct',
-                                              'original_instrs', 'original_bytes', 'saved_bytes'])
+                                              'number_of_necessary_push', 'bytes_required', 'original_instrs', 'original_bytes', 'saved_bytes'])
         df.to_csv(csv_file)
