@@ -285,8 +285,6 @@ if __name__=="__main__":
         contract_name = contract_path.split('/')[-1]
         csv_file = results_dir + contract_name + "_results_" + solver + ".csv"
 
-        if csv_file in already_analyzed_contracts:
-            continue
 
         for file in glob.glob(contract_path + "/jsons/*.json"):
             with open(results_dir + "report.txt", 'w') as f:
