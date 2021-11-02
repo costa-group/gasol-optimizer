@@ -1903,6 +1903,9 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     else:
         new_user_defins = all_user_defins
 
+
+    new_user_defins = update_user_defins(new_ts,new_user_defins)
+        
     if simplification:
         vars_list = recompute_vars_set(new_ss,new_ts,new_user_defins,[])
     else:
@@ -5268,3 +5271,29 @@ def split_blocks_by_number(instructions,where2split):
     blocks.append(ins_block)
     
     return blocks
+
+
+def update_user_defins(target_stack, userdef_ins):
+    new_userdef_ins = []
+    already = False
+    while(not already):
+        new_userdef_ins = remove_unused_userdefins(target_stack,userdef_ins)
+        if new_userdef_ins != userdef_ins:
+            userdef_ins = new_userdef_ins
+        else:
+            already = True
+    return new_userdef_ins
+
+def remove_unused_userdefins(target_stack, userdef_ins):
+    new_userdef_ins = []
+    for u in userdef_ins:
+        if not u["storage"]: 
+            output_st = u["outpt_sk"][0]
+
+            used = list(filter(lambda x: output_st in x["inpt_sk"], userdef_ins))
+            if len(used) != 0 or output_st in target_stack:
+                new_userdef_ins.append(u)
+        else:
+            new_userdef_ins.append(u)
+    return new_userdef_ins
+            
