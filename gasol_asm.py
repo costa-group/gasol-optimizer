@@ -820,7 +820,7 @@ if __name__ == '__main__':
     #         log_dict = json.load(path)
     #         optimize_asm_from_log(args.input_path, log_dict, args.output_path)
     # if not args.block:
-    optimize_asm_in_asm_format(args.input_path, args.output_path, args.csv_path, args.tout, False,args.storage,args.last_constants,args.size,args.partition)
+    optimize_asm_in_asm_format(args.input_path, args.output_path, args.csv_path, args.tout, args.backend, args.storage,args.last_constants,args.size,args.partition)
     # else:
     #    optimize_isolated_asm_block(args.input_path, args.tout)
 
