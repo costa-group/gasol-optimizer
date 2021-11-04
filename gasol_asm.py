@@ -45,6 +45,12 @@ def init():
     global new_gas
     new_gas = 0
 
+    global previous_size
+    previous_size = 0
+
+    global new_size
+    new_size = 0
+
     global statistics_rows
     statistics_rows = []
 
@@ -450,6 +456,11 @@ def optimize_isolated_asm_block(block_name, timeout=10,storage = False, last_con
 def update_gas_count(old_block, new_block):
     global previous_gas
     global new_gas
+    global previous_size
+    global new_size
+
+    previous_size += sum([bytes_required(asm_bytecode) for asm_bytecode in old_block.getInstructions()])
+    new_size += sum([bytes_required(asm_bytecode) for asm_bytecode in new_block.getInstructions()])
 
     old_instructions = preprocess_instructions(old_block.getInstructions())
     new_instructions = preprocess_instructions(new_block.getInstructions())
@@ -725,9 +736,6 @@ def optimize_asm_in_asm_format(file_name, output_file, csv_file, timeout=10, log
     print("Previous number of instructions:", compute_number_of_instructions_in_asm_json_per_file(asm))
     print("New number of instructions:", compute_number_of_instructions_in_asm_json_per_file(new_asm))
 
-    print("Previous bytecode size:", compute_bytecode_size_in_asm_json_per_file(asm))
-    print("New bytecode size:", compute_bytecode_size_in_asm_json_per_file(new_asm))
-
     if log:
         with open(gasol_path + file_name_str + ".log" , "w") as log_f:
             json.dump(log_dicts, log_f)
@@ -742,6 +750,8 @@ def optimize_asm_in_asm_format(file_name, output_file, csv_file, timeout=10, log
 if __name__ == '__main__':
     global previous_gas
     global new_gas
+    global previous_size
+    global new_size
 
     init()
     clean_dir()
@@ -781,3 +791,6 @@ if __name__ == '__main__':
 
     print("Previous gas executed: "+str(previous_gas))
     print("New gas executed: " + str(new_gas))
+
+    print("Previous size executed: " + str(previous_size))
+    print("New size executed: " + str(new_size))
