@@ -114,8 +114,8 @@ class AsmBlock():
 
                 # We have already generated a complete block, so we update the values
                 elif len(sub_block_list[current_sub_block_index]) - 1 == current_instruction_in_sub_block:
-                    assert (sub_block_list[current_sub_block_index][current_instruction_in_sub_block].startswith(
-                        plain_representation))
+                    # assert (sub_block_list[current_sub_block_index][current_instruction_in_sub_block].startswith(
+                    #     plain_representation))
 
                     # Last split instruction if any is considered into the block, instead of a split per se
                     if current_sub_block_index + 1 == len(sub_block_list):
@@ -134,15 +134,15 @@ class AsmBlock():
                     current_instruction_in_sub_block = 1
 
                 else:
-                    assert (sub_block_list[current_sub_block_index][current_instruction_in_sub_block].startswith(
-                        plain_representation))
+                    # assert (sub_block_list[current_sub_block_index][current_instruction_in_sub_block].startswith(
+                    #     plain_representation))
 
                     current_sub_block.append(asm_bytecode)
                     current_instruction_in_sub_block += 1
 
             else:
-                assert (sub_block_list[current_sub_block_index][current_instruction_in_sub_block].startswith(
-                    plain_representation))
+                # assert (sub_block_list[current_sub_block_index][current_instruction_in_sub_block].startswith(
+                #    plain_representation))
                 initial_instructions = False
                 current_sub_block.append(asm_bytecode)
                 if len(sub_block_list[current_sub_block_index]) - 1 == current_instruction_in_sub_block:
@@ -178,7 +178,7 @@ class AsmBlock():
                 instructions.append(elem)
 
         # The number of sub blocks must match
-        assert (current_sub_block == len(optimized_sub_blocks))
+        # assert (current_sub_block == len(optimized_sub_blocks))
         self.instructions = instructions
 
 
@@ -202,7 +202,7 @@ class AsmBlock():
                 instructions.append(elem)
 
         # The number of sub blocks must match
-        assert (current_sub_block == len(optimized_sub_blocks))
+        # assert (current_sub_block == len(optimized_sub_blocks))
         self.instructions = instructions
 
 
