@@ -90,13 +90,13 @@ def execute_syrup_backend(args_i,json_file = None, previous_solution_dict = None
         es = initialize_dir_and_streams("oms", block_name)
         json_path = json_file
     else:
-        if json_file:
+        if type(json_file) == str:
             json_path = json_file
+            solver = args_i.solver
+            es = initialize_dir_and_streams(solver, json_path)
         else:
-            json_path = args_i.source
-
-        solver = args_i.solver
-        es = initialize_dir_and_streams(solver, json_path)
+            es = initialize_dir_and_streams("oms", block_name)
+            json_path = json_file
 
     b0, bs, user_instr, variables, initial_stack, final_stack, current_cost, instr_seq, mem_order = parse_data(json_path)
 
