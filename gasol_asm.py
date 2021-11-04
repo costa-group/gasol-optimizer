@@ -146,7 +146,7 @@ def compute_original_sfs_with_simplifications(instructions, stack_size, cname, b
         prefix = ""
 
     fname = args.input_path.split("/")[-1].split(".")[0]
-    exit_code = ir_block.evm2rbr_compiler(file_name = fname, contract_name=cname, block=block_data, block_id=block_id,
+    exit_code, subblocks_list = ir_block.evm2rbr_compiler(file_name = fname, contract_name=cname, block=block_data, block_id=block_id,
                                           preffix=prefix, simplification=True,storage=storage,size = size_abs, part = partition)
 
     sfs_dict = get_sfs_dict()
