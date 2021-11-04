@@ -544,6 +544,9 @@ def optimize_asm_block_asm_format(block, contract_name, timeout, storage, last_c
                                                                                block_id, is_init_block,storage,
                                                                                last_const,size_abs, partition)
 
+    if not args.backend:
+        return new_block, {}
+
     sfs_dict = contracts_dict["syrup_contract"]
     for solver_output, block_name, current_cost, current_length, user_instr, solver_time \
             in optimize_block(sfs_dict, timeout, size_abs):
@@ -820,7 +823,7 @@ if __name__ == '__main__':
     #         log_dict = json.load(path)
     #         optimize_asm_from_log(args.input_path, log_dict, args.output_path)
     # if not args.block:
-    optimize_asm_in_asm_format(args.input_path, args.output_path, args.csv_path, args.tout, args.backend, args.storage,args.last_constants,args.size,args.partition)
+    optimize_asm_in_asm_format(args.input_path, args.output_path, args.csv_path, args.tout, False, args.storage,args.last_constants,args.size,args.partition)
     # else:
     #    optimize_isolated_asm_block(args.input_path, args.tout)
 
