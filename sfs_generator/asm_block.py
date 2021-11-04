@@ -91,6 +91,7 @@ class AsmBlock():
 
         assembly_item_to_internal_representation = {v:k for k, v in opcodes.opcode_internal_representation_to_assembly_item.items()}
         print(self.instructions)
+        print(sub_block_list)
         for asm_bytecode in self.instructions:
 
             instruction = asm_bytecode.getDisasm()
@@ -120,9 +121,16 @@ class AsmBlock():
                     assert (sub_block_list[current_sub_block_index][current_instruction_in_sub_block].startswith(
                         plain_representation))
 
-                    sub_blocks.append(current_sub_block)
-                    current_sub_block = []
-                    sub_blocks.append(asm_bytecode)
+                    # Last split instruction if any is considered into the block, instead of a split per se
+                    if current_sub_block_index + 1 == len(sub_block_list):
+                        current_sub_block.append(asm_bytecode)
+                        sub_blocks.append(current_sub_block)
+                        current_sub_block = []
+
+                    else:
+                        sub_blocks.append(current_sub_block)
+                        current_sub_block = []
+                        sub_blocks.append(asm_bytecode)
 
                     pop_initial = True
                     current_sub_block_index += 1

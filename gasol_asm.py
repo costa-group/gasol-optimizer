@@ -551,8 +551,10 @@ def optimize_asm_block_asm_format(block, contract_name, timeout, storage, last_c
         # We weren't able to find a solution using the solver, so we just update
         if not check_solver_output_is_correct(solver_output):
             optimized_blocks[block_name] = None
-            statistics_row = {"block_id": block_name, "no_model_found": True, "shown_optimal": False}
+            statistics_row = {"block_id": block_name, "no_model_found": True, "shown_optimal": False,
+                              "solver_time_in_sec": round(solver_time, 3)}
             statistics_rows.append(statistics_row)
+            total_time += solver_time
             continue
 
         bs = sfs_dict[block_name]['max_sk_sz']
@@ -584,6 +586,9 @@ def optimize_asm_block_asm_format(block, contract_name, timeout, storage, last_c
         block_name = "initial_block" + str(block_id)
     else:
         block_name = "block" + str(block_id)
+
+    if len(sub_block_list) > 1 and len(sub_block_list[-1]) == 1:
+        sub_block_list = sub_block_list[0:-1]
 
     if partition:
         asm_sub_blocks = list(filter(lambda x: isinstance(x, list), block.split_in_sub_blocks_partition(sub_block_list)))
@@ -618,7 +623,11 @@ def optimize_asm_block_asm_format(block, contract_name, timeout, storage, last_c
         optimized_blocks_list = []
         optimized_blocks_list_idx = 0
         for sub_block_instructions in sub_block_list:
-            # Test if it the instructions are a sublist
+
+            if optimized_blocks_list_idx >= len(optimized_blocks_ordered_list):
+                optimized_blocks_list.append([])
+                continue
+
             block_name, block_optimized = optimized_blocks_ordered_list[optimized_blocks_list_idx]
             sfs_dict_related_instructions = sfs_dict[block_name]['original_instrs']
 
@@ -626,9 +635,6 @@ def optimize_asm_block_asm_format(block, contract_name, timeout, storage, last_c
             # we are considering
             if sfs_dict_related_instructions in [sub_block_instructions[i:len(sfs_dict_related_instructions) + i]
                                                  for i in range(len(sub_block_instructions) + 1 - len(sfs_dict_related_instructions))]:
-                print("TENGO")
-                print(sfs_dict_related_instructions)
-                print(sub_block_instructions)
                 optimized_blocks_list.append(block_optimized)
                 optimized_blocks_list_idx += 1
 
@@ -818,7 +824,6 @@ if __name__ == '__main__':
     # else:
     #    optimize_isolated_asm_block(args.input_path, args.tout)
 
-    print("")
     print("")
     print("Total time spent by the SMT solver in minutes: " + str(round(total_time / 60, 2)))
     print("")
