@@ -2,6 +2,7 @@
 
 import sfs_generator.utils as utils
 import global_params.constants as constants
+import sfs_generator.opcodes as opcodes
 
 class AsmBlock():
     
@@ -80,6 +81,66 @@ class AsmBlock():
 
         return sub_blocks
 
+    def split_in_sub_blocks_partition(self, sub_block_list):
+        sub_blocks = []
+        current_sub_block = []
+        current_sub_block_index = 0
+        current_instruction_in_sub_block = 0
+        initial_instructions = True
+
+        assembly_item_to_internal_representation = {v:k for k, v in opcodes.opcode_internal_representation_to_assembly_item.items()}
+        print(self.instructions)
+        for asm_bytecode in self.instructions:
+
+            instruction = asm_bytecode.getDisasm()
+            # Representation that matches the one in the sub block list
+            plain_representation = assembly_item_to_internal_representation.get(instruction, instruction)
+            print("Plain", plain_representation)
+            # Three cases: either a instruction correspond to a jump/end or split instruction or neither of them.
+            if instruction in ["JUMP","JUMPI","STOP","RETURN","REVERT","INVALID","JUMPDEST","tag"] \
+                    or instruction in constants.split_block:
+
+                # We append all instructions that do not conform a block
+                if initial_instructions or current_sub_block_index >= len(sub_block_list):
+                    sub_blocks.append(asm_bytecode)
+
+                # We have already generated a complete block, so we update the values
+                elif len(sub_block_list[current_sub_block_index]) - 1 == current_instruction_in_sub_block:
+                    assert (sub_block_list[current_sub_block_index][current_instruction_in_sub_block].startswith(
+                        plain_representation))
+
+                    sub_blocks.append(current_sub_block)
+                    current_sub_block = []
+                    sub_blocks.append(asm_bytecode)
+
+                    current_sub_block_index += 1
+                    # First instruction always corresponds to the split instruction, so we do not consider it again
+                    current_instruction_in_sub_block = 1
+
+                else:
+                    assert (sub_block_list[current_sub_block_index][current_instruction_in_sub_block].startswith(
+                        plain_representation))
+
+                    current_sub_block.append(asm_bytecode)
+                    current_instruction_in_sub_block += 1
+
+            else:
+                assert (sub_block_list[current_sub_block_index][current_instruction_in_sub_block].startswith(
+                    plain_representation))
+                initial_instructions = False
+                current_sub_block.append(asm_bytecode)
+                if len(sub_block_list[current_sub_block_index]) - 1 == current_instruction_in_sub_block:
+                    current_sub_block_index += 1
+                    current_instruction_in_sub_block = 0
+                else:
+                    current_instruction_in_sub_block += 1
+
+        # If there is a sub block left, we need to add it to the list
+        if current_sub_block:
+            sub_blocks.append(current_sub_block)
+
+        return sub_blocks
+
     # Given a set of optimized sub_blocks (possibly containing None when no optimized block has been generated),
     # rebuilds a block considering the "isolated" instructions which split the blocks
     def set_instructions_from_sub_blocks(self, optimized_sub_blocks):
@@ -102,6 +163,31 @@ class AsmBlock():
         # The number of sub blocks must match
         assert (current_sub_block == len(optimized_sub_blocks))
         self.instructions = instructions
+
+
+    # Given a set of optimized sub_blocks (possibly containing None when no optimized block has been generated),
+    # rebuilds a block considering the "isolated" instructions which split the blocks
+    def set_instructions_from_sub_blocks_partition(self, optimized_sub_blocks, sub_blocks_list):
+        current_sub_block = 0
+        previous_sub_blocks = self.split_in_sub_blocks_partition(sub_blocks_list)
+
+        instructions = []
+        for elem in previous_sub_blocks:
+            if isinstance(elem, list):
+                # If no optimized block is in the list, then we just consider instructions without optimizing
+                if optimized_sub_blocks[current_sub_block] is None:
+                    instructions.extend(elem)
+                # Otherwise, instructions from current block are added
+                else:
+                    instructions.extend(optimized_sub_blocks[current_sub_block])
+                current_sub_block += 1
+            else:
+                instructions.append(elem)
+
+        # The number of sub blocks must match
+        assert (current_sub_block == len(optimized_sub_blocks))
+        self.instructions = instructions
+
 
 
     def __str__(self):
