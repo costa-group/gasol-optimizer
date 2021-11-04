@@ -90,15 +90,11 @@ class AsmBlock():
         pop_initial = True
 
         assembly_item_to_internal_representation = {v:k for k, v in opcodes.opcode_internal_representation_to_assembly_item.items()}
-        print(self.instructions)
-        print(sub_block_list)
         for asm_bytecode in self.instructions:
 
             instruction = asm_bytecode.getDisasm()
             # Representation that matches the one in the sub block list
             plain_representation = assembly_item_to_internal_representation.get(instruction, instruction)
-            print("Plain", plain_representation)
-            print(current_sub_block_index, current_instruction_in_sub_block)
 
             # Pops that appear at the beginning of a block that isn't the first one are simplified via
             # intra-block optimization (not always, for instance with LOG3 does not behave this way)
