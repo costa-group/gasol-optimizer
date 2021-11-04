@@ -778,11 +778,12 @@ def optimize_asm_in_asm_format(file_name, output_file, csv_file, timeout=10, log
         with open(gasol_path + file_name_str + ".log" , "w") as log_f:
             json.dump(log_dicts, log_f)
 
-    with open(output_file, 'w') as f:
-        f.write(json.dumps(rebuild_asm(new_asm)))
+    if args.backend:
+        with open(output_file, 'w') as f:
+            f.write(json.dumps(rebuild_asm(new_asm)))
 
-    df = pd.DataFrame(statistics_rows)
-    df.to_csv(csv_file)
+        df = pd.DataFrame(statistics_rows)
+        df.to_csv(csv_file)
 
 
 if __name__ == '__main__':
