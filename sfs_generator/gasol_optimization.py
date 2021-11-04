@@ -3269,7 +3269,14 @@ def smt_translate_block(rule,file_name,name,preffix,simplification=True,storage 
 
     print("RULES  : "+str(gas_saved_op))
     print("MAX L : "+str(max_l))
-    return subblocks
+
+    subblocks_postprocess = []
+    for s in subblocks:
+        s1 = list(filter(lambda x: x.find("nop(")!=-1,s))
+        ins = list(map(lambda x: x.strip()[4:-1],s1))
+        subblocks_postprocess.append(ins)
+
+    return subblocks_postprocess
     #print("Blocks Generation SYRUP: "+str(end-begin)+"s")
 
 def apply_transform(instr):
