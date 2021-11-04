@@ -1098,9 +1098,9 @@ def evm2rbr_compiler(file_name = None, contract_name = None,block = None, block_
         end = dtimer()
         ethir_time = end-begin
         #print("Build RBR: "+str(ethir_time)+"s")
-        smt_translate_block(rule,file_name,contract_name,preffix,simplification,storage, size, part)
+        subblocks = smt_translate_block(rule,file_name,contract_name,preffix,simplification,storage, size, part)
                 
-        return 0
+        return 0, subblocks
         
     except Exception as e:
         traceback.print_exc()
