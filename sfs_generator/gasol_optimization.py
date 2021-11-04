@@ -1528,7 +1528,7 @@ def generate_encoding(instructions,variables,source_stack,simplification=True):
     variable_content = {}
     for v in variables:
         s_dict = {}
-        print(v)
+        # print(v)
         search_for_value(v,instructions_reverse, source_stack,simplification)
         variable_content[v] = s_dict[v]
 
@@ -1549,7 +1549,7 @@ def generate_storage_info(instructions,source_stack):
     sload_relative_pos = {}
     mload_relative_pos = {}
 
-    print("STARTING STORE")
+    # print("STARTING STORE")
     for x in range(0,len(instructions)):
         s_dict = {}
 
@@ -3203,7 +3203,7 @@ def smt_translate_block(rule,file_name,name,preffix,simplification=True,storage 
     info = "INFO DEPLOY "+gasol_path+"ethir_OK_"+source_name+"_blocks_"+rule.get_rule_name()+" LENGTH="+str(len(opcodes))+" PUSH="+str(len(list(filter(lambda x: x.find("nop(PUSH")!=-1,opcodes))))
     info_deploy.append(info)
     
-
+    subblocks = []
     res = is_optimizable(opcodes,instructions)
     if res:
         ops = list(map(lambda x: x[4:-1],opcodes))
@@ -3269,6 +3269,7 @@ def smt_translate_block(rule,file_name,name,preffix,simplification=True,storage 
 
     print("RULES  : "+str(gas_saved_op))
     print("MAX L : "+str(max_l))
+    return subblocks
     #print("Blocks Generation SYRUP: "+str(end-begin)+"s")
 
 def apply_transform(instr):
