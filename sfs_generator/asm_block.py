@@ -87,6 +87,7 @@ class AsmBlock():
         current_sub_block_index = 0
         current_instruction_in_sub_block = 0
         initial_instructions = True
+        pop_initial = True
 
         assembly_item_to_internal_representation = {v:k for k, v in opcodes.opcode_internal_representation_to_assembly_item.items()}
         print(self.instructions)
@@ -96,6 +97,16 @@ class AsmBlock():
             # Representation that matches the one in the sub block list
             plain_representation = assembly_item_to_internal_representation.get(instruction, instruction)
             print("Plain", plain_representation)
+            print(current_sub_block_index, current_instruction_in_sub_block)
+
+            # Pops that appear at the beginning of a block that isn't the first one are simplified via
+            # intra-block optimization (not always, for instance with LOG3 does not behave this way)
+            if plain_representation == "POP" and pop_initial and not initial_instructions and \
+                    len(sub_block_list[current_sub_block_index]) > current_instruction_in_sub_block and \
+                    plain_representation != sub_block_list[current_sub_block_index][current_instruction_in_sub_block]:
+                current_sub_block.append(asm_bytecode)
+                continue
+
             # Three cases: either a instruction correspond to a jump/end or split instruction or neither of them.
             if instruction in ["JUMP","JUMPI","STOP","RETURN","REVERT","INVALID","JUMPDEST","tag"] \
                     or instruction in constants.split_block:
@@ -113,6 +124,7 @@ class AsmBlock():
                     current_sub_block = []
                     sub_blocks.append(asm_bytecode)
 
+                    pop_initial = True
                     current_sub_block_index += 1
                     # First instruction always corresponds to the split instruction, so we do not consider it again
                     current_instruction_in_sub_block = 1
@@ -134,6 +146,7 @@ class AsmBlock():
                     current_instruction_in_sub_block = 0
                 else:
                     current_instruction_in_sub_block += 1
+                    pop_initial = False
 
         # If there is a sub block left, we need to add it to the list
         if current_sub_block:

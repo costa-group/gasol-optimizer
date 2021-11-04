@@ -645,8 +645,10 @@ def optimize_asm_block_asm_format(block, contract_name, timeout, storage, last_c
     #     # but its corresponding block optimized in the list is not None
     #     log_dicts = {k : v for k,v in log_dicts.items() if optimized_blocks_list_with_intra_block_consideration[int(k.split(".")[-1])] is not None}
 
-
-    new_block.set_instructions_from_sub_blocks(optimized_blocks_list)
+    if partition:
+        new_block.set_instructions_from_sub_blocks_partition(optimized_blocks_list, sub_block_list)
+    else:
+        new_block.set_instructions_from_sub_blocks(optimized_blocks_list)
 
     new_block.compute_stack_size()
 
