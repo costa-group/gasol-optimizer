@@ -3215,14 +3215,17 @@ def smt_translate_block(rule,file_name,name,preffix,simplification=True,storage 
                 where2split = split_by_numbers(stores_pos)
 
                 if where2split == []:
+                    subblocks = [opcodes]
                     translate_block(rule,instructions,opcodes,True,preffix,simplification)
 
                 else:
                     subblocks = split_blocks_by_number(rule.get_instructions(),where2split)
                     generate_subblocks(rule,subblocks,True,preffix,simplification)
             else:
+                subblocks = [opcodes]
                 translate_block(rule,instructions,opcodes,True,preffix,simplification) 
         else:
+            subblocks = [opcodes]
             translate_block(rule,instructions,opcodes,True,preffix,simplification) 
     else: #we need to split the blocks into subblocks
         r = False
