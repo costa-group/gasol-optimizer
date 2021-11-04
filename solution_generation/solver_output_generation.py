@@ -2,13 +2,20 @@ import shlex
 import subprocess
 from global_params.paths import *
 import re
-
+import resource
 
 def run_command(cmd):
     FNULL = open(os.devnull, 'w')
     solc_p = subprocess.Popen(shlex.split(cmd), stdout=subprocess.PIPE,
                               stderr=FNULL)
     return solc_p.communicate()[0].decode()
+
+
+def run_and_measure_command(cmd):
+    usage_start = resource.getrusage(resource.RUSAGE_CHILDREN)
+    solution = run_command(cmd)
+    usage_stop = resource.getrusage(resource.RUSAGE_CHILDREN)
+    return solution, usage_stop.ru_utime + usage_stop.ru_stime - usage_start.ru_utime - usage_start.ru_stime
 
 
 def get_solver_to_execute(smt_file, solver, tout):
@@ -31,9 +38,9 @@ def generate_solution(block_name, solver, tout):
     exec_command = get_solver_to_execute(encoding_file, solver, tout)
 
     print("Executing " + solver + " for file " + block_name)
-    solution = run_command(exec_command)
+    solution, solver_time = run_and_measure_command(exec_command)
 
-    return solution
+    return solution, solver_time
 
 
 def obtain_solver_output(block_name, solver, tout):

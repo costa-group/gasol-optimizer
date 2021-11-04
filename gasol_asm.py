@@ -54,6 +54,9 @@ def init():
     global statistics_rows
     statistics_rows = []
 
+    global total_time
+    total_time = 0
+
 def clean_dir():
     ext = ["rbr", "csv", "sol", "bl", "disasm", "json"]
     if gasol_folder in os.listdir(tmp_path):
@@ -186,11 +189,12 @@ def optimize_block(sfs_dict, timeout, size = False):
 
             if initial_program_length > 40:
                 solver_output = "unsat"
+                solver_time = 0
             # At this point, solution is a string that contains the output directly
             # from the solver
             else:
-                solver_output = obtain_solver_output(block_name, "oms", timeout)
-            block_solutions.append((solver_output, block_name, current_cost, current_size, user_instr))
+                solver_output, solver_time = obtain_solver_output(block_name, "oms", timeout)
+            block_solutions.append((solver_output, block_name, current_cost, current_size, user_instr, solver_time))
 
     return block_solutions
 
@@ -521,6 +525,7 @@ def filter_optimized_blocks_by_intra_block_optimization(asm_sub_blocks, optimize
 # Given an asm_block and its contract name, returns the asm block after the optimization
 def optimize_asm_block_asm_format(block, contract_name, timeout, storage, last_const, size_abs, partition):
     global statistics_rows
+    global total_time
 
     bytecodes = block.getInstructions()
     stack_size = block.getSourceStack()
@@ -540,7 +545,7 @@ def optimize_asm_block_asm_format(block, contract_name, timeout, storage, last_c
                                                                                last_const,size_abs, partition)
 
     sfs_dict = contracts_dict["syrup_contract"]
-    for solver_output, block_name, current_cost, current_length, user_instr \
+    for solver_output, block_name, current_cost, current_length, user_instr, solver_time \
             in optimize_block(sfs_dict, timeout, size_abs):
 
         # We weren't able to find a solution using the solver, so we just update
@@ -564,9 +569,10 @@ def optimize_asm_block_asm_format(block, contract_name, timeout, storage, last_c
                                                                           gas_theta_dict, values_dict)
         _, shown_optimal = analyze_file(solver_output, "oms")
         optimized_length = sum([bytes_required(instr) for instr in new_sub_block])
-        statistics_row = {"block_id": block_name, "saved_size": current_length - optimized_length,
+        statistics_row = {"block_id": block_name, "solver_time_in_sec": round(solver_time, 3), "saved_size": current_length - optimized_length,
                           "saved_gas": current_cost - optimized_cost, "no_model_found": False, "shown_optimal": shown_optimal}
         statistics_rows.append(statistics_row)
+        total_time += solver_time
 
         if (not size_abs and current_cost > optimized_cost) or (size_abs and current_length > optimized_length) :
             optimized_blocks[block_name] = new_sub_block
@@ -773,6 +779,7 @@ if __name__ == '__main__':
     global new_gas
     global previous_size
     global new_size
+    global total_time
 
     init()
     clean_dir()
@@ -809,9 +816,12 @@ if __name__ == '__main__':
     # else:
     #    optimize_isolated_asm_block(args.input_path, args.tout)
 
-
+    print("")
+    print("")
+    print("Total time spent by the SMT solver in minutes: " + str(round(total_time / 60, 2)))
+    print("")
     print("Previous gas executed: "+str(previous_gas))
     print("New gas executed: " + str(new_gas))
-
+    print("")
     print("Previous size executed: " + str(previous_size))
     print("New size executed: " + str(new_size))
