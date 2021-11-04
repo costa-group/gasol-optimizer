@@ -157,7 +157,7 @@ def compute_original_sfs_with_simplifications(instructions, stack_size, cname, b
 
     sfs_dict = get_sfs_dict()
 
-    return sfs_dict
+    return sfs_dict, subblocks_list
 
 
 # Given the sequence of bytecodes, the initial stack size, the contract name and the
@@ -535,7 +535,11 @@ def optimize_asm_block_asm_format(block, contract_name, timeout, storage, last_c
 
     instructions = preprocess_instructions(bytecodes)
 
-    sfs_dict = compute_original_sfs_with_simplifications(instructions,stack_size,contract_name, block_id, is_init_block,storage, last_const,size_abs, partition)["syrup_contract"]
+    contracts_dict, sub_block_list = compute_original_sfs_with_simplifications(instructions,stack_size,contract_name,
+                                                                               block_id, is_init_block,storage,
+                                                                               last_const,size_abs, partition)
+
+    sfs_dict = contracts_dict["syrup_contract"]
     for solver_output, block_name, current_cost, current_length, user_instr \
             in optimize_block(sfs_dict, timeout, size_abs):
 
@@ -575,17 +579,22 @@ def optimize_asm_block_asm_format(block, contract_name, timeout, storage, last_c
     else:
         block_name = "block" + str(block_id)
 
-    asm_sub_blocks = list(filter(lambda x: isinstance(x, list), block.split_in_sub_blocks()))
+    if partition:
+        asm_sub_blocks = list(filter(lambda x: isinstance(x, list), block.split_in_sub_blocks_partition(sub_block_list)))
+    else:
+        asm_sub_blocks = list(filter(lambda x: isinstance(x, list), block.split_in_sub_blocks()))
+
+    # return block, log_dicts
 
     # At this point, we must be wary: some blocks may have been simplified totally and are not contained in the
     # optimized blocks dict. Thus, we need to identify them and assign them to []
     # Three cases: zero sub-block present in the contract, one or more than one
 
     # Case zero: nothing has been optimized
-    if len(optimized_blocks) == 0:
+    if len(asm_sub_blocks) == 0:
         return deepcopy(block), {}
     # Case one: block may have been skipped completely
-    if len(optimized_blocks) == 1:
+    if len(asm_sub_blocks) == 1:
         if not sfs_dict:
             optimized_blocks[block_name] = []
             log_dicts[contract_name + '_' + block_name] = []
@@ -595,19 +604,31 @@ def optimize_asm_block_asm_format(block, contract_name, timeout, storage, last_c
     # # Case more than one sub blocks: several intermediate sub blocks may have been skipped.
     # # They can be identified from those sub blocks numbers that are not present in the sfs dict
     else:
-        number_of_asm_sub_blocks = len(asm_sub_blocks)
+        optimized_blocks_ordered_list = list(sorted(optimized_blocks.items(), key=lambda kv: int(kv[0].replace(block_name + ".", ''))))
 
-        # If no key in the sfs dict contains i, it means that we have totally simplified that block and it didn't
-        # appear in the sfs. Thus, we need to add it to the corresponding key
-        # Note that sfs_dict keys are always of the form block_name_index, so we can obtain the generic name
-        if number_of_asm_sub_blocks != len(sfs_dict.keys()):
-            ids_in_dict = set(map(lambda x: int(x.replace(block_name + ".", '')), sfs_dict.keys()))
-            ids_not_in_dict = set(range(number_of_asm_sub_blocks)).difference(ids_in_dict)
-            for elem in ids_not_in_dict:
-                optimized_blocks[block_name + "." + str(elem)] = []
-                log_dicts[contract_name + '_' + block_name + "." + str(elem)] = []
-        optimized_blocks_list = list(collections.OrderedDict(
-            sorted(optimized_blocks.items(), key=lambda kv: int(kv[0].replace(block_name + ".", '')))).values())
+        # For each sub-block in the initial block, we check whether is matches the corresponding sfs dict. If not,
+        # it means a block was reduced directly and hence, we need to record it in the list of sub blocks
+
+        optimized_blocks_list = []
+        optimized_blocks_list_idx = 0
+        for sub_block_instructions in sub_block_list:
+            # Test if it the instructions are a sublist
+            block_name, block_optimized = optimized_blocks_ordered_list[optimized_blocks_list_idx]
+            sfs_dict_related_instructions = sfs_dict[block_name]['original_instrs']
+
+            # If the instructions match current block, we add the optimized  (or not) solution and add 1 to the index
+            # we are considering
+            if sfs_dict_related_instructions in [sub_block_instructions[i:len(sfs_dict_related_instructions) + i]
+                                                 for i in range(len(sub_block_instructions) + 1 - len(sfs_dict_related_instructions))]:
+                print("TENGO")
+                print(sfs_dict_related_instructions)
+                print(sub_block_instructions)
+                optimized_blocks_list.append(block_optimized)
+                optimized_blocks_list_idx += 1
+
+            # Otherwise the block was simplified totally
+            else:
+                optimized_blocks_list.append([])
 
     #     # We sort by block id and obtain the associated values in order
     #     optimized_blocks_list_with_intra_block_consideration = \
