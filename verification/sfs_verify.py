@@ -47,7 +47,13 @@ def compare_target_stack(json_origin, json_opt):
         i+=1
 
     return True
-        
+
+
+def compare_dependences(dep_origin,dep_opt):
+    pass
+
+def compare_storage_userdef_ins(userdef_origin,userdef_opt):
+    pass
 
 def compare_variables(var_origin, var_opt, src_origin, src_opt, user_def_origin, user_def_opt):
 
