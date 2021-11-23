@@ -49,11 +49,84 @@ def compare_target_stack(json_origin, json_opt):
     return True
 
 
-def compare_dependences(dep_origin,dep_opt):
-    pass
+def compare_dependences(dep_origin,dep_opt,userdef_origin, userdef_opt,location):
+    i = 0
+    verified = True
+
+    if location == "storage":
+        ins_origin = list(filter(lambda x: x["opcode"].find("SSTORE")!=-1 or x["opcode"].find("SLOAD")!=-1,userdef_origin))
+        ins_opt = list(filter(lambda x: x["opcode"].find("SSTORE")!=-1 or x["opcode"].find("SLOAD")!=-1,userdef_opt))
+    else:
+        ins_origin = list(filter(lambda x: x["opcode"].find("MSTORE")!=-1 or x["opcode"].find("MLOAD")!=-1,userdef_origin))
+        ins_opt = list(filter(lambda x: x["opcode"].find("MSTORE")!=-1 or x["opcode"].find("MLOAD")!=-1,userdef_opt))
+    
+    if len(dep_origin) != len(dep_opt):
+        return False
+    
+    while(i< len(dep_origin) and verified):
+        dep = dep_origin[i]
+
+        # it may have different identifiers We have to check if any
+        # tuple in dep_opt corresponds to dep
+        if dep not in dep_opt:
+            first = dep[0]
+            second = dep[1]
+
+            first_opt_id = search_val_in_userdef(first,userdef_opt)
+            second_opt_id = search_val_in_userdef(second,userdef_opt)
+
+            if (first_opt_id,second_opt_id) not in dep_opt:
+                verified = False
+        i+=1
+    return verified
 
 def compare_storage_userdef_ins(userdef_origin,userdef_opt):
+    storage_ins_origin = list(filter(lambda x: x["opcode"].find("SSTORE")!=-1 or x["opcode"].find("SLOAD")!=-1,userdef_origin))
+    storage_ins_opt = list(filter(lambda x: x["opcode"].find("SSTORE")!=-1 or x["opcode"].find("SLOAD")!=-1,userdef_opt))
+
+    memory_ins_origin = list(filter(lambda x: x["opcode"].find("MSTORE")!=-1 or x["opcode"].find("MLOAD")!=-1,userdef_origin))
+    memory_ins_opt = list(filter(lambda x: x["opcode"].find("MSTORE")!=-1 or x["opcode"].find("MLOAD")!=-1,userdef_opt))
+
+    if len(storage_ins_origin) != len(storage_ins_opt):
+        return False
+
+    if len(memory_ins_origin) != len(memory_ins_opt):
+        return False
+
+    i = 0
+    verified = True
+    while(i < len(storage_ins_origin) and verified):
+        ins = storage_ins_origin[i]
+
+        if ins not in storage_ins_opt:
+            new_id = search_val_in_userdef(ins,storage_ins_opt)
+
+            if new_id == -1:
+                verified = False
+        i+=1
+
+
+    if not verified:
+        return False
+
+    i = 0
+    verified = True
+    while(i < len(memory_ins_origin) and verified):
+        ins = memory_ins_origin[i]
+
+        if ins not in memory_ins_opt:
+            new_id = search_val_in_userdef(ins,memory_ins_opt)
+
+            if new_id == -1:
+                verified = False
+        i+=1
+        
+    return verified
+
+
+def search_val_in_userdef(instruction, userdef_ins):
     pass
+
 
 def compare_variables(var_origin, var_opt, src_origin, src_opt, user_def_origin, user_def_opt):
 
