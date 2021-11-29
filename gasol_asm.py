@@ -420,8 +420,7 @@ def preprocess_instructions_plain_text(instructions):
         i += 1
     return opcodes
 
-
-def optimize_isolated_asm_block(block_name, timeout=10,storage = False, last_const = False):
+def optimize_isolated_asm_block(block_name,output_file, csv_file, timeout=10, log=False, storage= False, last_const = False, size_abs = False, partition = False):
 
     with open(block_name,"r") as f:        
         instructions = f.readline().strip()
@@ -432,7 +431,15 @@ def optimize_isolated_asm_block(block_name, timeout=10,storage = False, last_con
     stack_size = compute_stack_size(opcodes)
     contract_name = block_name.split('/')[-1]
 
-    sfs_dict = compute_original_sfs_with_simplifications(opcodes, stack_size, contract_name, 0, False,storage, last_const)["syrup_contract"]
+    sfs, subblocks_list = compute_original_sfs_with_simplifications(opcodes, stack_size, contract_name, 0, False,storage, last_const, size_abs, partition)
+
+    sfs_dict = sfs["syrup_contract"]
+
+    new_block = [] 
+    if not args.backend:
+        return new_block, {}
+
+
     for solver_output, block_name, current_cost, current_length, user_instr \
         in optimize_block(sfs_dict, timeout):
 
@@ -797,7 +804,7 @@ if __name__ == '__main__':
     clean_dir()
     ap = argparse.ArgumentParser(description='GASOL tool')
     ap.add_argument('input_path', help='Path to input file that contains the asm')
-    # ap.add_argument("-bl", "--block", help ="Enable analysis of a single asm block", action = "store_true")
+    ap.add_argument("-bl", "--block", help ="Enable analysis of a single asm block", action = "store_true")
     ap.add_argument("-tout", metavar='timeout', action='store', type=int,
                     help="Timeout in seconds. By default, set to 10s per block.", default=10)
     # ap.add_argument("-optimize-gasol-from-log-file", dest='log_path', action='store', metavar="log_file",
@@ -823,10 +830,10 @@ if __name__ == '__main__':
     #     with open(args.log_path) as path:
     #         log_dict = json.load(path)
     #         optimize_asm_from_log(args.input_path, log_dict, args.output_path)
-    # if not args.block:
-    optimize_asm_in_asm_format(args.input_path, args.output_path, args.csv_path, args.tout, False, args.storage,args.last_constants,args.size,args.partition)
-    # else:
-    #    optimize_isolated_asm_block(args.input_path, args.tout)
+    if not args.block:
+        optimize_asm_in_asm_format(args.input_path, args.output_path, args.csv_path, args.tout, False, args.storage,args.last_constants,args.size,args.partition)
+    else:
+       optimize_isolated_asm_block(args.input_path, args.output_path, args.csv_path, args.tout, False, args.storage,args.last_constants,args.size,args.partition)
 
     print("")
     print("Total time spent by the SMT solver in minutes: " + str(round(total_time / 60, 2)))
