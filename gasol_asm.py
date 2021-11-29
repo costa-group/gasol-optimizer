@@ -438,10 +438,9 @@ def optimize_isolated_asm_block(block_name,output_file, csv_file, timeout=10, lo
     new_block = [] 
     if not args.backend:
         return new_block, {}
-
-
-    for solver_output, block_name, current_cost, current_length, user_instr \
-        in optimize_block(sfs_dict, timeout):
+    
+    for solver_output, block_name, current_cost, current_length, user_instr, solver_time \
+            in optimize_block(sfs_dict, timeout, size_abs):
 
         # We weren't able to find a solution using the solver, so we just update
         if not check_solver_output_is_correct(solver_output):
