@@ -13,6 +13,9 @@ class AsmBlock():
         #minimum size of the source stack
         self.source_stack = 0
         self.is_init_block = is_init_block
+        self.jump_type = None
+        self.jump_to = None
+        self.falls_to = None
 
     def getContractName(self):
         return self.contract_name
@@ -54,6 +57,29 @@ class AsmBlock():
 
         self.source_stack = init_stack
 
+
+    def get_jump_type(self):
+        return self.jump_type
+
+    def set_jumpt_type(self,t):
+        if t not in ["conditional","unconditional","terminal"]:
+            raise Exception("Wrong jump type")
+        else:
+            self.jump_type = t
+        
+    def get_jump_to(self):
+        return self.jump_to
+
+    def set_jump_to(self, address):
+        self.jump_to = address
+
+    def get_falls_to(self):
+        return self.falls_to
+
+    def set_jump_to(self, address):
+        self.falls_to = address
+
+        
     # Split the block in a list of asm_bytecodes that contains either sub blocks or
     # isolated instructions (JUMPs or split instructions).
     def split_in_sub_blocks(self):
