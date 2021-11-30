@@ -62,7 +62,7 @@ class AsmBlock():
         return self.jump_type
 
     def set_jumpt_type(self,t):
-        if t not in ["conditional","unconditional","terminal"]:
+        if t not in ["conditional","unconditional","terminal", "falls_to"]:
             raise Exception("Wrong jump type")
         else:
             self.jump_type = t
@@ -232,6 +232,17 @@ class AsmBlock():
         self.instructions = instructions
 
 
+    def set_destination(self):
+        last_instruction = self.instructions[-1].getDisasm()
+        if last_instruction == "JUMP":
+            self.set_jump_type("unconditional")
+        elif last_instruction == "JUMPI":
+            self.set_jump_type("conditional")
+        elif last_instruction in ["INVALID","REVERT","STOP","RETURN","SUICIDE"]:
+            self.set_jump_type("terminal")
+        else:
+            self.set_jump_type("falls_to")
+        
 
     def __str__(self):
         content = ""
