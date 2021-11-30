@@ -232,7 +232,7 @@ class AsmBlock():
         self.instructions = instructions
 
 
-    def set_destination(self):
+    def set_types(self):
         last_instruction = self.instructions[-1].getDisasm()
         if last_instruction == "JUMP":
             self.set_jump_type("unconditional")
