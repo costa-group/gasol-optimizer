@@ -116,9 +116,15 @@ def parse_asm(file_name):
     return asm_json
 
 
+# Given a string containing a sequence of instructions, returns a list of dicts representing each of them.
+# These dicts contain the key "name", that corresponds to the name of the instruction of Assembly format and
+# the key "value" if the opcode has any hexadecimal value associated.
+# See https://github.com/ethereum/solidity/blob/develop/libevmasm/Assembly.cpp on how different assembly
+# items are represented
 def plain_instructions_to_asm_representation(raw_instruction_str):
+    # We chain all strings contained in the raw string, splitting whenever a line is found or a whitespace
     split_str = list(itertools.chain.from_iterable([[elem for elem in line.split(" ")] for line in raw_instruction_str.splitlines()]))
-    print(split_str)
+
     # We remove empty elements, as they obviously do not add any info on the sequence of opcodes
     ops = list(filter(lambda x: x != '', split_str))
     opcodes = []
@@ -126,7 +132,6 @@ def plain_instructions_to_asm_representation(raw_instruction_str):
 
     while i < len(ops):
         op = ops[i]
-        instr = {}
         if not op.startswith("PUSH"):
             opcodes.append({"name": op})
         else:
@@ -156,7 +161,22 @@ def plain_instructions_to_asm_representation(raw_instruction_str):
     return opcodes
 
 
+# Conversion from a string containing all different instructions in Assembly format to ASMBlocks representation.
+# See https://github.com/ethereum/solidity/blob/develop/libevmasm/Assembly.cpp on how different assembly
+# items are represented
 def parse_blocks_from_plain_instructions(raw_instructions_str):
     instr_list = plain_instructions_to_asm_representation(raw_instructions_str)
     blocks = build_blocks_from_asm_representation("isolated", instr_list, False)
     return blocks
+
+
+# Conversion from an ASMBlock to a plain sequence of instructions
+def parse_asm_representation_from_block(asm_block):
+    return '\n'.join([asm_instruction.getDisasm() + ' ' + asm_instruction.getValue()
+                     if asm_instruction.getValue() is not None else asm_instruction.getDisasm()
+                     for asm_instruction in asm_block.getInstructions()])
+
+
+# Conversion from a list of ASMBlocks to a plain sequence of instructions
+def parse_asm_representation_from_blocks(asm_blocks):
+    return '\n'.join([parse_asm_representation_from_block(asm_block) for asm_block in asm_blocks])

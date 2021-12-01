@@ -17,7 +17,7 @@ sys.path.append(os.path.dirname(os.path.realpath(__file__))+"/statistics")
 sys.path.append(os.path.dirname(os.path.realpath(__file__))+"/global_params")
 
 
-from parser_asm import parse_asm, parse_blocks_from_plain_instructions
+from parser_asm import parse_asm, parse_blocks_from_plain_instructions, parse_asm_representation_from_blocks
 import ir_block
 from gasol_optimization import get_sfs_dict
 from gasol_encoder import execute_syrup_backend, generate_theta_dict_from_sequence, execute_syrup_backend_combined
@@ -376,97 +376,38 @@ def optimize_asm_from_log(file_name, json_log, output_file):
             print("Log file does not contain a valid solution")
 
 
-def preprocess_instructions_plain_text(instructions):
-    ops = instructions.split(" ")
-    # We remove empty elements, as they obviously do not add any info on the sequence of opcodes
-    ops = list(filter(lambda x: x != '', ops))
-    opcodes = []
-    i = 0
+def optimize_isolated_asm_block(block_name,output_file, csv_file, timeout=10, storage= False, last_const = False, size_abs = False, partition = False):
+    global statistics_rows
 
-    while i < len(ops):
-        op = ops[i]
-        if not op.startswith("PUSH"):
-            opcodes.append(op.strip())
-        else:
-            if op.startswith("PUSH") and op.find("DEPLOYADDRESS") != -1:
-            # Fixme: add ALL PUSH variants: PUSH data, PUSH DEPLOYADDRESS
-                op = "PUSHDEPLOYADDRESS"
-            elif op.startswith("PUSH") and op.find("SIZE") != -1:
-                op = "PUSHSIZE"
-            # If position t+1 is a Yul Keyword, then we need to analyze them separately
-            elif not isYulKeyword(ops[i + 1]):
-                val = ops[i + 1]
-                op = op + " 0x" + val if not val.startswith("0x") else op + " " + val
-                i = i + 1
-            else:
-                t = ops[i + 1]
-                val = ops[i + 2]
+    file_name_str = block_name.split("/")[-1].split(".")[0]
 
-                if op.startswith("PUSH") and t.find("tag") != -1:
-                    op = "PUSHTAG" + " 0x" + val if not val.startswith("0x") else "PUSHTAG " + val
+    # If not output file provided, then we create a name by default.
+    if output_file is None:
+        output_file = file_name_str + "_optimized.txt"
 
-                elif op.startswith("PUSH") and t.find("#[$]") != -1:
-                    op = "PUSH#[$]" + " 0x" + val if not val.startswith("0x") else "PUSH#[$] " + val
-
-                elif op.startswith("PUSH") and t.find("[$]") != -1:
-                    op = "PUSH[$]" + " 0x" + val if not val.startswith("0x") else "PUSH[$] " + val
-
-                elif op.startswith("PUSH") and t.find("data") != -1:
-                    op = "PUSHDATA" + " 0x" + val if not val.startswith("0x") else "PUSHDATA " + val
-
-                i += 2
-            opcodes.append(op)
-
-        i += 1
-    return opcodes
-
-def optimize_isolated_asm_block(block_name,output_file, csv_file, timeout=10, log=False, storage= False, last_const = False, size_abs = False, partition = False):
+    if csv_file is None:
+        csv_file = file_name_str + "_statistics.csv"
 
     with open(block_name,"r") as f:        
         instructions = f.read()
-    f.close()
 
     blocks = parse_blocks_from_plain_instructions(instructions)
+    asm_blocks = []
+
     for block in blocks:
-        print(block)
-        print("aaa")
-    exit(0)
-    
-    opcodes = preprocess_instructions_plain_text(instructions)
+        asm_block, _ = optimize_asm_block_asm_format(block, file_name_str, timeout, storage, last_const,
+                                                               size_abs, partition)
+        asm_blocks.append(asm_block)
 
-    stack_size = compute_stack_size(opcodes)
-    contract_name = block_name.split('/')[-1]
+        update_gas_count(block, asm_block)
 
-    sfs, subblocks_list = compute_original_sfs_with_simplifications(opcodes, stack_size, contract_name, 0, False,storage, last_const, size_abs, partition)
-
-    sfs_dict = sfs["syrup_contract"]
-
-    new_block = [] 
-    if not args.backend:
-        return new_block, {}
-    
-    for solver_output, block_name, current_cost, current_length, user_instr, solver_time \
-            in optimize_block(sfs_dict, timeout, size_abs):
-
-        # We weren't able to find a solution using the solver, so we just update
-        if not check_solver_output_is_correct(solver_output):
-            print("The solver has not been able to find a solution for sub block " + block_name)
-            continue
-
-        bs = sfs_dict[block_name]['max_sk_sz']
-
-        _, instruction_theta_dict, opcodes_theta_dict, gas_theta_dict, values_dict = generate_theta_dict_from_sequence(bs, user_instr)
-
-        instruction_output, _, pushed_output, optimized_cost = \
-            generate_info_from_solution(solver_output, opcodes_theta_dict, instruction_theta_dict,
-                                        gas_theta_dict, values_dict)
-
-        sol = generate_disasm_sol_from_output(solver_output, opcodes_theta_dict, instruction_theta_dict, gas_theta_dict, values_dict)
-
-        print("Estimated initial cost: " + str(current_cost))
-        print("Initial sequence: " + str(opcodes))
-        print("Estimated new cost: " + str(optimized_cost))
-        print("Optimized sequence: " +str(sol))
+    if args.backend:
+        df = pd.DataFrame(statistics_rows)
+        df.to_csv(csv_file)
+        print("")
+        print("Optimized code stored at " + output_file)
+        with open(output_file, 'w') as f:
+            f.write(parse_asm_representation_from_blocks(asm_blocks))
 
 
 def update_gas_count(old_block, new_block):
@@ -794,6 +735,8 @@ def optimize_asm_in_asm_format(file_name, output_file, csv_file, timeout=10, log
         with open(output_file, 'w') as f:
             f.write(json.dumps(rebuild_asm(new_asm)))
 
+        print("")
+        print("Json solc optimized stored at " + output_file)
         df = pd.DataFrame(statistics_rows)
         df.to_csv(csv_file)
 
@@ -838,7 +781,7 @@ if __name__ == '__main__':
     if not args.block:
         optimize_asm_in_asm_format(args.input_path, args.output_path, args.csv_path, args.tout, False, args.storage,args.last_constants,args.size,args.partition)
     else:
-       optimize_isolated_asm_block(args.input_path, args.output_path, args.csv_path, args.tout, False, args.storage,args.last_constants,args.size,args.partition)
+        optimize_isolated_asm_block(args.input_path, args.output_path, args.csv_path, args.tout, args.storage,args.last_constants,args.size,args.partition)
 
     print("")
     print("Total time spent by the SMT solver in minutes: " + str(round(total_time / 60, 2)))
