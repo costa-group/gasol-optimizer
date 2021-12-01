@@ -6,7 +6,7 @@ from sfs_generator.asm_json import AsmJSON
 from sfs_generator.asm_block import AsmBlock
 from sfs_generator.asm_contract import AsmContract
 
-def buildAsmBytecode(instruction):
+def build_asm_bytecode(instruction):
     begin = instruction["begin"]
     end = instruction["end"]
     name = instruction["name"]
@@ -17,7 +17,7 @@ def buildAsmBytecode(instruction):
     return asm_bytecode
 
 
-def buildBlocks(cname,instr_list, is_init_code):
+def build_blocks_from_asm_representation(cname, instr_list, is_init_code):
     bytecodes = []
 
     block = AsmBlock(cname,0, is_init_code)
@@ -25,7 +25,7 @@ def buildBlocks(cname,instr_list, is_init_code):
     i = 0
     while i < len(instr_list):
         instr_name = instr_list[i]["name"]
-        asm_bytecode = buildAsmBytecode(instr_list[i])
+        asm_bytecode = build_asm_bytecode(instr_list[i])
 
         # Final instructions of a block
         if instr_name in ["JUMP","JUMPI","STOP","RETURN","REVERT","INVALID"]:
@@ -64,7 +64,7 @@ def build_asm_contract(cname,cinfo):
 
     initCode = cinfo[".code"]
 
-    init_bytecode = buildBlocks(cname, initCode, True)
+    init_bytecode = build_blocks_from_asm_representation(cname, initCode, True)
     
     asm_c.setInitCode(init_bytecode)
         
@@ -78,7 +78,7 @@ def build_asm_contract(cname,cinfo):
             asm_c.setAux(elem,aux_data)
 
             code = data[elem][".code"]
-            run_bytecode = buildBlocks(cname,code, False)
+            run_bytecode = build_blocks_from_asm_representation(cname, code, False)
             asm_c.setRunCode(elem,run_bytecode)
 
             data1 = data[elem].get(".data",None)
