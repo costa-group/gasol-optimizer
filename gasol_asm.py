@@ -17,7 +17,7 @@ sys.path.append(os.path.dirname(os.path.realpath(__file__))+"/statistics")
 sys.path.append(os.path.dirname(os.path.realpath(__file__))+"/global_params")
 
 
-from parser_asm import parse_asm
+from parser_asm import parse_asm, parse_blocks_from_plain_instructions
 import ir_block
 from gasol_optimization import get_sfs_dict
 from gasol_encoder import execute_syrup_backend, generate_theta_dict_from_sequence, execute_syrup_backend_combined
@@ -423,8 +423,14 @@ def preprocess_instructions_plain_text(instructions):
 def optimize_isolated_asm_block(block_name,output_file, csv_file, timeout=10, log=False, storage= False, last_const = False, size_abs = False, partition = False):
 
     with open(block_name,"r") as f:        
-        instructions = f.readline().strip()
+        instructions = f.read()
     f.close()
+
+    blocks = parse_blocks_from_plain_instructions(instructions)
+    for block in blocks:
+        print(block)
+        print("aaa")
+    exit(0)
     
     opcodes = preprocess_instructions_plain_text(instructions)
 

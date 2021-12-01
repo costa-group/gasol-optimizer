@@ -5,12 +5,14 @@ from sfs_generator.asm_bytecode import AsmBytecode
 from sfs_generator.asm_json import AsmJSON
 from sfs_generator.asm_block import AsmBlock
 from sfs_generator.asm_contract import AsmContract
+from sfs_generator.utils import isYulKeyword
+import itertools
 
 def build_asm_bytecode(instruction):
-    begin = instruction["begin"]
-    end = instruction["end"]
-    name = instruction["name"]
-    source = instruction["source"]
+    begin = instruction.get("begin", -1)
+    end = instruction.get("end", -1)
+    name = instruction.get("name", -1)
+    source = instruction.get("source", -1)
     value = instruction.get("value", None)
 
     asm_bytecode = AsmBytecode(begin,end,source,name,value)
@@ -112,4 +114,49 @@ def parse_asm(file_name):
 
 
     return asm_json
-        
+
+
+def plain_instructions_to_asm_representation(raw_instruction_str):
+    split_str = list(itertools.chain.from_iterable([[elem for elem in line.split(" ")] for line in raw_instruction_str.splitlines()]))
+    print(split_str)
+    # We remove empty elements, as they obviously do not add any info on the sequence of opcodes
+    ops = list(filter(lambda x: x != '', split_str))
+    opcodes = []
+    i = 0
+
+    while i < len(ops):
+        op = ops[i]
+        instr = {}
+        if not op.startswith("PUSH"):
+            opcodes.append({"name": op})
+        else:
+            if op.startswith("PUSH") and op.find("DEPLOYADDRESS") != -1:
+                # Fixme: add ALL PUSH variants: PUSH data, PUSH DEPLOYADDRESS
+                final_op = {"name": op}
+            elif op.startswith("PUSH") and op.find("SIZE") != -1:
+                final_op = {"name": op}
+            # If position t+1 is a Yul Keyword, then we need to analyze them separately
+            elif not isYulKeyword(ops[i + 1]):
+                val = ops[i + 1]
+                # The hex representation omits
+                val_representation = val[2:] if val.startswith("0x") else val
+                final_op = {"name": op, "value": val_representation}
+                i = i + 1
+            else:
+                name_keyword = ops[i + 1]
+                val = ops[i + 2]
+                name = op + " " + name_keyword
+                val_representation = val[2:] if val.startswith("0x") else val
+                final_op = {"name": name, "value": val_representation}
+                i += 2
+
+            opcodes.append(final_op)
+
+        i += 1
+    return opcodes
+
+
+def parse_blocks_from_plain_instructions(raw_instructions_str):
+    instr_list = plain_instructions_to_asm_representation(raw_instructions_str)
+    blocks = build_blocks_from_asm_representation("isolated", instr_list, False)
+    return blocks
