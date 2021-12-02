@@ -64,20 +64,36 @@ def init():
 relevant_operations = ["ADD", "MUL", "SUB", "EXP", "SHL", "AND", "OR", "XOR", "NOT"]
 
 
-def update_integer_values(count_integer, reconstruct_integer, value, name):
+def update_integer_values(count_integer, reconstruct_integer, associated_cost, associated_bytes, value, name, n_bytes, gas_cost):
     count_integer[value] = count_integer.get(value, 0) + 1
+
     current_set = reconstruct_integer.get(value, set())
     current_set.add(name)
     reconstruct_integer[value] = current_set
+
+    current_set = associated_cost.get(value, set())
+    current_set.add(gas_cost)
+    associated_cost[value] = current_set
+
+    current_set = associated_bytes.get(value, set())
+    current_set.add(n_bytes)
+    associated_bytes[value] = current_set
 
 
 def negate(number, bits = 256):
     return int(format(~number & 2 ** bits - 1, "0{}b".format(bits)), 2)
 
 
-def process_block(block, count_integer, reconstruct_integer, big_numbers):
+def bytes_associated_to_push(n):
+    return 1 + int(ceil(len(hex(n)[2:]) / 2))
+
+
+def process_block(block, count_integer, reconstruct_integer, associated_cost, associated_bytes, big_numbers):
     stack_act = []
     names = []
+    current_cost = 0
+    current_bytes = 0
+
     for asm_bytecode in block.getInstructions():
         op_name = asm_bytecode.getDisasm()
 
@@ -88,6 +104,8 @@ def process_block(block, count_integer, reconstruct_integer, big_numbers):
 
             stack_act.insert(0, pushed_value)
             names.insert(0, "PUSH " + asm_bytecode.getValue())
+            current_bytes += bytes_associated_to_push(pushed_value)
+            current_cost += 3
 
         elif op_name == "NOT" and len(stack_act) > 0:
             op1 = stack_act[0]
@@ -97,6 +115,9 @@ def process_block(block, count_integer, reconstruct_integer, big_numbers):
 
             names.insert(0, op_name + "(" + name1 + ")")
             stack_act.insert(0, negate(op1))
+
+            current_bytes += 1
+            current_cost += 3
 
         elif len(stack_act) > 1 and op_name in relevant_operations:
             op1, op2 = stack_act[0], stack_act[1]
@@ -109,6 +130,9 @@ def process_block(block, count_integer, reconstruct_integer, big_numbers):
 
             names.insert(0, op_name + "(" + name1 + ", " + name2 + ")")
 
+            current_bytes += 1
+            current_cost += 3
+
             if op_name == "ADD":
                 stack_act.insert(0, op1 + op2)
             elif op_name == "MUL":
@@ -117,6 +141,7 @@ def process_block(block, count_integer, reconstruct_integer, big_numbers):
                 stack_act.insert(0, op1 - op2)
             elif op_name == "EXP":
                 stack_act.insert(0, op1 ** op2)
+                current_cost += 7 + 50 * (bytes_associated_to_push(op2)-1)
             elif op_name == "SHL":
                 stack_act.insert(0, op2 << op1)
             elif op_name == "AND":
@@ -129,13 +154,17 @@ def process_block(block, count_integer, reconstruct_integer, big_numbers):
                 raise ValueError("Forgotten operation")
         else:
             for value, name in zip(stack_act, names):
-                update_integer_values(count_integer, reconstruct_integer, value, name)
+                update_integer_values(count_integer, reconstruct_integer, associated_cost, associated_bytes, value,
+                                      name, current_bytes, current_cost)
 
             stack_act = []
             names = []
+            current_cost = 0
+            current_bytes = 0
 
     for value, name in zip(stack_act, names):
-        update_integer_values(count_integer, reconstruct_integer, value, name)
+        update_integer_values(count_integer, reconstruct_integer, associated_cost, associated_bytes, value, name,
+                              current_bytes, current_cost)
 
 
 def factorize_with_timeout(number, c, timeout=1):
@@ -155,6 +184,7 @@ def find_nearest_perfect_power(n):
     exponent = 1
     current_cost = 2*n
     current_diff = n
+    addition = True
 
     for k in range(2, floor(log2(n)) + 1):
         base1 = ceil(n ** (1/k))
@@ -174,17 +204,105 @@ def find_nearest_perfect_power(n):
             exponent = k
             base = base2
             current_cost = cost2
+            # base1 ** candidate1 >= n, so the diff is subtracted
+            addition = False
 
         elif cost1 <= min(cost2, current_cost):
             current_diff = diff1
             exponent = k
             base = base2
             current_cost = cost1
+            addition = True
 
-    print(n, current_diff, base, exponent)
-    return current_diff, base, exponent
+    return current_diff, base, exponent, addition
 
-# That's not possible
+
+def find_nearest_shift(n):
+    base = 0
+    exponent = 1
+    current_cost = 2*n
+    current_diff = n
+    addition = True
+
+    for k in range(2, floor(log2(n)) + 1):
+        base1 = ceil(n ** (1/k))
+        base2 = floor(n ** (1/k))
+
+        candidate1 = base1 ** k
+        candidate2 = base2 ** k
+
+        diff1 = abs(candidate1 - n)
+        diff2 = abs(candidate2 - n)
+
+        cost1 = len(hex(base1)[2:]) + len(hex(k)[2:]) + len(hex(diff1)[2:])
+        cost2 = len(hex(base2)[2:]) + len(hex(k)[2:]) + len(hex(diff2)[2:])
+
+        if cost2 <= min(cost1, current_cost):
+            current_diff = diff2
+            exponent = k
+            base = base2
+            current_cost = cost2
+            # base1 ** candidate1 >= n, so the diff is subtracted
+            addition = False
+
+        elif cost1 <= min(cost2, current_cost):
+            current_diff = diff1
+            exponent = k
+            base = base2
+            current_cost = cost1
+            addition = True
+
+    return current_diff, base, exponent, addition
+
+
+def build_best_configuration(n, remaining_bytes, already_negated):
+    # We need at least two bytes to generate a number
+    if remaining_bytes <= 1:
+        return None, None
+    cost_push = bytes_associated_to_push(n)
+    expression_push = "PUSH " + hex(n)[2:]
+
+    cost_best = cost_push
+    expression_best = expression_push
+
+    # There is no way to obtain better results if the pushed values has 2 bytes
+    if len(hex(n)[2:])  <= 2:
+
+        # There are enough bytes to represent the number
+        if cost_push <= remaining_bytes:
+            return cost_push, expression_push
+        else:
+            return None, None
+
+
+    if not already_negated:
+        cost, expression = build_best_configuration(negate(n), min(remaining_bytes-1, bytes_associated_to_push(negate(n))) , False)
+        if cost is not None and cost + 1 < cost_best:
+            cost_best = cost + 1
+            expression_best = "NOT(" + expression + ")"
+
+    current_diff, base, exponent, is_addition = find_nearest_perfect_power(n)
+
+    cost_base, expression_base = build_best_configuration(base, min(remaining_bytes - 1, bytes_associated_to_push(base)) , True)
+    cost_exponent, expression_exponent = build_best_configuration(exponent, min(remaining_bytes - 1, bytes_associated_to_push(exponent)) , True)
+
+
+    if cost_base is not None and cost_exponent is not None and cost_base + cost_exponent + 2 < remaining_bytes:
+        cost_without_diff = cost_base + cost_exponent + 2
+        cost_diff, expression_diff = build_best_configuration(current_diff, min(remaining_bytes - cost_without_diff,
+                                                                                bytes_associated_to_push(current_diff)), True)
+        if cost_diff is not None and cost_diff + cost_without_diff < cost_best:
+            cost_best = cost_diff + cost_without_diff
+
+            if is_addition:
+                expression_best = "ADD(EXP(" + expression_base + ", " + expression_exponent + "), " + expression_diff + ")"
+            else:
+                expression_best = "SUB(EXP(" + expression_base + ", " + expression_exponent + "), " + expression_diff + ")"
+
+    if cost_best <= remaining_bytes:
+        return cost_best, expression_best
+    else:
+        return None, None
 
 if __name__=="__main__":
     global args
@@ -194,6 +312,8 @@ if __name__=="__main__":
     count_integer = dict()
     reconstruct_integer = dict()
     big_numbers = dict()
+    associated_cost = dict()
+    associated_bytes = dict()
 
     total_blocks = 0
     for asm_file in glob.glob(contracts_dir_path + "*.json_solc"):
@@ -202,19 +322,20 @@ if __name__=="__main__":
             for identifier in c.getDataIds():
                 blocks = c.getRunCodeOf(identifier)
                 for block in blocks:
-                    process_block(block, count_integer, reconstruct_integer, big_numbers)
+                    process_block(block, count_integer, reconstruct_integer, associated_cost, associated_bytes, big_numbers)
 
     df = pd.DataFrame([{"hexadecimal": hex(k), "decimal":k, "count":v, "expression": str(reconstruct_integer[k])} for k, v in
                        reversed(sorted(count_integer.items(), key=lambda kv: kv[1]))])
     df.to_csv(results_dir + "integer_constants.csv")
 
+    print(set(reconstruct_integer.keys()).difference(set(associated_bytes.keys())))
     current_rows = []
-    for k, v in reversed(sorted(big_numbers.items(), key=lambda kv: kv[1])):
-        current_diff, base, exponent = find_nearest_perfect_power(k)
-        current_rows.append({"hexadecimal": hex(k), "decimal": k, "count": v, "base": base, "base_hex": hex(base),
-                             "exponent": exponent, "exponent_hex": hex(exponent), "final_diff": current_diff,
-                             "final_diff_hex": hex(current_diff) , "current_bytes" : len(hex(k)[2:]) / 2 + 1,
-                             "expected_bytes": (len(hex(base)[2:]) + len(hex(exponent)[2:]) + len(hex(current_diff)[2:])) / 2 + 4})
+    for k, v in reversed(sorted(count_integer.items(), key=lambda kv: kv[1])):
+        if bytes_associated_to_push(k) < 3:
+            continue
+        cost_best, expression_best = build_best_configuration(k, bytes_associated_to_push(k), False)
+        current_rows.append({"hexadecimal": hex(k), "decimal": k, "current_cost": str(associated_bytes[k]), "cost_best" : cost_best,
+                             "expression": str(reconstruct_integer[k]), "expression_best": expression_best})
     df2 = pd.DataFrame(current_rows)
     df2.to_csv(results_dir + "pushed_values.csv")
 
