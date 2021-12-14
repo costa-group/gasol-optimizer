@@ -27,7 +27,7 @@ def get_solver_to_execute(smt_file, solver, tout):
         else:
             return bclt_exec + " -file " + smt_file + " -tlimit " + str(tout)
     else:
-        return oms_exec + " " + smt_file
+        return oms_exec + " " + smt_file + " -optimization=True"
 
 
 # Calls syrup and computes the solution. Returns the raw output from the corresponding solver
