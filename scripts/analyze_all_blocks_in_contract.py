@@ -24,10 +24,6 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))+"/s
 from disasm_generation import generate_disasm_sol
 import ir_block
 from gasol_optimization import get_sfs_dict
-sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-from gasol_asm import preprocess_instructions_plain_text
-
-
 
 def modifiable_path_files_init():
     parser = argparse.ArgumentParser()
@@ -58,6 +54,9 @@ def modifiable_path_files_init():
     parser.add_argument("-bytecode-size-soft-constraints", dest='bytecode_size_soft_constraints', action='store_true',
                     help="")
     parser.add_argument("-memory-encoding", help="Choose the memory encoding model", choices = ["l_vars","direct"], default="l_vars")
+    parser.add_argument("-number-instruction-gas-model", dest='number_instruction_gas_model', action='store_true',
+                    help="Soft constraints for optimizing the number of instructions instead of gas")
+
 
 
     global args
@@ -194,7 +193,7 @@ def run_and_measure_command(cmd):
 
 
 def analyze_file_oms(solution):
-    pattern = re.compile("\(gas (.*)\)")
+    pattern = re.compile("\(gas ([0-9]*)\)")
     for match in re.finditer(pattern, solution):
         number = int(match.group(1))
         pattern2 = re.compile("range")
@@ -257,7 +256,7 @@ def get_solver_to_execute(block_id):
         else:
             return bclt_exec + " -file " + encoding_file + " -tlimit " + str(tout)
     else:
-        return oms_exec + " " + encoding_file
+        return oms_exec + " " + encoding_file+ " -optimization=True"
 
 
 def get_tout_found_per_solver(solution):

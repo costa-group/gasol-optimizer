@@ -48,7 +48,7 @@ def obtain_solver_output(block_name, solver, tout):
 
 
 def analyze_file_oms(solution):
-    pattern = re.compile("\(gas (.*)\)")
+    pattern = re.compile("\(gas ([0-9]*)\)")
     for match in re.finditer(pattern, solution):
         number = int(match.group(1))
         pattern2 = re.compile("range")
