@@ -27,7 +27,7 @@ def get_solver_to_execute(smt_file, solver, tout):
         else:
             return bclt_exec + " -file " + smt_file + " -tlimit " + str(tout)
     else:
-        return oms_exec + " " + smt_file
+        return oms_exec + " " + smt_file + " -optimization=True"
 
 
 # Calls syrup and computes the solution. Returns the raw output from the corresponding solver
@@ -48,7 +48,7 @@ def obtain_solver_output(block_name, solver, tout):
 
 
 def analyze_file_oms(solution):
-    pattern = re.compile("\(gas (.*)\)")
+    pattern = re.compile("\(gas ([0-9]*)\)")
     for match in re.finditer(pattern, solution):
         number = int(match.group(1))
         pattern2 = re.compile("range")
