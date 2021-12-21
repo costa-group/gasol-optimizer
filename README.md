@@ -7,7 +7,7 @@ GASOL
 GASOL is a generic framework that optimizes smart contracts by applying the technique called "super-optimization" that consists in optimizing basic blocks (sequences of EVM instructions). GASOL tries to find, for each basic block, a sequence of EVM instructions that produces the same stack as the original block, but consumes a smaller amount of gas.
 
 ## Documentation
-You can find documentation further about the Gasol project [here](https://github.com/costa-group/gasol-optimizer/tree/main/reports)
+You can find documentation further about the Gasol project [here](https://github.com/costa-group/gasol-optimizer/tree/main/reports).
 
 ## Installation (Ubuntu)
 GASOL is implemented in Python and runs Python3. It does not need any additional library. In order to install it, run one of the following commands:
