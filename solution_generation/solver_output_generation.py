@@ -1,19 +1,7 @@
-import os
 import shlex
 import subprocess
+from global_params.paths import *
 
-
-project_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-
-gasol_path = "/tmp/gasol/"
-
-encoding_path = gasol_path + "smt_encoding/"
-
-z3_exec = project_path + "/bin/z3"
-
-bclt_exec = project_path + "/bin/barcelogic"
-
-oms_exec = project_path + "/bin/optimathsat"
 
 
 def run_command(cmd):
@@ -38,7 +26,7 @@ def get_solver_to_execute(smt_file, solver, tout):
 # Calls syrup and computes the solution. Returns the raw output from the corresponding solver
 def generate_solution(block_name, solver, tout):
     # encoding_file = encoding_path+"encoding_Z3.smt2"
-    encoding_file = encoding_path + block_name + "_" + solver + ".smt2"
+    encoding_file = smt_encoding_path + block_name + "_" + solver + ".smt2"
 
     exec_command = get_solver_to_execute(encoding_file, solver, tout)
 

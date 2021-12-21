@@ -99,6 +99,8 @@ opcodes = {
     "PUSH[$]": [0x00,0,1], #Yul opcode
     "PUSHDEPLOYADDRESS": [0x00,0,1], #Yul opcode
     "PUSHDATA": [0x00,0,1], #Yul opcode
+    "PUSHSIZE": [0x00,0,1], #Yul opcode
+    "PUSHIMMUTABLE": [0x00,0,1], #Yul opcode
     "---END---": [0x00, 0, 0]
 }
 

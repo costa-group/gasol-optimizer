@@ -1,12 +1,10 @@
 #Pablo Gordillo
-import re
-import os
 import traceback
 from timeit import default_timer as dtimer
 
 from rbr_rule import RBRRule
 from gasol_optimization import smt_translate_block
-from global_params import gasol_path, tmp_path, gasol_folder
+from global_params.paths import *
 
 
 '''
@@ -30,7 +28,7 @@ def init_globals():
                  "XOR", "NOT", "BYTE","SHL","SHR","SAR"]
 
     global opcodes20
-    opcodes20 = ["SHA3"]
+    opcodes20 = ["SHA3","KECCAK256"]
 
     global opcodes30
     opcodes30 = ["ADDRESS", "BALANCE", "ORIGIN", "CALLER",
@@ -69,7 +67,7 @@ def init_globals():
     opcodesZ = ["RETURNDATACOPY","RETURNDATASIZE"]
 
     global opcodesYul
-    opcodesYul = ["PUSHTAG","PUSH#[$]","PUSH[$]", "PUSHDATA", "PUSHDEPLOYADDRESS", "ASSIGNIMMUTABLE"]
+    opcodesYul = ["PUSHTAG","PUSH#[$]","PUSH[$]", "PUSHDATA", "PUSHDEPLOYADDRESS", "ASSIGNIMMUTABLE","PUSHSIZE","PUSHIMMUTABLE"]
     
     global current_local_var
     current_local_var = 0
@@ -382,7 +380,7 @@ def translateOpcodes20(opcode, index_variables):
         v2, updated_variables = get_consume_variable(updated_variables)
         v3, updated_variables = get_new_variable(updated_variables)
         instr = v3+" = sha3("+ v1+", "+v2+")"
-    if opcode == "KECCAK256":
+    elif opcode == "KECCAK256":
         v1, updated_variables = get_consume_variable(index_variables)
         v2, updated_variables = get_consume_variable(updated_variables)
         v3, updated_variables = get_new_variable(updated_variables)
@@ -467,7 +465,12 @@ def translateOpcodes30(opcode, value, index_variables,block):
         v3, updated_variables = get_consume_variable(updated_variables)
 
         instr = "extcodecopy("+v0+","+v1+","+v2++","+v3+")"  
-            
+
+    elif opcode == "EXTCODEHASH":
+        _, updated_variables = get_consume_variable(index_variables)
+        v1, updated_variables = get_new_variable(updated_variables)
+        instr = v1+" = extcodehash("+v1+")"  
+        
     elif opcode == "MCOPY":
         pass
     else:
@@ -874,6 +877,11 @@ def translateYulOpcodes(opcode, value, index_variables):
         v1,updated_variables = get_new_variable(index_variables)
         instr = v1+" = pushdeployaddress"
 
+    elif opcode == "PUSHSIZE":
+        v1,updated_variables = get_new_variable(index_variables)
+        instr = v1+" = pushsize"
+
+        
     else:
         v1,updated_variables = get_new_variable(index_variables)
         try:
@@ -892,7 +900,10 @@ def translateYulOpcodes(opcode, value, index_variables):
             
         elif opcode == "PUSHDATA":
             instr = v1+" = pushdata(" + str(dec_value)+")"
-        
+
+        elif opcode == "PUSHIMMUTABLE":
+            instr = v1+" = pushimmutable(" + str(dec_value)+")"
+            
     return instr, updated_variables
 
 '''
@@ -972,8 +983,8 @@ def compile_instr(rule,evm_opcode,variables,list_jumps,cond):
 
 
 def isYulInstruction(opcode):
-    if opcode.find("tag") == -1 and opcode.find("#") == -1 and opcode.find("$") == -1 \
-            and opcode.find("DATA") == -1 and opcode.find("DEPLOY") == -1:
+    if opcode.find("TAG") == -1 and opcode.find("#") == -1 and opcode.find("$") == -1 \
+            and opcode.find("DATA") == -1 and opcode.find("DEPLOY") == -1 and opcode.find("SIZE") == -1 and opcode.find("IMMUTABLE") == -1:
         return False
     else:
         return True
@@ -1041,7 +1052,7 @@ Main function that build the rbr representation from the CFG of a solidity file.
 -saco_rbr is True if it has to generate the RBR in SACO syntax.
 -exe refers to the number of smart contracts analyzed.
 '''
-def evm2rbr_compiler(contract_name = None,block = None, block_id = -1):
+def evm2rbr_compiler(contract_name = None,block = None, block_id = -1,preffix = "",simplification = True):
     global rbr_blocks
     
     init_globals()
@@ -1061,7 +1072,7 @@ def evm2rbr_compiler(contract_name = None,block = None, block_id = -1):
         ethir_time = end-begin
         #print("Build RBR: "+str(ethir_time)+"s")
                
-        smt_translate_block(rule,contract_name)
+        smt_translate_block(rule,contract_name,preffix,simplification)
                 
         return 0
         
