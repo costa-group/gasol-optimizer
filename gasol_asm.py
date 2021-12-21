@@ -7,7 +7,7 @@ import os
 import sys
 import shutil
 import pandas as pd
-
+from timeit import default_timer as dtimer
 
 sys.path.append(os.path.dirname(os.path.realpath(__file__))+"/smt_encoding")
 sys.path.append(os.path.dirname(os.path.realpath(__file__))+"/sfs_generator/")
@@ -493,13 +493,20 @@ def optimize_asm_block_asm_format(block, contract_name, timeout, storage, last_c
 
     instructions = preprocess_instructions(bytecodes)
 
+    # x = dtimer()
+    
     contracts_dict, sub_block_list = compute_original_sfs_with_simplifications(instructions,stack_size,contract_name,
                                                                                block_id, is_init_block,storage,
                                                                                last_const,size_abs, partition)
 
+    # y = dtimer()
+    # print("*************************************************************")
+    # print("SFS generation time: "+str(y-x)+"s")
+    # print("*************************************************************")
+
     if not args.backend:
         return new_block, {}
-
+    
     sfs_dict = contracts_dict["syrup_contract"]
     for solver_output, block_name, current_cost, current_length, user_instr, solver_time \
             in optimize_block(sfs_dict, timeout, size_abs):
@@ -774,6 +781,7 @@ if __name__ == '__main__':
     if args.storage or args.partition:
         constants.append_store_instructions_to_split()
 
+    x = dtimer()
     # if args.log_path is not None:
     #     with open(args.log_path) as path:
     #         log_dict = json.load(path)
@@ -783,6 +791,14 @@ if __name__ == '__main__':
     else:
         optimize_isolated_asm_block(args.input_path, args.output_path, args.csv_path, args.tout, args.storage,args.last_constants,args.size,args.partition)
 
+
+    y = dtimer()
+
+    print("")
+    print("SFS time: "+str(y-x))
+    print("")
+    
+    
     print("")
     print("Total time spent by the SMT solver in minutes: " + str(round(total_time / 60, 2)))
     print("")
