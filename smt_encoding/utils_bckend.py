@@ -1,5 +1,6 @@
 import copy
 import re
+
 # Miscellanea methods
 
 # We add a | | to string variables, as these variables are usually

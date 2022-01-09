@@ -1,10 +1,12 @@
-import sys
-import pathlib
 import json
 import os
+import pathlib
+import sys
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))+"/global_params")
 
-from paths import smt_encoding_path
+import global_params.paths as paths
+
 
 def init():
 
@@ -40,8 +42,8 @@ def initialize_dir_and_streams(solver,source_name = None):
         opcode_map_file = name + "_" + opcode_map_file
         gas_map_file = name + "_" + gas_map_file
 
-    pathlib.Path(smt_encoding_path).mkdir(parents=True, exist_ok=True)
-    encoding_stream = open(smt_encoding_path + encoding_name, 'w')
+    pathlib.Path(paths.smt_encoding_path).mkdir(parents=True, exist_ok=True)
+    encoding_stream = open(paths.smt_encoding_path + encoding_name, 'w')
 
     return encoding_stream
 
@@ -55,15 +57,15 @@ def close_encoding():
 
 
 def write_instruction_map(theta_instr):
-    with open(smt_encoding_path + instr_map_file, 'w') as f:
+    with open(paths.smt_encoding_path + instr_map_file, 'w') as f:
         f.write(json.dumps(theta_instr))
 
 
 def write_opcode_map(instr_opcodes):
-    with open(smt_encoding_path + opcode_map_file, 'w') as f:
+    with open(paths.smt_encoding_path + opcode_map_file, 'w') as f:
         f.write(json.dumps(instr_opcodes))
 
 
 def write_gas_map(gas_instr):
-    with open(smt_encoding_path + gas_map_file, 'w') as f:
+    with open(paths.smt_encoding_path + gas_map_file, 'w') as f:
         f.write(json.dumps(gas_instr))

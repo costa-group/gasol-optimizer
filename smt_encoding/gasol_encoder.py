@@ -1,16 +1,25 @@
 #!/usr/bin/env python3
 import argparse
-
-from encoding_reconstruct_solution import generate_instr_sequence_from_instructions_and_pushed_values
-from superoptimization_enconding import generate_smtlib_encoding, generate_smtlib_encoding_appending
-from utils_bckend import add_bars_and_index_to_string, compute_final_stack_from_solution
-import json
-from encoding_files import initialize_dir_and_streams, write_encoding
-from smtlib_utils import set_logic, check_sat
-import re
-from encoding_utils import generate_disasm_map, generate_costs_ordered_dict, generate_stack_theta, generate_instr_map, \
-    generate_uninterpreted_theta, generate_uninterpreted_push_map
 import copy
+import json
+import re
+
+from smt_encoding.encoding_files import (initialize_dir_and_streams,
+                                         write_encoding)
+from smt_encoding.encoding_reconstruct_solution import \
+    generate_instr_sequence_from_instructions_and_pushed_values
+from smt_encoding.encoding_utils import (generate_costs_ordered_dict,
+                                         generate_disasm_map,
+                                         generate_instr_map,
+                                         generate_stack_theta,
+                                         generate_uninterpreted_push_map,
+                                         generate_uninterpreted_theta)
+from smt_encoding.smtlib_utils import check_sat, set_logic
+from smt_encoding.superoptimization_enconding import (
+    generate_smtlib_encoding, generate_smtlib_encoding_appending)
+from smt_encoding.utils_bckend import (add_bars_and_index_to_string,
+                                       compute_final_stack_from_solution)
+
 
 def parse_data(json_path, var_initial_idx=0, with_simplifications=True):
     # We can pass either the path to a json file, or

@@ -1,6 +1,10 @@
-from encoding_utils import *
-from encoding_files import write_encoding
-from encoding_memory_instructions import _l_variable_order_constraint, _mem_variable_equivalence_constraint
+from smt_encoding.encoding_files import write_encoding
+from smt_encoding.encoding_memory_instructions import (
+    _l_variable_order_constraint, _mem_variable_equivalence_constraint)
+from smt_encoding.encoding_utils import a, l, t
+from smt_encoding.smtlib_utils import (add_and, add_assert, add_eq,
+                                       add_implies, add_leq, add_lt, add_not,
+                                       add_or)
 
 # Aditional contraints
 

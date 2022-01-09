@@ -1,6 +1,13 @@
-from encoding_utils import *
-from encoding_files import write_encoding
-from utils_bckend import generate_generic_push_instruction
+import collections
+import re
+
+from smt_encoding.encoding_files import write_encoding
+from smt_encoding.encoding_utils import (a, generate_costs_ordered_dict,
+                                         generate_disjoint_sets_from_cost, t)
+from smt_encoding.smtlib_utils import (add_and, add_assert, add_assert_soft,
+                                       add_eq, add_leq, add_lt, add_not,
+                                       add_or)
+from smt_encoding.utils_bckend import generate_generic_push_instruction
 
 # Soft constraints
 
@@ -173,7 +180,7 @@ def byte_size_soft_constraints_complex(b0, theta_dict, is_barcelogic=False):
     cost_dict = dict(byte_tuples)
     for i in range(1, 33):
         cost_dict['PUSH' + str(i)] = i + 1
-    ordered_cost_dict = OrderedDict(sorted(cost_dict.items(), key=lambda t: t[1]))
+    ordered_cost_dict = collections.OrderedDict(sorted(cost_dict.items(), key=lambda t: t[1]))
     disjoin_sets = dict(generate_disjoint_sets_from_cost(ordered_cost_dict))
     previous_cost = 0
     or_variables = []

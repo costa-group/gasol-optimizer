@@ -1,10 +1,10 @@
 # Module that contains parameter declarations and
 # other auxiliary methods to generate the encoding
 import copy
-
-from smtlib_utils import *
-from collections import OrderedDict
 import re
+from collections import OrderedDict
+
+from smt_encoding.smtlib_utils import add_and, add_eq, var2str
 
 # We set the maximum k dup and swap instructions
 # can have.

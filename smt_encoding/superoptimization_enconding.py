@@ -1,18 +1,45 @@
 # Methods containing the generation of constraints
 # for applying superoptimization. It is assumed the
 # SFS has already been generated
+import copy
 
-from encoding_utils import *
-from encoding_initialize import initialize_variables, variables_assignment_constraint, \
-    initial_stack_encoding, final_stack_encoding
-from encoding_cost import paper_soft_constraints, label_name, alternative_soft_constraints, \
-    number_instructions_soft_constraints, byte_size_soft_constraints_simple, byte_size_soft_constraints_complex
-from encoding_stack_instructions import stack_constraints
-from encoding_redundant import *
-from encoding_files import write_encoding, write_opcode_map, write_instruction_map, write_gas_map
-from default_encoding import activate_default_encoding
-from encoding_reconstruct_solution import generate_encoding_from_log_json_dict
-from encoding_memory_instructions import memory_model_constraints_l_conflicting, memory_model_constraints_direct
+from smt_encoding.default_encoding import activate_default_encoding
+from smt_encoding.encoding_cost import (alternative_soft_constraints,
+                                        byte_size_soft_constraints_complex,
+                                        byte_size_soft_constraints_simple,
+                                        label_name,
+                                        number_instructions_soft_constraints,
+                                        paper_soft_constraints)
+from smt_encoding.encoding_files import (write_encoding, write_gas_map,
+                                         write_instruction_map,
+                                         write_opcode_map)
+from smt_encoding.encoding_initialize import (final_stack_encoding,
+                                              initial_stack_encoding,
+                                              initialize_variables,
+                                              variables_assignment_constraint)
+from smt_encoding.encoding_memory_instructions import (
+    memory_model_constraints_direct, memory_model_constraints_l_conflicting)
+from smt_encoding.encoding_reconstruct_solution import \
+    generate_encoding_from_log_json_dict
+from smt_encoding.encoding_redundant import (
+    each_function_is_used_at_least_once, each_function_is_used_at_most_once,
+    each_instruction_is_used_at_least_once_with_instruction_order,
+    no_output_before_pop, push_each_element_at_least_once,
+    restrain_instruction_order)
+from smt_encoding.encoding_stack_instructions import stack_constraints
+from smt_encoding.encoding_utils import (a, divide_usr_instr,
+                                         generate_costs_ordered_dict,
+                                         generate_disasm_map,
+                                         generate_instr_map,
+                                         generate_instruction_order_structures,
+                                         generate_phi_dict,
+                                         generate_stack_theta,
+                                         generate_uninterpreted_theta, t)
+from smt_encoding.smtlib_utils import (check_sat, get_objectives, get_value,
+                                       load_objective_model, set_logic,
+                                       set_minimize_function, set_model_true,
+                                       set_timeout)
+
 
 # Method to generate redundant constraints according to flags (at least once is included by default)
 def generate_redundant_constraints(flags, b0, user_instr, theta_stack, theta_comm, theta_non_comm, final_stack,
@@ -183,7 +210,7 @@ def generate_smtlib_encoding(b0, bs, usr_instr, variables, initial_stack, final_
     if flags['default-encoding']:
         flags = activate_default_encoding(initial_stack, final_stack, usr_instr, b0, flags)
 
-    write_encoding(set_logic('QF_LIA'))
+    write_encoding(set_logic('QF_IDL'))
     generate_configuration_statements(solver_name)
     generate_asserts_from_additional_info(additional_info)
     initialize_variables(variables, bs, b0, l_theta_dict)

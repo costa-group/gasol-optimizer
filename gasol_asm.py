@@ -1,15 +1,14 @@
 #!/usr/bin/python3
-
 import argparse
 import collections
 import json
 import os
-import sys
 import shutil
-import pandas as pd
+import sys
 from timeit import default_timer as dtimer
 
-sys.path.append(os.path.dirname(os.path.realpath(__file__))+"/smt_encoding")
+import pandas as pd
+
 sys.path.append(os.path.dirname(os.path.realpath(__file__))+"/sfs_generator/")
 sys.path.append(os.path.dirname(os.path.realpath(__file__))+"/solution_generation")
 sys.path.append(os.path.dirname(os.path.realpath(__file__))+"/verification")
@@ -17,25 +16,35 @@ sys.path.append(os.path.dirname(os.path.realpath(__file__))+"/statistics")
 sys.path.append(os.path.dirname(os.path.realpath(__file__))+"/global_params")
 
 
-from parser_asm import parse_asm, parse_blocks_from_plain_instructions, parse_asm_representation_from_blocks
-import ir_block
-from gasol_optimization import get_sfs_dict
-from gasol_encoder import execute_syrup_backend, generate_theta_dict_from_sequence, execute_syrup_backend_combined
-from solver_output_generation import obtain_solver_output, analyze_file
-from disasm_generation import generate_info_from_solution, generate_disasm_sol_from_output, \
-    read_initial_dicts_from_files, generate_sub_block_asm_representation_from_log, obtain_log_representation_from_solution,\
-    generate_sub_block_asm_representation_from_output
-from solver_solution_verify import check_solver_output_is_correct, generate_solution_dict
-from global_params.paths import *
-from utils import isYulInstruction, compute_stack_size, is_constant_instruction, isYulKeyword
 from copy import deepcopy
-import opcodes as op
-from rebuild_asm import rebuild_asm
-from verification.sfs_verify import verify_block_from_list_of_sfs
-from properties_from_asm_json import compute_number_of_instructions_in_asm_json_per_file, \
-    compute_bytecode_size_in_asm_json_per_file, bytes_required_initial_plain, bytes_required
-import global_params.constants as constants
 
+import ir_block
+import opcodes as op
+from disasm_generation import (
+    generate_disasm_sol_from_output, generate_info_from_solution,
+    generate_sub_block_asm_representation_from_log,
+    generate_sub_block_asm_representation_from_output,
+    obtain_log_representation_from_solution, read_initial_dicts_from_files)
+from smt_encoding.gasol_encoder import (execute_syrup_backend,
+                           execute_syrup_backend_combined,
+                           generate_theta_dict_from_sequence)
+from gasol_optimization import get_sfs_dict
+from parser_asm import (parse_asm, parse_asm_representation_from_blocks,
+                        parse_blocks_from_plain_instructions)
+from properties_from_asm_json import (
+    bytes_required, bytes_required_initial_plain,
+    compute_bytecode_size_in_asm_json_per_file,
+    compute_number_of_instructions_in_asm_json_per_file)
+from rebuild_asm import rebuild_asm
+from solver_output_generation import analyze_file, obtain_solver_output
+from solver_solution_verify import (check_solver_output_is_correct,
+                                    generate_solution_dict)
+from utils import (compute_stack_size, is_constant_instruction,
+                   isYulInstruction, isYulKeyword)
+
+import global_params.constants as constants
+from global_params.paths import *
+from verification.sfs_verify import verify_block_from_list_of_sfs
 
 
 def init():

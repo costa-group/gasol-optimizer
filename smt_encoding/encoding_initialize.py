@@ -1,5 +1,7 @@
-from encoding_files import write_encoding
-from encoding_utils import *
+from smt_encoding.encoding_files import write_encoding
+from smt_encoding.encoding_utils import a, add_eq, int_limit, l, t, u, x
+from smt_encoding.smtlib_utils import (add_and, add_assert, add_not,
+                                       declare_boolvar, declare_intvar)
 
 # Methods for initializing the variables
 

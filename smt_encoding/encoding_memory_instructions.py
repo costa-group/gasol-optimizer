@@ -1,5 +1,7 @@
-from encoding_utils import *
-from encoding_files import write_encoding
+from smt_encoding.encoding_files import write_encoding
+from smt_encoding.encoding_utils import l, t
+from smt_encoding.smtlib_utils import (add_and, add_assert, add_eq,
+                                       add_implies, add_leq, add_lt, add_not)
 
 # Methods for generating the constraints for both memory and storage (Ls)
 

@@ -1,5 +1,6 @@
-from encoding_utils import *
-from encoding_files import write_encoding
+from smt_encoding.encoding_files import write_encoding
+from smt_encoding.encoding_utils import a, t
+from smt_encoding.smtlib_utils import add_assert, add_eq
 
 
 # Given a list that contains info from the sequence, transforms it into
