@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 
 def rebuild_asm_bytecode(asm_bytecode):
     json_bytecode = {"begin": asm_bytecode.getBegin(), "end": asm_bytecode.getEnd(), "name": asm_bytecode.getDisasm(),

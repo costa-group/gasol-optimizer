@@ -1,5 +1,6 @@
 import re
 
+
 def analyze_file_oms(solution):
     pattern = re.compile("\(gas (.*)\)")
     for match in re.finditer(pattern, solution):

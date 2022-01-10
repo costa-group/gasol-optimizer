@@ -1,35 +1,37 @@
 #!/usr/bin/python3
-import re
-import json
 import collections
+import json
 import pathlib
+import re
 
-from paths import gasol_path, solutions_path
-from asm_bytecode import AsmBytecode
-from opcodes import opcode_internal_representation_to_assembly_item
-from gasol_encoder import generate_theta_dict_from_sequence
+import global_params.paths as paths
+from sfs_generator.asm_bytecode import AsmBytecode
+from sfs_generator.opcodes import \
+    opcode_internal_representation_to_assembly_item
+from smt_encoding.gasol_encoder import generate_theta_dict_from_sequence
+
 
 def init():
     global instruction_json
-    instruction_json = gasol_path + "smt_encoding/instruction.json"
+    instruction_json = paths.gasol_path + "smt_encoding/instruction.json"
 
     global opcodes_json
-    opcodes_json = gasol_path + "smt_encoding/opcode.json"
+    opcodes_json = paths.gasol_path + "smt_encoding/opcode.json"
 
     global gas_json
-    gas_json = gasol_path + "smt_encoding/gas.json"
+    gas_json = paths.gasol_path + "smt_encoding/gas.json"
 
     global solution_file
-    solution_file = gasol_path + "solution.txt"
+    solution_file = paths.gasol_path + "solution.txt"
 
     global instruction_final_solution
-    instruction_final_solution = gasol_path + "optimized_block_instructions.disasm_opt"
+    instruction_final_solution = paths.gasol_path + "optimized_block_instructions.disasm_opt"
 
     global opcodes_final_solution
-    opcodes_final_solution = gasol_path + "optimized_block_opcodes.evm"
+    opcodes_final_solution = paths.gasol_path + "optimized_block_opcodes.evm"
 
     global gas_final_solution
-    gas_final_solution = gasol_path + "gas.txt"
+    gas_final_solution = paths.gasol_path + "gas.txt"
 
 
 def generate_file_names(contract_name, block_name):
@@ -40,13 +42,13 @@ def generate_file_names(contract_name, block_name):
     global opcodes_final_solution
     global gas_final_solution
 
-    instruction_json = gasol_path+"smt_encoding/"+block_name+"_instruction.json"
-    opcodes_json = gasol_path+"smt_encoding/"+block_name+"_opcode.json"
-    gas_json = gasol_path+"smt_encoding/"+block_name+"_gas.json"
+    instruction_json = paths.gasol_path+"smt_encoding/"+block_name+"_instruction.json"
+    opcodes_json = paths.gasol_path+"smt_encoding/"+block_name+"_opcode.json"
+    gas_json = paths.gasol_path+"smt_encoding/"+block_name+"_gas.json"
 
-    instruction_final_solution = gasol_path+"solutions/" + contract_name + "/disasm/" + block_name + "_optimized.disasm_opt"
-    opcodes_final_solution = gasol_path+"solutions/" + contract_name + "/evm/" + block_name+"_optimized.evm"
-    gas_final_solution = gasol_path + "solutions/" + contract_name + "/total_gas/" + block_name + "_real_gas.txt"
+    instruction_final_solution = paths.gasol_path+"solutions/" + contract_name + "/disasm/" + block_name + "_optimized.disasm_opt"
+    opcodes_final_solution = paths.gasol_path+"solutions/" + contract_name + "/evm/" + block_name+"_optimized.evm"
+    gas_final_solution = paths.gasol_path + "solutions/" + contract_name + "/total_gas/" + block_name + "_real_gas.txt"
 
 
 # Given the sequence of instructions in disassembly format, in opcode format and the pushed values, returns
@@ -123,9 +125,9 @@ def generate_disasm_sol(contract_name, block_name, bs, user_instr, solver_output
     instr_sol, opcode_sol, pushed_values_decimal, total_gas = \
         generate_info_from_solution(solver_output, opcodes_theta_dict, instruction_theta_dict, gas_theta_dict, values_dict)
 
-    pathlib.Path(solutions_path + contract_name + "/disasm/").mkdir(parents=True, exist_ok=True)
-    pathlib.Path(solutions_path + contract_name + "/evm/").mkdir(parents=True, exist_ok=True)
-    pathlib.Path(solutions_path + contract_name + "/total_gas/").mkdir(parents=True, exist_ok=True)
+    pathlib.Path(paths.solutions_path + contract_name + "/disasm/").mkdir(parents=True, exist_ok=True)
+    pathlib.Path(paths.solutions_path + contract_name + "/evm/").mkdir(parents=True, exist_ok=True)
+    pathlib.Path(paths.solutions_path + contract_name + "/total_gas/").mkdir(parents=True, exist_ok=True)
 
 
     with open(opcodes_final_solution, 'w') as opcodes_file:

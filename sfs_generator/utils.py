@@ -1,5 +1,7 @@
-import opcodes
 import math
+
+import sfs_generator.opcodes as opcodes
+
 
 def toInt(a):
     elem = a.split("_")

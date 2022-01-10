@@ -1,11 +1,13 @@
 import json
 import math
-from timeit import default_timer as dtimer
-from utils import is_integer,all_integers, find_sublist, get_num_bytes
-import  opcodes as opcodes
 import os
-from paths import gasol_path, json_path
-import constants as constants
+from timeit import default_timer as dtimer
+
+import global_params.constants as constants
+import global_params.paths as paths
+import sfs_generator.opcodes as opcodes
+from sfs_generator.utils import (all_integers, find_sublist, get_num_bytes,
+                                 is_integer)
 
 terminate_block = ["ASSERTFAIL","RETURN","REVERT","SUICIDE","STOP"]
 
@@ -1976,10 +1978,10 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
 
 
     if simplification:
-        if "jsons" not in os.listdir(gasol_path):
-            os.mkdir(json_path)
+        if "jsons" not in os.listdir(paths.gasol_path):
+            os.mkdir(paths.json_path)
 
-        with open(json_path+"/"+source_name+"_"+cname+"_"+block_nm+"_input.json","w") as json_file:
+        with open(paths.json_path+"/"+source_name+"_"+cname+"_"+block_nm+"_input.json","w") as json_file:
             json.dump(json_dict,json_file)
 
     return split_by,""
@@ -3076,10 +3078,10 @@ def write_instruction_block(rule_name,opcodes,subblock = None):
 
     op = list(map(lambda x: x[4:-1],opcodes))
     
-    if "disasms" not in os.listdir(gasol_path):
-        os.mkdir(gasol_path+"/disasms")
+    if "disasms" not in os.listdir(paths.gasol_path):
+        os.mkdir(paths.gasol_path+"/disasms")
     
-    byte_file =  open(gasol_path+"/disasms/"+source_name+"_"+cname+"_"+block_nm+".disasm","w")
+    byte_file =  open(paths.gasol_path+"/disasms/"+source_name+"_"+cname+"_"+block_nm+".disasm","w")
     for e in op:
         byte_file.write(e+"\n")
     byte_file.close()
@@ -3200,7 +3202,7 @@ def smt_translate_block(rule,file_name,name,preffix,simplification=True,storage 
     print(instructions)
     print("*******")
 
-    info = "INFO DEPLOY "+gasol_path+"ethir_OK_"+source_name+"_blocks_"+rule.get_rule_name()+" LENGTH="+str(len(opcodes))+" PUSH="+str(len(list(filter(lambda x: x.find("nop(PUSH")!=-1,opcodes))))
+    info = "INFO DEPLOY "+paths.gasol_path+"ethir_OK_"+source_name+"_blocks_"+rule.get_rule_name()+" LENGTH="+str(len(opcodes))+" PUSH="+str(len(list(filter(lambda x: x.find("nop(PUSH")!=-1,opcodes))))
     info_deploy.append(info)
     
     subblocks = []
@@ -5189,7 +5191,7 @@ def get_sequence(split_list):
     i = 0
     split = []
     if split_list == []:
-        return spllit
+        return split
 
 
     print("VEAMOS")

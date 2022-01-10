@@ -3,11 +3,12 @@ import sys
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
+import json
 import unittest
 
-import json
 from gasol_asm import filter_optimized_blocks_by_intra_block_optimization
 from sfs_generator.asm_bytecode import AsmBytecode
+
 
 class TestGasolASM(unittest.TestCase):
     def test_intra_block_optimization_1(self):

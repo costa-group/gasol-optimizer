@@ -1,4 +1,4 @@
-from utils_verify import *
+from verification.utils_verify import is_integer
 
 '''
 The jsons are going to be different. What needs to be the same are the

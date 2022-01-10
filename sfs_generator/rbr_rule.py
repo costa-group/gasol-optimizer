@@ -1,6 +1,7 @@
 #Pablo Gordillo
 
-from utils import toInt
+from sfs_generator.utils import toInt
+
 '''
 RBRRule class. It represents the rules of the transaction system.
 Each rule contains:

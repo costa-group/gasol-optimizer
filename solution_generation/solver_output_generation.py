@@ -1,8 +1,11 @@
-import shlex
-import subprocess
-from global_params.paths import *
+import os
 import re
 import resource
+import shlex
+import subprocess
+
+import global_params.paths as paths
+
 
 def run_command(cmd):
     FNULL = open(os.devnull, 'w')
@@ -20,20 +23,20 @@ def run_and_measure_command(cmd):
 
 def get_solver_to_execute(smt_file, solver, tout):
     if solver == "z3":
-        return z3_exec + " -smt2 " + smt_file
+        return paths.z3_exec + " -smt2 " + smt_file
     elif solver == "barcelogic":
         if tout is None:
-            return bclt_exec + " -file " + smt_file
+            return paths.bclt_exec + " -file " + smt_file
         else:
-            return bclt_exec + " -file " + smt_file + " -tlimit " + str(tout)
+            return paths.bclt_exec + " -file " + smt_file + " -tlimit " + str(tout)
     else:
-        return oms_exec + " " + smt_file + " -optimization=True"
+        return paths.oms_exec + " " + smt_file + " -optimization=True"
 
 
 # Calls syrup and computes the solution. Returns the raw output from the corresponding solver
 def generate_solution(block_name, solver, tout):
     # encoding_file = encoding_path+"encoding_Z3.smt2"
-    encoding_file = smt_encoding_path + block_name + "_" + solver + ".smt2"
+    encoding_file = paths.smt_encoding_path + block_name + "_" + solver + ".smt2"
 
     exec_command = get_solver_to_execute(encoding_file, solver, tout)
 

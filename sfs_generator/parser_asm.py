@@ -1,12 +1,13 @@
-#!/usr/bin/env python3
 
-import json
-from sfs_generator.asm_bytecode import AsmBytecode
-from sfs_generator.asm_json import AsmJSON
-from sfs_generator.asm_block import AsmBlock
-from sfs_generator.asm_contract import AsmContract
-from sfs_generator.utils import isYulKeyword
 import itertools
+import json
+
+from sfs_generator.asm_block import AsmBlock
+from sfs_generator.asm_bytecode import AsmBytecode
+from sfs_generator.asm_contract import AsmContract
+from sfs_generator.asm_json import AsmJSON
+from sfs_generator.utils import isYulKeyword
+
 
 def build_asm_bytecode(instruction):
     begin = instruction.get("begin", -1)

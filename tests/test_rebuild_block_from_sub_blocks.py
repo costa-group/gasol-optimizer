@@ -3,12 +3,13 @@ import sys
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
+import glob
 import unittest
+from copy import deepcopy
 
 from sfs_generator.parser_asm import parse_asm
 from sfs_generator.rebuild_asm import rebuild_asm_contract
-import glob
-from copy import deepcopy
+
 
 class TestRebuildBlockFromSubBlocks(unittest.TestCase):
 

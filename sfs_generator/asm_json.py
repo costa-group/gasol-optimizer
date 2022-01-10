@@ -1,8 +1,8 @@
-#!/usr/bin/env python3
 
 from sfs_generator.asm_contract import AsmContract
 
-class AsmJSON():
+
+class AsmJSON:
 
     def __init__(self):
         self.solc_version = ""

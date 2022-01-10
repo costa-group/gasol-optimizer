@@ -1,12 +1,13 @@
 #Pablo Gordillo
+
+import os
 import traceback
 from timeit import default_timer as dtimer
 
-from rbr_rule import RBRRule
-from gasol_optimization import smt_translate_block
-from paths import *
-from utils import get_push_number
-
+import global_params.paths as paths
+from sfs_generator.gasol_optimization import smt_translate_block
+from sfs_generator.rbr_rule import RBRRule
+from sfs_generator.utils import get_push_number
 
 '''
 It initialize the globals variables. 
@@ -1047,13 +1048,13 @@ for each smart contract.
 -executions refers to the number of smart contract that has been translated. int.
 '''
 def write_rbr(rule,block_id,cname = None):
-    if gasol_folder not in os.listdir(tmp_path):
-        os.mkdir(gasol_path)
+    if paths.gasol_folder not in os.listdir(paths.tmp_path):
+        os.mkdir(paths.gasol_path)
 
     if block_id !=-1:
-        name = gasol_path+cname+"block"+str(block_id)+".rbr"
+        name = paths.gasol_path+cname+"block"+str(block_id)+".rbr"
     else:
-        name = gasol_path+cname+".rbr"
+        name = paths.gasol_path+cname+".rbr"
         
     with open(name,"w") as f:
         f.write(rule.rule2string()+"\n")

@@ -1,10 +1,9 @@
-#!/usr/bin/env python3
-
-import sfs_generator.utils as utils
 import global_params.constants as constants
 import sfs_generator.opcodes as opcodes
+import sfs_generator.utils as utils
 
-class AsmBlock():
+
+class AsmBlock:
     
     def __init__(self, cname, identifier, is_init_block):
         self.contract_name = cname

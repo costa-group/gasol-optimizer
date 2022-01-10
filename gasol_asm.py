@@ -5,46 +5,39 @@ import json
 import os
 import shutil
 import sys
+from copy import deepcopy
+from statistics.properties_from_asm_json import (
+    bytes_required, bytes_required_initial_plain,
+    compute_bytecode_size_in_asm_json_per_file,
+    compute_number_of_instructions_in_asm_json_per_file)
 from timeit import default_timer as dtimer
 
 import pandas as pd
 
-sys.path.append(os.path.dirname(os.path.realpath(__file__))+"/sfs_generator/")
-sys.path.append(os.path.dirname(os.path.realpath(__file__))+"/solution_generation")
-sys.path.append(os.path.dirname(os.path.realpath(__file__))+"/verification")
-sys.path.append(os.path.dirname(os.path.realpath(__file__))+"/statistics")
-sys.path.append(os.path.dirname(os.path.realpath(__file__))+"/global_params")
-
-
-from copy import deepcopy
-
-import ir_block
-import opcodes as op
-from disasm_generation import (
+import global_params.constants as constants
+import global_params.paths as paths
+import sfs_generator.ir_block as ir_block
+import sfs_generator.opcodes as op
+from sfs_generator.gasol_optimization import get_sfs_dict
+from sfs_generator.parser_asm import (parse_asm,
+                                      parse_asm_representation_from_blocks,
+                                      parse_blocks_from_plain_instructions)
+from sfs_generator.rebuild_asm import rebuild_asm
+from sfs_generator.utils import (compute_stack_size, is_constant_instruction,
+                                 isYulInstruction, isYulKeyword)
+from smt_encoding.gasol_encoder import (execute_syrup_backend,
+                                        execute_syrup_backend_combined,
+                                        generate_theta_dict_from_sequence)
+from solution_generation.disasm_generation import (
     generate_disasm_sol_from_output, generate_info_from_solution,
     generate_sub_block_asm_representation_from_log,
     generate_sub_block_asm_representation_from_output,
     obtain_log_representation_from_solution, read_initial_dicts_from_files)
-from smt_encoding.gasol_encoder import (execute_syrup_backend,
-                           execute_syrup_backend_combined,
-                           generate_theta_dict_from_sequence)
-from gasol_optimization import get_sfs_dict
-from parser_asm import (parse_asm, parse_asm_representation_from_blocks,
-                        parse_blocks_from_plain_instructions)
-from properties_from_asm_json import (
-    bytes_required, bytes_required_initial_plain,
-    compute_bytecode_size_in_asm_json_per_file,
-    compute_number_of_instructions_in_asm_json_per_file)
-from rebuild_asm import rebuild_asm
-from solver_output_generation import analyze_file, obtain_solver_output
-from solver_solution_verify import (check_solver_output_is_correct,
-                                    generate_solution_dict)
-from utils import (compute_stack_size, is_constant_instruction,
-                   isYulInstruction, isYulKeyword)
-
-import global_params.constants as constants
-from global_params.paths import *
+from solution_generation.solver_output_generation import (analyze_file,
+                                                          obtain_solver_output)
 from verification.sfs_verify import verify_block_from_list_of_sfs
+from verification.solver_solution_verify import (
+    check_solver_output_is_correct, generate_solution_dict)
 
 
 def init():
@@ -68,23 +61,23 @@ def init():
 
 def clean_dir():
     ext = ["rbr", "csv", "sol", "bl", "disasm", "json"]
-    if gasol_folder in os.listdir(tmp_path):
-        for elem in os.listdir(gasol_path):
+    if paths.gasol_folder in os.listdir(paths.tmp_path):
+        for elem in os.listdir(paths.gasol_path):
             last = elem.split(".")[-1]
             if last in ext:
-                os.remove(gasol_path+elem)
+                os.remove(paths.gasol_path+elem)
 
-        if "jsons" in os.listdir(gasol_path):
-            shutil.rmtree(gasol_path + "jsons")
+        if "jsons" in os.listdir(paths.gasol_path):
+            shutil.rmtree(paths.gasol_path + "jsons")
 
-        if "disasms" in os.listdir(gasol_path):
-            shutil.rmtree(gasol_path + "disasms")
+        if "disasms" in os.listdir(paths.gasol_path):
+            shutil.rmtree(paths.gasol_path + "disasms")
 
-        if "smt_encoding" in os.listdir(gasol_path):
-            shutil.rmtree(gasol_path + "smt_encoding")
+        if "smt_encoding" in os.listdir(paths.gasol_path):
+            shutil.rmtree(paths.gasol_path + "smt_encoding")
 
-        if "solutions" in os.listdir(gasol_path):
-            shutil.rmtree(gasol_path + "solutions")
+        if "solutions" in os.listdir(paths.gasol_path):
+            shutil.rmtree(paths.gasol_path + "solutions")
 
 
 def remove_last_constant_instructions(instructions):
@@ -165,7 +158,7 @@ def compute_original_sfs_with_simplifications(instructions, stack_size, cname, b
 
     fname = args.input_path.split("/")[-1].split(".")[0]
     exit_code, subblocks_list = ir_block.evm2rbr_compiler(file_name = fname, contract_name=cname, block=block_data, block_id=block_id,
-                                          preffix=prefix, simplification=True,storage=storage,size = size_abs, part = partition)
+                                                                        preffix=prefix, simplification=True, storage=storage, size = size_abs, part = partition)
 
     sfs_dict = get_sfs_dict()
 
@@ -666,15 +659,6 @@ def optimize_asm_in_asm_format(file_name, output_file, csv_file, timeout=10, log
     contracts = []
     # verifier_error = False
 
-    file_name_str = file_name.split("/")[-1].split(".")[0]
-
-    # If not output file provided, then we create a name by default.
-    if output_file is None:
-        output_file = file_name_str + "_optimized.json_solc"
-
-    if csv_file is None:
-        csv_file = file_name_str + "_statistics.csv"
-
     for c in asm.getContracts():
 
         new_contract = deepcopy(c)
@@ -744,15 +728,14 @@ def optimize_asm_in_asm_format(file_name, output_file, csv_file, timeout=10, log
     print("New number of instructions:", compute_number_of_instructions_in_asm_json_per_file(new_asm))
 
     if log:
-        with open(gasol_path + file_name_str + ".log" , "w") as log_f:
+        input_file_name = args.input_path.split("/")[-1].split(".")[0]
+        with open(paths.gasol_path + input_file_name + ".log" , "w") as log_f:
             json.dump(log_dicts, log_f)
 
     if args.backend:
         with open(output_file, 'w') as f:
             f.write(json.dumps(rebuild_asm(new_asm)))
 
-        print("")
-        print("Json solc optimized stored at " + output_file)
         df = pd.DataFrame(statistics_rows)
         df.to_csv(csv_file)
 
@@ -795,10 +778,24 @@ if __name__ == '__main__':
     #     with open(args.log_path) as path:
     #         log_dict = json.load(path)
     #         optimize_asm_from_log(args.input_path, log_dict, args.output_path)
-    if not args.block:
-        optimize_asm_in_asm_format(args.input_path, args.output_path, args.csv_path, args.tout, False, args.storage,args.last_constants,args.size,args.partition)
+
+    input_file_name = args.input_path.split("/")[-1].split(".")[0]
+
+    if args.output_path is None:
+        output_file = input_file_name + "_optimized.json_solc"
     else:
-        optimize_isolated_asm_block(args.input_path, args.output_path, args.csv_path, args.tout, args.storage,args.last_constants,args.size,args.partition)
+        output_file = args.output_path
+
+    if args.csv_path is None:
+        csv_file = input_file_name + "_statistics.csv"
+    else:
+        csv_file = args.csv_path
+
+
+    if not args.block:
+        optimize_asm_in_asm_format(args.input_path, output_file, csv_file, args.tout, False, args.storage,args.last_constants,args.size,args.partition)
+    else:
+        optimize_isolated_asm_block(args.input_path, output_file, csv_file, args.tout, args.storage,args.last_constants,args.size,args.partition)
 
 
     y = dtimer()
@@ -807,12 +804,22 @@ if __name__ == '__main__':
     print("SFS time: "+str(y-x))
     print("")
     
-    
+    if args.backend:
+        print("")
+        print("Total time spent by the SMT solver in minutes: " + str(round(total_time / 60, 2)))
+        print("")
+        print("Previous gas executed: "+str(previous_gas))
+        print("New gas executed: " + str(new_gas))
+        print("")
+        print("Previous size executed: " + str(previous_size))
+        print("New size executed: " + str(new_size))
+        print("")
+        print("Json solc optimized stored at " + output_file)
+
+    else:
+        print("Previous gas executed: " + str(previous_gas))
+        print("")
+        print("Previous size executed: " + str(previous_size))
+
     print("")
-    print("Total time spent by the SMT solver in minutes: " + str(round(total_time / 60, 2)))
-    print("")
-    print("Previous gas executed: "+str(previous_gas))
-    print("New gas executed: " + str(new_gas))
-    print("")
-    print("Previous size executed: " + str(previous_size))
-    print("New size executed: " + str(new_size))
+    print("Intermediate files stored at " + paths.gasol_path)

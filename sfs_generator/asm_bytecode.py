@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 class AsmBytecode:
 
     def __init__(self,begin,end,source,disasm,value):

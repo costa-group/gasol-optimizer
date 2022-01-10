@@ -3,12 +3,12 @@ import sys
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
+import glob
+import json
 import unittest
 
 from sfs_generator.parser_asm import parse_asm
 from sfs_generator.rebuild_asm import rebuild_asm
-import json
-import glob
 
 
 class TestRebuildASM(unittest.TestCase):
