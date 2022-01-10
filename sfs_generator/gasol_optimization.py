@@ -70,6 +70,8 @@ max_l = 0
 global size_flag
 size_flag = False
 
+global pop_flag
+pop_flag = False
 
 def init_globals():
     
@@ -1930,7 +1932,12 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
             vars_list.pop(idx)
 
     not_used = get_not_used_stack_variables(new_ss,new_ts,total_inpt_vars)
-    
+
+    if pop_flag :
+        pop_instructions = generate_pops(not_used)
+    else:
+        pop_instructions = []
+        
     num = check_all_pops(new_ss, new_ts, new_user_defins)
 
     if num !=-1:
@@ -1956,7 +1963,7 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     json_dict["vars"] = vars_list
     json_dict["src_ws"] = new_ss
     json_dict["tgt_ws"] = new_ts
-    json_dict["user_instrs"] = new_user_defins
+    json_dict["user_instrs"] = new_user_defins+pop_instructions
     json_dict["current_cost"] = gas
     json_dict["storage_dependences"] = sto_dep
     json_dict["memory_dependences"]= mem_dep
@@ -3156,7 +3163,7 @@ def compute_max_program_len(opcodes, num_guard,block = None):
     return len(new_opcodes)
     
 
-def smt_translate_block(rule,file_name,name,preffix,simplification=True,storage = False, size = False, part = False):
+def smt_translate_block(rule,file_name,name,preffix,simplification=True,storage = False, size = False, part = False, pop = False):
     global s_counter
     global max_instr_size
     global int_not0
@@ -3169,6 +3176,8 @@ def smt_translate_block(rule,file_name,name,preffix,simplification=True,storage 
     global original_ins
     global max_l
     global size_flag
+    global pop_flag
+
     
     init_globals()
     
@@ -3177,7 +3186,8 @@ def smt_translate_block(rule,file_name,name,preffix,simplification=True,storage 
         constants.append_store_instructions_to_split()
 
     size_flag = size
-        
+    pop_flag = pop
+    
     sfs_contracts = {}
 
     blocks_json_dict = {}
@@ -5310,3 +5320,23 @@ def remove_unused_userdefins(target_stack, userdef_ins):
             new_userdef_ins.append(u)
     return new_userdef_ins
             
+def generate_pops(not_used_variables):
+    pop_id = 0
+
+    pop_instructions = []
+    obj = {}
+    for v in not_used_variables:
+        obj["id"] = "POP_"+str(pop_id)
+        obj["opcode"] = process_opcode(str(opcodes.get_opcode("POP")[0]))
+        obj["disasm"] = "POP"
+        obj["inpt_sk"] = [v]
+        obj["outpt_sk"] = []
+        obj["gas"] = opcodes.get_ins_cost("POP")
+        obj["commutative"] = False
+        obj["storage"] = False #It is true only for MSTORE and SSTORE
+
+        pop_instructions.append(obj)
+        pop_id+=1
+
+    return pop_instructions
+        
