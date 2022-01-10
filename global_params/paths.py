@@ -1,8 +1,9 @@
 import os
+import uuid
 
 tmp_path = "/tmp/"
-gasol_path = tmp_path + "gasol/"
-gasol_folder = "gasol"
+gasol_folder = "gasol_" + uuid.uuid4().hex
+gasol_path = tmp_path + gasol_folder + "/"
 json_path =  gasol_path + "jsons"
 smt_encoding_path = gasol_path +"smt_encoding/"
 solutions_path = gasol_path +"solutions/"
