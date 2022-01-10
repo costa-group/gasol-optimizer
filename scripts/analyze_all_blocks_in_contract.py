@@ -1,29 +1,26 @@
 #!/usr/bin/python3
 import argparse
-import os
 import glob
+import json
+import os
 import pathlib
+import re
+import resource
 import shlex
 import subprocess
-import re
-import json
-import pandas as pd
 import sys
-import resource
-sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))+"/global_params")
-sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))+"/sfs_generator")
-from utils import compute_stack_size
-from paths import project_path, oms_exec, gasol_path, smt_encoding_path, json_path, z3_exec, bclt_exec, solutions_path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))+"/smt_encoding")
-from encoding_utils import generate_phi_dict
-from gasol_encoder import execute_syrup_backend
-sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))+"/verification")
-from sfs_verify import are_equals
-sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))+"/scripts")
-sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))+"/solution_generation")
-from disasm_generation import generate_disasm_sol
-import ir_block
-from gasol_optimization import get_sfs_dict
+
+import pandas as pd
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+
+import global_params.paths as paths
+from sfs_generator.utils import compute_stack_size
+from smt_encoding.encoding_utils import generate_phi_dict
+from smt_encoding.gasol_encoder import execute_syrup_backend
+from solution_generation.disasm_generation import generate_disasm_sol
+from verification.sfs_verify import are_equals
+
 
 def modifiable_path_files_init():
     parser = argparse.ArgumentParser()
@@ -96,13 +93,13 @@ def modifiable_path_files_init():
 
 def not_modifiable_path_files_init():
     global solver_output_file
-    solver_output_file = gasol_path + "solution.txt"
+    solver_output_file = paths.gasol_path + "solution.txt"
 
     global final_json_path
-    final_json_path = json_path + "block__block0_input.json"
+    final_json_path = paths.json_path + "block__block0_input.json"
 
     global final_disasm_blk_path
-    final_disasm_blk_path = gasol_path + "block.disasm_blk"
+    final_disasm_blk_path = paths.gasol_path + "block.disasm_blk"
 
 
 def number_encoding_size(number):
@@ -246,17 +243,17 @@ def analyze_file(solution):
 def get_solver_to_execute(block_id):
     global tout
 
-    encoding_file = smt_encoding_path + block_id + "_" + solver + ".smt2"
+    encoding_file = paths.smt_encoding_path + block_id + "_" + solver + ".smt2"
 
     if solver == "z3":
-        return z3_exec + " -smt2 " + encoding_file
+        return paths.z3_exec + " -smt2 " + encoding_file
     elif solver == "barcelogic":
         if tout is None:
-            return bclt_exec + " -file " + encoding_file
+            return paths.bclt_exec + " -file " + encoding_file
         else:
-            return bclt_exec + " -file " + encoding_file + " -tlimit " + str(tout)
+            return paths.bclt_exec + " -file " + encoding_file + " -tlimit " + str(tout)
     else:
-        return oms_exec + " " + encoding_file+ " -optimization=True"
+        return paths.oms_exec + " " + encoding_file+ " -optimization=True"
 
 
 def get_tout_found_per_solver(solution):
@@ -273,7 +270,7 @@ def get_tout_found_per_solver(solution):
 if __name__=="__main__":
     global args
     init()
-    pathlib.Path(gasol_path).mkdir(parents=True, exist_ok=True)
+    pathlib.Path(paths.gasol_path).mkdir(parents=True, exist_ok=True)
     pathlib.Path(results_dir).mkdir(parents=True, exist_ok=True)
 
     already_analyzed_contracts = glob.glob(results_dir + "/*.csv")
@@ -355,8 +352,8 @@ if __name__=="__main__":
                     f.write(solution)
 
                 generate_disasm_sol(contract_name, block_id, bs, user_instr, solution)
-                instruction_final_solution = solutions_path + contract_name + "/disasm/" + block_id + "_optimized.disasm_opt"
-                gas_final_solution = solutions_path + contract_name + "/total_gas/" + block_id + "_real_gas.txt"
+                instruction_final_solution = paths.solutions_path + contract_name + "/disasm/" + block_id + "_optimized.disasm_opt"
+                gas_final_solution = paths.solutions_path + contract_name + "/total_gas/" + block_id + "_real_gas.txt"
 
                 with open(instruction_final_solution, 'r') as f:
                     instructions_disasm = f.read()
