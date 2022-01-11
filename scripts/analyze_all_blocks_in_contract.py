@@ -79,12 +79,14 @@ def modifiable_path_files_init():
     # Folder which contains the json files to analyze. Must follow this structure:
     # - main_folder
     #   -- contract_1_folder
-    #      --- block_1.json
-    #      --- block_2.json
+    #      --- jsons
+    #          --- block_1.json
+    #          --- block_2.json
     #      ...
     #   -- contract_2_folder
-    #      --- block_1.json
-    #      --- block_2.json
+    #      --- jsons
+    #          --- block_1.json
+    #          --- block_2.json
     #      ...
     #   ...
     global contracts_dir_path
@@ -383,3 +385,6 @@ if __name__=="__main__":
                                               'final_progr_len', 'number_of_necessary_uninterpreted_instructions',
                                               'number_of_necessary_push', 'bytes_required', 'original_instrs', 'original_bytes', 'saved_bytes'])
         df.to_csv(csv_file)
+
+        print("Intermediate files stored at " + paths.gasol_path)
+
