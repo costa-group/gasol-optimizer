@@ -242,9 +242,7 @@ def analyze_file(solution):
         return analyze_file_barcelogic(solution)
 
 
-def get_solver_to_execute(block_id):
-    global tout
-
+def get_solver_to_execute(block_id, bclt_timeout):
     encoding_file = paths.smt_encoding_path + block_id + "_" + solver + ".smt2"
 
     if solver == "z3":
@@ -253,7 +251,7 @@ def get_solver_to_execute(block_id):
         if tout is None:
             return paths.bclt_exec + " -file " + encoding_file
         else:
-            return paths.bclt_exec + " -file " + encoding_file + " -tlimit " + str(tout)
+            return paths.bclt_exec + " -file " + encoding_file + " -tlimit " + str(bclt_timeout)
     else:
         return paths.oms_exec + " " + encoding_file+ " -optimization=True"
 
@@ -311,11 +309,12 @@ if __name__=="__main__":
                 file_results['original_bytes'] = sum([bytes_required_initial(instr) for instr in original_instrs])
                 initial_stack = data['src_ws']
 
+            bclt_timeout = 10 * ( 1 + sum([1 if instr['storage'] else 0 for instr in user_instr]))
             # When init_progr_length > 40, we assume a timeout is produced
             if init_program_length > 40:
                 file_results['no_model_found'] = True
                 file_results['shown_optimal'] = False
-                file_results['solver_time_in_sec'] = 10 * ( 1 + sum([1 if instr['storage'] else 0 for instr in user_instr]))
+                file_results['solver_time_in_sec'] = bclt_timeout
                 rows_list.append(file_results)
                 continue
 
@@ -326,11 +325,10 @@ if __name__=="__main__":
                     print(file,file=f)
                 continue
 
-            smt_exec_command = get_solver_to_execute(block_id)
+            smt_exec_command = get_solver_to_execute(block_id, bclt_timeout)
             solution, executed_time = run_and_measure_command(smt_exec_command)
             executed_time = round(executed_time, 3)
             tout_pattern = get_tout_found_per_solver(solution)
-
             if tout_pattern:
                 if re.search(re.compile("unsat"), solution):
                     with open(results_dir + "unsat.txt", 'a') as f:
