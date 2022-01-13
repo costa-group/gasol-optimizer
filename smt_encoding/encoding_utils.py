@@ -4,17 +4,8 @@ import copy
 import re
 from collections import OrderedDict
 
+import global_params.constants as constants
 from smt_encoding.smtlib_utils import add_and, add_eq, var2str
-
-# We set the maximum k dup and swap instructions
-# can have.
-
-max_k_dup = 16
-max_k_swap = 16
-
-# Maximum size integers have in the EVM
-
-int_limit = 2**256
 
 # Methods for generating string corresponding to
 # variables we will be using for the encoding
@@ -57,10 +48,10 @@ def move(j, alpha, beta, delta):
 def generate_stack_theta(bs):
     theta = {"PUSH": 0, "POP": 1, "NOP": 2}
     initial_index = 3
-    for i in range(1, min(bs, max_k_dup+1)):
+    for i in range(1, min(bs, constants.max_k_dup + 1)):
         theta["DUP" + str(i)] = initial_index
         initial_index += 1
-    for i in range(1, min(bs, max_k_swap+1)):
+    for i in range(1, min(bs, constants.max_k_swap + 1)):
         theta["SWAP" + str(i)] = initial_index
         initial_index += 1
     return theta
@@ -106,9 +97,9 @@ def divide_usr_instr(user_instr):
 # as keys, and their gas cost as values. Ordered by increasing costs
 def generate_costs_ordered_dict(bs, user_instr, theta_dict):
     instr_costs = {theta_dict["PUSH"]: 3, theta_dict["POP"]: 2, theta_dict["NOP"]: 0}
-    for i in range(1, min(bs, max_k_dup + 1)):
+    for i in range(1, min(bs, constants.max_k_dup + 1)):
         instr_costs[theta_dict["DUP" + str(i)]] = 3
-    for i in range(1, min(bs, max_k_swap + 1)):
+    for i in range(1, min(bs, constants.max_k_swap + 1)):
         instr_costs[theta_dict["SWAP" + str(i)]] = 3
     for instr in user_instr:
         instr_costs[theta_dict[instr['id']]] = instr['gas']

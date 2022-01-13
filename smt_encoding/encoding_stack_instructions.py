@@ -1,6 +1,6 @@
+import global_params.constants as constants
 from smt_encoding.encoding_files import write_encoding
-from smt_encoding.encoding_utils import (a, int_limit, max_k_dup, max_k_swap,
-                                         move, t, u, x)
+from smt_encoding.encoding_utils import a, move, t, u, x
 from smt_encoding.smtlib_utils import (add_and, add_assert, add_eq,
                                        add_implies, add_leq, add_lt, add_not,
                                        add_or)
@@ -9,8 +9,8 @@ from smt_encoding.smtlib_utils import (add_and, add_assert, add_eq,
 
 def _push_encoding(j, bs, theta_push):
     left_term = add_eq(t(j), theta_push)
-    right_term = add_and(add_leq(0, a(j)), add_lt(a(j), int_limit), add_not(u(bs-1,j)), u(0, j+1),
-                          add_eq(x(0, j+1), a(j)), move(j, 0, bs-2, 1))
+    right_term = add_and(add_leq(0, a(j)), add_lt(a(j), constants.int_limit), add_not(u(bs - 1, j)), u(0, j + 1),
+                         add_eq(x(0, j+1), a(j)), move(j, 0, bs-2, 1))
     write_encoding(add_assert(add_implies(left_term, right_term)))
 
 
@@ -62,10 +62,10 @@ def _stack_constraints(b0, bs, theta, initial_idx=0):
         _pop_encoding(j, bs, theta["POP"])
         _nop_encoding(j, bs, theta["NOP"])
 
-        for k in range(1, min(bs, max_k_dup + 1)):
+        for k in range(1, min(bs, constants.max_k_dup + 1)):
             _dupk_encoding(k, j, bs, theta["DUP" + str(k)])
 
-        for k in range(1, min(bs, max_k_swap + 1)):
+        for k in range(1, min(bs, constants.max_k_swap + 1)):
             _swapk_encoding(k, j, bs, theta["SWAP" + str(k)])
 
 # Methods for generating constraints for non-commutative uninterpreted functions (Cu)

@@ -1,5 +1,6 @@
+import global_params.constants as constants
 from smt_encoding.encoding_files import write_encoding
-from smt_encoding.encoding_utils import a, add_eq, int_limit, l, t, u, x
+from smt_encoding.encoding_utils import a, add_eq, l, t, u, x
 from smt_encoding.smtlib_utils import (add_and, add_assert, add_not,
                                        declare_boolvar, declare_intvar)
 
@@ -51,7 +52,7 @@ def initialize_variables(variables, bs, b0, theta_mem, initial_idx=0):
 def variables_assignment_constraint(variables, initial_idx=0):
     write_encoding("; Variables assignment")
     for i, var in enumerate(variables):
-        statement = add_eq(var, int_limit + i + initial_idx)
+        statement = add_eq(var, constants.int_limit + i + initial_idx)
         write_encoding(add_assert(statement))
 
 
