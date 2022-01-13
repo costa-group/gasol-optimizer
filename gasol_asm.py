@@ -378,7 +378,8 @@ def optimize_asm_from_log(file_name, json_log, output_file):
             print("Log file does not contain a valid solution")
 
 
-def optimize_isolated_asm_block(block_name,output_file, csv_file, timeout=10, storage= False, last_const = False, size_abs = False, partition = False):
+def optimize_isolated_asm_block(block_name,output_file, csv_file, timeout=10, storage= False, last_const = False,
+                                size_abs = False, partition = False, pop = False):
     global statistics_rows
 
     file_name_str = block_name.split("/")[-1].split(".")[0]
@@ -397,8 +398,7 @@ def optimize_isolated_asm_block(block_name,output_file, csv_file, timeout=10, st
     asm_blocks = []
 
     for block in blocks:
-        asm_block, _ = optimize_asm_block_asm_format(block, file_name_str, timeout, storage, last_const,
-                                                               size_abs, partition)
+        asm_block, _ = optimize_asm_block_asm_format(block, file_name_str, timeout, storage, last_const, size_abs, partition, pop)
         asm_blocks.append(asm_block)
 
         update_gas_count(block, asm_block)
@@ -630,16 +630,20 @@ def compare_asm_block_asm_format(old_block, new_block, contract_name="example",s
 
     old_instructions = preprocess_instructions(old_block.getInstructions())
 
-    old_sfs_dict = compute_original_sfs_with_simplifications(old_instructions, old_block.getSourceStack(),
+    old_sfs_information, _ = compute_original_sfs_with_simplifications(old_instructions, old_block.getSourceStack(),
                                                              contract_name, old_block.getBlockId(),
-                                                             old_block.get_is_init_block(),storage, last_const, size_abs, partition, pop)["syrup_contract"]
+                                                             old_block.get_is_init_block(),storage, last_const, size_abs, partition, pop)
+
+    old_sfs_dict = old_sfs_information["syrup_contract"]
 
     new_instructions = preprocess_instructions(new_block.getInstructions())
 
 
-    new_sfs_dict = compute_original_sfs_with_simplifications(new_instructions, new_block.getSourceStack(),
+    new_sfs_information, _ = compute_original_sfs_with_simplifications(new_instructions, new_block.getSourceStack(),
                                                              contract_name, new_block.getBlockId(),
-                                                             new_block.get_is_init_block(),storage, last_const, size_abs, partition, pop)["syrup_contract"]
+                                                             new_block.get_is_init_block(),storage, last_const, size_abs, partition, pop)
+
+    new_sfs_dict = new_sfs_information["syrup_contract"]
 
     final_comparison = verify_block_from_list_of_sfs(old_sfs_dict, new_sfs_dict)
 
