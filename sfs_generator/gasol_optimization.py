@@ -247,7 +247,6 @@ def contained_in_source_stack(v,instructions,source_stack):
     if instructions == []:
         contained = True
     else:
-        
         while(i<len(instructions)):
             pos_var = instructions[i].find(v)
 
@@ -508,7 +507,6 @@ def generate_sstore_mstore(store_ins,instructions,source_stack,pos):
     pre = already_considered 
 
     for v in new_vars:
-
         search_for_value_aux(v,instructions,source_stack,pos)
     
         values[v] = s_dict[v]
@@ -532,7 +530,6 @@ def generate_sload_mload(load_ins,instructions,source_stack,pos):
     
     new_vars, funct = get_involved_vars(load_ins,"")
     
-        
     in_sourcestack = contained_in_source_stack(new_vars[0],instructions,source_stack)
     
     if in_sourcestack or is_integer(new_vars[0])!=-1:
@@ -1558,7 +1555,8 @@ def generate_storage_info(instructions,source_stack):
         s_dict = {}
 
         if instructions[x].find("sstore")!=-1:
-            exp = generate_sstore_mstore(instructions[x],instructions[x-1::-1],source_stack,len(instructions)-x)
+            ins_list = [] if x == 0 else instructions[x-1::-1]
+            exp = generate_sstore_mstore(instructions[x],ins_list,source_stack,len(instructions)-x)
             #print("ESTO GUARDO EN SSTORE")
             #print(exp)
             sstore_seq.append(exp)
@@ -1571,7 +1569,8 @@ def generate_storage_info(instructions,source_stack):
             mstore_seq.append("keccak")
             sstore_seq.append("keccak")
         elif instructions[x].find("mstore")!=-1:
-            exp = generate_sstore_mstore(instructions[x],instructions[x-1::-1],source_stack,len(instructions)-x)
+            ins_list = [] if x == 0 else instructions[x-1::-1]
+            exp = generate_sstore_mstore(instructions[x],ins_list,source_stack,len(instructions)-x)
             #print("ESTO GUARDO EN MSTORE")
             #print(exp)
             mstore_seq.append(exp)
@@ -1586,7 +1585,8 @@ def generate_storage_info(instructions,source_stack):
     
     for x in range(0,len(instructions)):
         if instructions[x].find("sload")!=-1:
-            exp,r = generate_sload_mload(instructions[x],instructions[x-1::-1],source_stack,len(instructions)-x)
+            ins_list = [] if x == 0 else instructions[x-1::-1]
+            exp,r = generate_sload_mload(instructions[x],ins_list,source_stack,len(instructions)-x)
             last_sload = exp
             #print("MIRA UN SLOAD")
             #print(exp)
@@ -1597,7 +1597,8 @@ def generate_storage_info(instructions,source_stack):
             storage_order.append(sload_relative_pos[last_sload])
             
         elif instructions[x].find("mload")!=-1:
-            exp,r = generate_sload_mload(instructions[x],instructions[x-1::-1],source_stack,len(instructions)-x)
+            ins_list = [] if x == 0 else instructions[x-1::-1]
+            exp,r = generate_sload_mload(instructions[x],ins_list,source_stack,len(instructions)-x)
             last_mload = exp
             #print("MIRA UN MLOAD")
             #print(exp)
@@ -1844,7 +1845,7 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     global max_instr_size
     global num_pops
     global blocks_json_dict
-
+    
     split_by = False
     
     max_ss_idx = compute_max_idx(max_ss_idx1,ss)
