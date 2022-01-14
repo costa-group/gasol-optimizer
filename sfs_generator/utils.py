@@ -188,3 +188,10 @@ def get_num_bytes(val):
         bits = math.ceil(math.log(val,2))
         b = bits/8
         return b
+
+def isYulInstructionUpper(opcode):
+    if opcode.find("TAG") == -1 and opcode.find("#") == -1 and opcode.find("$") == -1 \
+            and opcode.find("DATA") == -1 and opcode.find("DEPLOY") == -1 and opcode.find("SIZE") == -1 and opcode.find("IMMUTABLE") == -1:
+        return False
+    else:
+        return True
