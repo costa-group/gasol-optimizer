@@ -95,7 +95,7 @@ def generate_info_from_solution(solver_output, opcodes_theta_dict, instruction_t
             instruction_position = int(match.group(1))
             instruction_theta = int(match.group(2))
                 # Nops are excluded. theta(NOP) = 2
-            if instruction_theta == 2:
+            if instruction_theta_dict[instruction_theta] == "NOP":
                 break
             instr_sol[instruction_position] = instruction_theta_dict[instruction_theta]
             opcode_sol[instruction_position] = opcodes_theta_dict[instruction_theta]
@@ -187,7 +187,7 @@ def generate_info_from_sequence(instr_sequence, opcodes_theta_dict,
         if sequence_elem > 0:
             # Nops are excluded. theta(NOP) = 2
             sequence_elem = sequence_elem
-            if sequence_elem == 2:
+            if instruction_theta_dict[sequence_elem] == "NOP":
                 break
             instr_sol[instruction_position] = instruction_theta_dict[sequence_elem]
             opcode_sol[instruction_position] = opcodes_theta_dict[sequence_elem]
