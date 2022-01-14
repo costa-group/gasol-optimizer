@@ -306,7 +306,8 @@ if __name__=="__main__":
                 file_results['number_of_necessary_push'] = len(generate_phi_dict(user_instr, final_stack))
                 original_instrs = data['original_instrs']
                 file_results['original_instrs'] = original_instrs
-                file_results['original_bytes'] = sum([bytes_required_initial(instr) for instr in original_instrs])
+                old_bytes, old_instructions = total_bytes(original_instrs)
+                file_results['original_bytes'] = old_bytes
                 initial_stack = data['src_ws']
 
             bclt_timeout = 10 * ( 1 + sum([1 if instr['storage'] else 0 for instr in user_instr]))
