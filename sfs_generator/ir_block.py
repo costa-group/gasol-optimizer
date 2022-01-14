@@ -7,7 +7,7 @@ from timeit import default_timer as dtimer
 import global_params.paths as paths
 from sfs_generator.gasol_optimization import smt_translate_block
 from sfs_generator.rbr_rule import RBRRule
-from sfs_generator.utils import get_push_number
+from sfs_generator.utils import get_push_number, isYulInstructionUpper
 
 '''
 It initialize the globals variables. 
@@ -961,7 +961,7 @@ def compile_instr(rule,evm_opcode,variables,list_jumps,cond):
                 rule.add_instr(ins)
         else:
             rule.add_instr(value)
-    elif opcode_name[:4] in opcodes60 and not isYulInstruction(opcode_name):
+    elif opcode_name[:4] in opcodes60 and not isYulInstructionUpper(opcode_name):
         value, index_variables = translateOpcodes60(opcode_name[:4], opcode_rest, variables)
         pushid = get_push_number(opcode_rest)
         rule.add_instr(value)
@@ -992,19 +992,15 @@ def compile_instr(rule,evm_opcode,variables,list_jumps,cond):
         index_variables = variables
         rule.add_instr(value)
 
-    if opcode_name[:4] in opcodes60 and not isYulInstruction(opcode_name):
-        rule.add_instr("nop("+opcode_name+str(pushid)+")")
+    if opcode_name[:4] in opcodes60 and not isYulInstructionUpper(opcode_name):
+        rule.add_instr("nop("+opcode_name+str(pushid)+" "+str(opcode_rest).strip("0x")+")")
+
+    elif opcode_name in opcodesYul:
+        rule.add_instr("nop("+opcode_name+" "+str(opcode_rest).strip("0x")+")")
     else:
         rule.add_instr("nop("+opcode_name+")")
     return index_variables
 
-
-def isYulInstruction(opcode):
-    if opcode.find("TAG") == -1 and opcode.find("#") == -1 and opcode.find("$") == -1 \
-            and opcode.find("DATA") == -1 and opcode.find("DEPLOY") == -1 and opcode.find("SIZE") == -1 and opcode.find("IMMUTABLE") == -1:
-        return False
-    else:
-        return True
     
 '''
 It generates the rbr rules corresponding to a block from the CFG.
@@ -1094,7 +1090,7 @@ def evm2rbr_compiler(file_name = None, contract_name = None,block = None, block_
             print("NO STORAGE BLOCK")
         write_rbr(rule,block_id,preffix+contract_name)
 
-        print(preffix)
+        # print(preffix)
         
         end = dtimer()
         ethir_time = end-begin

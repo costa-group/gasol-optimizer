@@ -7,7 +7,7 @@ import global_params.constants as constants
 import global_params.paths as paths
 import sfs_generator.opcodes as opcodes
 from sfs_generator.utils import (all_integers, find_sublist, get_num_bytes,
-                                 is_integer)
+                                 is_integer, isYulInstructionUpper)
 
 terminate_block = ["ASSERTFAIL","RETURN","REVERT","SUICIDE","STOP"]
 
@@ -1967,7 +1967,17 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     json_dict["current_cost"] = gas
     json_dict["storage_dependences"] = sto_dep
     json_dict["memory_dependences"]= mem_dep
-    json_dict["original_instrs"] = original_ins
+
+    new_original_ins = []
+    for e in original_ins:
+        if e.find("PUSH")!=-1:
+            aux = e.split()
+            new = "PUSH "+str(aux[-1]) if not isYulInstructionUpper(e) and aux[0][:4] == "PUSH" else e
+            new_original_ins.append(new)
+        else:
+            new_original_ins.append(e)
+    
+    json_dict["original_instrs"] = " ".join(new_original_ins)
 
     
     if not simplification:
@@ -2908,8 +2918,9 @@ def translate_last_subblock(rule,block,sstack,sstack_idx,idx,isolated,preffix,si
             compute_gast = True
             new_opcodes = compute_opcodes2write(opcodes,num_guard)
             new_ops = list(map(lambda x: x[4:-1],new_opcodes))
-            original_ins = new_ops
 
+            original_ins = new_ops
+            
             if not simp:
                 index, fin = find_sublist(block,new_opcodes)
                 init_info = get_encoding_init_block(block[index:fin+1],sstack)
@@ -3219,7 +3230,9 @@ def smt_translate_block(rule,file_name,name,preffix,simplification=True,storage 
     res = is_optimizable(opcodes,instructions)
     if res:
         ops = list(map(lambda x: x[4:-1],opcodes))
+
         original_ins = ops
+
         if part:
             if len(opcodes) > max_bound and not split_sto:
                 stores_pos = compute_position_stores(opcodes)
