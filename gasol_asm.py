@@ -6,11 +6,10 @@ import os
 import shutil
 import sys
 from copy import deepcopy
-from statistics.properties_from_asm_json import (
-    bytes_required_asm, preprocess_instructions,
-    compute_number_of_instructions_in_asm_json_per_file)
+from properties.properties_from_asm_json import (
+    bytes_required_asm, compute_number_of_instructions_in_asm_json_per_file,
+    preprocess_instructions)
 from timeit import default_timer as dtimer
-from sfs_generator.utils import get_ins_size_seq
 
 import pandas as pd
 
@@ -23,8 +22,9 @@ from sfs_generator.parser_asm import (parse_asm,
                                       parse_asm_representation_from_blocks,
                                       parse_blocks_from_plain_instructions)
 from sfs_generator.rebuild_asm import rebuild_asm
-from sfs_generator.utils import (compute_stack_size, is_constant_instruction,
-                                 isYulInstruction, isYulKeyword)
+from sfs_generator.utils import (compute_stack_size, get_ins_size_seq,
+                                 is_constant_instruction, isYulInstruction,
+                                 isYulKeyword)
 from smt_encoding.gasol_encoder import (execute_syrup_backend,
                                         execute_syrup_backend_combined,
                                         generate_theta_dict_from_sequence)
@@ -33,8 +33,8 @@ from solution_generation.disasm_generation import (
     generate_sub_block_asm_representation_from_log,
     generate_sub_block_asm_representation_from_output,
     obtain_log_representation_from_solution, read_initial_dicts_from_files)
-from solution_generation.solver_output_generation import (analyze_file,
-                                                          obtain_solver_output)
+from solution_generation.solver_output_generation import obtain_solver_output
+from properties.properties_from_solver_output import analyze_file
 from verification.sfs_verify import verify_block_from_list_of_sfs
 from verification.solver_solution_verify import (
     check_solver_output_is_correct, generate_solution_dict)

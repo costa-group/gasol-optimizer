@@ -1,8 +1,7 @@
 # Module that contains methods for determining different properties from an AsmJSON object
 
-import re
 from sfs_generator.utils import get_ins_size, isYulInstruction
-import sfs_generator.opcodes as opcodes
+
 
 def asm_instruction_to_plain(asm_bytecode):
     op = asm_bytecode.getDisasm()

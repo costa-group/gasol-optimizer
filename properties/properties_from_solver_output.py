@@ -2,7 +2,7 @@ import re
 
 
 def analyze_file_oms(solution):
-    pattern = re.compile("\(gas (.*)\)")
+    pattern = re.compile("\(gas ([0-9]*)\)")
     for match in re.finditer(pattern, solution):
         number = int(match.group(1))
         pattern2 = re.compile("range")
@@ -42,8 +42,7 @@ def analyze_file_barcelogic(solution):
     return submatch_barcelogic(solution), False
 
 
-def analyze_file(solution):
-    global solver
+def analyze_file(solution, solver):
     if solver == "oms":
         return analyze_file_oms(solution)
     elif solver == "z3":
@@ -52,8 +51,7 @@ def analyze_file(solution):
         return analyze_file_barcelogic(solution)
 
 
-def get_tout_found_per_solver(solution):
-    global solver
+def get_tout_found_per_solver(solution, solver):
     if solver == "z3":
         return re.search(re.compile("model is not"), solution)
     elif solver == "barcelogic":

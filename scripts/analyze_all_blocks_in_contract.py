@@ -15,11 +15,14 @@ import pandas as pd
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
 import global_params.paths as paths
-from sfs_generator.utils import compute_stack_size
+from sfs_generator.utils import (compute_stack_size, get_ins_size,
+                                 get_ins_size_seq)
 from smt_encoding.encoding_utils import generate_phi_dict
 from smt_encoding.gasol_encoder import execute_syrup_backend
 from solution_generation.disasm_generation import generate_disasm_sol
 from verification.sfs_verify import are_equals
+from solution_generation.solver_output_generation import obtain_solver_output
+from properties.properties_from_solver_output import analyze_file, get_tout_found_per_solver
 
 
 def modifiable_path_files_init():
@@ -32,7 +35,7 @@ def modifiable_path_files_init():
                         help="folder that contains the jsons to analyze. It must be in the proper format",
                         required=True)
     parser.add_argument("-csv-folder", metavar='csv_folder', action='store', type=str,
-                        help="folder that will store the csvs containing the statistics per file. Inside that folder, "
+                        help="folder that will store the csvs containing the properties per file. Inside that folder, "
                              "another subfolder is created: solver_name + _ + timeout + 's'", required=True)
     parser.add_argument('-at-most', help='add a constraint for each uninterpreted function so that they are used at most once',
                     action='store_true', dest='at_most')
@@ -104,167 +107,9 @@ def not_modifiable_path_files_init():
     final_disasm_blk_path = paths.gasol_path + "block.disasm_blk"
 
 
-def number_encoding_size(number):
-    i = 0
-    while number != 0:
-        i += 1
-        number = number >> 8
-    return i
-
-
-def bytes_required(op_name, val, address_length = 4):
-    if op_name == "ASSIGNIMMUTABLE":
-        # Number of PushImmutable's with the same hash. Assume 1 (?)
-        m_immutableOccurrences = 1
-        return 1 + (3 + 32) * m_immutableOccurrences
-    elif not op_name.startswith("PUSH") or op_name == "tag":
-        return 1
-    elif op_name == "PUSH":
-        return 1 + max(1, number_encoding_size(int(val,16)))
-    elif op_name == "PUSH#[$]" or op_name == "PUSHSIZE":
-        return 1 + 4
-    elif op_name == "PUSHTAG" or op_name == "PUSHDATA" or op_name == "PUSH[$]":
-        return 1 + address_length
-    elif op_name == "PUSHLIB" or op_name == "PUSHDEPLOYADDRESS":
-        return 1 + 20
-    elif op_name == "PUSHIMMUTABLE":
-        return 1 + 32
-    else:
-        raise ValueError("Opcode not recognized")
-
-
-def bytes_required_initial(op_name, address_length = 4):
-    push_match = re.match(re.compile('PUSH([0-9]+)'), op_name)
-    if push_match:
-        return 1 + max(1, int(push_match.group(1)))
-    elif op_name == "ASSIGNIMMUTABLE":
-        # Number of PushImmutable's with the same hash. Assume 1 (?)
-        m_immutableOccurrences = 1
-        return 1 + (3 + 32) * m_immutableOccurrences
-    elif not op_name.startswith("PUSH") or op_name == "tag":
-        return 1
-    elif op_name == "PUSH#[$]" or op_name == "PUSHSIZE":
-        return 1 + 4
-    elif op_name == "PUSHTAG" or op_name == "PUSHDATA" or op_name == "PUSH[$]":
-        return 1 + address_length
-    elif op_name == "PUSHLIB" or op_name == "PUSHDEPLOYADDRESS":
-        return 1 + 20
-    elif op_name == "PUSHIMMUTABLE":
-        return 1 + 32
-    else:
-        raise ValueError("Opcode not recognized")
-
-def total_bytes(instructions_disasm):
-    instructions = list(filter(lambda x: x != '', instructions_disasm.split(' ')))
-    i, bytes, j = 0, 0, 0
-    while i < len(instructions):
-        j += 1
-        if instructions[i] == "PUSH":
-            bytes += bytes_required("PUSH", instructions[i+1])
-            i += 2
-        elif instructions[i].startswith("PUSH") and not instructions[i].startswith("PUSHDEPLOYADDRESS") \
-                    and not instructions[i].startswith("PUSHSIZE"):
-            bytes += bytes_required(instructions[i], None)
-            i += 2
-        else:
-            bytes += bytes_required(instructions[i], None)
-            i += 1
-    return bytes, j
-
-
 def init():
     modifiable_path_files_init()
     not_modifiable_path_files_init()
-
-
-def run_command(cmd):
-    FNULL = open(os.devnull, 'w')
-    solc_p = subprocess.Popen(shlex.split(cmd), stdout=subprocess.PIPE,
-                              stderr=FNULL)
-    return solc_p.communicate()[0].decode()
-
-
-def run_and_measure_command(cmd):
-    usage_start = resource.getrusage(resource.RUSAGE_CHILDREN)
-    solution = run_command(cmd)
-    usage_stop = resource.getrusage(resource.RUSAGE_CHILDREN)
-    return solution, usage_stop.ru_utime + usage_stop.ru_stime - usage_start.ru_utime - usage_start.ru_stime
-
-
-def analyze_file_oms(solution):
-    pattern = re.compile("\(gas ([0-9]*)\)")
-    for match in re.finditer(pattern, solution):
-        number = int(match.group(1))
-        pattern2 = re.compile("range")
-        if re.search(pattern2, solution):
-            return number, False
-        return number, True
-
-
-def submatch_z3(string):
-    subpattern = re.compile("\(interval (.*) (.*)\)")
-    for submatch in re.finditer(subpattern, string):
-        return int(submatch.group(2))
-    return -1
-
-
-def analyze_file_z3(solution):
-    pattern = re.compile("\(gas (.*)\)")
-    for match in re.finditer(pattern, solution):
-        number = submatch_z3(match.group(1))
-        if number == -1:
-            return int(match.group(1)), True
-        else:
-            return number, False
-
-
-def submatch_barcelogic(string):
-    subpattern = re.compile("\(cost (.*)\)")
-    for submatch in re.finditer(subpattern, string):
-        return int(submatch.group(1))
-    return -1
-
-
-def analyze_file_barcelogic(solution):
-    pattern = re.compile("\(optimal (.*)\)")
-    for match in re.finditer(pattern, solution):
-        return int(match.group(1)), True
-    return submatch_barcelogic(solution), False
-
-
-def analyze_file(solution):
-    global solver
-    if solver == "oms":
-        return analyze_file_oms(solution)
-    elif solver == "z3":
-        return analyze_file_z3(solution)
-    else:
-        return analyze_file_barcelogic(solution)
-
-
-def get_solver_to_execute(block_id, bclt_timeout):
-    encoding_file = paths.smt_encoding_path + block_id + "_" + solver + ".smt2"
-
-    if solver == "z3":
-        return paths.z3_exec + " -smt2 " + encoding_file
-    elif solver == "barcelogic":
-        if tout is None:
-            return paths.bclt_exec + " -file " + encoding_file
-        else:
-            return paths.bclt_exec + " -file " + encoding_file + " -tlimit " + str(bclt_timeout)
-    else:
-        return paths.oms_exec + " " + encoding_file+ " -optimization=True"
-
-
-def get_tout_found_per_solver(solution):
-    global solver
-    if solver == "z3":
-        return re.search(re.compile("model is not"), solution)
-    elif solver == "barcelogic":
-        target_gas_cost, _ = analyze_file_barcelogic(solution)
-        return target_gas_cost == -1
-    else:
-        return re.search(re.compile("not enabled"), solution)
 
 
 if __name__=="__main__":
@@ -306,7 +151,7 @@ if __name__=="__main__":
                 file_results['number_of_necessary_push'] = len(generate_phi_dict(user_instr, final_stack))
                 original_instrs = data['original_instrs']
                 file_results['original_instrs'] = original_instrs
-                old_bytes, old_instructions = total_bytes(original_instrs)
+                old_bytes = get_ins_size_seq(original_instrs)
                 file_results['original_bytes'] = old_bytes
                 initial_stack = data['src_ws']
 
@@ -326,10 +171,9 @@ if __name__=="__main__":
                     print(file,file=f)
                 continue
 
-            smt_exec_command = get_solver_to_execute(block_id, bclt_timeout)
-            solution, executed_time = run_and_measure_command(smt_exec_command)
+            solution, executed_time = obtain_solver_output(block_id, solver, bclt_timeout)
             executed_time = round(executed_time, 3)
-            tout_pattern = get_tout_found_per_solver(solution)
+            tout_pattern = get_tout_found_per_solver(solution, solver)
             if tout_pattern:
                 if re.search(re.compile("unsat"), solution):
                     with open(results_dir + "unsat.txt", 'a') as f:
@@ -344,7 +188,7 @@ if __name__=="__main__":
                 file_results['no_model_found'] = False
                 file_results['solver_time_in_sec'] = executed_time
 
-                target_gas_cost, shown_optimal = analyze_file(solution)
+                target_gas_cost, shown_optimal = analyze_file(solution, solver)
                 # Sometimes, solution reached is not good enough
                 file_results['target_gas_cost'] = target_gas_cost
                 file_results['shown_optimal'] = shown_optimal
@@ -359,10 +203,10 @@ if __name__=="__main__":
                 with open(instruction_final_solution, 'r') as f:
                     instructions_disasm = f.read()
                     file_results['target_disasm'] = instructions_disasm
-                    number_bytes, number_of_instructions = total_bytes(instructions_disasm)
+                    number_bytes = get_ins_size_seq(instructions_disasm)
                     file_results['bytes_required'] = number_bytes
                     file_results['saved_bytes'] = file_results['original_bytes'] - number_bytes
-                    file_results['final_progr_len'] = number_of_instructions
+                    file_results['final_progr_len'] = 0
 
                     # Generate the disasm_blk file, including the size of the initial stack in the first
                     # line and the disasm instructions in the second one. This will be used to check if the
