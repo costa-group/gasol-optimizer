@@ -7,7 +7,7 @@ from timeit import default_timer as dtimer
 import global_params.paths as paths
 from sfs_generator.gasol_optimization import smt_translate_block
 from sfs_generator.rbr_rule import RBRRule
-from sfs_generator.utils import get_push_number, isYulInstructionUpper
+from sfs_generator.utils import get_push_number_hex, isYulInstructionUpper
 
 '''
 It initialize the globals variables. 
@@ -963,7 +963,7 @@ def compile_instr(rule,evm_opcode,variables,list_jumps,cond):
             rule.add_instr(value)
     elif opcode_name[:4] in opcodes60 and not isYulInstructionUpper(opcode_name):
         value, index_variables = translateOpcodes60(opcode_name[:4], opcode_rest, variables)
-        pushid = get_push_number(opcode_rest)
+        pushid = get_push_number_hex(opcode_rest)
         rule.add_instr(value)
     elif opcode_name[:3] in opcodes80:
         value, index_variables = translateOpcodes80(opcode_name[:3], opcode_name[3:], variables)

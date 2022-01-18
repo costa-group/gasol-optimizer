@@ -6,7 +6,7 @@ from timeit import default_timer as dtimer
 import global_params.constants as constants
 import global_params.paths as paths
 import sfs_generator.opcodes as opcodes
-from sfs_generator.utils import (all_integers, find_sublist, get_num_bytes,
+from sfs_generator.utils import (all_integers, find_sublist, get_num_bytes_int,
                                  is_integer, isYulInstructionUpper)
 
 terminate_block = ["ASSERTFAIL","RETURN","REVERT","SUICIDE","STOP"]
@@ -592,8 +592,8 @@ def update_unary_func(func,var,val,evaluate):
 
                     v0 = int(val)
 
-                    bytes_v0 = get_num_bytes(v0)
-                    bytes_sol = get_num_bytes(val_end)
+                    bytes_v0 = get_num_bytes_int(v0)
+                    bytes_sol = get_num_bytes_int(val_end)
                                 
                     if bytes_sol <= bytes_v0+1:
                         s_dict[var] = val_end
@@ -1431,10 +1431,10 @@ def check_size(exp_without, expression):
     if exp_without != expression:
         v0 = int(exp_without[0])
         v1 = int(exp_without[1])
-        bytes_v0 = get_num_bytes(v0)
-        bytes_v1 = get_num_bytes(v1)
+        bytes_v0 = get_num_bytes_int(v0)
+        bytes_v1 = get_num_bytes_int(v1)
 
-        bytes_sol = get_num_bytes(expression)
+        bytes_sol = get_num_bytes_int(expression)
 
         if bytes_sol <= bytes_v0+bytes_v1+2:
             return True,expression
@@ -2758,10 +2758,10 @@ def translate_subblock(rule,instrs,sstack,tstack,sstack_idx,idx,next_block,preff
         build_userdef_instructions()
         gas = get_block_cost(opcodes,0)
         max_stack_size = max_idx_used(instructions,tstack)
+        pops2remove = 0
         if max_stack_size!=0 and gas !=0 and not is_identity_map(sstack,tstack,instructions):
             compute_gast = True
             new_tstack,new_nexts = optimize_splitpop_block(tstack,sstack,next_block,opcodes)
-            pops2remove = 0
             if new_nexts != []:
                 pops2remove = new_nexts[2]
                 # gas = gas+2*pops2remove
@@ -3541,8 +3541,8 @@ def apply_transform(instr):
 
             if size_flag:
                 v0 = int(val[0])
-                bytes_v0 = get_num_bytes(v0)
-                bytes_sol = get_num_bytes(val_end)
+                bytes_v0 = get_num_bytes_int(v0)
+                bytes_sol = get_num_bytes_int(val_end)
 
                 if bytes_sol <= bytes_v0+1:    
                     saved_push+=1

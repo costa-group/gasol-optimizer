@@ -7,10 +7,10 @@ import shutil
 import sys
 from copy import deepcopy
 from statistics.properties_from_asm_json import (
-    bytes_required, bytes_required_initial_plain,
-    compute_bytecode_size_in_asm_json_per_file,
+    bytes_required_asm, preprocess_instructions,
     compute_number_of_instructions_in_asm_json_per_file)
 from timeit import default_timer as dtimer
+from sfs_generator.utils import get_ins_size_seq
 
 import pandas as pd
 
@@ -97,46 +97,6 @@ def remove_last_constant_instructions(instructions):
         
     new_stack_size = compute_stack_size(instructions)
     return new_stack_size, cons_instructions[::-1]
-            
-            
-# It modifies the name of the push opcodes of yul to integrate them in a single string
-def preprocess_instructions(bytecodes):
-    instructions = []
-    for b in bytecodes:
-        op = b.getDisasm()
-
-        if op.startswith("PUSH") and not isYulInstruction(op):
-            op = op+" 0x"+b.getValue()
-
-        else:
-            if op.startswith("PUSH") and op.find("tag")!=-1:
-                op = "PUSHTAG"+" 0x"+b.getValue()
-
-            elif op.startswith("PUSH") and op.find("#[$]")!=-1:
-                op = "PUSH#[$]"+" 0x"+b.getValue()
-
-            elif op.startswith("PUSH") and op.find("[$]")!=-1:
-                op = "PUSH[$]"+" 0x"+b.getValue()
-
-            elif op.startswith("PUSH") and op.find("data")!=-1:
-                op = "PUSHDATA"+" 0x"+b.getValue()
-
-            elif op.startswith("PUSH") and op.find("IMMUTABLE")!=-1:
-                op = "PUSHIMMUTABLE"+" 0x"+b.getValue()
-
-            elif op.startswith("PUSH") and op.find("LIB")!=-1:
-                op = "PUSHLIB"+" 0x"+b.getValue()
-                
-            elif op.startswith("PUSH") and op.find("DEPLOYADDRESS") !=-1:
-                # Fixme: add ALL PUSH variants: PUSH data, PUSH DEPLOYADDRESS
-                op = "PUSHDEPLOYADDRESS"
-            elif op.startswith("PUSH") and op.find("SIZE") !=-1:
-                op = "PUSHSIZE"
-            
-        instructions.append(op)
-
-
-    return instructions
 
 
 def compute_original_sfs_with_simplifications(instructions, stack_size, cname, block_id, is_initial_block,storage, last_const, size_abs, partition, pop_flag):
@@ -177,7 +137,7 @@ def optimize_block(sfs_dict, timeout, size = False):
 
         current_cost = sfs_block['current_cost']
         original_instrs = sfs_block['original_instrs']
-        current_size = sum([bytes_required_initial_plain(instr) for instr in original_instrs])
+        current_size = get_ins_size_seq(original_instrs)
         user_instr = sfs_block['user_instrs']
         initial_program_length = sfs_block['init_progr_len']
 
@@ -418,8 +378,8 @@ def update_gas_count(old_block, new_block):
     global previous_size
     global new_size
 
-    previous_size += sum([bytes_required(asm_bytecode) for asm_bytecode in old_block.getInstructions()])
-    new_size += sum([bytes_required(asm_bytecode) for asm_bytecode in new_block.getInstructions()])
+    previous_size += sum([bytes_required_asm(asm_bytecode) for asm_bytecode in old_block.getInstructions()])
+    new_size += sum([bytes_required_asm(asm_bytecode) for asm_bytecode in new_block.getInstructions()])
 
     old_instructions = preprocess_instructions(old_block.getInstructions())
     new_instructions = preprocess_instructions(new_block.getInstructions())
@@ -535,7 +495,7 @@ def optimize_asm_block_asm_format(block, contract_name, timeout, storage, last_c
                                                                           instruction_theta_dict,
                                                                           gas_theta_dict, values_dict)
         _, shown_optimal = analyze_file(solver_output, "oms")
-        optimized_length = sum([bytes_required(instr) for instr in new_sub_block])
+        optimized_length = sum([bytes_required_asm(instr) for instr in new_sub_block])
         statistics_row = {"block_id": block_name, "solver_time_in_sec": round(solver_time, 3), "saved_size": current_length - optimized_length,
                           "saved_gas": current_cost - optimized_cost, "no_model_found": False, "shown_optimal": shown_optimal}
         statistics_rows.append(statistics_row)
@@ -580,32 +540,17 @@ def optimize_asm_block_asm_format(block, contract_name, timeout, storage, last_c
     # # Case more than one sub blocks: several intermediate sub blocks may have been skipped.
     # # They can be identified from those sub blocks numbers that are not present in the sfs dict
     else:
-        optimized_blocks_ordered_list = list(sorted(optimized_blocks.items(), key=lambda kv: int(kv[0].replace(block_name + ".", ''))))
 
         # For each sub-block in the initial block, we check whether is matches the corresponding sfs dict. If not,
         # it means a block was reduced directly and hence, we need to record it in the list of sub blocks
 
         optimized_blocks_list = []
-        optimized_blocks_list_idx = 0
-        for sub_block_instructions in sub_block_list:
+        for current_idx in range(len(sub_block_list)):
+            current_block_name = block_name + "." + str(current_idx)
 
-            if optimized_blocks_list_idx >= len(optimized_blocks_ordered_list):
-                optimized_blocks_list.append([])
-                continue
-
-            block_name, block_optimized = optimized_blocks_ordered_list[optimized_blocks_list_idx]
-            sfs_dict_related_instructions = sfs_dict[block_name]['original_instrs']
-
-            # If the instructions match current block, we add the optimized  (or not) solution and add 1 to the index
-            # we are considering
-            if sfs_dict_related_instructions in [sub_block_instructions[i:len(sfs_dict_related_instructions) + i]
-                                                 for i in range(len(sub_block_instructions) + 1 - len(sfs_dict_related_instructions))]:
-                optimized_blocks_list.append(block_optimized)
-                optimized_blocks_list_idx += 1
-
-            # Otherwise the block was simplified totally
-            else:
-                optimized_blocks_list.append([])
+            # If the corresponding block name does not belong to the list of optimized blocks, it means it was
+            # simplified completely. Therefore, it is set to empty []
+            optimized_blocks_list.append(optimized_blocks.get(current_block_name, []))
 
     #     # We sort by block id and obtain the associated values in order
     #     optimized_blocks_list_with_intra_block_consideration = \
