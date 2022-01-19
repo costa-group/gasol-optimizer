@@ -73,6 +73,9 @@ size_flag = False
 global pop_flag
 pop_flag = False
 
+global push_flag
+push_flag = False
+
 def init_globals():
     
     global u_counter
@@ -1954,6 +1957,13 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
         sto_dep, mem_dep = [],[]
 
 
+    if push_flag:
+        new_vars_list, new_push_ins = transform_push_uninterpreted_functions(new_ts,new_user_defins)
+        
+    else:
+        new_var_list = []
+        new_push_ins = []
+        
     # if XXX:
     #     split_by = True
     #     return split_by,ins
@@ -1961,10 +1971,10 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     json_dict["init_progr_len"] = max_instr_size-discount_op
     json_dict["max_progr_len"] = max_instr_size
     json_dict["max_sk_sz"] = max_sk_sz_idx-len(remove_vars)
-    json_dict["vars"] = vars_list
+    json_dict["vars"] = vars_list+new_var_list
     json_dict["src_ws"] = new_ss
     json_dict["tgt_ws"] = new_ts
-    json_dict["user_instrs"] = new_user_defins+pop_instructions
+    json_dict["user_instrs"] = new_user_defins+pop_instructions+new_push_ins
     json_dict["current_cost"] = gas
     json_dict["storage_dependences"] = sto_dep
     json_dict["memory_dependences"]= mem_dep
@@ -3175,7 +3185,7 @@ def compute_max_program_len(opcodes, num_guard,block = None):
     return len(new_opcodes)
     
 
-def smt_translate_block(rule,file_name,name,preffix,simplification=True,storage = False, size = False, part = False, pop = False):
+def smt_translate_block(rule,file_name,name,preffix,simplification=True,storage = False, size = False, part = False, pop = False, push = False):
     global s_counter
     global max_instr_size
     global int_not0
@@ -3189,6 +3199,7 @@ def smt_translate_block(rule,file_name,name,preffix,simplification=True,storage 
     global max_l
     global size_flag
     global pop_flag
+    global push_flag
 
     
     init_globals()
@@ -3199,6 +3210,7 @@ def smt_translate_block(rule,file_name,name,preffix,simplification=True,storage 
 
     size_flag = size
     pop_flag = pop
+    push_flag = push
     
     sfs_contracts = {}
 
@@ -5353,4 +5365,67 @@ def generate_pops(not_used_variables):
         pop_id+=1
 
     return pop_instructions
+
+def generate_push_instruction(idx, value, out):
+    obj["id"] = "PUSH_"+str(idx)
+    obj["opcode"] = process_opcode(str(hex(0x60)))
+    obj["disasm"] = "PUSH"
+    obj["inpt_sk"] = [value]
+    obj["outpt_sk"] = [out]
+    obj["gas"] = opcodes.get_ins_cost("PUSH")
+    obj["commutative"] = False
+    obj["storage"] = False #It is true only for MSTORE and SSTORE
+
+    return obj
+
+def transform_push_uninterpreted_functions(target_stack,uninterpreted_functions):
+    global s_counter
+    
+    push_variables = {}
+    new_variables = []
+    new_uninterpreted = []
+
+    push_idx = 0
+    
+    i = 0
+    while i< len(target_stack):
+        v = target_stack[i]
+        if is_integer(v) != -1:
+            s_var = push_variables.get(v,-1)
+            if s_var == -1:
+                s_var = "s("+s_counter+")"
+                push_variables[v] = s_var
+                s_counter+=1
+                new_obj = generate_push_instruction(push_idx, v, s_var)
+                push_idx+=1
+                new_uninterpreted.append(new_obj)
+                
+            target_stack[i] = s_var
+            new_variables.append(s_var)
+        i+=1
+
+    i = 0
+    while(i < len(uninterpreted_functions)):
+        ins = uninterpreted_functions[i]
         
+        input_sk = ins["inpt_sk"]
+        j = 0
+        while j < len(input_sk):
+            in_v = input_sk[j]
+            if is_integer(in_v) != -1:
+                s_var = push_variables.get(in_v,-1)
+                if s_var == -1:
+                    s_var = "s("+s_counter+")"
+                    push_variables[in_v] = s_var
+                    s_counter+=1
+                    new_obj = generate_push_instruction(push_idx, in_v, s_var)
+                    push_idx+=1
+                    new_uninterpreted.append(new_obj)
+
+                input_sk[j] = s_var
+                new_variables.append(s_var)
+            j+=1
+        
+        i+=1
+
+    return new_variables, new_uninterpreted
