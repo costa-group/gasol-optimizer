@@ -76,6 +76,9 @@ pop_flag = False
 global push_flag
 push_flag = False
 
+global revert_flag
+revert_flag = False
+
 def init_globals():
     
     global u_counter
@@ -1978,7 +1981,8 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     json_dict["current_cost"] = gas
     json_dict["storage_dependences"] = sto_dep
     json_dict["memory_dependences"]= mem_dep
-
+    json_dict["is_revert"]= True if revert_flag else False
+    
     new_original_ins = []
     for e in original_ins:
         if e.find("PUSH")!=-1:
@@ -2683,6 +2687,10 @@ def compute_opcodes2write(opcodes,num_guard):
         
 def generate_subblocks(rule,list_subblocks,isolated,preffix,simplification):
     global gas_t
+    global revert_flag
+
+    prev_rever_flag = revert_flag
+    revert_flag = False
     
     source_stack_idx = get_stack_variables(rule)
     source_stack = generate_source_stack_variables(source_stack_idx)
@@ -2727,6 +2735,7 @@ def generate_subblocks(rule,list_subblocks,isolated,preffix,simplification):
 
     block = instrs[2:]
     if block != []:
+        revert_flag = prev_revert_flag
         translate_last_subblock(rule,block,source_stack,source_stack_idx,i,isolated,preffix,simplification,pops2remove)
 
     if compute_gast:
@@ -3200,7 +3209,7 @@ def smt_translate_block(rule,file_name,name,preffix,simplification=True,storage 
     global size_flag
     global pop_flag
     global push_flag
-
+    global revert_flag
     
     init_globals()
     
@@ -3211,6 +3220,7 @@ def smt_translate_block(rule,file_name,name,preffix,simplification=True,storage 
     size_flag = size
     pop_flag = pop
     push_flag = push
+    revert_flag = revert
     
     sfs_contracts = {}
 
