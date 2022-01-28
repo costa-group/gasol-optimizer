@@ -3185,7 +3185,7 @@ def compute_max_program_len(opcodes, num_guard,block = None):
     return len(new_opcodes)
     
 
-def smt_translate_block(rule,file_name,name,preffix,simplification=True,storage = False, size = False, part = False, pop = False, push = False):
+def smt_translate_block(rule,file_name,name,preffix,simplification=True,storage = False, size = False, part = False, pop = False, push = False, revert = False):
     global s_counter
     global max_instr_size
     global int_not0

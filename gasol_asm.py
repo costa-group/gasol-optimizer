@@ -99,10 +99,15 @@ def remove_last_constant_instructions(instructions):
     return new_stack_size, cons_instructions[::-1]
 
 
-def compute_original_sfs_with_simplifications(instructions, stack_size, cname, block_id, is_initial_block,storage, last_const, size_abs, partition, pop_flag, push_flag):
+def compute_original_sfs_with_simplifications(instructions, stack_size, cname, block_id, is_initial_block,storage, last_const, size_abs, partition, pop_flag, push_flag,revert_return):
 
     block_ins = list(filter(lambda x: x not in ["JUMP","JUMPI","JUMPDEST","tag", "STOP","RETURN","INVALID","REVERT"], instructions))
-    
+
+    if ("REVERT" in instructions or "RETURN" in instructions) and revert_return:
+        revert_flag = True
+    else:
+        revert_flag = False
+        
     if last_const:
         new_stack_size , rest_instructions = remove_last_constant_instructions(block_ins)
         
@@ -118,7 +123,7 @@ def compute_original_sfs_with_simplifications(instructions, stack_size, cname, b
 
     fname = args.input_path.split("/")[-1].split(".")[0]
     exit_code, subblocks_list = ir_block.evm2rbr_compiler(file_name = fname, contract_name=cname, block=block_data, block_id=block_id,
-                                                                        preffix=prefix, simplification=True, storage=storage, size = size_abs, part = partition,pop = pop_flag, push = push_flag)
+                                                                        preffix=prefix, simplification=True, storage=storage, size = size_abs, part = partition,pop = pop_flag, push = push_flag, revert = revert_flag)
 
     sfs_dict = get_sfs_dict()
 
@@ -339,7 +344,7 @@ def optimize_asm_from_log(file_name, json_log, output_file):
 
 
 def optimize_isolated_asm_block(block_name,output_file, csv_file, timeout=10, storage= False, last_const = False,
-                                size_abs = False, partition = False, pop = False, push = False):
+                                size_abs = False, partition = False, pop = False, push = False, revert = False):
     global statistics_rows
 
     file_name_str = block_name.split("/")[-1].split(".")[0]
@@ -358,7 +363,7 @@ def optimize_isolated_asm_block(block_name,output_file, csv_file, timeout=10, st
     asm_blocks = []
 
     for block in blocks:
-        asm_block, _ = optimize_asm_block_asm_format(block, file_name_str, timeout, storage, last_const, size_abs, partition, pop, push)
+        asm_block, _ = optimize_asm_block_asm_format(block, file_name_str, timeout, storage, last_const, size_abs, partition, pop, push, revert)
         asm_blocks.append(asm_block)
 
         update_gas_count(block, asm_block)
@@ -438,7 +443,7 @@ def filter_optimized_blocks_by_intra_block_optimization(asm_sub_blocks, optimize
     return list(reversed(final_sub_blocks))
 
 # Given an asm_block and its contract name, returns the asm block after the optimization
-def optimize_asm_block_asm_format(block, contract_name, timeout, storage, last_const, size_abs, partition,pop_flag, push_flag):
+def optimize_asm_block_asm_format(block, contract_name, timeout, storage, last_const, size_abs, partition,pop_flag, push_flag, revert_return):
     global statistics_rows
     global total_time
 
@@ -459,7 +464,7 @@ def optimize_asm_block_asm_format(block, contract_name, timeout, storage, last_c
     
     contracts_dict, sub_block_list = compute_original_sfs_with_simplifications(instructions,stack_size,contract_name,
                                                                                block_id, is_init_block,storage,
-                                                                               last_const,size_abs, partition,pop_flag, push_flag)
+                                                                               last_const,size_abs, partition,pop_flag, push_flag, revert_return)
 
     # y = dtimer()
     # print("*************************************************************")
@@ -571,13 +576,13 @@ def optimize_asm_block_asm_format(block, contract_name, timeout, storage, last_c
     return new_block, log_dicts
 
 
-def compare_asm_block_asm_format(old_block, new_block, contract_name="example",storage = False, last_const = False, size_abs = False, partition = False, pop = False, push = False):
+def compare_asm_block_asm_format(old_block, new_block, contract_name="example",storage = False, last_const = False, size_abs = False, partition = False, pop = False, push = False, revert = False):
 
     old_instructions = preprocess_instructions(old_block.getInstructions())
 
     old_sfs_information, _ = compute_original_sfs_with_simplifications(old_instructions, old_block.getSourceStack(),
                                                              contract_name, old_block.getBlockId(),
-                                                                       old_block.get_is_init_block(),storage, last_const, size_abs, partition, pop, push)
+                                                                       old_block.get_is_init_block(),storage, last_const, size_abs, partition, pop, push, revert)
 
     old_sfs_dict = old_sfs_information["syrup_contract"]
 
@@ -586,7 +591,7 @@ def compare_asm_block_asm_format(old_block, new_block, contract_name="example",s
 
     new_sfs_information, _ = compute_original_sfs_with_simplifications(new_instructions, new_block.getSourceStack(),
                                                              contract_name, new_block.getBlockId(),
-                                                                       new_block.get_is_init_block(),storage, last_const, size_abs, partition, pop, push)
+                                                                       new_block.get_is_init_block(),storage, last_const, size_abs, partition, pop, push, revert)
 
     new_sfs_dict = new_sfs_information["syrup_contract"]
 
@@ -600,7 +605,7 @@ def compare_asm_block_asm_format(old_block, new_block, contract_name="example",s
     return final_comparison and (intermediate_instructions_old == intermediate_instructions_new)
 
 
-def optimize_asm_in_asm_format(file_name, output_file, csv_file, timeout=10, log=False, storage= False, last_const = False, size_abs = False, partition = False, pop = False, push = False ):
+def optimize_asm_in_asm_format(file_name, output_file, csv_file, timeout=10, log=False, storage= False, last_const = False, size_abs = False, partition = False, pop = False, push = False, revert = False):
     global statistics_rows
 
     asm = parse_asm(file_name)
@@ -626,7 +631,7 @@ def optimize_asm_in_asm_format(file_name, output_file, csv_file, timeout=10, log
         init_code_blocks = []
 
         for block in init_code:
-            asm_block, log_element = optimize_asm_block_asm_format(block, contract_name, timeout, storage, last_const,size_abs,partition, pop, push)
+            asm_block, log_element = optimize_asm_block_asm_format(block, contract_name, timeout, storage, last_const,size_abs,partition, pop, push, revert)
             log_dicts.update(log_element)
             init_code_blocks.append(asm_block)
 
@@ -648,7 +653,7 @@ def optimize_asm_in_asm_format(file_name, output_file, csv_file, timeout=10, log
 
             run_code_blocks = []
             for block in blocks:
-                asm_block, log_element = optimize_asm_block_asm_format(block, contract_name, timeout, storage, last_const,size_abs,partition, pop, push)
+                asm_block, log_element = optimize_asm_block_asm_format(block, contract_name, timeout, storage, last_const,size_abs,partition, pop, push, revert)
                 log_dicts.update(log_element)
                 run_code_blocks.append(asm_block)
 
@@ -716,6 +721,7 @@ if __name__ == '__main__':
     ap.add_argument("-partition","--partition",help="It enables the partition in blocks of 24 instructions",action="store_true")
     ap.add_argument("-pop","--pop",help="It considers the necessary pops as uninterpreted functions",action="store_true")
     ap.add_argument("-push","--push",help="It considers the push instructions as uninterpreted functions",action="store_true")
+    ap.add_argument("-terminal","--terminal",help="It takes into account if the last instruction is a revert or a return",action="store_true")
     ap.add_argument("-backend","--backend",help="Enables backend",action="store_true")
     args = ap.parse_args()
 
@@ -744,9 +750,9 @@ if __name__ == '__main__':
 
 
     if not args.block:
-        optimize_asm_in_asm_format(args.input_path, output_file, csv_file, args.tout, False, args.storage,args.last_constants,args.size,args.partition,args.pop,args.push)
+        optimize_asm_in_asm_format(args.input_path, output_file, csv_file, args.tout, False, args.storage,args.last_constants,args.size,args.partition,args.pop,args.push, args.terminal)
     else:
-        optimize_isolated_asm_block(args.input_path, output_file, csv_file, args.tout, args.storage,args.last_constants,args.size,args.partition,args.pop,args.push)
+        optimize_isolated_asm_block(args.input_path, output_file, csv_file, args.tout, args.storage,args.last_constants,args.size,args.partition,args.pop,args.push, args.terminal)
 
 
     y = dtimer()
