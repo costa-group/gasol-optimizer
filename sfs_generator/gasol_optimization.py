@@ -2689,7 +2689,7 @@ def generate_subblocks(rule,list_subblocks,isolated,preffix,simplification):
     global gas_t
     global revert_flag
 
-    prev_rever_flag = revert_flag
+    prev_revert_flag = revert_flag
     revert_flag = False
     
     source_stack_idx = get_stack_variables(rule)
