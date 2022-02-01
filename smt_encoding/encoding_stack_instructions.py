@@ -7,71 +7,74 @@ from smt_encoding.smtlib_utils import (add_and, add_assert, add_eq,
 
 # Methods for generating the constraints for stack (Cs)
 
-def _push_encoding(j, bs, theta_push):
+def push_encoding(j, bs, theta_push):
     left_term = add_eq(t(j), theta_push)
     right_term = add_and(add_leq(0, a(j)), add_lt(a(j), constants.int_limit), add_not(u(bs - 1, j)), u(0, j + 1),
                          add_eq(x(0, j+1), a(j)), move(j, 0, bs-2, 1))
-    write_encoding(add_assert(add_implies(left_term, right_term)))
+    return add_assert(add_implies(left_term, right_term))
 
 
-def _dupk_encoding(k, j, bs, theta_dupk):
+def dupk_encoding(k, j, bs, theta_dupk):
     left_term = add_eq(t(j), theta_dupk)
     right_term = add_and(add_not(u(bs-1, j)), u(k-1, j), u(0, j+1),
                           add_eq(x(0, j+1), x(k-1, j)), move(j, 0, bs-2, 1))
-    write_encoding(add_assert(add_implies(left_term, right_term)))
+    return add_assert(add_implies(left_term, right_term))
 
 
-def _swapk_encoding(k,j, bs, theta_swapk):
+def swapk_encoding(k, j, bs, theta_swapk):
     left_term = add_eq(t(j), theta_swapk)
     right_term = add_and(u(k,j), u(0, j+1), add_eq(x(0, j+1), x(k,j)) ,
                           u(k, j+1), add_eq(x(k, j+1), x(0,j)),
                           move(j, 1, k-1, 0), move(j, k+1, bs-1, 0))
-    write_encoding(add_assert(add_implies(left_term, right_term)))
+    return add_assert(add_implies(left_term, right_term))
 
 
-def _pop_encoding(j, bs, theta_pop):
+def pop_encoding(j, bs, theta_pop):
     left_term = add_eq(t(j), theta_pop)
     right_term = add_and(u(0,j), add_not(u(bs-1, j+1)), move(j,1,bs-1,-1))
-    write_encoding(add_assert(add_implies(left_term, right_term)))
+    return add_assert(add_implies(left_term, right_term))
 
 
-def _pop_uninterpreted_encoding(j, bs, theta_pop, o):
+def pop_uninterpreted_encoding(j, bs, theta_pop, o):
     left_term = add_eq(t(j), theta_pop)
     right_term = add_and(u(0,j), add_eq(x(0,j), o), add_not(u(bs-1, j+1)), move(j,1,bs-1,-1))
-    write_encoding(add_assert(add_implies(left_term, right_term)))
+    return add_assert(add_implies(left_term, right_term))
 
 
-def _nop_encoding(j, bs, theta_nop):
+def nop_encoding(j, bs, theta_nop):
     left_term = add_eq(t(j), theta_nop)
     right_term = move(j,0,bs-1,0)
-    write_encoding(add_assert(add_implies(left_term, right_term)))
+    return add_assert(add_implies(left_term, right_term))
 
 
-def _fromnop_encoding(b0, theta_nop, initial_idx):
+def fromnop_encoding(b0, theta_nop, initial_idx):
+    constraints = []
     for j in range(initial_idx, b0-1+initial_idx):
         left_term = add_eq(t(j), theta_nop)
         right_term = add_eq(t(j+1), theta_nop)
-        write_encoding(add_assert(add_implies(left_term, right_term)))
+        constraints.append(add_assert(add_implies(left_term, right_term)))
+    return constraints
 
 
 def _stack_constraints(b0, bs, theta, initial_idx=0):
     write_encoding("; Stack contraints")
-    _fromnop_encoding(b0, theta["NOP"], initial_idx)
+    write_encoding(*fromnop_encoding(b0, theta["NOP"], initial_idx))
     for j in range(initial_idx, b0 + initial_idx):
-        _push_encoding(j, bs, theta["PUSH"])
-        _pop_encoding(j, bs, theta["POP"])
-        _nop_encoding(j, bs, theta["NOP"])
+        write_encoding(push_encoding(j, bs, theta["PUSH"]))
+        write_encoding(pop_encoding(j, bs, theta["POP"]))
+        write_encoding(nop_encoding(j, bs, theta["NOP"]))
 
         for k in range(1, min(bs, constants.max_k_dup + 1)):
-            _dupk_encoding(k, j, bs, theta["DUP" + str(k)])
+            write_encoding(dupk_encoding(k, j, bs, theta["DUP" + str(k)]))
 
         for k in range(1, min(bs, constants.max_k_swap + 1)):
-            _swapk_encoding(k, j, bs, theta["SWAP" + str(k)])
+            write_encoding(swapk_encoding(k, j, bs, theta["SWAP" + str(k)]))
+
 
 # Methods for generating constraints for non-commutative uninterpreted functions (Cu)
 
 
-def _non_comm_function_encoding(j, bs, o, r, theta_f):
+def non_comm_function_encoding(j, bs, o, r, theta_f):
     n = len(o)
     left_term = add_eq(t(j), theta_f)
     right_term_first_and = ["true"]
@@ -87,7 +90,7 @@ def _non_comm_function_encoding(j, bs, o, r, theta_f):
     right_term = add_and(add_and(*right_term_first_and), u(0, j+1) , add_eq(x(0,j+1), r),
                           move(j, n, min(bs-2+n, bs-1), 1-n) , add_and(*right_term_second_and),
                          add_and(*right_term_third_and))
-    write_encoding(add_assert(add_implies(left_term, right_term)))
+    return add_assert(add_implies(left_term, right_term))
 
 
 def _non_comm_function_constraints(b0, bs, non_comm_user_instr, theta_non_comm, first_position_instr_appears_dict,
@@ -113,7 +116,7 @@ def _non_comm_function_constraints(b0, bs, non_comm_user_instr, theta_non_comm, 
         # a instruction can appear and final_idx refers to the first position that instruction cannot appear.
         # Note that last value can be b0 if it can appear at any point.
         for j in range(initial_possible_idx, final_possible_idx):
-            _non_comm_function_encoding(j, bs, o, r, theta_f)
+            write_encoding(non_comm_function_encoding(j, bs, o, r, theta_f))
 
         # Instructions cannot appear in [final_idx, b0), so we add a statement to consider this situation.
         for j in range(final_possible_idx, b0+initial_idx):
@@ -121,12 +124,12 @@ def _non_comm_function_constraints(b0, bs, non_comm_user_instr, theta_non_comm, 
 
 # Methods for generating constraints for commutative uninterpreted functions (Cc)
 
-def _comm_function_encoding(j, bs, o0, o1, r, theta_f):
+def comm_function_encoding(j, bs, o0, o1, r, theta_f):
     left_term = add_eq(t(j), theta_f)
     right_term = add_and(u(0,j), u(1,j), add_or(add_and(add_eq(x(0,j), o0), add_eq(x(1,j), o1)),
                                                   add_and(add_eq(x(0,j), o1), add_eq(x(1,j), o0))),
                           u(0,j+1), add_eq(x(0,j+1), r), move(j, 2, bs-1, -1), add_not(u(bs-1, j+1)))
-    write_encoding(add_assert(add_implies(left_term, right_term)))
+    return add_assert(add_implies(left_term, right_term))
 
 
 def _comm_function_constraints(b0, bs, comm_user_instr, theta_comm, first_position_instr_appears_dict,
@@ -153,18 +156,18 @@ def _comm_function_constraints(b0, bs, comm_user_instr, theta_comm, first_positi
         # a instruction can appear and final_idx refers to the first position that instruction cannot appear.
         # Note that last value can be b0 if it can appear at any point.
         for j in range(initial_possible_idx, final_possible_idx):
-            _comm_function_encoding(j, bs, o0, o1, r, theta_f)
+            write_encoding(comm_function_encoding(j, bs, o0, o1, r, theta_f))
 
         # Instructions cannot appear in [final_idx, b0), so we add a statement to consider this situation.
         for j in range(final_possible_idx, b0+initial_idx):
             write_encoding(add_assert(add_not(add_eq(t(j), theta_f))))
 
 
-def _store_stack_function_encoding(j, bs, o0, o1, theta_f):
+def store_stack_function_encoding(j, bs, o0, o1, theta_f):
     left_term = add_eq(t(j), theta_f)
     right_term = add_and(u(0,j), u(1,j), add_and(add_eq(x(0,j), o0), add_eq(x(1,j), o1)),
                          move(j, 2, bs-1, -2), add_not(u(bs-1, j+1)), add_not(u(bs-2, j+1)))
-    write_encoding(add_assert(add_implies(left_term, right_term)))
+    return add_assert(add_implies(left_term, right_term))
 
 
 def _store_stack_constraints(b0, bs, mem_instr, theta_mem, first_position_instr_appears_dict,
@@ -188,7 +191,7 @@ def _store_stack_constraints(b0, bs, mem_instr, theta_mem, first_position_instr_
         # a instruction can appear and final_idx refers to the first position that instruction cannot appear.
         # Note that last value can be b0 if it can appear at any point.
         for j in range(initial_possible_idx, final_possible_idx):
-            _store_stack_function_encoding(j, bs, o0, o1, theta_f)
+            write_encoding(store_stack_function_encoding(j, bs, o0, o1, theta_f))
 
         # Instructions cannot appear in [final_idx, b0), so we add a statement to consider this situation.
         for j in range(final_possible_idx, b0+initial_idx):

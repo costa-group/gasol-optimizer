@@ -48,8 +48,9 @@ def initialize_dir_and_streams(solver,source_name = None):
     return encoding_stream
 
 
-def write_encoding(string):
-    print(string, file=encoding_stream)
+def write_encoding(*asserts):
+    for ass in asserts:
+        print(ass, file=encoding_stream)
 
 
 def close_encoding():
