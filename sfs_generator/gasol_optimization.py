@@ -396,9 +396,9 @@ def search_for_value(var, instructions,source_stack,evaluate = True):
     
     search_for_value_aux(var,instructions,source_stack,0,evaluate)
 
-    # print(s_dict)
-    # print(u_dict)
-    # print("???????????????????????????")
+    print(s_dict)
+    print(u_dict)
+    print("???????????????????????????")
     
 def search_for_value_aux(var, instructions,source_stack,level,evaluate = True):
     global s_counter
@@ -446,7 +446,7 @@ def search_for_value_aux(var, instructions,source_stack,level,evaluate = True):
             update_unary_func(funct,var,new_vars[0],evaluate)
             
         else:
-            if new_vars[0] not in zero_ary:
+            if new_vars[0] not in zero_ary and new_vars[0].find("gas")==-1:
                 search_for_value_aux(new_vars[0],instructions[i:],source_stack,level,evaluate)
                 val = s_dict[new_vars[0]]
             else:
@@ -641,6 +641,9 @@ def update_unary_func(func,var,val,evaluate):
                 arity = 1
 
             elem = ((val,func),arity)
+            print("******")
+            print(elem)
+            print("******")
             new_uvar, defined = is_already_defined(elem)
             if defined:
                 s_dict[var] = new_uvar
@@ -1126,8 +1129,8 @@ def get_involved_vars(instr,var):
         funct =  "gasprice"
 
     elif instr.find("gas")!=-1:
-        var_list.append("gas")
-        funct =  "gas"
+        var_list.append(instr)
+        funct =  instr
     
     elif instr.find("calldatasize")!=-1:
         var_list.append("calldatasize")
@@ -1539,6 +1542,10 @@ def generate_encoding(instructions,variables,source_stack,simplification=True):
         search_for_value(v,instructions_reverse, source_stack,simplification)
         variable_content[v] = s_dict[v]
 
+    print(variable_content)
+    print(s_dict)
+    print(u_dict)
+        
     if not split_sto:
         generate_storage_info(instructions,source_stack)
     else:

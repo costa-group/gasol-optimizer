@@ -92,6 +92,10 @@ def init_globals():
     global sload_counter
     sload_counter = 0
 
+    global gas_counter
+    gas_counter = 0
+    
+    
     global mload_counter
     mload_counter = 0
 
@@ -549,6 +553,7 @@ def translateOpcodes50(opcode, value, index_variables,block):
     global pc_cont
     global sload_counter
     global mload_counter
+    global gas_counter
     
     if opcode == "POP":        
         v1, updated_variables = get_consume_variable(index_variables)
@@ -596,8 +601,8 @@ def translateOpcodes50(opcode, value, index_variables,block):
 
     elif opcode == "GAS":
         v1, updated_variables = get_new_variable(index_variables)
-        instr = v1+" = "+"gas"
-
+        instr = v1+" = "+"gas"+str(gas_counter)
+        gas_counter+=1
     elif opcode == "JUMPDEST":
         instr = ""
         updated_variables = index_variables
