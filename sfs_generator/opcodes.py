@@ -190,7 +190,7 @@ def get_opcode(opcode):
     # # check PUSHi
     # for i in range(32):
     #     if opcode == 'PUSH' + str(i + 1):
-        return [hex(0x60), 0, 1]
+        return [0x60, 0, 1]
 
     elif opcode.startswith("tag"):
         return [hex(0x00), 0, 0]

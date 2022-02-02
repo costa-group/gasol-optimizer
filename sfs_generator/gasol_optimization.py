@@ -1961,7 +1961,7 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
 
 
     if push_flag:
-        new_vars_list, new_push_ins = transform_push_uninterpreted_functions(new_ts,new_user_defins)
+        new_var_list, new_push_ins = transform_push_uninterpreted_functions(new_ts,new_user_defins)
         
     else:
         new_var_list = []
@@ -2461,6 +2461,7 @@ def times_used_userdef_instructions(user_def,tstack,all_input_values):
         instr["times_used"] = len(used)
 
 def process_opcode(result):
+    
     op_val = hex(int(result))[2:]
 
     if (int(op_val,16)<12):
@@ -5377,8 +5378,9 @@ def generate_pops(not_used_variables):
     return pop_instructions
 
 def generate_push_instruction(idx, value, out):
+    obj = {}
     obj["id"] = "PUSH_"+str(idx)
-    obj["opcode"] = process_opcode(str(hex(0x60)))
+    obj["opcode"] = process_opcode(str(opcodes.get_opcode("PUSH")[0]))
     obj["disasm"] = "PUSH"
     obj["inpt_sk"] = [value]
     obj["outpt_sk"] = [out]
@@ -5403,7 +5405,7 @@ def transform_push_uninterpreted_functions(target_stack,uninterpreted_functions)
         if is_integer(v) != -1:
             s_var = push_variables.get(v,-1)
             if s_var == -1:
-                s_var = "s("+s_counter+")"
+                s_var = "s("+str(s_counter)+")"
                 push_variables[v] = s_var
                 s_counter+=1
                 new_obj = generate_push_instruction(push_idx, v, s_var)
@@ -5425,7 +5427,7 @@ def transform_push_uninterpreted_functions(target_stack,uninterpreted_functions)
             if is_integer(in_v) != -1:
                 s_var = push_variables.get(in_v,-1)
                 if s_var == -1:
-                    s_var = "s("+s_counter+")"
+                    s_var = "s("+str(s_counter)+")"
                     push_variables[in_v] = s_var
                     s_counter+=1
                     new_obj = generate_push_instruction(push_idx, in_v, s_var)
