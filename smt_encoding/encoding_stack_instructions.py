@@ -35,7 +35,7 @@ def pop_encoding(j, bs, theta_pop):
     return add_assert(add_implies(left_term, right_term))
 
 
-def pop_uninterpreted_encoding(j, bs, theta_pop, o):
+def pop_uninterpreted_encoding(j, bs, o, theta_pop):
     left_term = add_eq(t(j), theta_pop)
     right_term = add_and(u(0,j), add_eq(x(0,j), o), add_not(u(bs-1, j+1)), move(j,1,bs-1,-1))
     return add_assert(add_implies(left_term, right_term))
