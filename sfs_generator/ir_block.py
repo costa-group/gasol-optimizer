@@ -89,15 +89,19 @@ def init_globals():
     global pc_cont
     pc_cont = 0
 
+    global mload_counter
+    mload_counter = 0
+    
     global sload_counter
     sload_counter = 0
 
     global gas_counter
     gas_counter = 0
+
+    global timestamp_counter
+    timestamp_counter = 0
     
-    
-    global mload_counter
-    mload_counter = 0
+
 
 '''
 Given a block it returns a list containingn the height of its
@@ -500,6 +504,7 @@ updated. It also updated the corresponding global variables.
 '''
 def translateOpcodes40(opcode, index_variables,block):
     global blockhash_cont
+    global timestamp_counter
     
     if opcode == "BLOCKHASH":
         v0, updated_variables = get_consume_variable(index_variables)
@@ -513,7 +518,8 @@ def translateOpcodes40(opcode, index_variables,block):
 
     elif opcode == "TIMESTAMP":
         v1, updated_variables = get_new_variable(index_variables)
-        instr = v1+" = timestamp"
+        instr = v1+" = timestamp"+str(timestamp_counter)
+        timestamp_counter+=1
 
     elif opcode == "NUMBER":
         v1, updated_variables = get_new_variable(index_variables)
