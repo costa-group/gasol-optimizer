@@ -5382,7 +5382,8 @@ def generate_push_instruction(idx, value, out):
     obj["id"] = "PUSH_"+str(idx)
     obj["opcode"] = process_opcode(str(opcodes.get_opcode("PUSH")[0]))
     obj["disasm"] = "PUSH"
-    obj["inpt_sk"] = [value]
+    obj["inpt_sk"] = []
+    obj["value"] = [value]
     obj["outpt_sk"] = [out]
     obj["gas"] = opcodes.get_ins_cost("PUSH")
     obj["commutative"] = False
