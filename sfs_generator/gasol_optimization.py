@@ -395,10 +395,6 @@ def search_for_value(var, instructions,source_stack,evaluate = True):
     global s_dict
     
     search_for_value_aux(var,instructions,source_stack,0,evaluate)
-
-    print(s_dict)
-    print(u_dict)
-    print("???????????????????????????")
     
 def search_for_value_aux(var, instructions,source_stack,level,evaluate = True):
     global s_counter
@@ -446,7 +442,7 @@ def search_for_value_aux(var, instructions,source_stack,level,evaluate = True):
             update_unary_func(funct,var,new_vars[0],evaluate)
             
         else:
-            if new_vars[0] not in zero_ary and new_vars[0].find("gas")==-1:
+            if new_vars[0] not in zero_ary and new_vars[0].find("gas")==-1 and new_vars[0].find("timestamp")==-1:
                 search_for_value_aux(new_vars[0],instructions[i:],source_stack,level,evaluate)
                 val = s_dict[new_vars[0]]
             else:
@@ -550,7 +546,7 @@ def generate_sload_mload(load_ins,instructions,source_stack,pos):
         return new_uvar,elem
             
     else:
-        if new_vars[0] not in zero_ary:
+        if new_vars[0] not in zero_ary and new_vars[0].find("gas")==-1 and new_vars[0].find("timestamp")==-1:
             search_for_value_aux(new_vars[0],instructions,source_stack,level)
             val = s_dict[new_vars[0]]
         else:
@@ -607,7 +603,7 @@ def update_unary_func(func,var,val,evaluate):
                     else:
                         u_var = create_new_svar()
 
-                        if val in zero_ary:
+                        if val in zero_ary or val.find("gas")!=-1 or val.find("timestamp")!=-1:
                             arity = 0
                         else:
                             arity = 1
@@ -635,15 +631,13 @@ def update_unary_func(func,var,val,evaluate):
         
             u_var = create_new_svar()
 
-            if val in zero_ary:
+            if val in zero_ary or val.find("gas")!=-1 or val.find("timestamp")!=-1:
                 arity = 0
             else:
                 arity = 1
 
             elem = ((val,func),arity)
-            print("******")
-            print(elem)
-            print("******")
+
             new_uvar, defined = is_already_defined(elem)
             if defined:
                 s_dict[var] = new_uvar
@@ -721,8 +715,8 @@ def get_involved_vars(instr,var):
         funct = "mstore8"
         
     elif instr.find("timestamp")!=-1:
-        var_list.append("timestamp")
-        funct =  "timestamp"
+        var_list.append(instr)
+        funct =  instr
 
     elif instr.find("msize")!=-1:
         var_list.append("msize")
@@ -1541,10 +1535,6 @@ def generate_encoding(instructions,variables,source_stack,simplification=True):
         # print(v)
         search_for_value(v,instructions_reverse, source_stack,simplification)
         variable_content[v] = s_dict[v]
-
-    print(variable_content)
-    print(s_dict)
-    print(u_dict)
         
     if not split_sto:
         generate_storage_info(instructions,source_stack)
@@ -2135,7 +2125,7 @@ def build_userdef_instructions():
             is_new, obj = generate_userdefname(u_var,funct,[args],arity_exp)
 
             
-            if not is_new and funct not in ["gas","timestamp","returndatasize"]:
+            if not is_new and funct.find("timestamp")==-1 and funct.find("returndatasize")==-1 and funct.find("gas")==-1:
                 if not split_sto and funct.find("sload")==-1 and funct.find("mload")==-1:
                     user_defins.append(obj)
                 else:
@@ -2218,6 +2208,7 @@ def generate_userdefname(u_var,funct,args,arity,init=False):
     # print("A VER A VER")
     # print(funct)
     # print(user_def_counter)
+    # print (arity)
     
     if funct.find("+") != -1:
         instr_name = "ADD"
@@ -2342,7 +2333,7 @@ def generate_userdefname(u_var,funct,args,arity,init=False):
         instr_name = "SLOAD"
 
     elif funct.find("timestamp")!=-1:
-        instr_name = "TIMESTAMP"
+        instr_name = funct.upper()
 
     elif funct.find("msize")!=-1:
         instr_name = "MSIZE"
@@ -2368,9 +2359,8 @@ def generate_userdefname(u_var,funct,args,arity,init=False):
     elif funct.find("keccak256")!=-1:
         instr_name = "KECCAK256"
 
-        
     elif funct.find("gas")!=-1:
-        instr_name = "GAS"
+        instr_name = funct.upper()
 
     elif funct.find("returndatasize")!=-1:
         instr_name = "RETURNDATASIZE"
@@ -2426,6 +2416,9 @@ def generate_userdefname(u_var,funct,args,arity,init=False):
     if defined == -1:
         obj = {}
 
+        if instr_name.find("GAS") !=-1 or instr_name.find("TIMESTAMP")!=-1:
+            instr_name = instr_name[:-1]
+        
         if funct == args: #0-ary functions
             name = instr_name
         else:
@@ -5389,7 +5382,8 @@ def generate_push_instruction(idx, value, out):
     obj["id"] = "PUSH_"+str(idx)
     obj["opcode"] = process_opcode(str(opcodes.get_opcode("PUSH")[0]))
     obj["disasm"] = "PUSH"
-    obj["inpt_sk"] = [value]
+    obj["inpt_sk"] = []
+    obj["value"] = [value]
     obj["outpt_sk"] = [out]
     obj["gas"] = opcodes.get_ins_cost("PUSH")
     obj["commutative"] = False
