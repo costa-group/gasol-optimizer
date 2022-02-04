@@ -1,6 +1,6 @@
 from smt_encoding.encoding_files import write_encoding
 from smt_encoding.encoding_memory_instructions import (
-    _l_variable_order_constraint, _mem_variable_equivalence_constraint)
+    l_variable_order_constraint, mem_variable_equivalence_constraint)
 from smt_encoding.encoding_utils import a, l, t
 from smt_encoding.smtlib_utils import (add_and, add_assert, add_eq,
                                        add_implies, add_leq, add_lt, add_not,
@@ -70,7 +70,7 @@ def restrain_instruction_order(b0, dependency_graph, first_position_instr_appear
 
         write_encoding(add_assert(add_and(add_leq(initial_possible_idx, l(theta_store)), add_lt(l(theta_store), final_possible_idx))))
         for j in range(initial_possible_idx, final_possible_idx):
-            _mem_variable_equivalence_constraint(j, theta_store)
+            write_encoding(mem_variable_equivalence_constraint(j, theta_store))
 
     for instr, previous_instrs in dependency_graph.items():
 
@@ -92,7 +92,7 @@ def restrain_instruction_order(b0, dependency_graph, first_position_instr_appear
             # At this step, we only consider instructions related with l variables associated. The remaining ones
             # are PUSH or similar instructions
             if previous_instr_name in theta_conflicting and instr in theta_conflicting :
-                _l_variable_order_constraint(theta_conflicting[previous_instr_name], theta_conflicting[instr])
+                write_encoding(l_variable_order_constraint(theta_conflicting[previous_instr_name], theta_conflicting[instr]))
                 continue
 
         #     # If previous instruction doesn't appear in previous_values, we initialize to empty list
