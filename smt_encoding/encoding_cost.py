@@ -111,12 +111,16 @@ def number_instructions_soft_constraints(b0, theta_nop, is_barcelogic):
 # Method for generating the soft constraints in which the size of the bytecode is minimized.
 # NOP instructions have a 0 cost associated, PUSH-related instructions have a size of 2 associated,
 # and the remaining ones have cost 1 associated
-def byte_size_soft_constraints_simple(b0, theta_dict, is_barcelogic=False):
+def byte_size_soft_constraints_simple(b0, usr_instr, theta_dict, is_barcelogic=False):
+    ids = ["POP", "PUSH", "NOP"]
+    ids.extend(list(filter(lambda x: x.startswith("SWAP") or x.startswith("DUP"), theta_dict)))
+    ids.extend([instr["id"] for instr in usr_instr])
+
     disjoin_sets = {0: [theta_dict["NOP"]],
                     1: list(map(lambda y: theta_dict[y], filter(lambda x: not x.startswith("PUSH") and x != "NOP" and
-                                                                          x != "ASSIGNIMMUTABLE", theta_dict.keys()))),
+                                                                          x != "ASSIGNIMMUTABLE", ids))),
                     5: list(map(lambda y: theta_dict[y], filter(lambda x: x.startswith("PUSH") or x == "ASSIGNIMMUTABLE",
-                                                                theta_dict.keys())))}
+                                                                ids)))}
 
     previous_cost = 0
     or_variables = []

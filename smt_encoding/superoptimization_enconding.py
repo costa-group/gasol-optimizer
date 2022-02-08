@@ -95,7 +95,7 @@ def generate_soft_constraints(solver_name, b0, bs, usr_instr, theta_dict, flags,
     elif flags['number-instruction-gas-model']:
         number_instructions_soft_constraints(b0, theta_dict['NOP'], is_barcelogic)
     elif flags['bytecode-size-soft-constraints']:
-        byte_size_soft_constraints_simple(b0, theta_dict, is_barcelogic)
+        byte_size_soft_constraints_simple(b0, usr_instr, theta_dict, is_barcelogic)
     elif flags['complex-bytecode-size-soft-constraints']:
         byte_size_soft_constraints_complex(b0, theta_dict, is_barcelogic)
     else:
@@ -225,12 +225,13 @@ def generate_smtlib_encoding(b0, bs, usr_instr, variables, initial_stack, final_
     generate_redundant_constraints(flags, b0, usr_instr, theta_stack, theta_comm, theta_non_comm, final_stack,
                                    dependency_graph, first_position_instr_appears_dict,
                                    first_position_instr_cannot_appear_dict, theta_dict, theta_mem, l_theta_dict)
+
+    # Only consider instructions that do not belong to the l dict
     new_user_instr = []
     for instr in usr_instr:
         new_instr = copy.deepcopy(instr)
-        if new_instr['gas'] > 2:
-            new_instr['gas'] = 0
-        new_user_instr.append(new_instr)
+        if new_instr['id'] not in l_theta_dict:
+            new_user_instr.append(new_instr)
 
     generate_soft_constraints(solver_name, b0, bs, new_user_instr, theta_dict, flags, current_cost, instr_seq)
     generate_cost_functions(solver_name)
