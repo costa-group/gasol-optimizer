@@ -1,5 +1,6 @@
 from smt_encoding.encoding_stack_instructions import \
     store_stack_function_encoding
+from smt_encoding.instructions.encoding_instruction import InstructionSubset
 from smt_encoding.instructions.uninterpreted_instruction import UninterpretedFunction
 
 
@@ -18,3 +19,7 @@ class StoreUninterpreted(UninterpretedFunction):
         encoding_method = lambda j: store_stack_function_encoding(j, bs, o0, o1, self.theta_value)
 
         return super().encoding_instruction(encoding_function=encoding_method, **kwargs)
+
+    @property
+    def instruction_subset(self) -> InstructionSubset:
+        return InstructionSubset.store

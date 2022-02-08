@@ -9,6 +9,7 @@ class InstructionSubset(Enum):
     non_comm = 3
     pop = 4
 
+ThetaValue = int
 
 # Interface for representing the necessary methods for encoding an instruction
 class EncodingInstruction(ABC):
@@ -16,9 +17,8 @@ class EncodingInstruction(ABC):
     # Theta value associated to the instruction
     @property
     @abstractmethod
-    def theta_value(self) -> int:
+    def theta_value(self) -> ThetaValue:
         raise NotImplementedError
-
 
     # Unique id that identifies the instruction. For instance, ADD_0, POP, PUSH_2...
     @property

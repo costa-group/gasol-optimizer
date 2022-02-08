@@ -1,8 +1,7 @@
 import itertools
 
-from smt_encoding.encoding_utils import l
-from smt_encoding.smtlib_utils import declare_intvar
-from smt_encoding.encoding_memory_instructions import l_variable_order_constraint, mem_variable_equivalence_constraint, direct_order_constraint
+from smt_encoding.instructions.encoding_instruction import EncodingInstruction, ThetaValue
+from typing import Tuple
 
 # We generate a dict that given the id of an instruction, returns
 # the id of instructions that must be executed to obtain its input and the corresponding
@@ -183,44 +182,24 @@ def generate_instruction_dicts(b0, user_instr, final_stack, flags, order_tuples)
     top_elem_is_instruction = any([0 == index_map[instr['outpt_sk'][0]] for instr in final_stack_instrs])
 
 
-class PreOrderEncoding:
+class InstructionBounds:
 
-    def __init__(self, instructions, order_tuples, b0, bs):
+    def __init__(self, instructions : [EncodingInstruction], order_tuples : [Tuple[str, str]], b0 : int, bs : int):
         self._instructions = instructions
         self._order_tuples = order_tuples
         self._dependency_theta_graph = generate_dependency_graph(instructions, order_tuples)
         self._b0 = b0
         self._bs = bs
+        self._first_position_instr = {}
+        self._first_position_not_instr = {}
 
 
-    def _generate_order_from_instructions(self):
-        return None
+    def lower_bound(self, theta_value : ThetaValue) -> int:
+        return self._first_position_instr.get(theta_value, 0)
 
 
-    def first_position_in_sequence(self, instruction):
-        return self._first_position_instr.get(instruction, 0)
-
-
-    def last_position_in_sequence(self, instruction):
-        return self._last_position_instr.get(instruction, self._b0)
-
-
-    def encode_order(self, **kwargs):
-        constraints = []
-
-        l_encoding_flag = kwargs["l_var"]
-
-        if l_encoding_flag:
-            pass
-
-
-        # Those instructions which has a unique id associated are considered as part of the encoding order
-        unique_instructions = list(filter(lambda instr: instr.unique_id, self._instructions))
-        constraints.extend(itertools.chain.from_iterable([initialize_l_vars(instr.theta) for instr in unique_instructions]))
-        constraints.extend(itertools.chain.from_iterable([mem_variable_equivalence_constraint(instr.theta) for instr in unique_instructions]))
-
-        constraints.extend(itertools.chain.from_iterable([initialize_l_vars(instr.theta) for instr in unique_instructions]))
-        constraints.extend(itertools.chain.from_iterable([initialize_l_vars(instr.theta) for instr in unique_instructions]))
+    def upper_bound(self, theta_value : ThetaValue) -> int:
+        return self._first_position_not_instr.get(theta_value, self._b0) - 1
 
 
 

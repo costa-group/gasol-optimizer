@@ -1,8 +1,7 @@
 from abc import ABC
 
 from smt_encoding.instructions.encoding_instruction import EncodingInstruction
-from smt_encoding.utils_bckend import add_bars_and_index_to_string
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 
 SMS_T = Dict[str, Any]
 
@@ -12,10 +11,11 @@ class UninterpretedFunction(EncodingInstruction, ABC):
     def __init__(self, instr : SMS_T, theta_value : int, var_initial_idx : int = 0):
         self._output_stack = instr['outpt_sk']
         self._input_stack = instr['inpt_sk']
-        self._gas = instr["inpt_sk"]
+        self._gas = instr["gas"]
         self._name = instr["disasm"]
         self._hex = instr["opcode"]
         self._id = instr["id"]
+        self._size = instr["size"]
         self._theta_value = theta_value
         self._initial_idx = var_initial_idx
 
@@ -24,7 +24,7 @@ class UninterpretedFunction(EncodingInstruction, ABC):
     # any other element
     @property
     def unique_ui(self) -> bool:
-        return len(self.input_stack) > 0
+        return len(self._input_stack) > 0
 
     @property
     def theta_value(self) -> int:
@@ -36,22 +36,24 @@ class UninterpretedFunction(EncodingInstruction, ABC):
 
     @property
     def opcode_name(self) -> str:
-        return self.name
+        return self._name
 
     # If an instruction only appears once in the code, then we do not need to take into account in the soft constraints
     # Thus, none gas cost is returned.
     @property
-    def gas_cost(self) -> Optional[int]:
-        if self.unique_ui:
-            return None
-        else:
-            return self.gas
+    def gas_cost(self) -> int:
+        return self._gas
 
     @property
-    def size_cost(self) -> Optional[int]:
-        if self.unique_ui:
+    def size_cost(self) -> int:
+        return self._size
+
+    @property
+    def input_stack(self) -> List[str]:
+        return self._input_stack
+
+    @property
+    def output_stack(self) -> Optional[str]:
+        if not self._output_stack:
             return None
-        elif self.name.startswith("PUSH"):
-            return 5
-        else:
-            return 1
+        return self._output_stack

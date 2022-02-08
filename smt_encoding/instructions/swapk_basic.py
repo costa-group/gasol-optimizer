@@ -1,5 +1,4 @@
 import global_params.constants as constants
-from smt_encoding.encoding_stack_instructions import swapk_encoding
 from smt_encoding.instructions.basic_instruction import BasicInstruction
 
 
@@ -10,13 +9,6 @@ class SwapKBasic(BasicInstruction):
         self._k = k
         self._theta_value = theta_value
         self.initial_idx = initial_idx
-
-
-    def encoding_instruction(self, **kwargs):
-        bs = kwargs["bs"]
-        j = kwargs['j']
-
-        return swapk_encoding(self._k, j, bs, self.theta_value)
 
 
     @property
