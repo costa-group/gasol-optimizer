@@ -4,12 +4,9 @@
 import copy
 
 from smt_encoding.default_encoding import activate_default_encoding
-from smt_encoding.encoding_cost import (alternative_soft_constraints,
-                                        byte_size_soft_constraints_complex,
-                                        byte_size_soft_constraints_simple,
-                                        label_name,
-                                        number_instructions_soft_constraints,
-                                        paper_soft_constraints)
+from smt_encoding.encoding_cost import (label_name, gas_group_constraints, gas_direct_constraints,
+                                        size_direct_constraints, size_group_constraints,
+                                        number_instructions_soft_constraints, paper_soft_constraints)
 from smt_encoding.encoding_files import (write_encoding, write_gas_map,
                                          write_instruction_map,
                                          write_opcode_map)
@@ -79,27 +76,20 @@ def generate_asserts_from_additional_info(additional_info):
             write_encoding(set_timeout(float(additional_info['tout'])))
 
 
-def generate_soft_constraints(solver_name, b0, bs, usr_instr, theta_dict, flags,
-                              current_cost, instr_seq):
+def generate_soft_constraints(solver_name, b0, user_instr, theta_dict, first_position_dict, last_position_dict, flags):
     is_barcelogic = solver_name == "barcelogic"
 
-    # We need to address whether the want to encode the initial solution (in which case,
-    # weight is assigned to -1) or not. Only paper soft constraints take into account this value.
-    if flags['initial-solution']:
-        weight = current_cost
-    else:
-        weight = -1
-
     if flags['inequality-gas-model']:
-        alternative_soft_constraints(b0, bs, usr_instr, theta_dict, is_barcelogic)
+        gas_direct_constraints(user_instr, theta_dict, first_position_dict, last_position_dict, is_barcelogic)
     elif flags['number-instruction-gas-model']:
         number_instructions_soft_constraints(b0, theta_dict['NOP'], is_barcelogic)
     elif flags['bytecode-size-soft-constraints']:
-        byte_size_soft_constraints_simple(b0, usr_instr, theta_dict, is_barcelogic)
-    elif flags['complex-bytecode-size-soft-constraints']:
-        byte_size_soft_constraints_complex(b0, theta_dict, is_barcelogic)
+        size_group_constraints(theta_dict, first_position_dict, last_position_dict, is_barcelogic)
+    elif flags['inequality-size-model']:
+        size_direct_constraints(theta_dict, first_position_dict, last_position_dict, is_barcelogic)
     else:
-        paper_soft_constraints(b0, bs, usr_instr, theta_dict, is_barcelogic, instr_seq, weight)
+        gas_group_constraints(user_instr, theta_dict, first_position_dict, last_position_dict, is_barcelogic)
+        # paper_soft_constraints(b0, b0, user_instr, theta_dict, is_barcelogic)
 
 
 def generate_cost_functions(solver_name):
@@ -192,8 +182,6 @@ def generate_final_statements(solver_name):
 # Method to generate complete representation
 def generate_smtlib_encoding(b0, bs, usr_instr, variables, initial_stack, final_stack, flags, additional_info):
     solver_name = additional_info['solver']
-    current_cost = additional_info['current_cost']
-    instr_seq = additional_info['instr_seq']
     order_tuples = additional_info['mem_order']
     memory_encoding = additional_info['memory_encoding']
 
@@ -227,13 +215,24 @@ def generate_smtlib_encoding(b0, bs, usr_instr, variables, initial_stack, final_
                                    first_position_instr_cannot_appear_dict, theta_dict, theta_mem, l_theta_dict)
 
     # Only consider instructions that do not belong to the l dict
-    new_user_instr = []
+    user_instr_cost = []
+    not_l_theta_dict = {}
+    last_position_dict = {}
+    first_position_dict = {}
     for instr in usr_instr:
         new_instr = copy.deepcopy(instr)
-        if new_instr['id'] not in l_theta_dict:
-            new_user_instr.append(new_instr)
+        instr_id = new_instr['id']
+        if instr_id not in l_theta_dict:
+            user_instr_cost.append(new_instr)
 
-    generate_soft_constraints(solver_name, b0, bs, new_user_instr, theta_dict, flags, current_cost, instr_seq)
+    for instr_id in set(theta_dict.keys()).difference(set(l_theta_dict.keys())):
+        theta_instr = theta_dict[instr_id]
+        not_l_theta_dict[instr_id] = theta_dict[instr_id]
+        first_position_dict[theta_instr] = first_position_instr_appears_dict.get(instr_id, 0)
+        last_position_dict[theta_instr] = first_position_instr_cannot_appear_dict.get(instr_id, b0)
+
+
+    generate_soft_constraints(solver_name, b0, user_instr_cost, not_l_theta_dict, first_position_dict, last_position_dict, flags)
     generate_cost_functions(solver_name)
     if additional_info['previous_solution'] is not None:
         generate_encoding_from_log_json_dict(additional_info['previous_solution'])

@@ -79,6 +79,7 @@ def initialize_flags_and_additional_info(args_i, current_cost, instr_seq, previo
              'instruction-order': args_i_dict.get('instruction_order', False),
              'no-output-before-pop': args_i_dict.get('no_output_before_pop', False),
              'inequality-gas-model': args_i_dict.get('inequality_gas_model', False),
+             'inequality-size-model': args_i_dict.get('inequality_gas_model', False),
              'initial-solution': args_i_dict.get('initial_solution', False),
              'default-encoding': args_i_dict.get('default_encoding', False),
              'number-instruction-gas-model': args_i_dict.get('number_instruction_gas_model',False),
