@@ -7,7 +7,7 @@ import global_params.constants as constants
 import global_params.paths as paths
 import sfs_generator.opcodes as opcodes
 from sfs_generator.utils import (all_integers, find_sublist, get_num_bytes_int,
-                                 is_integer, isYulInstructionUpper)
+                                 is_integer, isYulInstructionUpper, get_ins_size)
 
 terminate_block = ["ASSERTFAIL","RETURN","REVERT","SUICIDE","STOP"]
 
@@ -2444,7 +2444,8 @@ def generate_userdefname(u_var,funct,args,arity,init=False):
         if instr_name in ["PUSHTAG","PUSH#[$]","PUSH[$]","PUSHDATA","PUSHIMMUTABLE","PUSHLIB"]:
             obj["value"] = args_aux
         user_def_counter[instr_name]=idx+1
-
+        obj["size"] = get_ins_size(instr_name)
+        
         new = True
     else:
         obj = defined
@@ -5388,7 +5389,9 @@ def generate_push_instruction(idx, value, out):
     obj["gas"] = opcodes.get_ins_cost("PUSH")
     obj["commutative"] = False
     obj["storage"] = False #It is true only for MSTORE and SSTORE
+    obj["size"] = get_ins_size("PUSH",value)
 
+    
     return obj
 
 def transform_push_uninterpreted_functions(target_stack,uninterpreted_functions):
