@@ -1,15 +1,17 @@
 #!/usr/bin/python3
 import argparse
-import os
 import glob
+import json
+import os
 import pathlib
+import re
 import shlex
 import subprocess
-import re
-import json
-import pandas as pd
 import sys
+
+import pandas as pd
 from sympy.ntheory import factorint
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))+"/global_params")
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))+"/sfs_generator")
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))+"/smt_encoding")
@@ -17,10 +19,12 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))+"/v
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))+"/scripts")
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))+"/solution_generation")
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-from parser_asm import parse_asm
+from math import ceil, floor, log2
+
 import asm_bytecode
 import stopit
-from math import ceil, floor, log2
+from parser_asm import parse_asm
+
 
 def modifiable_path_files_init():
     parser = argparse.ArgumentParser()
@@ -28,7 +32,7 @@ def modifiable_path_files_init():
                         help="folder that contains the jsons to analyze. It must be in the proper format",
                         required=True)
     parser.add_argument("-csv-folder", metavar='csv_folder', action='store', type=str,
-                        help="folder that will store the csvs containing the statistics per file. Inside that folder, "
+                        help="folder that will store the csvs containing the properties per file. Inside that folder, "
                              "another subfolder is created: solver_name + _ + timeout + 's'", required=True)
 
 
@@ -222,37 +226,68 @@ def find_nearest_shift(n):
     exponent = 1
     current_cost = 2*n
     current_diff = n
+    current_factor = 0
     addition = True
 
     for k in range(2, floor(log2(n)) + 1):
-        base1 = ceil(n ** (1/k))
-        base2 = floor(n ** (1/k))
+        for factor in range(1, 256):
 
-        candidate1 = base1 ** k
-        candidate2 = base2 ** k
+            base1 = ceil((n / factor) ** (1/k))
+            base2 = floor((n / factor) ** (1/k))
 
-        diff1 = abs(candidate1 - n)
-        diff2 = abs(candidate2 - n)
+            candidate1 = (base1 * factor) ** k
+            candidate2 = (base2 * factor) ** k
 
-        cost1 = len(hex(base1)[2:]) + len(hex(k)[2:]) + len(hex(diff1)[2:])
-        cost2 = len(hex(base2)[2:]) + len(hex(k)[2:]) + len(hex(diff2)[2:])
+            diff1 = abs(candidate1 - n)
+            diff2 = abs(candidate2 - n)
 
-        if cost2 <= min(cost1, current_cost):
-            current_diff = diff2
-            exponent = k
-            base = base2
-            current_cost = cost2
-            # base1 ** candidate1 >= n, so the diff is subtracted
-            addition = False
 
-        elif cost1 <= min(cost2, current_cost):
-            current_diff = diff1
-            exponent = k
-            base = base2
-            current_cost = cost1
-            addition = True
+            # SHL(factor, k), where len(factor) == 1
+            if base1 == 2:
+                cost1 = bytes_associated_to_push(k) + 3
 
-    return current_diff, base, exponent, addition
+            # MUL(EXP(base, k), PUSH factor), where len(factor) == 1
+            else:
+                if factor > 1:
+                    cost1 = bytes_associated_to_push(base1) + bytes_associated_to_push(k) + 4
+                else:
+                    cost1 = bytes_associated_to_push(base1) + bytes_associated_to_push(k) + 1
+
+            # SHL(factor, k), where len(factor) == 1
+            if base2 == 2:
+                cost2 = bytes_associated_to_push(k) + 3
+
+            # MUL(EXP(base, k), PUSH factor), where len(factor) == 1
+            else:
+                if factor > 1:
+                    cost2 = bytes_associated_to_push(base2) + bytes_associated_to_push(k) + 4
+                else:
+                    cost2 = bytes_associated_to_push(base2) + bytes_associated_to_push(k) + 1
+
+            if diff1 != 0:
+                cost1 += bytes_associated_to_push(diff1)
+
+            if diff2 != 0:
+                cost2 += bytes_associated_to_push(diff2)
+
+            if cost2 <= min(cost1, current_cost):
+                current_diff = diff2
+                exponent = k
+                base = base2
+                current_cost = cost2
+                current_factor = factor
+                # base1 ** candidate1 >= n, so the diff is subtracted
+                addition = False
+
+            elif cost1 <= min(cost2, current_cost):
+                current_diff = diff1
+                exponent = k
+                base = base2
+                current_cost = cost1
+                current_factor = factor
+                addition = True
+
+    return current_diff, base, exponent, current_factor, addition
 
 
 def build_best_configuration(n, remaining_bytes, already_negated):
@@ -281,23 +316,46 @@ def build_best_configuration(n, remaining_bytes, already_negated):
             cost_best = cost + 1
             expression_best = "NOT(" + expression + ")"
 
-    current_diff, base, exponent, is_addition = find_nearest_perfect_power(n)
+    current_diff, base, exponent, factor, is_addition = find_nearest_shift(n)
 
     cost_base, expression_base = build_best_configuration(base, min(remaining_bytes - 1, bytes_associated_to_push(base)) , True)
     cost_exponent, expression_exponent = build_best_configuration(exponent, min(remaining_bytes - 1, bytes_associated_to_push(exponent)) , True)
 
+    if cost_base is not None and cost_exponent is not None:
 
-    if cost_base is not None and cost_exponent is not None and cost_base + cost_exponent + 2 < remaining_bytes:
-        cost_without_diff = cost_base + cost_exponent + 2
-        cost_diff, expression_diff = build_best_configuration(current_diff, min(remaining_bytes - cost_without_diff,
-                                                                                bytes_associated_to_push(current_diff)), True)
-        if cost_diff is not None and cost_diff + cost_without_diff < cost_best:
-            cost_best = cost_diff + cost_without_diff
+        # SHL(factor, k), where len(factor) == 1
+        if base == 2:
+            cost_without_diff = cost_exponent + 3
+            expression_without_diff = "SHL(" + expression_exponent + ", " + "PUSH " + hex(factor)[2:] + ")"
 
-            if is_addition:
-                expression_best = "ADD(EXP(" + expression_base + ", " + expression_exponent + "), " + expression_diff + ")"
+        # MUL(EXP(base, k), PUSH factor), where len(factor) == 1
+        else:
+            if factor > 1:
+                cost_without_diff = cost_base + cost_exponent + 4
+                expression_without_diff = "MUL(EXP(" + expression_base + ", " + expression_exponent + "), PUSH " + hex(factor)[2:] + ")"
             else:
-                expression_best = "SUB(EXP(" + expression_base + ", " + expression_exponent + "), " + expression_diff + ")"
+                cost_without_diff = cost_base + cost_exponent + 1
+                expression_without_diff = "EXP(" + expression_base + ", " + expression_exponent + ")"
+
+    else:
+        cost_without_diff = remaining_bytes + 2
+
+
+    if cost_without_diff < remaining_bytes:
+        if current_diff == 0:
+            if cost_without_diff < cost_best:
+                cost_best = cost_without_diff
+                expression_best = expression_without_diff
+        else:
+            cost_diff, expression_diff = build_best_configuration(current_diff, min(remaining_bytes - cost_without_diff,
+                                                                                    bytes_associated_to_push(current_diff)), True)
+            if cost_diff is not None and cost_diff + cost_without_diff < cost_best:
+                cost_best = cost_diff + cost_without_diff + 1
+
+                if is_addition:
+                    expression_best = "ADD(" + expression_without_diff  + ", " + expression_diff + ")"
+                else:
+                    expression_best = "SUB(" + expression_without_diff  + ", " + expression_diff + ")"
 
     if cost_best <= remaining_bytes:
         return cost_best, expression_best
@@ -328,14 +386,16 @@ if __name__=="__main__":
                        reversed(sorted(count_integer.items(), key=lambda kv: kv[1]))])
     df.to_csv(results_dir + "integer_constants.csv")
 
-    print(set(reconstruct_integer.keys()).difference(set(associated_bytes.keys())))
     current_rows = []
+    i = 0
     for k, v in reversed(sorted(count_integer.items(), key=lambda kv: kv[1])):
         if bytes_associated_to_push(k) < 3:
             continue
+        print(k)
         cost_best, expression_best = build_best_configuration(k, bytes_associated_to_push(k), False)
-        current_rows.append({"hexadecimal": hex(k), "decimal": k, "current_cost": str(associated_bytes[k]), "cost_best" : cost_best,
-                             "expression": str(reconstruct_integer[k]), "expression_best": expression_best})
+        if cost_best < min(associated_bytes[k]):
+            current_rows.append({"hexadecimal": hex(k), "decimal": k, "current_cost": str(associated_bytes[k]), "cost_best" : cost_best,
+                                 "expression": str(reconstruct_integer[k]), "expression_best": expression_best})
     df2 = pd.DataFrame(current_rows)
     df2.to_csv(results_dir + "pushed_values.csv")
 

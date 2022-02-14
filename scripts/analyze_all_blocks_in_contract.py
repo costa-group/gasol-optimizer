@@ -15,14 +15,15 @@ import pandas as pd
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
 import global_params.paths as paths
+from properties.properties_from_solver_output import (
+    analyze_file, get_tout_found_per_solver)
 from sfs_generator.utils import (compute_stack_size, get_ins_size,
                                  get_ins_size_seq)
 from smt_encoding.encoding_utils import generate_phi_dict
 from smt_encoding.gasol_encoder import execute_syrup_backend
 from solution_generation.disasm_generation import generate_disasm_sol
-from verification.sfs_verify import are_equals
 from solution_generation.solver_output_generation import obtain_solver_output
-from properties.properties_from_solver_output import analyze_file, get_tout_found_per_solver
+from verification.sfs_verify import are_equals
 
 
 def modifiable_path_files_init():

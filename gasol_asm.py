@@ -6,9 +6,6 @@ import os
 import shutil
 import sys
 from copy import deepcopy
-from properties.properties_from_asm_json import (
-    bytes_required_asm, compute_number_of_instructions_in_asm_json_per_file,
-    preprocess_instructions)
 from timeit import default_timer as dtimer
 
 import pandas as pd
@@ -17,6 +14,10 @@ import global_params.constants as constants
 import global_params.paths as paths
 import sfs_generator.ir_block as ir_block
 import sfs_generator.opcodes as op
+from properties.properties_from_asm_json import (
+    bytes_required_asm, compute_number_of_instructions_in_asm_json_per_file,
+    preprocess_instructions)
+from properties.properties_from_solver_output import analyze_file
 from sfs_generator.gasol_optimization import get_sfs_dict
 from sfs_generator.parser_asm import (parse_asm,
                                       parse_asm_representation_from_blocks,
@@ -34,7 +35,6 @@ from solution_generation.disasm_generation import (
     generate_sub_block_asm_representation_from_output,
     obtain_log_representation_from_solution, read_initial_dicts_from_files)
 from solution_generation.solver_output_generation import obtain_solver_output
-from properties.properties_from_solver_output import analyze_file
 from verification.sfs_verify import verify_block_from_list_of_sfs
 from verification.solver_solution_verify import (
     check_solver_output_is_correct, generate_solution_dict)
