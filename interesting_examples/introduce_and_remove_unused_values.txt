@@ -1,0 +1,27 @@
+Non optimized:  PUSHTAG 547 PUSH FF PUSH 40 PUSH 0 KECCAK256 SLOAD AND SWAP1 POP PUSHTAG 546
+Optimized:  PUSH ff PUSH 40 PUSH 0 KECCAK256 SLOAD AND PUSHTAG 546 
+
+Criteria: Size
+
+Previous gas (estimation): 753
+New gas (estimation): 745
+
+In this example, it is assumed PUSHTAG consume 5 bytes: 1 from the opcode itself, and 4 from the tag address.
+
+Previous size (estimation): 21
+New size (estimation): 14
+
+solc version: 0.8.11
+Command line: solc 0x1d29Bafa88E83a6D8F757DbFAf8BAf7be8fE08Bf.sol --experimental-via-ir --optimize --combined-json asm --optimize-runs 1
+Block name: 0x1d29Bafa88E83a6D8F757DbFAf8BAf7be8fE08Bf_LoveVote_block393.2_input
+
+
+ASM block: 
+
+... {"begin":22362,"end":30069,"name":"MSTORE","source":0},
+
+{"begin":28619,"end":28713,"name":"PUSH [tag]","source":0,"value":"547"},{"begin":22362,"end":30069,"name":"PUSH","source":0,"value":"FF"},{"begin":22362,"end":30069,"name":"PUSH","source":0,"value":"40"},{"begin":-1,"end":-1,"name":"PUSH","source":-1,"value":"0"},{"begin":22362,"end":30069,"name":"KECCAK256","source":0},{"begin":22362,"end":30069,"name":"SLOAD","source":0},{"begin":22362,"end":30069,"name":"AND","source":0},{"begin":28627,"end":28690,"name":"SWAP1","source":0},{"begin":28627,"end":28690,"name":"POP","source":0},{"begin":28627,"end":28690,"name":"PUSH [tag]","source":0,"value":"546"},
+
+{"begin":28627,"end":28690,"name":"JUMP","source":0}, ...
+
+Explanation: the jump address introduced with PUSHTAG 547 is just popped afterwards and no used at any point in the sequence.
