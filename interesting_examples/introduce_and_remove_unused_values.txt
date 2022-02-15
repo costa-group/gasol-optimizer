@@ -24,4 +24,4 @@ ASM block:
 
 {"begin":28627,"end":28690,"name":"JUMP","source":0}, ...
 
-Explanation: the jump address introduced with PUSHTAG 547 is just popped afterwards and no used at any point in the sequence.
+Explanation: the jump address introduced with PUSHTAG 547 is just popped afterwards, with no impact in the block.
