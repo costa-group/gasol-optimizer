@@ -1,0 +1,26 @@
+Non optimized:  PUSH 0 DUP1 SLOAD PUSH 1 PUSH 1 PUSH A0 SHL SUB NOT AND PUSH 1 PUSH 1 PUSH A0 SHL SUB SWAP3 SWAP1 SWAP3 AND SWAP2 SWAP1 SWAP2 OR SWAP1
+Optimized:  PUSH 1 PUSH 1 PUSH a0 SHL SUB PUSH 0 SLOAD DUP2 NOT AND SWAP2 AND OR PUSH 0 
+
+Criteria: Size
+
+Previous gas (estimation): 15
+New gas (estimation): 6
+
+Previous size: 31
+New size: 19
+
+solc version: 0.8.11
+Command line: solc 0x5552F868dB969c2e2cB90680257236f25CbEBb4F.sol --experimental-via-ir --optimize --combined-json asm --optimize-runs 1
+Block name: 0x5552F868dB969c2e2cB90680257236f25CbEBb4F_EverShib_block294.3_input
+
+
+ASM block: 
+
+... {"begin":11233,"end":11277,"name":"LOG3","source":0},
+
+{"begin":11254,"end":11260,"name":"PUSH","source":0,"value":"0"},{"begin":9624,"end":11319,"name":"DUP1","source":0},{"begin":9624,"end":11319,"name":"SLOAD","source":0},{"begin":-1,"end":-1,"name":"PUSH","source":-1,"value":"1"},{"begin":-1,"end":-1,"name":"PUSH","source":-1,"value":"1"},{"begin":-1,"end":-1,"name":"PUSH","source":-1,"value":"A0"},{"begin":-1,"end":-1,"name":"SHL","source":-1},{"begin":-1,"end":-1,"name":"SUB","source":-1},{"begin":-1,"end":-1,"name":"NOT","source":-1},{"begin":9624,"end":11319,"name":"AND","source":0},{"begin":-1,"end":-1,"name":"PUSH","source":-1,"value":"1"},{"begin":-1,"end":-1,"name":"PUSH","source":-1,"value":"1"},{"begin":-1,"end":-1,"name":"PUSH","source":-1,"value":"A0"},{"begin":-1,"end":-1,"name":"SHL","source":-1},{"begin":-1,"end":-1,"name":"SUB","source":-1},{"begin":9624,"end":11319,"name":"SWAP3","source":0},{"begin":9624,"end":11319,"name":"SWAP1","source":0},{"begin":9624,"end":11319,"name":"SWAP3","source":0},{"begin":9624,"end":11319,"name":"AND","source":0},{"begin":9624,"end":11319,"name":"SWAP2","source":0},{"begin":9624,"end":11319,"name":"SWAP1","source":0},{"begin":9624,"end":11319,"name":"SWAP2","source":0},{"begin":9624,"end":11319,"name":"OR","source":0},{"begin":9624,"end":11319,"name":"SWAP1","source":0},
+
+{"begin":9624,"end":11319,"name":"SSTORE","source":0} ...
+
+Explanation: The same arithmetical expression (PUSH 1 PUSH 1 PUSH A0 SHL SUB) is computed twice, which can be simplified using a DUP operation. Besides, multiple
+SWAP can be avoided by changing the order in which instructions are applied. 
