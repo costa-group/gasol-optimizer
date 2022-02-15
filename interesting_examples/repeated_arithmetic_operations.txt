@@ -3,8 +3,8 @@ Optimized:  PUSH 1 PUSH 1 PUSH a0 SHL SUB PUSH 0 SLOAD DUP2 NOT AND SWAP2 AND OR
 
 Criteria: Size
 
-Previous gas (estimation): 15
-New gas (estimation): 6
+Previous gas (estimation): 769
+New gas (estimation): 739
 
 Previous size: 31
 New size: 19
@@ -22,5 +22,5 @@ ASM block:
 
 {"begin":9624,"end":11319,"name":"SSTORE","source":0} ...
 
-Explanation: The same arithmetical expression (PUSH 1 PUSH 1 PUSH A0 SHL SUB) is computed twice, which can be simplified using a DUP operation. Besides, multiple
-SWAP can be avoided by changing the order in which instructions are applied. 
+Explanation: The same arithmetical expression (PUSH 1 PUSH 1 PUSH A0 SHL SUB) is computed twice for different purposes, 
+which can be simplified using a DUP operation. Besides, multiple SWAP can be avoided by changing the order in which instructions are applied. 
