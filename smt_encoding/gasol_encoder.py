@@ -67,9 +67,8 @@ def parse_data(json_path, var_initial_idx=0, with_simplifications=True):
     variables = list(map(lambda x: add_bars_and_index_to_string(x, var_initial_idx), data['vars']))
 
     current_cost = data['current_cost']
-    instr_seq = data.get('init_info', dict()).get('opcodes_seq', [])
-    pushed_values = data.get('init_info', dict()).get('push_vals', [])
-    combined_instr_seq = generate_instr_sequence_from_instructions_and_pushed_values(instr_seq, pushed_values)
+
+    combined_instr_seq = data['original_instrs']
     mem_order = [*data['storage_dependences'], *data.get('memory_dependences')]
     return b0, bs, new_user_instr, variables, initial_stack, final_stack, current_cost, combined_instr_seq, mem_order
 
@@ -215,9 +214,11 @@ if __name__ == "__main__":
     timeout = args['tout']
     memory_model = args['memory_encoding']
 
-    b0, bs, user_instr, variables, initial_stack, final_stack, current_cost, _, mem_order = parse_data(json_path, 0, True)
+    b0, bs, user_instr, variables, initial_stack, final_stack, current_cost, original_sol, mem_order = parse_data(json_path, 0, True)
     instr_seq = list(filter(lambda x: x != "" and x != "PUSH", args['instr_seq'].split(" ")))
-    print(instr_seq)
+    instr_seq_original = list(filter(lambda x: x != "" and x != "PUSH", original_sol.split(" ")))
+
+    # print(instr_seq, instr_seq_original)
 
     flags = {'at-most': args.get('at_most', False), 'pushed-at-least': args.get('pushed_once', False),
              'instruction-order': args.get('instruction_order', False),
@@ -234,6 +235,8 @@ if __name__ == "__main__":
 
     if args['instr_seq']:
         obtained_stack = compute_final_stack_from_solution(initial_stack, user_instr, instr_seq)
+        # final_stack = compute_final_stack_from_solution(initial_stack, user_instr, instr_seq_original)
+
         if obtained_stack == final_stack:
             print("Check")
         else:
