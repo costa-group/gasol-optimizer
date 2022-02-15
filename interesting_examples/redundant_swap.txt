@@ -9,7 +9,7 @@ Previous size: 5
 New size: 2
 
 solc version: 0.8.11
-Command line: solc 0x8C3c25474530DF10046f7cDc197571F353F5AcA0.sol --experimental-via-ir --optimize --combined-json asm  --optimize-runs 9999999
+Command line: solc 0x8CFeA40E059Eb393f49C103EA56C80bF8D2CA20a.sol --experimental-via-ir --optimize --combined-json asm  --optimize-runs 9999999
 Block name:  0x8CFeA40E059Eb393f49C103EA56C80bF8D2CA20a_GoldFarmFaaS_initial_block23.1_input
 
 
