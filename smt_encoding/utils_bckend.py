@@ -53,7 +53,7 @@ def compute_final_stack_from_solution(initial_stack, user_instr, instr_seq):
                 if current_instr['commutative']:
                     inpt_stack = current_instr['inpt_sk']
                     if (inpt_stack[0] != final_stack[0] or inpt_stack[1] != final_stack[1]) and\
-                            (inpt_stack[0] != final_stack[0] or inpt_stack[1] != final_stack[1]):
+                            (inpt_stack[0] != final_stack[1] or inpt_stack[1] != final_stack[0]):
                         continue
                     else:
                         final_stack.pop(0)

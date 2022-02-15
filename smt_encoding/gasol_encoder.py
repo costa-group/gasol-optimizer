@@ -3,6 +3,11 @@ import argparse
 import copy
 import json
 import re
+import sys
+import os
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+
 
 from smt_encoding.encoding_files import (initialize_dir_and_streams,
                                          write_encoding)
@@ -199,7 +204,7 @@ if __name__ == "__main__":
     ap.add_argument("-complex-bytecode-size-soft-constraints", dest='complex_bytecode_size_soft_constraints', action='store_true',
                         help="")
     ap.add_argument("-memory-encoding", help="Choose the memory encoding model", choices = ["l_vars","direct"], default="l_vars")
-    ap.add_argument("-instr-seq", help="Choose the memory encoding model")
+    ap.add_argument("-instr-seq", help="Choose the memory encoding model", action="store", type=str)
 
 
 
@@ -212,6 +217,7 @@ if __name__ == "__main__":
 
     b0, bs, user_instr, variables, initial_stack, final_stack, current_cost, _, mem_order = parse_data(json_path, 0, True)
     instr_seq = list(filter(lambda x: x != "" and x != "PUSH", args['instr_seq'].split(" ")))
+    print(instr_seq)
 
     flags = {'at-most': args.get('at_most', False), 'pushed-at-least': args.get('pushed_once', False),
              'instruction-order': args.get('instruction_order', False),
