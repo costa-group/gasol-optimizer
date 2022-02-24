@@ -131,7 +131,7 @@ def execute_syrup_backend_combined(sfs_dict, instr_sequence_dict, contract_name,
 
     es = initialize_dir_and_streams(solver, contract_name)
 
-    write_encoding(set_logic('QF_LIA'))
+    write_encoding(set_logic('QF_IDL'))
 
     for block in sfs_dict:
 
