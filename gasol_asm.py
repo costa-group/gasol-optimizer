@@ -362,11 +362,12 @@ def optimize_isolated_asm_block(block_name,output_file, csv_file, timeout=10, st
     blocks = parse_blocks_from_plain_instructions(instructions)
     asm_blocks = []
 
-    for block in blocks:
-        asm_block, _ = optimize_asm_block_asm_format(block, file_name_str, timeout, storage, last_const, size_abs, partition, pop, push, revert)
+    for old_block in blocks:
+        asm_block, _ = optimize_asm_block_asm_format(old_block, file_name_str, timeout, storage, last_const, size_abs, partition, pop, push, revert)
         asm_blocks.append(asm_block)
 
-        update_gas_count(block, asm_block)
+        update_gas_count(old_block, asm_block)
+        update_size_count(old_block, asm_block)
 
     if args.backend:
         df = pd.DataFrame(statistics_rows)
@@ -380,22 +381,25 @@ def optimize_isolated_asm_block(block_name,output_file, csv_file, timeout=10, st
 def update_gas_count(old_block, new_block):
     global previous_gas
     global new_gas
+
+    old_instructions = preprocess_instructions(old_block.getInstructions())
+    new_instructions = preprocess_instructions(new_block.getInstructions())
+
+    for instr in old_instructions:
+        if not isYulInstruction(instr):
+            previous_gas += op.get_ins_cost(instr)
+
+    for instr in new_instructions:
+        if not isYulInstruction(instr):
+            new_gas += op.get_ins_cost(instr)
+
+
+def update_size_count(old_block, new_block):
     global previous_size
     global new_size
 
     previous_size += sum([bytes_required_asm(asm_bytecode) for asm_bytecode in old_block.getInstructions()])
     new_size += sum([bytes_required_asm(asm_bytecode) for asm_bytecode in new_block.getInstructions()])
-
-    old_instructions = preprocess_instructions(old_block.getInstructions())
-    new_instructions = preprocess_instructions(new_block.getInstructions())
-
-    for i in old_instructions:
-        if not isYulInstruction(i):
-            previous_gas += op.get_ins_cost(i)
-
-    for i in new_instructions:
-        if not isYulInstruction(i):
-            new_gas += op.get_ins_cost(i)
 
 
 
@@ -630,12 +634,13 @@ def optimize_asm_in_asm_format(file_name, output_file, csv_file, timeout=10, log
 
         init_code_blocks = []
 
-        for block in init_code:
-            asm_block, log_element = optimize_asm_block_asm_format(block, contract_name, timeout, storage, last_const,size_abs,partition, pop, push, revert)
+        for old_block in init_code:
+            optimized_block, log_element = optimize_asm_block_asm_format(old_block, contract_name, timeout, storage, last_const,size_abs,partition, pop, push, revert)
             log_dicts.update(log_element)
-            init_code_blocks.append(asm_block)
+            init_code_blocks.append(optimized_block)
 
-            update_gas_count(block, asm_block)
+            # Deployment size is not considered
+            update_gas_count(old_block, optimized_block)
 
             # if not compare_asm_block_asm_format(block, asm_block):
             #     print("Optimized block " + str(block.getBlockId()) + " from init code at contract " + contract_name +
@@ -652,12 +657,13 @@ def optimize_asm_in_asm_format(file_name, output_file, csv_file, timeout=10, log
             blocks = c.getRunCodeOf(identifier)
 
             run_code_blocks = []
-            for block in blocks:
-                asm_block, log_element = optimize_asm_block_asm_format(block, contract_name, timeout, storage, last_const,size_abs,partition, pop, push, revert)
+            for old_block in blocks:
+                optimized_block, log_element = optimize_asm_block_asm_format(old_block, contract_name, timeout, storage, last_const,size_abs,partition, pop, push, revert)
                 log_dicts.update(log_element)
-                run_code_blocks.append(asm_block)
+                run_code_blocks.append(optimized_block)
 
-                update_gas_count(block, asm_block)
+                update_gas_count(old_block, optimized_block)
+                update_size_count(old_block, optimized_block)
 
                 # if not compare_asm_block_asm_format(block, asm_block):
                 #     print("Optimized block " + str(block.getBlockId()) + " from data id " + str(identifier)
