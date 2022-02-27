@@ -3,13 +3,13 @@ import itertools
 import json
 
 from sfs_generator.asm_block import AsmBlock
-from sfs_generator.asm_bytecode import AsmBytecode
+from sfs_generator.asm_bytecode import AsmBytecode, ASM_Json_T
 from sfs_generator.asm_contract import AsmContract
 from sfs_generator.asm_json import AsmJSON
 from sfs_generator.utils import isYulKeyword
 
 
-def build_asm_bytecode(instruction):
+def build_asm_bytecode(instruction : ASM_Json_T) -> AsmBytecode:
     begin = instruction.get("begin", -1)
     end = instruction.get("end", -1)
     name = instruction.get("name", -1)
@@ -20,7 +20,7 @@ def build_asm_bytecode(instruction):
     return asm_bytecode
 
 
-def build_blocks_from_asm_representation(cname, instr_list, is_init_code):
+def build_blocks_from_asm_representation(cname : str, instr_list : [ASM_Json_T], is_init_code : bool) -> [AsmBlock]:
     bytecodes = []
 
     block = AsmBlock(cname,0, is_init_code)
@@ -32,8 +32,7 @@ def build_blocks_from_asm_representation(cname, instr_list, is_init_code):
 
         # Final instructions of a block
         if instr_name in ["JUMP","JUMPI","STOP","RETURN","REVERT","INVALID"]:
-            block.addInstructions(asm_bytecode)
-            block.compute_stack_size()
+            block.add_instruction(asm_bytecode)
             bytecodes.append(block)
             block = AsmBlock(cname,blockId, is_init_code)
             blockId+=1
@@ -41,19 +40,17 @@ def build_blocks_from_asm_representation(cname, instr_list, is_init_code):
         # Tag always correspond to the beginning of a new block. JUMPDEST is always preceded by a tag instruction
         elif instr_name == "tag":
             # There must be at least one instruction to add current block
-            if block.getInstructions():
-                block.compute_stack_size()
+            if block.instructions:
                 bytecodes.append(block)
                 block = AsmBlock(cname, blockId, is_init_code)
                 blockId += 1
-            block.addInstructions(asm_bytecode)
+            block.add_instruction(asm_bytecode)
         else:
-            block.addInstructions(asm_bytecode)
+            block.add_instruction(asm_bytecode)
         i+=1
 
     # If last block has any instructions left, it must be added to the bytecode
-    if block.getInstructions():
-        block.compute_stack_size()
+    if block.instructions:
         bytecodes.append(block)
 
     return bytecodes
@@ -122,7 +119,7 @@ def parse_asm(file_name):
 # the key "value" if the opcode has any hexadecimal value associated.
 # See https://github.com/ethereum/solidity/blob/develop/libevmasm/Assembly.cpp on how different assembly
 # items are represented
-def plain_instructions_to_asm_representation(raw_instruction_str):
+def plain_instructions_to_asm_representation(raw_instruction_str : str):
     # We chain all strings contained in the raw string, splitting whenever a line is found or a whitespace
     split_str = list(itertools.chain.from_iterable([[elem for elem in line.split(" ")] for line in raw_instruction_str.splitlines()]))
 
@@ -172,10 +169,10 @@ def parse_blocks_from_plain_instructions(raw_instructions_str):
 
 
 # Conversion from an ASMBlock to a plain sequence of instructions
-def parse_asm_representation_from_block(asm_block):
-    return '\n'.join([asm_instruction.getDisasm() + ' ' + asm_instruction.getValue()
-                     if asm_instruction.getValue() is not None else asm_instruction.getDisasm()
-                     for asm_instruction in asm_block.getInstructions()])
+def parse_asm_representation_from_block(asm_block : AsmBlock):
+    return '\n'.join([asm_instruction.disasm + ' ' + asm_instruction.value
+                     if asm_instruction.value is not None else asm_instruction.disasm
+                     for asm_instruction in asm_block.instructions])
 
 
 # Conversion from a list of ASMBlocks to a plain sequence of instructions

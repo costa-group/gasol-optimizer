@@ -1,20 +1,23 @@
+from sfs_generator.asm_block import AsmBlock
+from sfs_generator.asm_bytecode import AsmBytecode, ASM_Json_T
+from typing import List
 
-def rebuild_asm_bytecode(asm_bytecode):
-    json_bytecode = {"begin": asm_bytecode.getBegin(), "end": asm_bytecode.getEnd(), "name": asm_bytecode.getDisasm(),
-                     "source": asm_bytecode.getSource()}
+def rebuild_asm_bytecode(asm_bytecode : AsmBytecode) -> ASM_Json_T:
+    json_bytecode = {"begin": asm_bytecode.begin, "end": asm_bytecode.end, "name": asm_bytecode.disasm,
+                     "source": asm_bytecode.source}
 
-    if asm_bytecode.getValue() is not None :
-        json_bytecode["value"] = asm_bytecode.getValue()
+    if asm_bytecode.value is not None :
+        json_bytecode["value"] = asm_bytecode.value
 
     return json_bytecode
 
 # Given a list of blocks of instructions, the initial code is rebuilt
-def rebuild_asm_block(asm_blocks):
+def rebuild_asm_block(asm_blocks : List[AsmBlock]):
 
     json_code = []
 
     for block in asm_blocks:
-        for instr in block.getInstructions():
+        for instr in block.instructions:
             json_code.append(rebuild_asm_bytecode(instr))
 
     return json_code
