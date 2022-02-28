@@ -66,7 +66,7 @@ def build_asm_contract(cname,cinfo):
 
     init_bytecode = build_blocks_from_asm_representation(cname, initCode, True)
     
-    asm_c.setInitCode(init_bytecode)
+    asm_c.init_code = init_bytecode
         
     data = cinfo[".data"]
 
@@ -75,41 +75,37 @@ def build_asm_contract(cname,cinfo):
 
         if not isinstance(data[elem],str):
             aux_data = data[elem][".auxdata"]
-            asm_c.setAux(elem,aux_data)
+            asm_c.set_auxdata(elem, aux_data)
 
             code = data[elem][".code"]
             run_bytecode = build_blocks_from_asm_representation(cname, code, False)
-            asm_c.setRunCode(elem,run_bytecode)
+            asm_c.set_run_code(elem, run_bytecode)
 
-            data1 = data[elem].get(".data",None)
+            data1 = data[elem].get(".data", None)
             if data1 is not None:
-                asm_c.setAuxData(elem,data1)
+                asm_c.set_data_field(elem, data1)
             
         else:
-            asm_c.setData(elem, data[elem])
+            asm_c.set_data_field_with_address(elem, data[elem])
     return asm_c
 
 def parse_asm(file_name):
     with open(file_name) as f:
         data = json.load(f)
 
-        
-    asm_json = AsmJSON() 
-
     solc_v = data["version"]
-    asm_json.setVersion(solc_v)
+    asm_json = AsmJSON(solc_v)
     
     contracts = data["contracts"]
 
 
     for c in contracts:
         if contracts[c].get("asm",None) is None:
-            asm_json.addContracts(AsmContract(c, False))
+            asm_json.add_contract(AsmContract(c, False))
             continue
 
         asm_c = build_asm_contract(c,contracts[c]["asm"])
-        asm_json.addContracts(asm_c)
-
+        asm_json.add_contract(asm_c)
 
     return asm_json
 

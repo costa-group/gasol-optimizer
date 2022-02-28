@@ -282,17 +282,17 @@ def optimize_asm_from_log(file_name, json_log, output_file):
     if output_file is None:
         output_file = file_name_str + "_optimized_from_log.json_solc"
 
-    for c in asm.getContracts():
+    for c in asm.contracts:
 
         new_contract = deepcopy(c)
 
         # If it does not have the asm field, then we skip it, as there are no instructions to optimize
-        if not c.has_asm_field():
+        if not c.has_asm_field:
             contracts.append(new_contract)
             continue
 
         contract_name = (c.contract_name.split("/")[-1]).split(":")[-1]
-        init_code = c.getInitCode()
+        init_code = c.init_code
         init_code_blocks = []
 
         print("\nAnalyzing Init Code of: " + contract_name)
@@ -305,12 +305,12 @@ def optimize_asm_from_log(file_name, json_log, output_file):
             file_ids.update(block_ids)
             init_code_blocks.append(new_block)
 
-        new_contract.setInitCode(init_code_blocks)
+        new_contract.init_code = init_code_blocks
 
         print("\nAnalyzing Runtime Code of: " + contract_name)
         print("-----------------------------------------\n")
-        for identifier in c.getDataIds():
-            blocks = c.getRunCodeOf(identifier)
+        for identifier in c.get_data_ids_with_code():
+            blocks = c.get_run_code(identifier)
 
             run_code_blocks = []
 
@@ -322,7 +322,7 @@ def optimize_asm_from_log(file_name, json_log, output_file):
                 file_ids.update(block_ids)
                 run_code_blocks.append(new_block)
 
-            new_contract.setRunCode(identifier, run_code_blocks)
+            new_contract.set_run_code(identifier, run_code_blocks)
 
         contracts.append(new_contract)
 
@@ -615,17 +615,17 @@ def optimize_asm_in_asm_format(file_name, output_file, csv_file, timeout=10, log
     contracts = []
     # verifier_error = False
 
-    for c in asm.getContracts():
+    for c in asm.contracts:
 
         new_contract = deepcopy(c)
 
         # If it does not have the asm field, then we skip it, as there are no instructions to optimize
-        if not c.has_asm_field():
+        if not c.has_asm_field:
             contracts.append(new_contract)
             continue
 
-        contract_name = (c.getContractName().split("/")[-1]).split(":")[-1]
-        init_code = c.getInitCode()
+        contract_name = (c.contract_name.split("/")[-1]).split(":")[-1]
+        init_code = c.init_code
 
         print("\nAnalyzing Init Code of: " + contract_name)
         print("-----------------------------------------\n")
@@ -647,12 +647,12 @@ def optimize_asm_in_asm_format(file_name, output_file, csv_file, timeout=10, log
             #     print(asm_block.instructions)
             #     verifier_error = True
 
-        new_contract.setInitCode(init_code_blocks)
+        new_contract.init_code = init_code_blocks
 
         print("\nAnalyzing Runtime Code of: " + contract_name)
         print("-----------------------------------------\n")
-        for identifier in c.getDataIds():
-            blocks = c.getRunCodeOf(identifier)
+        for identifier in c.get_data_ids_with_code():
+            blocks = c.get_run_code(identifier)
 
             run_code_blocks = []
             for old_block in blocks:
@@ -670,7 +670,7 @@ def optimize_asm_in_asm_format(file_name, output_file, csv_file, timeout=10, log
                 #     print(asm_block.instructions)
                 #     verifier_error = True
 
-            new_contract.setRunCode(identifier, run_code_blocks)
+            new_contract.set_run_code(identifier, run_code_blocks)
 
         contracts.append(new_contract)
 

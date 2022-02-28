@@ -25,9 +25,9 @@ def rebuild_asm_block(asm_blocks : List[AsmBlock]):
 
 def rebuild_asm_contract(asm_contract):
 
-    json_contract = {".code": rebuild_asm_block(asm_contract.getInitCode())}
+    json_contract = {".code": rebuild_asm_block(asm_contract.init_code)}
 
-    data_ids = asm_contract.getDataIds()
+    data_ids = asm_contract.get_data_ids_with_code()
 
     json_data = {}
 
@@ -35,39 +35,39 @@ def rebuild_asm_contract(asm_contract):
 
         json_data_fields = {}
 
-        aux_data = asm_contract.get_aux(data_id)
+        aux_data = asm_contract.get_auxdata(data_id)
         json_data_fields[".auxdata"] = aux_data
 
-        run_bytecode = rebuild_asm_block(asm_contract.getRunCodeOf(data_id))
+        run_bytecode = rebuild_asm_block(asm_contract.get_run_code(data_id))
         json_data_fields[".code"] = run_bytecode
 
-        data = asm_contract.get_data_aux(data_id)
+        data = asm_contract.get_data_field(data_id)
         if data is not None:
             json_data_fields[".data"] = data
 
         json_data[data_id] = json_data_fields
 
-    data_addresses = asm_contract.getDataFieldIds()
+    data_addresses = asm_contract.get_data_ids_with_data_address()
 
     for address in data_addresses:
-        json_data[address] = asm_contract.getDataField(address)
+        json_data[address] = asm_contract.get_data_address(address)
 
     json_contract[".data"] = json_data
 
-    return {asm_contract.getContractName() : {"asm" : json_contract}}
+    return {asm_contract.contract_name : {"asm" : json_contract}}
 
 
 def rebuild_asm(asm_json):
 
-    final_asm = {"version": asm_json.getVersion()}
+    final_asm = {"version": asm_json.version}
 
     contracts = {}
 
-    for c in asm_json.getContracts():
+    for c in asm_json.contracts:
 
         # If it has no asm field, then we just add the contract name to the json dict
-        if not c.has_asm_field():
-            contracts.update({c.getContractName() : {}})
+        if not c.has_asm_field:
+            contracts.update({c.contract_name : {}})
             continue
 
         contract = rebuild_asm_contract(c)
