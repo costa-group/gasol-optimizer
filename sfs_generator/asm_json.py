@@ -39,6 +39,13 @@ class AsmJSON:
         return final_asm
 
 
+    def to_plain(self) -> str:
+        content_list = []
+        for c in self.contracts:
+            content_list.append(c.to_plain())
+        return "\n".join(content_list)
+
+
     def __str__(self):
         content = ""
         for c in self.contracts:
