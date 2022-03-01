@@ -377,8 +377,8 @@ if __name__=="__main__":
     for asm_file in glob.glob(contracts_dir_path + "*.json_solc"):
         asm_json = parse_asm(asm_file)
         for c in asm_json.getContracts():
-            for identifier in c.getDataIds():
-                blocks = c.getRunCodeOf(identifier)
+            for identifier in c.get_data_ids_with_code():
+                blocks = c.get_run_code(identifier)
                 for block in blocks:
                     process_block(block, count_integer, reconstruct_integer, associated_cost, associated_bytes, big_numbers)
 

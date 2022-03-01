@@ -1,94 +1,116 @@
 import global_params.constants as constants
 import sfs_generator.opcodes as opcodes
 import sfs_generator.utils as utils
+from sfs_generator.asm_bytecode import AsmBytecode, ASM_Json_T
+from typing import List, Union
 
+# Blocks are identified using an int
+Block_id_T = int
+
+# Jump types identified as strings (maybe in the future use enum)
+Jump_Type_T = str
 
 class AsmBlock:
+    """
+    Class for representing an Assembly block
+    """
     
-    def __init__(self, cname, identifier, is_init_block):
+    def __init__(self, cname : str, identifier : Block_id_T, is_init_block : bool):
         self.contract_name = cname
-        self.identifier = identifier
-        self.instructions = []
-        #minimum size of the source stack
+        self.block_id = identifier
+        self._instructions = []
+        # minimum size of the source stack
         self.source_stack = 0
         self.is_init_block = is_init_block
-        self.jump_type = None
+        self._jump_type = None
         self.jump_to = None
         self.falls_to = None
 
-    def getContractName(self):
-        return self.contract_name
+    @property
+    def instructions(self) -> List[AsmBytecode]:
+        return self._instructions
 
-    def setContractName(self,name):
-        self.contract_name = name
+    @instructions.setter
+    def instructions(self, new_instructions : List[AsmBytecode]) -> None:
+        # First, we update the source stack size
+        self.source_stack = utils.compute_stack_size(map(lambda x: x.disasm, new_instructions))
 
-    def getBlockId(self):
-        return self.identifier
+        # Then we update the new set of instructions
+        self._instructions = new_instructions
 
-    def setBlockId(self, identifier):
-        self.identifier = identifier
+    def add_instruction(self, bytecode : AsmBytecode) -> None:
+        self._instructions.append(bytecode)
 
-    def addInstructions(self,bytecode):
-        self.instructions.append(bytecode)
-        
-    def getInstructions(self):
-        return self.instructions
+        # If an instruction is added, we need to update the source stack counter
+        self.source_stack = utils.compute_stack_size(map(lambda x: x.disasm, self._instructions))
 
-    def setInstructions(self, instructions):
-        self.instructions = instructions
+    @property
+    def jump_type(self) -> Jump_Type_T:
+        return self._jump_type
 
-    def getSourceStack(self):
-        return self.source_stack
-
-    def setSourceStack(self, val):
-        self.source_stack = val
-
-    def get_is_init_block(self):
-        return self.is_init_block
-
-    def set_is_init_block(self, val):
-        self.is_init_block = val
-
-    def compute_stack_size(self):
-        evm_instructions = map(lambda x: x.getDisasm(),self.instructions)
-        
-        init_stack = utils.compute_stack_size(evm_instructions)
-
-        self.source_stack = init_stack
-
-
-    def get_jump_type(self):
-        return self.jump_type
-
-    def set_jumpt_type(self,t):
+    @jump_type.setter
+    def jump_type(self, t : Jump_Type_T) -> None:
         if t not in ["conditional","unconditional","terminal", "falls_to"]:
             raise Exception("Wrong jump type")
         else:
-            self.jump_type = t
+            self._jump_type = t
+
+    def set_types(self) -> None:
+        """
+        Set the jump type matching the last instruction in the block
+        :return: None
+        """
+        last_instruction = self.instructions[-1].disasm
+        if last_instruction == "JUMP":
+            self.jump_type = "unconditional"
+        elif last_instruction == "JUMPI":
+            self.jump_type = "conditional"
+        elif last_instruction in ["INVALID","REVERT","STOP","RETURN","SUICIDE"]:
+            self.jump_type = "terminal"
+        else:
+            self.jump_type = "falls_to"
+
+    def to_json(self) -> [ASM_Json_T]:
+        return list(map(lambda instr: instr.to_json(), self.instructions))
+
+
+    def to_plain(self) -> str:
+        return ' '.join(map(lambda instr: instr.to_plain(), self.instructions))
+
+    def __str__(self):
+        content = ""
+        content += "Block Id:"+str(self.block_id)+"\n"
+        for i in self.instructions:
+            content += str(i)+"\n"
+
+        content+=str(self.source_stack)
+        return content
+
+    def __repr__(self):
+        content = ""
+        content += "Block Id:"+str(self.block_id)+"\n"
+        for i in self.instructions:
+            content += str(i)+"\n"
+
+        content+=str(self.source_stack)
+        return content
+
+
         
-    def get_jump_to(self):
-        return self.jump_to
+    def split_in_sub_blocks(self) -> [Union[List[AsmBytecode], AsmBytecode]]:
+        """
+        Split the block in a list of asm_bytecodes that contains either sub blocks or
+        isolated instructions (JUMPs or split instructions).
 
-    def set_jump_to(self, address):
-        self.jump_to = address
-
-    def get_falls_to(self):
-        return self.falls_to
-
-    def set_jump_to(self, address):
-        self.falls_to = address
-
-        
-    # Split the block in a list of asm_bytecodes that contains either sub blocks or
-    # isolated instructions (JUMPs or split instructions).
-    def split_in_sub_blocks(self):
+        :return: a list with the split sub-blocks
+        """
         sub_blocks = []
         current_sub_block = []
         for asm_bytecode in self.instructions:
 
-            instruction = asm_bytecode.getDisasm()
+            instruction = asm_bytecode.disasm
 
-            # Three cases: either a instruction correspond to a jump/end or split instruction or neither of them.
+            # Three cases: either an instruction correspond to a jump/end or split instruction or neither of them.
             if instruction in ["JUMP","JUMPI","STOP","RETURN","REVERT","INVALID","JUMPDEST","tag"] \
                     or instruction in constants.split_block:
                 if current_sub_block:
@@ -117,7 +139,7 @@ class AsmBlock:
         assembly_item_to_internal_representation = {v:k for k, v in opcodes.opcode_internal_representation_to_assembly_item.items()}
         for asm_bytecode in self.instructions:
 
-            instruction = asm_bytecode.getDisasm()
+            instruction = asm_bytecode.disasm
             # Representation that matches the one in the sub block list
             plain_representation = assembly_item_to_internal_representation.get(instruction, instruction)
 
@@ -229,25 +251,3 @@ class AsmBlock:
         # The number of sub blocks must match
         # assert (current_sub_block == len(optimized_sub_blocks))
         self.instructions = instructions
-
-
-    def set_types(self):
-        last_instruction = self.instructions[-1].getDisasm()
-        if last_instruction == "JUMP":
-            self.set_jump_type("unconditional")
-        elif last_instruction == "JUMPI":
-            self.set_jump_type("conditional")
-        elif last_instruction in ["INVALID","REVERT","STOP","RETURN","SUICIDE"]:
-            self.set_jump_type("terminal")
-        else:
-            self.set_jump_type("falls_to")
-        
-
-    def __str__(self):
-        content = ""
-        content += "Block Id:"+str(self.identifier)+"\n"
-        for i in self.instructions:
-            content += str(i)+"\n"
-
-        content+=str(self.source_stack)
-        return content

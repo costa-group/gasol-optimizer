@@ -170,10 +170,10 @@ def optimize_block(sfs_dict, timeout, size = False):
 # contains the sfs from each block, the second one contains the sequence of instructions and
 # the third one is a set that contains all block ids.
 def generate_sfs_dicts_from_log(block, contract_name, json_log,storage, last_const):
-    bytecodes = block.getInstructions()
-    stack_size = block.getSourceStack()
-    block_id = block.getBlockId()
-    is_init_block = block.get_is_init_block()
+    bytecodes = block.instructions
+    stack_size = block.source_stack
+    block_id = block.block_id
+    is_init_block = block.is_init_block
 
     instructions = preprocess_instructions(bytecodes)
 
@@ -227,8 +227,8 @@ def check_log_file_is_correct(sfs_dict, instr_sequence_dict):
 def optimize_asm_block_from_log(block, sfs_dict, instr_sequence_dict):
     new_block = deepcopy(block)
     optimized_blocks = {}
-    is_init_block = block.get_is_init_block()
-    block_id = block.getBlockId()
+    is_init_block = block.is_init_block
+    block_id = block.block_id
 
     if is_init_block:
         block_name = "initial_block" + str(block_id)
@@ -264,7 +264,7 @@ def optimize_asm_block_from_log(block, sfs_dict, instr_sequence_dict):
     optimized_blocks_list = [None if i not in optimized_blocks else optimized_blocks[i] for i in range(len(asm_sub_blocks))]
 
     new_block.set_instructions_from_sub_blocks(optimized_blocks_list)
-    new_block.compute_stack_size()
+
     return new_block
 
 
@@ -282,17 +282,17 @@ def optimize_asm_from_log(file_name, json_log, output_file):
     if output_file is None:
         output_file = file_name_str + "_optimized_from_log.json_solc"
 
-    for c in asm.getContracts():
+    for c in asm.contracts:
 
         new_contract = deepcopy(c)
 
         # If it does not have the asm field, then we skip it, as there are no instructions to optimize
-        if not c.has_asm_field():
+        if not c.has_asm_field:
             contracts.append(new_contract)
             continue
 
-        contract_name = (c.getContractName().split("/")[-1]).split(":")[-1]
-        init_code = c.getInitCode()
+        contract_name = (c.contract_name.split("/")[-1]).split(":")[-1]
+        init_code = c.init_code
         init_code_blocks = []
 
         print("\nAnalyzing Init Code of: " + contract_name)
@@ -305,12 +305,12 @@ def optimize_asm_from_log(file_name, json_log, output_file):
             file_ids.update(block_ids)
             init_code_blocks.append(new_block)
 
-        new_contract.setInitCode(init_code_blocks)
+        new_contract.init_code = init_code_blocks
 
         print("\nAnalyzing Runtime Code of: " + contract_name)
         print("-----------------------------------------\n")
-        for identifier in c.getDataIds():
-            blocks = c.getRunCodeOf(identifier)
+        for identifier in c.get_data_ids_with_code():
+            blocks = c.get_run_code(identifier)
 
             run_code_blocks = []
 
@@ -322,7 +322,7 @@ def optimize_asm_from_log(file_name, json_log, output_file):
                 file_ids.update(block_ids)
                 run_code_blocks.append(new_block)
 
-            new_contract.setRunCode(identifier, run_code_blocks)
+            new_contract.set_run_code(identifier, run_code_blocks)
 
         contracts.append(new_contract)
 
@@ -382,8 +382,8 @@ def update_gas_count(old_block, new_block):
     global previous_gas
     global new_gas
 
-    old_instructions = preprocess_instructions(old_block.getInstructions())
-    new_instructions = preprocess_instructions(new_block.getInstructions())
+    old_instructions = preprocess_instructions(old_block.instructions)
+    new_instructions = preprocess_instructions(new_block.instructions)
 
     for instr in old_instructions:
         if not isYulInstruction(instr):
@@ -398,8 +398,8 @@ def update_size_count(old_block, new_block):
     global previous_size
     global new_size
 
-    previous_size += sum([bytes_required_asm(asm_bytecode) for asm_bytecode in old_block.getInstructions()])
-    new_size += sum([bytes_required_asm(asm_bytecode) for asm_bytecode in new_block.getInstructions()])
+    previous_size += sum([bytes_required_asm(asm_bytecode) for asm_bytecode in old_block.instructions])
+    new_size += sum([bytes_required_asm(asm_bytecode) for asm_bytecode in new_block.instructions])
 
 
 
@@ -414,7 +414,7 @@ def filter_optimized_blocks_by_intra_block_optimization(asm_sub_blocks, optimize
     previous_block_starts_with_pop = False
     # Traverse from right to left
     for asm_sub_block, optimized_sub_block in zip(reversed(asm_sub_blocks), reversed(optimized_sub_blocks)):
-        if asm_sub_block[0].getDisasm() == "POP":
+        if asm_sub_block[0].disasm == "POP":
             current_pop_streak_blocks.append(deepcopy(optimized_sub_block))
             previous_block_starts_with_pop = True
         elif previous_block_starts_with_pop:
@@ -451,10 +451,10 @@ def optimize_asm_block_asm_format(block, contract_name, timeout, storage, last_c
     global statistics_rows
     global total_time
 
-    bytecodes = block.getInstructions()
-    stack_size = block.getSourceStack()
-    block_id = block.getBlockId()
-    is_init_block = block.get_is_init_block()
+    bytecodes = block.instructions
+    stack_size = block.source_stack
+    block_id = block.block_id
+    is_init_block = block.is_init_block
     new_block = deepcopy(block)
 
     # Optimized blocks. When a block is not optimized, None is pushed to the list.
@@ -575,27 +575,25 @@ def optimize_asm_block_asm_format(block, contract_name, timeout, storage, last_c
     else:
         new_block.set_instructions_from_sub_blocks(optimized_blocks_list)
 
-    new_block.compute_stack_size()
-
     return new_block, log_dicts
 
 
 def compare_asm_block_asm_format(old_block, new_block, contract_name="example",storage = False, last_const = False, size_abs = False, partition = False, pop = False, push = False, revert = False):
 
-    old_instructions = preprocess_instructions(old_block.getInstructions())
+    old_instructions = preprocess_instructions(old_block.instructions)
 
-    old_sfs_information, _ = compute_original_sfs_with_simplifications(old_instructions, old_block.getSourceStack(),
-                                                             contract_name, old_block.getBlockId(),
-                                                                       old_block.get_is_init_block(),storage, last_const, size_abs, partition, pop, push, revert)
+    old_sfs_information, _ = compute_original_sfs_with_simplifications(old_instructions, old_block.source_stack,
+                                                                       contract_name, old_block.block_id,
+                                                                       old_block.is_init_block, storage, last_const, size_abs, partition, pop, push, revert)
 
     old_sfs_dict = old_sfs_information["syrup_contract"]
 
-    new_instructions = preprocess_instructions(new_block.getInstructions())
+    new_instructions = preprocess_instructions(new_block.instructions)
 
 
-    new_sfs_information, _ = compute_original_sfs_with_simplifications(new_instructions, new_block.getSourceStack(),
-                                                             contract_name, new_block.getBlockId(),
-                                                                       new_block.get_is_init_block(),storage, last_const, size_abs, partition, pop, push, revert)
+    new_sfs_information, _ = compute_original_sfs_with_simplifications(new_instructions, new_block.source_stack,
+                                                                       contract_name, new_block.block_id,
+                                                                       new_block.is_init_block, storage, last_const, size_abs, partition, pop, push, revert)
 
     new_sfs_dict = new_sfs_information["syrup_contract"]
 
@@ -617,17 +615,17 @@ def optimize_asm_in_asm_format(file_name, output_file, csv_file, timeout=10, log
     contracts = []
     # verifier_error = False
 
-    for c in asm.getContracts():
+    for c in asm.contracts:
 
         new_contract = deepcopy(c)
 
         # If it does not have the asm field, then we skip it, as there are no instructions to optimize
-        if not c.has_asm_field():
+        if not c.has_asm_field:
             contracts.append(new_contract)
             continue
 
-        contract_name = (c.getContractName().split("/")[-1]).split(":")[-1]
-        init_code = c.getInitCode()
+        contract_name = (c.contract_name.split("/")[-1]).split(":")[-1]
+        init_code = c.init_code
 
         print("\nAnalyzing Init Code of: " + contract_name)
         print("-----------------------------------------\n")
@@ -639,22 +637,22 @@ def optimize_asm_in_asm_format(file_name, output_file, csv_file, timeout=10, log
             log_dicts.update(log_element)
             init_code_blocks.append(optimized_block)
 
-            # Deployment size is not considered
+            # Deployment size is not considered when measuring it
             update_gas_count(old_block, optimized_block)
 
             # if not compare_asm_block_asm_format(block, asm_block):
-            #     print("Optimized block " + str(block.getBlockId()) + " from init code at contract " + contract_name +
+            #     print("Optimized block " + str(block.block_id) + " from init code at contract " + contract_name +
             #           " has not been verified correctly")
-            #     print(block.getInstructions())
-            #     print(asm_block.getInstructions())
+            #     print(block.instructions)
+            #     print(asm_block.instructions)
             #     verifier_error = True
 
-        new_contract.setInitCode(init_code_blocks)
+        new_contract.init_code = init_code_blocks
 
         print("\nAnalyzing Runtime Code of: " + contract_name)
         print("-----------------------------------------\n")
-        for identifier in c.getDataIds():
-            blocks = c.getRunCodeOf(identifier)
+        for identifier in c.get_data_ids_with_code():
+            blocks = c.get_run_code(identifier)
 
             run_code_blocks = []
             for old_block in blocks:
@@ -666,13 +664,13 @@ def optimize_asm_in_asm_format(file_name, output_file, csv_file, timeout=10, log
                 update_size_count(old_block, optimized_block)
 
                 # if not compare_asm_block_asm_format(block, asm_block):
-                #     print("Optimized block " + str(block.getBlockId()) + " from data id " + str(identifier)
+                #     print("Optimized block " + str(block.block_id) + " from data id " + str(identifier)
                 #           + " at contract " + contract_name + " has not been verified correctly")
-                #     print(block.getInstructions())
-                #     print(asm_block.getInstructions())
+                #     print(block.instructions)
+                #     print(asm_block.instructions)
                 #     verifier_error = True
 
-            new_contract.setRunCode(identifier, run_code_blocks)
+            new_contract.set_run_code(identifier, run_code_blocks)
 
         contracts.append(new_contract)
 
@@ -764,7 +762,7 @@ if __name__ == '__main__':
     y = dtimer()
 
     print("")
-    print("SFS time: "+str(y-x))
+    print("Total time: "+str(y-x))
     print("")
     
     if args.backend:
