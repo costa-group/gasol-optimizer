@@ -413,7 +413,7 @@ generates variables depending on the bytecode and returns the
 corresponding translated instruction and the variables's index
 updated. It also updated the corresponding global variables.
 '''
-def translateOpcodes30(opcode, value, index_variables,block):
+def translateOpcodes30(opcode, value, index_variables):
     
     if opcode == "ADDRESS":
         v1, updated_variables = get_new_variable(index_variables)
@@ -480,7 +480,7 @@ def translateOpcodes30(opcode, value, index_variables,block):
         v2, updated_variables = get_consume_variable(updated_variables)
         v3, updated_variables = get_consume_variable(updated_variables)
 
-        instr = "extcodecopy("+v0+","+v1+","+v2++","+v3+")"  
+        instr = "extcodecopy("+v0+","+v1+","+v2+","+v3+")"
 
     elif opcode == "EXTCODEHASH":
         _, updated_variables = get_consume_variable(index_variables)
@@ -502,7 +502,7 @@ generates variables depending on the bytecode and returns the
 corresponding translated instruction and the variables's index
 updated. It also updated the corresponding global variables.
 '''
-def translateOpcodes40(opcode, index_variables,block):
+def translateOpcodes40(opcode, index_variables):
     global blockhash_cont
     global timestamp_counter
     
@@ -555,7 +555,7 @@ generates variables depending on the bytecode and returns the
 corresponding translated instruction and the variables's index
 updated. It also updated the corresponding global variables.
 '''
-def translateOpcodes50(opcode, value, index_variables,block):
+def translateOpcodes50(opcode, value, index_variables):
     global pc_cont
     global sload_counter
     global mload_counter
@@ -870,7 +870,7 @@ corresponding translated instruction and the variables's index
 updated. It also updated the corresponding global variables.
 Unclassified opcodes.
 '''
-def translateOpcodesZ(opcode, index_variables,block):
+def translateOpcodesZ(opcode, index_variables):
     if opcode == "RETURNDATASIZE":
         v1, updated_variables = get_new_variable(index_variables)
         instr = v1+" = returndatasize"
@@ -960,13 +960,13 @@ def compile_instr(rule,evm_opcode,variables,list_jumps,cond):
         value, index_variables = translateOpcodes20(opcode_name, variables)
         rule.add_instr(value)
     elif opcode_name in opcodes30:
-        value, index_variables = translateOpcodes30(opcode_name,opcode_rest,variables,rule.get_Id())
+        value, index_variables = translateOpcodes30(opcode_name,opcode_rest,variables)
         rule.add_instr(value)
     elif opcode_name in opcodes40:
-        value, index_variables = translateOpcodes40(opcode_name,variables,rule.get_Id())
+        value, index_variables = translateOpcodes40(opcode_name,variables)
         rule.add_instr(value)
     elif opcode_name in opcodes50:
-        value, index_variables = translateOpcodes50(opcode_name, opcode_rest, variables,rule.get_Id())
+        value, index_variables = translateOpcodes50(opcode_name, opcode_rest, variables)
         if type(value) is list:
             for ins in value:
                 rule.add_instr(ins)
@@ -993,7 +993,7 @@ def compile_instr(rule,evm_opcode,variables,list_jumps,cond):
         #RETURN
         rule.add_instr(value)
     elif opcode_name in opcodesZ:
-        value, index_variables = translateOpcodesZ(opcode_name,variables,rule.get_Id())
+        value, index_variables = translateOpcodesZ(opcode_name,variables)
         rule.add_instr(value)
     elif opcode_name in opcodesYul:
         value, index_variables = translateYulOpcodes(opcode_name,opcode_rest,variables)
@@ -1018,7 +1018,7 @@ It generates the rbr rules corresponding to a block from the CFG.
 index_variables points to the corresponding top stack index.
 The stack could be reconstructed as [s(ith)...s(0)].
 '''
-def compile_block(instrs,input_stack,blockId):
+def compile_block(instrs,input_stack,block_id):
     global rbr_blocks
     global top_index
     
@@ -1027,11 +1027,8 @@ def compile_block(instrs,input_stack,blockId):
     finish = False
     
     index_variables = input_stack-1
-    if blockId !=-1:
-        block_id = blockId
-    else:
-        block_id = 0
     rule = RBRRule(block_id, "block",False)
+
     rule.set_index_input(input_stack)
     l_instr = instrs
 
@@ -1054,14 +1051,11 @@ for each smart contract.
 -rbr is a list containing instances of rbr_rule.
 -executions refers to the number of smart contract that has been translated. int.
 '''
-def write_rbr(rule,block_id,cname = None):
+def write_rbr(rule,block_name):
     if paths.gasol_folder not in os.listdir(paths.tmp_path):
         os.mkdir(paths.gasol_path)
 
-    if block_id !=-1:
-        name = paths.gasol_path+cname+"block"+str(block_id)+".rbr"
-    else:
-        name = paths.gasol_path+cname+".rbr"
+    name = paths.gasol_path+block_name+".rbr"
         
     with open(name,"w") as f:
         f.write(rule.rule2string()+"\n")
@@ -1078,7 +1072,7 @@ Main function that build the rbr representation from the CFG of a solidity file.
 -saco_rbr is True if it has to generate the RBR in SACO syntax.
 -exe refers to the number of smart contracts analyzed.
 '''
-def evm2rbr_compiler(file_name = None, contract_name = None,block = None, block_id = -1,preffix = "",simplification = True, storage = False, size = False, part = False, pop = False, push = False, revert = False):
+def evm2rbr_compiler(file_name = None,block = None, block_id = -1, block_name = "",simplification = True, storage = False, size = False, part = False, pop = False, push = False, revert = False):
     global rbr_blocks
     
     init_globals()
@@ -1099,14 +1093,14 @@ def evm2rbr_compiler(file_name = None, contract_name = None,block = None, block_
                 print("STORAGE BLOCK: SSTORE")
         else:
             print("NO STORAGE BLOCK")
-        write_rbr(rule,block_id,preffix+contract_name)
+        write_rbr(rule,block_name)
 
         # print(preffix)
         
         end = dtimer()
         ethir_time = end-begin
         #print("Build RBR: "+str(ethir_time)+"s")
-        subblocks = smt_translate_block(rule,file_name,contract_name,preffix,simplification,storage, size, part, pop, push, revert)
+        subblocks = smt_translate_block(rule,file_name,block_name,simplification,storage, size, part, pop, push, revert)
                 
         return 0, subblocks
         

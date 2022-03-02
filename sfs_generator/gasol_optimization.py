@@ -138,9 +138,6 @@ def init_globals():
     global memory_dep
     memory_dep = []
 
-    global block_name
-    block_name = ""
-
     global memory_opt
     memory_opt = [False,False,False]
 
@@ -1999,7 +1996,7 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
 
         
     if subblock != None:
-        block_nm = block_name+"."+str(subblock)
+        block_nm = block_name+"_"+str(subblock)
     else:
         block_nm = block_name
 
@@ -2010,7 +2007,7 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
         if "jsons" not in os.listdir(paths.gasol_path):
             os.mkdir(paths.json_path)
 
-        with open(paths.json_path+"/"+source_name+"_"+cname+"_"+block_nm+"_input.json","w") as json_file:
+        with open(paths.json_path+"/"+ block_nm + "_input.json","w") as json_file:
             json.dump(json_dict,json_file)
 
     return split_by,""
@@ -2585,7 +2582,7 @@ def is_optimizable(opcode_instructions,instructions):
     else:
         return False
 
-def translate_block(rule,instructions,opcodes,isolated,preffix,simp):
+def translate_block(rule,instructions,opcodes,isolated,sub_block_name,simp):
     global max_instr_size
     global max_stack_size
     global num_pops
@@ -2667,9 +2664,9 @@ def translate_block(rule,instructions,opcodes,isolated,preffix,simp):
             init_info = get_encoding_init_block(rule.get_instructions()[index:fin+1],source_stack)
         else:
             init_info = {}
-        generate_json(preffix+rule.get_rule_name(),source_stack,t_vars,source_stack_idx-1,gas, init_info,simplification = simp)
+        generate_json(sub_block_name,source_stack,t_vars,source_stack_idx-1,gas, init_info,simplification = simp)
         if simp:
-            write_instruction_block(rule.get_rule_name(),new_opcodes)
+            write_instruction_block(sub_block_name,new_opcodes)
 
 
 def compute_opcodes2write(opcodes,num_guard):
@@ -2687,7 +2684,7 @@ def compute_opcodes2write(opcodes,num_guard):
 
     return new_opcodes
         
-def generate_subblocks(rule,list_subblocks,isolated,preffix,simplification):
+def generate_subblocks(rule,list_subblocks,isolated,sub_block_name,simplification):
     global gas_t
     global revert_flag
 
@@ -2713,7 +2710,7 @@ def generate_subblocks(rule,list_subblocks,isolated,preffix,simplification):
         seq = range(ts_idx,-1,-1)
         target_stack = list(map(lambda x: "s("+str(x)+")",seq))
 
-        new_nexts, pops2remove = translate_subblock(rule,block,source_stack,target_stack,source_stack_idx,i,list_subblocks[i+1],preffix,simplification,pops2remove)
+        new_nexts, pops2remove = translate_subblock(rule,block,source_stack,target_stack,source_stack_idx,i,list_subblocks[i+1],sub_block_name,simplification,pops2remove)
 
         if new_nexts == []:
         #We update the source stack for the new block
@@ -2738,13 +2735,13 @@ def generate_subblocks(rule,list_subblocks,isolated,preffix,simplification):
     block = instrs[2:]
     if block != []:
         revert_flag = prev_revert_flag
-        translate_last_subblock(rule,block,source_stack,source_stack_idx,i,isolated,preffix,simplification,pops2remove)
+        translate_last_subblock(rule,block,source_stack,source_stack_idx,i,isolated,sub_block_name,simplification,pops2remove)
 
     if compute_gast:
         gas_t+=get_cost(original_opcodes)
 
     
-def translate_subblock(rule,instrs,sstack,tstack,sstack_idx,idx,next_block,preffix,simp,prev_pops):
+def translate_subblock(rule,instrs,sstack,tstack,sstack_idx,idx,next_block,sub_block_name,simp,prev_pops):
     global max_instr_size
     global max_stack_size
     global num_pops
@@ -2801,9 +2798,9 @@ def translate_subblock(rule,instrs,sstack,tstack,sstack_idx,idx,next_block,preff
             if prev_pops != 0:
                 gas = gas+2*prev_pops
                 
-            generate_json(preffix+rule.get_rule_name(),sstack,new_tstack,sstack_idx,gas,init_info,subblock=idx,simplification = simp)
+            generate_json(sub_block_name,sstack,new_tstack,sstack_idx,gas,init_info,subblock=idx,simplification = simp)
             if simp:
-                write_instruction_block(rule.get_rule_name(),new_opcodes,subblock=idx)
+                write_instruction_block(sub_block_name, new_opcodes,subblock=idx)
             
         return new_nexts, pops2remove
     else:
@@ -2880,7 +2877,7 @@ def modify_next_block(next_block,pops2remove):
     return new_nextblock,idx2-pops2remove
     
     
-def translate_last_subblock(rule,block,sstack,sstack_idx,idx,isolated,preffix,simp, prev_pops):
+def translate_last_subblock(rule,block,sstack,sstack_idx,idx,isolated,block_name,simp, prev_pops):
     global max_instr_size
     global max_stack_size
     global num_pops
@@ -2952,9 +2949,9 @@ def translate_last_subblock(rule,block,sstack,sstack_idx,idx,isolated,preffix,si
             if prev_pops!=0:
                 gas+=2*prev_pops
                 
-            generate_json(preffix+rule.get_rule_name(),sstack,tstack,sstack_idx,gas,init_info,subblock=idx,simplification = simp)
+            generate_json(block_name,sstack,tstack,sstack_idx,gas,init_info,subblock=idx,simplification = simp)
             if simp:
-                write_instruction_block(rule.get_rule_name(),new_opcodes,subblock=idx)
+                write_instruction_block(block_name,new_opcodes,subblock=idx)
     
 def get_new_source_stack(instr,nop_instr,idx):
     
@@ -3111,8 +3108,8 @@ def translate_terminal_block(rule):
 
         
 def write_instruction_block(rule_name,opcodes,subblock = None):
-    if subblock != None:
-        block_nm = rule_name+"."+str(subblock)
+    if subblock is not None:
+        block_nm = rule_name+"_"+str(subblock)
     else:
         block_nm = rule_name
 
@@ -3121,7 +3118,7 @@ def write_instruction_block(rule_name,opcodes,subblock = None):
     if "disasms" not in os.listdir(paths.gasol_path):
         os.mkdir(paths.gasol_path+"/disasms")
     
-    byte_file =  open(paths.gasol_path+"/disasms/"+source_name+"_"+cname+"_"+block_nm+".disasm","w")
+    byte_file =  open(paths.gasol_path+"/disasms/" + block_nm+".disasm","w")
     for e in op:
         byte_file.write(e+"\n")
     byte_file.close()
@@ -3196,16 +3193,14 @@ def compute_max_program_len(opcodes, num_guard,block = None):
     return len(new_opcodes)
     
 
-def smt_translate_block(rule,file_name,name,preffix,simplification=True,storage = False, size = False, part = False, pop = False, push = False, revert = False):
+def smt_translate_block(rule,file_name,block_name,simplification=True,storage = False, size = False, part = False, pop = False, push = False, revert = False):
     global s_counter
     global max_instr_size
     global int_not0
     global source_name
-    global cname
     global blocks_json_dict
     global sfs_contracts
     global split_sto
-    global block_name
     global original_ins
     global max_l
     global size_flag
@@ -3231,7 +3226,6 @@ def smt_translate_block(rule,file_name,name,preffix,simplification=True,storage 
     info_deploy = []
 
     source_name = file_name
-    cname =  name
 
     int_not0 = [-1+2**256]#map(lambda x: -1+2**x, range(8,264,8))
     
@@ -3241,14 +3235,11 @@ def smt_translate_block(rule,file_name,name,preffix,simplification=True,storage 
     
     opcodes = get_opcodes(rule)    
 
-    block_name = rule.get_rule_name()
-
     print(block_name)
-    print(rule.get_rule_name())
     print(instructions)
     print("*******")
 
-    info = "INFO DEPLOY "+paths.gasol_path+"ethir_OK_"+source_name+"_blocks_"+rule.get_rule_name()+" LENGTH="+str(len(opcodes))+" PUSH="+str(len(list(filter(lambda x: x.find("nop(PUSH")!=-1,opcodes))))
+    info = "INFO DEPLOY "+paths.gasol_path+"ethir_OK_"+ block_name + " LENGTH="+str(len(opcodes))+" PUSH="+str(len(list(filter(lambda x: x.find("nop(PUSH")!=-1,opcodes))))
     info_deploy.append(info)
     
     subblocks = []
@@ -3266,17 +3257,17 @@ def smt_translate_block(rule,file_name,name,preffix,simplification=True,storage 
 
                 if where2split == []:
                     subblocks = [opcodes]
-                    translate_block(rule,instructions,opcodes,True,preffix,simplification)
+                    translate_block(rule,instructions,opcodes,True,block_name,simplification)
 
                 else:
                     subblocks = split_blocks_by_number(rule.get_instructions(),where2split)
-                    generate_subblocks(rule,subblocks,True,preffix,simplification)
+                    generate_subblocks(rule,subblocks,True,block_name,simplification)
             else:
                 subblocks = [opcodes]
-                translate_block(rule,instructions,opcodes,True,preffix,simplification) 
+                translate_block(rule,instructions,opcodes,True,block_name,simplification)
         else:
             subblocks = [opcodes]
-            translate_block(rule,instructions,opcodes,True,preffix,simplification) 
+            translate_block(rule,instructions,opcodes,True,block_name,simplification)
     else: #we need to split the blocks into subblocks
         r = False
         new_instructions = []
@@ -3312,7 +3303,7 @@ def smt_translate_block(rule,file_name,name,preffix,simplification=True,storage 
             # print("FINAL")
             # print(subblocks)
             # print(len(subblocks))
-        generate_subblocks(rule,subblocks,True,preffix,simplification)
+        generate_subblocks(rule,subblocks,True,block_name,simplification)
 
     end = dtimer()
     # for f in info_deploy:
@@ -4578,10 +4569,10 @@ def replace_loads_by_sstores(storage_location, location):
                 dep = list(map(lambda x: are_dependent(var,x[0][0],elem[0][-1],x[0][-1]),rest_list))
                 if True not in dep and elem[0][-1].find("mstore8") == -1: #it does not work for mstore8
                     if location == "storage":
-                        print("[OPT]: Replaced sload by its value "+str(block_name))
+                        print("[OPT]: Replaced sload by its value")
                         gas_store_op+=700
                     else:
-                        print("[OPT]: Replaced mload by its value "+str(block_name))
+                        print("[OPT]: Replaced mload by its value")
                         gas_memory_op+=3
                     storage_location.pop(i+pos+1)
                     discount_op+=1
@@ -4647,10 +4638,10 @@ def remove_store_recursive_dif(storage_location, location):
                     storage_location.pop(i)
                     discount_op+=1
                     if location == "storage":
-                        print("[OPT]: Removed sstore sstore "+str(block_name))
+                        print("[OPT]: Removed sstore sstore ")
                         gas_store_op+=5000
                     else:
-                        print("[OPT]: Removed mstore mstore "+str(block_name))
+                        print("[OPT]: Removed mstore mstore ")
                         gas_memory_op+=3
                     print(storage_location)
                     remove_store_recursive_dif(storage_location,location)
@@ -4717,10 +4708,10 @@ def remove_store_loads(storage_location, location):
                         discount_op+=1
                         finished = True
                         if storage_location == "storage":
-                            print("[OPT]: OPTIMIZATION sstore OF sload "+str(block_name))
+                            print("[OPT]: OPTIMIZATION sstore OF sload")
                             gas_store_op+=5000
                         else:
-                            print("[OPT]: OPTIMIZATION mstore OF mload "+str(block_name))
+                            print("[OPT]: OPTIMIZATION mstore OF mload")
                             gas_memory_op+=3
                         remove_store_loads(storage_location,location)
         i+=1

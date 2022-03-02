@@ -99,7 +99,8 @@ def remove_last_constant_instructions(instructions):
     return new_stack_size, cons_instructions[::-1]
 
 
-def compute_original_sfs_with_simplifications(instructions, stack_size, cname, block_id, is_initial_block,storage, last_const, size_abs, partition, pop_flag, push_flag,revert_return):
+def compute_original_sfs_with_simplifications(instructions, stack_size, block_id, block_name,
+                                              storage, last_const, size_abs, partition, pop_flag, push_flag,revert_return):
 
     block_ins = list(filter(lambda x: x not in ["JUMP","JUMPI","JUMPDEST","tag", "STOP","RETURN","INVALID","REVERT"], instructions))
 
@@ -116,14 +117,11 @@ def compute_original_sfs_with_simplifications(instructions, stack_size, cname, b
     
     block_data = {"instructions": block_ins, "input": new_stack_size}
 
-    if is_initial_block:
-        prefix = "initial_"
-    else:
-        prefix = ""
-
     fname = args.input_path.split("/")[-1].split(".")[0]
-    exit_code, subblocks_list = ir_block.evm2rbr_compiler(file_name = fname, contract_name=cname, block=block_data, block_id=block_id,
-                                                                        preffix=prefix, simplification=True, storage=storage, size = size_abs, part = partition,pop = pop_flag, push = push_flag, revert = revert_flag)
+    exit_code, subblocks_list = \
+        ir_block.evm2rbr_compiler(file_name = fname, block=block_data, block_name=block_name, block_id=block_id,
+                                  simplification=True, storage=storage, size = size_abs, part = partition,pop =
+                                  pop_flag, push = push_flag, revert = revert_flag)
 
     sfs_dict = get_sfs_dict()
     print("SFS dict", sfs_dict)
@@ -173,13 +171,13 @@ def optimize_block(sfs_dict, timeout, size = False):
 def generate_sfs_dicts_from_log(block, contract_name, json_log,storage, last_const, size_abs, partition, pop_flag, push_flag,revert_return):
     bytecodes = block.instructions
     stack_size = block.source_stack
+    block_name = block.block_name
     block_id = block.block_id
-    is_init_block = block.is_init_block
 
     instructions = preprocess_instructions(bytecodes)
 
-    contracts_dict, sub_block_list = compute_original_sfs_with_simplifications(instructions, stack_size, contract_name, block_id,
-                                                         is_init_block,storage, last_const, size_abs, partition, pop_flag,
+    contracts_dict, sub_block_list = compute_original_sfs_with_simplifications(instructions, stack_size, block_id, block_name,
+                                                         storage, last_const, size_abs, partition, pop_flag,
                                                          push_flag,revert_return)
     syrup_contracts = contracts_dict["syrup"]
 
@@ -470,6 +468,7 @@ def optimize_asm_block_asm_format(block, contract_name, timeout, storage, last_c
     bytecodes = block.instructions
     stack_size = block.source_stack
     block_id = block.block_id
+    block_name = block.block_name
     is_init_block = block.is_init_block
     new_block = deepcopy(block)
 
@@ -482,9 +481,9 @@ def optimize_asm_block_asm_format(block, contract_name, timeout, storage, last_c
 
     # x = dtimer()
     
-    contracts_dict, sub_block_list = compute_original_sfs_with_simplifications(instructions,stack_size,contract_name,
-                                                                               block_id, is_init_block,storage,
-                                                                               last_const,size_abs, partition,pop_flag, push_flag, revert_return)
+    contracts_dict, sub_block_list = compute_original_sfs_with_simplifications(instructions,stack_size,block_id,
+                                                                               block_name,storage, last_const,size_abs,
+                                                                               partition,pop_flag, push_flag, revert_return)
 
     # y = dtimer()
     # print("*************************************************************")
@@ -600,8 +599,8 @@ def compare_asm_block_asm_format(old_block, new_block, contract_name="example",s
     old_instructions = preprocess_instructions(old_block.instructions)
 
     old_sfs_information, _ = compute_original_sfs_with_simplifications(old_instructions, old_block.source_stack,
-                                                                       contract_name, old_block.block_id,
-                                                                       old_block.is_init_block, storage, last_const, size_abs, partition, pop, push, revert)
+                                                                       old_block.block_id, old_block.block_name,
+                                                                       storage, last_const, size_abs, partition, pop, push, revert)
 
     old_sfs_dict = old_sfs_information["syrup_contract"]
 
@@ -609,8 +608,8 @@ def compare_asm_block_asm_format(old_block, new_block, contract_name="example",s
 
 
     new_sfs_information, _ = compute_original_sfs_with_simplifications(new_instructions, new_block.source_stack,
-                                                                       contract_name, new_block.block_id,
-                                                                       new_block.is_init_block, storage, last_const, size_abs, partition, pop, push, revert)
+                                                                       new_block.block_id, new_block.block_name,
+                                                                       storage, last_const, size_abs, partition, pop, push, revert)
 
     new_sfs_dict = new_sfs_information["syrup_contract"]
 
