@@ -126,6 +126,7 @@ def compute_original_sfs_with_simplifications(instructions, stack_size, cname, b
                                                                         preffix=prefix, simplification=True, storage=storage, size = size_abs, part = partition,pop = pop_flag, push = push_flag, revert = revert_flag)
 
     sfs_dict = get_sfs_dict()
+    print("SFS dict", sfs_dict)
 
     return sfs_dict, subblocks_list
 
@@ -169,7 +170,7 @@ def optimize_block(sfs_dict, timeout, size = False):
 # Given the log file loaded in json format, current block and the contract name, generates three dicts: one that
 # contains the sfs from each block, the second one contains the sequence of instructions and
 # the third one is a set that contains all block ids.
-def generate_sfs_dicts_from_log(block, contract_name, json_log,storage, last_const):
+def generate_sfs_dicts_from_log(block, contract_name, json_log,storage, last_const, size_abs, partition, pop_flag, push_flag,revert_return):
     bytecodes = block.instructions
     stack_size = block.source_stack
     block_id = block.block_id
@@ -177,8 +178,10 @@ def generate_sfs_dicts_from_log(block, contract_name, json_log,storage, last_con
 
     instructions = preprocess_instructions(bytecodes)
 
-    sfs_dict = compute_original_sfs_with_simplifications(instructions, stack_size,
-                                                         contract_name, block_id, is_init_block,storage, last_const)['syrup_contract']
+    contracts_dict, sub_block_list = compute_original_sfs_with_simplifications(instructions, stack_size, contract_name, block_id,
+                                                         is_init_block,storage, last_const, size_abs, partition, pop_flag,
+                                                         push_flag,revert_return)
+    syrup_contracts = contracts_dict["syrup"]
 
     # Contains sfs blocks considered to check the SMT problem. Therefore, a block is added from
     # sfs_original iff solver could not find an optimized solution, and from sfs_dict otherwise.
@@ -191,7 +194,7 @@ def generate_sfs_dicts_from_log(block, contract_name, json_log,storage, last_con
     ids = set()
 
     # We need to inspect all sub-blocks in the sfs dict.
-    for block_id in sfs_dict:
+    for block_id in syrup_contracts:
 
         log_json_id = contract_name + "_" + block_id
 
@@ -203,7 +206,7 @@ def generate_sfs_dicts_from_log(block, contract_name, json_log,storage, last_con
 
         instr_sequence = json_log[log_json_id]
 
-        sfs_block = sfs_dict[block_id]
+        sfs_block = syrup_contracts[block_id]
 
 
         sfs_final[log_json_id] = sfs_block
@@ -268,7 +271,8 @@ def optimize_asm_block_from_log(block, sfs_dict, instr_sequence_dict):
     return new_block
 
 
-def optimize_asm_from_log(file_name, json_log, output_file):
+def optimize_asm_from_log(file_name, json_log, output_file, storage, last_const, size_abs, partition, pop_flag,
+                          push_flag, revert_return):
     asm = parse_asm(file_name)
 
     # Blocks from all contracts are checked together. Thus, we first will obtain the needed
@@ -298,7 +302,12 @@ def optimize_asm_from_log(file_name, json_log, output_file):
         print("\nAnalyzing Init Code of: " + contract_name)
         print("-----------------------------------------\n")
         for block in init_code:
-            sfs_final_block, instr_sequence_dict_block, block_ids = generate_sfs_dicts_from_log(block, contract_name, json_log)
+            sfs_final_block, instr_sequence_dict_block, block_ids = generate_sfs_dicts_from_log(block, contract_name,
+                                                                                                json_log, storage,
+                                                                                                last_const, size_abs,
+                                                                                                partition, pop_flag,
+                                                                                                push_flag,revert_return)
+
             new_block = optimize_asm_block_from_log(block, sfs_final_block, instr_sequence_dict_block)
             sfs_dict.update(sfs_final_block)
             instr_sequence_dict.update(instr_sequence_dict_block)
@@ -315,7 +324,14 @@ def optimize_asm_from_log(file_name, json_log, output_file):
             run_code_blocks = []
 
             for block in blocks:
-                sfs_final_block, instr_sequence_dict_block, block_ids = generate_sfs_dicts_from_log(block, contract_name, json_log)
+                sfs_final_block, instr_sequence_dict_block, block_ids = generate_sfs_dicts_from_log(block,
+                                                                                                    contract_name,
+                                                                                                    json_log, storage,
+                                                                                                    last_const,
+                                                                                                    size_abs,
+                                                                                                    partition, pop_flag,
+                                                                                                    push_flag,
+                                                                                                    revert_return)
                 new_block = optimize_asm_block_from_log(block, sfs_final_block, instr_sequence_dict_block)
                 sfs_dict.update(sfs_final_block)
                 instr_sequence_dict.update(instr_sequence_dict_block)
@@ -335,7 +351,7 @@ def optimize_asm_from_log(file_name, json_log, output_file):
         if correct:
             print("Solution generated from log file has been verified correctly")
             new_asm = deepcopy(asm)
-            new_asm.set_contracts(contracts)
+            new_asm.contracts = contracts
 
             with open(output_file, 'w') as f:
                 f.write(json.dumps(rebuild_asm(new_asm)))
@@ -569,6 +585,7 @@ def optimize_asm_block_asm_format(block, contract_name, timeout, storage, last_c
     #     # sub block information from the log dict. These sub blocks correspond to those that appeared at the log dict
     #     # but its corresponding block optimized in the list is not None
     #     log_dicts = {k : v for k,v in log_dicts.items() if optimized_blocks_list_with_intra_block_consideration[int(k.split(".")[-1])] is not None}
+    print("optimized", sub_block_list, optimized_blocks_list, log_dicts)
 
     if partition:
         new_block.set_instructions_from_sub_blocks_partition(optimized_blocks_list, sub_block_list)
@@ -634,6 +651,8 @@ def optimize_asm_in_asm_format(file_name, output_file, csv_file, timeout=10, log
 
         for old_block in init_code:
             optimized_block, log_element = optimize_asm_block_asm_format(old_block, contract_name, timeout, storage, last_const,size_abs,partition, pop, push, revert)
+            print("block comparison", old_block, optimized_block)
+
             log_dicts.update(log_element)
             init_code_blocks.append(optimized_block)
 
@@ -657,6 +676,8 @@ def optimize_asm_in_asm_format(file_name, output_file, csv_file, timeout=10, log
             run_code_blocks = []
             for old_block in blocks:
                 optimized_block, log_element = optimize_asm_block_asm_format(old_block, contract_name, timeout, storage, last_const,size_abs,partition, pop, push, revert)
+                print("block comparison", old_block, optimized_block)
+
                 log_dicts.update(log_element)
                 run_code_blocks.append(optimized_block)
 
@@ -680,14 +701,15 @@ def optimize_asm_in_asm_format(file_name, output_file, csv_file, timeout=10, log
     #     print("The optimized bytecode could not be verified")
 
     new_asm = deepcopy(asm)
-    new_asm.set_contracts(contracts)
+    new_asm.contracts = contracts
 
     print("Previous number of instructions:", compute_number_of_instructions_in_asm_json_per_file(asm))
     print("New number of instructions:", compute_number_of_instructions_in_asm_json_per_file(new_asm))
 
     if log:
         input_file_name = args.input_path.split("/")[-1].split(".")[0]
-        with open(paths.gasol_path + input_file_name + ".log" , "w") as log_f:
+
+        with open(input_file_name + ".log" , "w") as log_f:
             json.dump(log_dicts, log_f)
 
     if args.backend:
@@ -712,10 +734,10 @@ if __name__ == '__main__':
     ap.add_argument("-bl", "--block", help ="Enable analysis of a single asm block", action = "store_true")
     ap.add_argument("-tout", metavar='timeout', action='store', type=int,
                     help="Timeout in seconds. By default, set to 10s per block.", default=10)
-    # ap.add_argument("-optimize-gasol-from-log-file", dest='log_path', action='store', metavar="log_file",
-    #                     help="Generates the same optimized bytecode than the one associated to the log file")
-    # ap.add_argument("-log", "--generate-log", help ="Generate log file for Etherscan verification",
-    #                 action = "store_true", dest='log_flag')
+    ap.add_argument("-optimize-gasol-from-log-file", dest='log_path', action='store', metavar="log_file",
+                        help="Generates the same optimized bytecode than the one associated to the log file")
+    ap.add_argument("-log", "--generate-log", help ="Enable log file for Etherscan verification",
+                    action = "store_true", dest='log_flag')
     ap.add_argument("-o", help="ASM output path", dest='output_path', action='store')
     ap.add_argument("-csv", help="CSV file path", dest='csv_path', action='store')
     ap.add_argument("-storage", "--storage", help="Split using SSTORE, MSTORE and MSTORE8", action="store_true")
@@ -735,10 +757,12 @@ if __name__ == '__main__':
         constants.append_store_instructions_to_split()
 
     x = dtimer()
-    # if args.log_path is not None:
-    #     with open(args.log_path) as path:
-    #         log_dict = json.load(path)
-    #         optimize_asm_from_log(args.input_path, log_dict, args.output_path)
+    if args.log_path is not None:
+        with open(args.log_path) as path:
+            log_dict = json.load(path)
+            optimize_asm_from_log(args.input_path, log_dict, args.output_path,  args.storage,args.last_constants,
+                                  args.size,args.partition,args.pop,args.push, args.terminal)
+            exit(0)
 
     input_file_name = args.input_path.split("/")[-1].split(".")[0]
 
@@ -754,9 +778,11 @@ if __name__ == '__main__':
 
 
     if not args.block:
-        optimize_asm_in_asm_format(args.input_path, output_file, csv_file, args.tout, False, args.storage,args.last_constants,args.size,args.partition,args.pop,args.push, args.terminal)
+        optimize_asm_in_asm_format(args.input_path, output_file, csv_file, args.tout, args.log_flag, args.storage,
+                                   args.last_constants,args.size,args.partition,args.pop,args.push, args.terminal)
     else:
-        optimize_isolated_asm_block(args.input_path, output_file, csv_file, args.tout, args.storage,args.last_constants,args.size,args.partition,args.pop,args.push, args.terminal)
+        optimize_isolated_asm_block(args.input_path, output_file, csv_file, args.tout, args.storage,args.last_constants,
+                                    args.size,args.partition,args.pop,args.push, args.terminal)
 
 
     y = dtimer()
