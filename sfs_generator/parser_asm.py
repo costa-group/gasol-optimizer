@@ -73,7 +73,7 @@ def build_asm_contract(cname : str, cinfo : Dict[str, Any]) -> AsmContract:
     initCode = cinfo[".code"]
 
     # For blocks, we are not interested in the complete path
-    simplified_cname = cname.split("/")[-1]
+    simplified_cname = (cname.split("/")[-1]).split(":")[-1]
 
     init_bytecode = build_blocks_from_asm_representation(simplified_cname, '_'.join([simplified_cname, "initial"]), initCode, True)
     
