@@ -21,19 +21,18 @@ def build_asm_bytecode(instruction : ASM_Json_T) -> AsmBytecode:
     return asm_bytecode
 
 
-def _generate_block_name_from_id(is_init_code : bool, block_name_prefix : str, block_id : Union[str, int]) -> str:
-    if is_init_code:
-        return '_'.join([block_name_prefix, "initial_code", "block", str(block_id)])
-    else:
-        return '_'.join([block_name_prefix, "block", str(block_id)])
+def _generate_block_name_from_id(block_name_prefix : str, block_id : Union[str, int]) -> str:
+    return '_'.join([block_name_prefix, "block", str(block_id)])
 
 
 def build_blocks_from_asm_representation(cname : str, block_name_prefix : str, instr_list : [ASM_Json_T],
                                          is_init_code : bool) -> [AsmBlock]:
     bytecodes = []
 
-    block = AsmBlock(cname, _generate_block_name_from_id(is_init_code, block_name_prefix, 0), is_init_code)
-    block_id = 1
+    block_id = 0
+    block = AsmBlock(cname, block_id, _generate_block_name_from_id(block_name_prefix, block_id), is_init_code)
+    block_id += 1
+
     i = 0
     while i < len(instr_list):
         instr_name = instr_list[i]["name"]
@@ -43,7 +42,7 @@ def build_blocks_from_asm_representation(cname : str, block_name_prefix : str, i
         if instr_name in ["JUMP","JUMPI","STOP","RETURN","REVERT","INVALID"]:
             block.add_instruction(asm_bytecode)
             bytecodes.append(block)
-            block = AsmBlock(cname, _generate_block_name_from_id(is_init_code, block_name_prefix, block_id), is_init_code)
+            block = AsmBlock(cname, block_id, _generate_block_name_from_id(block_name_prefix, block_id), is_init_code)
             block_id+=1
 
         # Tag always correspond to the beginning of a new block. JUMPDEST is always preceded by a tag instruction
@@ -51,7 +50,7 @@ def build_blocks_from_asm_representation(cname : str, block_name_prefix : str, i
             # There must be at least one instruction to add current block
             if block.instructions:
                 bytecodes.append(block)
-                block = AsmBlock(cname,  _generate_block_name_from_id(is_init_code, block_name_prefix, block_id), is_init_code)
+                block = AsmBlock(cname, block_id, _generate_block_name_from_id(block_name_prefix, block_id), is_init_code)
                 block_id += 1
             block.add_instruction(asm_bytecode)
         else:

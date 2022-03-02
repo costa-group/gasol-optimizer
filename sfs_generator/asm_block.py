@@ -5,7 +5,7 @@ from sfs_generator.asm_bytecode import AsmBytecode, ASM_Json_T
 from typing import List, Union
 
 # Blocks are identified using an int
-Block_id_T = str
+Block_id_T = int
 
 # Jump types identified as strings (maybe in the future use enum)
 Jump_Type_T = str
@@ -15,9 +15,10 @@ class AsmBlock:
     Class for representing an Assembly block
     """
     
-    def __init__(self, cname : str, identifier : Block_id_T, is_init_block : bool):
+    def __init__(self, cname : str, identifier : Block_id_T, name : str, is_init_block : bool):
         self.contract_name = cname
         self.block_id = identifier
+        self.block_name = name
         self._instructions = []
         # minimum size of the source stack
         self.source_stack = 0
