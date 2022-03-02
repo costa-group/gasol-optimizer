@@ -1995,10 +1995,10 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
         json_dict["init_info"] = opcodes_seq
 
         
-    if subblock != None:
-        block_nm = block_name+"_"+str(subblock)
+    if subblock is not None:
+        block_nm = block_name + "_" + str(subblock)
     else:
-        block_nm = block_name
+        block_nm = block_name + "_0"
 
     blocks_json_dict[block_nm] = json_dict
 
