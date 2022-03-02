@@ -5,7 +5,7 @@ from sfs_generator.asm_bytecode import AsmBytecode, ASM_Json_T
 from typing import List, Union
 
 # Blocks are identified using an int
-Block_id_T = int
+Block_id_T = str
 
 # Jump types identified as strings (maybe in the future use enum)
 Jump_Type_T = str
