@@ -167,7 +167,7 @@ def optimize_block(sfs_dict, timeout, size = False):
 # Given the log file loaded in json format, current block and the contract name, generates three dicts: one that
 # contains the sfs from each block, the second one contains the sequence of instructions and
 # the third one is a set that contains all block ids.
-def generate_sfs_dicts_from_log(block, contract_name, json_log,storage, last_const, size_abs, partition, pop_flag, push_flag,revert_return):
+def generate_sfs_dicts_from_log(block, json_log,storage, last_const, size_abs, partition, pop_flag, push_flag,revert_return):
     bytecodes = block.instructions
     stack_size = block.source_stack
     block_name = block.block_name
@@ -193,21 +193,19 @@ def generate_sfs_dicts_from_log(block, contract_name, json_log,storage, last_con
     # We need to inspect all sub-blocks in the sfs dict.
     for block_id in syrup_contracts:
 
-        log_json_id = contract_name + "_" + block_id
-
-        ids.add(log_json_id)
+        ids.add(block_id)
 
         # If the id is not at json log, this means it has not been optimized
-        if log_json_id not in json_log:
+        if block_id not in json_log:
             continue
 
-        instr_sequence = json_log[log_json_id]
+        instr_sequence = json_log[block_id]
 
         sfs_block = syrup_contracts[block_id]
 
 
-        sfs_final[log_json_id] = sfs_block
-        instr_sequence_dict[log_json_id] = instr_sequence
+        sfs_final[block_id] = sfs_block
+        instr_sequence_dict[block_id] = instr_sequence
 
     return sfs_final, instr_sequence_dict, ids
 
@@ -227,37 +225,21 @@ def check_log_file_is_correct(sfs_dict, instr_sequence_dict):
 def optimize_asm_block_from_log(block, sfs_dict, instr_sequence_dict):
     new_block = deepcopy(block)
     optimized_blocks = {}
-    is_init_block = block.is_init_block
-    block_id = block.block_id
 
-    if is_init_block:
-        block_name = "initial_block" + str(block_id)
-    else:
-        block_name = "block" + str(block_id)
-
-    for block_id in sfs_dict:
-
-        # We obtain the subindex from the block (if any)
-        block_sub_index_str = block_id.split(block_name)[-1]
-
-        # No subindex. By default, assigned to 0
-        if block_sub_index_str == '':
-            block_sub_index = 0
-        else:
-            # we must ignore the point . (first chatr in block_sub_index_str)
-            block_sub_index = int(block_sub_index_str[1:])
-
-        sfs_block = sfs_dict[block_id]
+    for sub_block_name in sfs_dict:
+        sfs_block = sfs_dict[sub_block_name]
 
         user_instr = sfs_block['user_instrs']
 
         bs = sfs_block['max_sk_sz']
-        instr_sequence = instr_sequence_dict[block_id]
+        instr_sequence = instr_sequence_dict[sub_block_name]
         _, instruction_theta_dict, opcodes_theta_dict, gas_theta_dict, values_dict = \
             generate_theta_dict_from_sequence(bs, user_instr)
 
         asm_sub_block = generate_sub_block_asm_representation_from_log(instr_sequence, opcodes_theta_dict,
                                                                        instruction_theta_dict, gas_theta_dict, values_dict)
+
+        block_sub_index = int(sub_block_name.split("_")[-1])
         optimized_blocks[block_sub_index] = asm_sub_block
 
     asm_sub_blocks = list(filter(lambda x: isinstance(x, list), block.split_in_sub_blocks()))
@@ -299,11 +281,9 @@ def optimize_asm_from_log(file_name, json_log, output_file, storage, last_const,
         print("\nAnalyzing Init Code of: " + contract_name)
         print("-----------------------------------------\n")
         for block in init_code:
-            sfs_final_block, instr_sequence_dict_block, block_ids = generate_sfs_dicts_from_log(block, contract_name,
-                                                                                                json_log, storage,
-                                                                                                last_const, size_abs,
-                                                                                                partition, pop_flag,
-                                                                                                push_flag,revert_return)
+            sfs_final_block, instr_sequence_dict_block, block_ids = \
+                generate_sfs_dicts_from_log(block, json_log, storage, last_const, size_abs, partition, pop_flag,
+                                            push_flag,revert_return)
 
             new_block = optimize_asm_block_from_log(block, sfs_final_block, instr_sequence_dict_block)
             sfs_dict.update(sfs_final_block)
@@ -321,14 +301,10 @@ def optimize_asm_from_log(file_name, json_log, output_file, storage, last_const,
             run_code_blocks = []
 
             for block in blocks:
-                sfs_final_block, instr_sequence_dict_block, block_ids = generate_sfs_dicts_from_log(block,
-                                                                                                    contract_name,
-                                                                                                    json_log, storage,
-                                                                                                    last_const,
-                                                                                                    size_abs,
-                                                                                                    partition, pop_flag,
-                                                                                                    push_flag,
-                                                                                                    revert_return)
+                sfs_final_block, instr_sequence_dict_block, block_ids = \
+                    generate_sfs_dicts_from_log(block, json_log, storage,last_const, size_abs, partition, pop_flag,
+                                                push_flag, revert_return)
+
                 new_block = optimize_asm_block_from_log(block, sfs_final_block, instr_sequence_dict_block)
                 sfs_dict.update(sfs_final_block)
                 instr_sequence_dict.update(instr_sequence_dict_block)
@@ -376,7 +352,7 @@ def optimize_isolated_asm_block(block_name,output_file, csv_file, timeout=10, st
     asm_blocks = []
 
     for old_block in blocks:
-        asm_block, _ = optimize_asm_block_asm_format(old_block, file_name_str, timeout, storage, last_const, size_abs, partition, pop, push, revert)
+        asm_block, _ = optimize_asm_block_asm_format(old_block, timeout, storage, last_const, size_abs, partition, pop, push, revert)
         asm_blocks.append(asm_block)
 
         update_gas_count(old_block, asm_block)
