@@ -38,7 +38,7 @@ from solution_generation.solver_output_generation import obtain_solver_output
 from verification.sfs_verify import verify_block_from_list_of_sfs
 from verification.solver_solution_verify import (
     check_solver_output_is_correct, generate_solution_dict)
-
+from solution_generation.optimize_from_sub_blocks import rebuild_optimized_asm_block
 
 def init():
     global previous_gas
@@ -102,7 +102,7 @@ def remove_last_constant_instructions(instructions):
 def compute_original_sfs_with_simplifications(instructions, stack_size, block_id, block_name,
                                               storage, last_const, size_abs, partition, pop_flag, push_flag,revert_return):
 
-    block_ins = list(filter(lambda x: x not in ["JUMP","JUMPI","JUMPDEST","tag", "STOP","RETURN","INVALID","REVERT"], instructions))
+    block_ins = list(filter(lambda x: x not in constants.beginning_block and x not in constants.end_block, instructions))
 
     if ("REVERT" in instructions or "RETURN" in instructions) and revert_return:
         revert_flag = True
@@ -124,7 +124,8 @@ def compute_original_sfs_with_simplifications(instructions, stack_size, block_id
                                   pop_flag, push = push_flag, revert = revert_flag)
 
     sfs_dict = get_sfs_dict()
-
+    print("SFS dict:", sfs_dict)
+    print("Sub-block list:", subblocks_list)
     return sfs_dict, subblocks_list
 
 
@@ -454,16 +455,9 @@ def optimize_asm_block_asm_format(block, timeout, storage, last_const, size_abs,
 
     instructions = preprocess_instructions(bytecodes)
 
-    # x = dtimer()
-    
     contracts_dict, sub_block_list = compute_original_sfs_with_simplifications(instructions,stack_size,block_id,
                                                                                block_name,storage, last_const,size_abs,
                                                                                partition,pop_flag, push_flag, revert_return)
-
-    # y = dtimer()
-    # print("*************************************************************")
-    # print("SFS generation time: "+str(y-x)+"s")
-    # print("*************************************************************")
 
     if not args.backend:
         return new_block, {}
@@ -506,63 +500,7 @@ def optimize_asm_block_asm_format(block, timeout, storage, last_const, size_abs,
         else:
             optimized_blocks[sub_block_name] = None
 
-    if len(sub_block_list) > 1 and len(sub_block_list[-1]) == 1:
-        sub_block_list = sub_block_list[0:-1]
-
-    if partition:
-        asm_sub_blocks = list(filter(lambda x: isinstance(x, list), block.split_in_sub_blocks_partition(sub_block_list)))
-    else:
-        asm_sub_blocks = list(filter(lambda x: isinstance(x, list), block.split_in_sub_blocks()))
-
-    # At this point, we must be wary: some blocks may have been simplified totally and are not contained in the
-    # optimized blocks dict. Thus, we need to identify them and assign them to []
-    # Three cases: zero sub-block present in the contract, one or more than one
-
-    # Case zero: nothing has been optimized
-    if len(asm_sub_blocks) == 0:
-        return deepcopy(block), {}
-    # Case one: block may have been skipped completely
-    if len(asm_sub_blocks) == 1:
-        if not sfs_dict:
-            optimized_blocks[block_name] = []
-            log_dicts[block_name] = []
-
-        optimized_blocks_list = list(optimized_blocks.values())
-
-    # # Case more than one sub blocks: several intermediate sub blocks may have been skipped.
-    # # They can be identified from those sub blocks numbers that are not present in the sfs dict
-    else:
-
-        # For each sub-block in the initial block, we check whether is matches the corresponding sfs dict. If not,
-        # it means a block was reduced directly and hence, we need to record it in the list of sub blocks
-
-        optimized_blocks_list = []
-        for current_idx in range(len(sub_block_list)):
-            sub_block_name = block_name + "_" + str(current_idx)
-
-            # If the corresponding block name does not belong to the list of optimized blocks, it means it was
-            # simplified completely. Therefore, it is set to empty []
-            if sub_block_name not in optimized_blocks:
-                log_dicts[sub_block_name] = []
-                optimized_blocks_list.append([])
-
-            else:
-                optimized_blocks_list.append(optimized_blocks[sub_block_name])
-
-
-        # We sort by block id and obtain the associated values in order
-        optimized_blocks_list_with_intra_block_consideration = \
-            filter_optimized_blocks_by_intra_block_optimization(asm_sub_blocks, optimized_blocks_list)
-
-        # If a sub block was optimized but finally we have to skip that optimization, we have to remove the corresponding
-        # sub block information from the log dict. These sub blocks correspond to those that appeared at the log dict
-        # but its corresponding block optimized in the list is not None
-        log_dicts = {k : v for k,v in log_dicts.items() if optimized_blocks_list_with_intra_block_consideration[int(k.split("_")[-1])] is not None}
-
-    if partition:
-        new_block.set_instructions_from_sub_blocks_partition(optimized_blocks_list, sub_block_list)
-    else:
-        new_block.set_instructions_from_sub_blocks(optimized_blocks_list)
+    new_block = rebuild_optimized_asm_block(block, sub_block_list, optimized_blocks)
 
     return new_block, log_dicts
 
@@ -623,7 +561,6 @@ def optimize_asm_in_asm_format(file_name, output_file, csv_file, timeout=10, log
 
         for old_block in init_code:
             optimized_block, log_element = optimize_asm_block_asm_format(old_block, timeout, storage, last_const,size_abs,partition, pop, push, revert)
-            print("block comparison", old_block, optimized_block)
 
             log_dicts.update(log_element)
             init_code_blocks.append(optimized_block)
@@ -648,7 +585,6 @@ def optimize_asm_in_asm_format(file_name, output_file, csv_file, timeout=10, log
             run_code_blocks = []
             for old_block in blocks:
                 optimized_block, log_element = optimize_asm_block_asm_format(old_block, timeout, storage, last_const,size_abs,partition, pop, push, revert)
-                print("block comparison", old_block, optimized_block)
 
                 log_dicts.update(log_element)
                 run_code_blocks.append(optimized_block)
