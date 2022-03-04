@@ -96,7 +96,9 @@ class AsmBlock:
         content+=str(self.source_stack)
         return content
 
-
+    def instructions_to_optimize(self) -> [ASM_Json_T]:
+        return [instruction.to_plain() for instruction in self.instructions
+                if instruction.disasm not in constants.beginning_block and instruction.disasm not in constants.end_block]
         
     def split_in_sub_blocks(self) -> [Union[List[AsmBytecode], AsmBytecode]]:
         """
