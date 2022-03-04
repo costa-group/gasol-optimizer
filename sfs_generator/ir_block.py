@@ -1004,7 +1004,7 @@ def compile_instr(rule,evm_opcode,variables,list_jumps,cond):
         rule.add_instr(value)
 
     if opcode_name[:4] in opcodes60 and not isYulInstructionUpper(opcode_name):
-        rule.add_instr("nop("+opcode_name+str(pushid)+" "+str(opcode_rest).lstrip("0").lstrip("x")+")")
+        rule.add_instr("nop("+opcode_name+" "+str(opcode_rest).lstrip("0").lstrip("x")+")")
 
     elif opcode_name in opcodesYul:
         rule.add_instr("nop("+opcode_name+" "+str(opcode_rest).lstrip("0").lstrip("x")+")")
