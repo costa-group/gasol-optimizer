@@ -162,7 +162,7 @@ def generate_disasm_sol_from_output(solver_output, opcodes_theta_dict, instructi
 
         # Basic stack instructions refer to those instruction that only manage the stack: SWAPk, POP or DUPk.
         # These instructions just initialize each field in the asm format to -1
-        special_push_with_value_match = re.match(re.compile('PUSHIMMUTABLE|PUSHTAG|PUSH#\[\$]|PUSH\[\$]|PUSHDATA'), instr)
+        special_push_with_value_match = re.match(re.compile('PUSHIMMUTABLE|PUSH [tag]|PUSH #\[\$]|PUSH \[\$]|PUSH data'), instr)
         if instr == "PUSH" or special_push_with_value_match:
             value = hex(int(pushed_values_decimal[position]))[2:]
             opcode_list.append(instr + " 0x" + value)
@@ -236,7 +236,7 @@ def generate_sub_block_asm_representation_from_instructions(instr_sol, pushed_va
 
         # Basic stack instructions refer to those instruction that only manage the stack: SWAPk, POP or DUPk.
         # These instructions just initialize each field in the asm format to -1
-        special_push_with_value_match = re.match(re.compile('PUSHIMMUTABLE|PUSHTAG|PUSH#\[\$]|PUSH\[\$]|PUSHDATA'),
+        special_push_with_value_match = re.match(re.compile('PUSHIMMUTABLE|PUSH [tag]|PUSH #\[\$]|PUSH \[\$]|PUSH data'),
                                                  instr)
 
         # If the instruction is a key in the opcode_... dict, then we need to rename it to fit the assembly format

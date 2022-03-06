@@ -39,6 +39,7 @@ from verification.sfs_verify import verify_block_from_list_of_sfs
 from verification.solver_solution_verify import (
     check_solver_output_is_correct, generate_solution_dict)
 from solution_generation.optimize_from_sub_blocks import rebuild_optimized_asm_block
+from sfs_generator.asm_block import AsmBlock
 
 def init():
     global previous_gas
@@ -140,8 +141,9 @@ def optimize_block(sfs_dict, timeout, size = False):
         sfs_block = sfs_dict[block_name]
 
         current_cost = sfs_block['current_cost']
-        original_instrs = sfs_block['original_instrs']
-        current_size = get_ins_size_seq(original_instrs)
+        # original_instrs = sfs_block['original_instrs']
+        # current_size = get_ins_size_seq(original_instrs)
+        current_size = 1
         user_instr = sfs_block['user_instrs']
         initial_program_length = sfs_block['init_progr_len']
 
@@ -174,7 +176,11 @@ def generate_sfs_dicts_from_log(block, json_log,storage, last_const, size_abs, p
     block_name = block.block_name
     block_id = block.block_id
 
-    instructions = preprocess_instructions(bytecodes)
+    instructions =  block.instructions_to_optimize()
+
+    # No instructions to optimize
+    if not instructions:
+        return deepcopy(block)
 
     contracts_dict, sub_block_list = compute_original_sfs_with_simplifications(instructions, stack_size, block_id, block_name,
                                                          storage, last_const, size_abs, partition, pop_flag,
@@ -350,6 +356,7 @@ def optimize_isolated_asm_block(block_name,output_file, csv_file, timeout=10, st
         instructions = f.read()
 
     blocks = parse_blocks_from_plain_instructions(instructions)
+    print(blocks)
     asm_blocks = []
 
     for old_block in blocks:
@@ -453,7 +460,11 @@ def optimize_asm_block_asm_format(block, timeout, storage, last_const, size_abs,
 
     log_dicts = {}
 
-    instructions = preprocess_instructions(bytecodes)
+    instructions =  block.instructions_to_optimize()
+
+    # No instructions to optimize
+    if instructions == []:
+        return new_block, {}
 
     contracts_dict, sub_block_list = compute_original_sfs_with_simplifications(instructions,stack_size,block_id,
                                                                                block_name,storage, last_const,size_abs,
@@ -488,7 +499,8 @@ def optimize_asm_block_asm_format(block, timeout, storage, last_const, size_abs,
                                                                           instruction_theta_dict,
                                                                           gas_theta_dict, values_dict)
         _, shown_optimal = analyze_file(solver_output, "oms")
-        optimized_length = sum([bytes_required_asm(instr) for instr in new_sub_block])
+        # optimized_length = sum([bytes_required_asm(instr) for instr in new_sub_block])
+        optimized_length = 0
         statistics_row = {"block_id": sub_block_name, "solver_time_in_sec": round(solver_time, 3), "saved_size": current_length - optimized_length,
                           "saved_gas": current_cost - optimized_cost, "no_model_found": False, "shown_optimal": shown_optimal}
         statistics_rows.append(statistics_row)
@@ -505,9 +517,9 @@ def optimize_asm_block_asm_format(block, timeout, storage, last_const, size_abs,
     return new_block, log_dicts
 
 
-def compare_asm_block_asm_format(old_block, new_block, contract_name="example",storage = False, last_const = False, size_abs = False, partition = False, pop = False, push = False, revert = False):
+def compare_asm_block_asm_format(old_block : AsmBlock, new_block : AsmBlock,storage = False, last_const = False, size_abs = False, partition = False, pop = False, push = False, revert = False):
 
-    old_instructions = preprocess_instructions(old_block.instructions)
+    old_instructions =  old_block.instructions_to_optimize()
 
     old_sfs_information, _ = compute_original_sfs_with_simplifications(old_instructions, old_block.source_stack,
                                                                        old_block.block_id, old_block.block_name,
@@ -515,8 +527,7 @@ def compare_asm_block_asm_format(old_block, new_block, contract_name="example",s
 
     old_sfs_dict = old_sfs_information["syrup_contract"]
 
-    new_instructions = preprocess_instructions(new_block.instructions)
-
+    new_instructions =  new_block.instructions_to_optimize()
 
     new_sfs_information, _ = compute_original_sfs_with_simplifications(new_instructions, new_block.source_stack,
                                                                        new_block.block_id, new_block.block_name,
@@ -566,7 +577,7 @@ def optimize_asm_in_asm_format(file_name, output_file, csv_file, timeout=10, log
             init_code_blocks.append(optimized_block)
 
             # Deployment size is not considered when measuring it
-            update_gas_count(old_block, optimized_block)
+            # update_gas_count(old_block, optimized_block)
 
             # if not compare_asm_block_asm_format(block, asm_block):
             #     print("Optimized block " + str(block.block_id) + " from init code at contract " + contract_name +
@@ -589,8 +600,8 @@ def optimize_asm_in_asm_format(file_name, output_file, csv_file, timeout=10, log
                 log_dicts.update(log_element)
                 run_code_blocks.append(optimized_block)
 
-                update_gas_count(old_block, optimized_block)
-                update_size_count(old_block, optimized_block)
+                # update_gas_count(old_block, optimized_block)
+                # update_size_count(old_block, optimized_block)
 
                 # if not compare_asm_block_asm_format(block, asm_block):
                 #     print("Optimized block " + str(block.block_id) + " from data id " + str(identifier)
