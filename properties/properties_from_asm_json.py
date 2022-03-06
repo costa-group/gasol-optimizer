@@ -48,7 +48,7 @@ def preprocess_instructions(bytecodes):
 # Computes the number of bytecodes given an ASM json object
 def compute_number_of_instructions_in_asm_json_per_contract(asm_json):
     contract_counter_dict = {}
-    for c in asm_json.getContracts():
+    for c in asm_json.contracts:
         number_instrs = 0
         contract_name = (c.contract_name.split("/")[-1]).split(":")[-1]
 

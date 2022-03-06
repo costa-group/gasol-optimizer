@@ -12,10 +12,10 @@ from sfs_generator.asm_bytecode import AsmBytecode
 
 class TestGasolASM(unittest.TestCase):
     def test_intra_block_optimization_1(self):
-        asm_blocks = [ [AsmBytecode(-1,-1,-1,"POP", -1)], [AsmBytecode(-1,-1,-1,"POP", -1)], "Error",
-                       [AsmBytecode(-1,-1,-1,"DUP", -1)], "Error", [AsmBytecode(-1,-1,-1,"POP", -1)],
-                       [AsmBytecode(-1,-1,-1,"DUP", -1)], "Error", [AsmBytecode(-1,-1,-1,"POP", -1)],
-                       [AsmBytecode(-1,-1,-1,"POP", -1)], "Error", [AsmBytecode(-1,-1,-1,"POP", -1)]]
+        asm_blocks = [ [AsmBytecode(-1,-1,-1,"POP", "0")], [AsmBytecode(-1,-1,-1,"POP", "0")], "Error",
+                       [AsmBytecode(-1,-1,-1,"DUP", "0")], "Error", [AsmBytecode(-1,-1,-1,"POP", "0")],
+                       [AsmBytecode(-1,-1,-1,"DUP", "0")], "Error", [AsmBytecode(-1,-1,-1,"POP", "0")],
+                       [AsmBytecode(-1,-1,-1,"POP", "0")], "Error", [AsmBytecode(-1,-1,-1,"POP", "0")]]
         asm_sub_blocks = list(filter(lambda x: isinstance(x, list), asm_blocks))
         optimized_blocks = ['a', None, 'b', 'c', 1, 2, 3, None]
         expected_result =  [None, None, 'b', 'c', None, None, None, None]
