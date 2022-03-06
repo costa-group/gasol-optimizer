@@ -212,9 +212,9 @@ def get_stack_variables(rule):
 def generate_target_stack_idx(input_elems,list_opcodes):
     init_val = 0
 
-    #print ("TARGET STACK")
-    #print (input_elems)
-    #print (list_opcodes)
+    print ("TARGET STACK")
+    print (input_elems)
+    print (list_opcodes)
     
     for op in list_opcodes:
         opcode = op[4:-1].strip()
@@ -2114,6 +2114,7 @@ def build_userdef_instructions():
         exp = u_dict[u_var]
         arity_exp = exp[1]
         args_exp = exp[0]
+        print(exp)
         
         if arity_exp ==0 or arity_exp == 1:
             funct = args_exp[1]
@@ -2380,16 +2381,16 @@ def generate_userdefname(u_var,funct,args,arity,init=False):
     #Yul opcodes
     
     elif funct.find("pushtag")!=-1:
-        instr_name = "PUSHTAG"
+        instr_name = "PUSH [tag]"
 
     elif funct.find("push#[$]")!=-1:
-        instr_name = "PUSH#[$]"
+        instr_name = "PUSH #[$]"
 
     elif funct.find("push[$]")!=-1:
-        instr_name = "PUSH[$]"
+        instr_name = "PUSH [$]"
 
     elif funct.find("pushdata")!=-1:
-        instr_name = "PUSHDATA"
+        instr_name = "PUSH data"
 
     elif funct.find("pushimmutable")!=-1:
         instr_name = "PUSHIMMUTABLE"
@@ -2397,7 +2398,7 @@ def generate_userdefname(u_var,funct,args,arity,init=False):
     elif funct.find("pushlib")!=-1:
         instr_name = "PUSHLIB"
 
-        
+    print("A", funct, instr_name)
     #TODO: Add more opcodes
     
     if instr_name in already_defined_userdef:
@@ -2407,7 +2408,7 @@ def generate_userdefname(u_var,funct,args,arity,init=False):
             defined = check_inputs(instr_name,args)
     else:
         defined = -1
-        # if instr_name not in ["PUSHTAG","PUSH#[$]","PUSH[$]","PUSHDATA"]:
+        # if instr_name not in ["PUSH [tag]","PUSH #[$]","PUSH [$]","PUSH data"]:
         already_defined_userdef.append(instr_name)
             
     if defined == -1:
@@ -2433,12 +2434,12 @@ def generate_userdefname(u_var,funct,args,arity,init=False):
         obj["id"] = name
         obj["opcode"] = process_opcode(str(opcodes.get_opcode(instr_name)[0]))
         obj["disasm"] = instr_name
-        obj["inpt_sk"] = [] if arity==0 or instr_name in ["PUSHTAG","PUSH#[$]","PUSH[$]","PUSHDATA","PUSHIMMUTABLE","PUSHLIB"] else args_aux
+        obj["inpt_sk"] = [] if arity==0 or instr_name in ["PUSH [tag]","PUSH #[$]","PUSH [$]","PUSH data","PUSHIMMUTABLE","PUSHLIB"] else args_aux
         obj["outpt_sk"] = [u_var]
         obj["gas"] = opcodes.get_ins_cost(instr_name)
         obj["commutative"] = True if instr_name in commutative_bytecodes else False
         obj["storage"] = False #It is true only for MSTORE and SSTORE
-        if instr_name in ["PUSHTAG","PUSH#[$]","PUSH[$]","PUSHDATA","PUSHIMMUTABLE","PUSHLIB"]:
+        if instr_name in ["PUSH [tag]","PUSH #[$]","PUSH [$]","PUSH data","PUSHIMMUTABLE","PUSHLIB"]:
             obj["value"] = args_aux
         user_def_counter[instr_name]=idx+1
         obj["size"] = get_ins_size(instr_name)
@@ -2496,7 +2497,7 @@ def check_inputs(instr_name,args_aux):
     
     for elem in user_defins:
         name = elem["disasm"]
-        if name == instr_name and name not in ["PUSHTAG","PUSH#[$]","PUSH[$]","PUSHDATA","PUSHIMMUTABLE","PUSHLIB"]:
+        if name == instr_name and name not in ["PUSH [tag]","PUSH #[$]","PUSH [$]","PUSH data","PUSHIMMUTABLE","PUSHLIB"]:
             input_variables = elem["inpt_sk"]
             if instr_name in commutative_bytecodes:
                 if ((input_variables[0] == args[1]) and (input_variables[1] == args[0])) or ((input_variables[0] == args[0]) and (input_variables[1] == args[1])):
@@ -2514,7 +2515,7 @@ def check_inputs(instr_name,args_aux):
                 if equals:
                     return elem
 
-        elif name == instr_name and name in ["PUSHTAG","PUSH#[$]","PUSH[$]","PUSHDATA","PUSHIMMUTABLE","PUSHLIB"]:
+        elif name == instr_name and name in ["PUSH [tag]","PUSH #[$]","PUSH [$]","PUSH data","PUSHIMMUTABLE","PUSHLIB"]:
             input_variables = elem["value"]
             i = 0
             equals = True

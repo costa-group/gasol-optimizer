@@ -7,7 +7,7 @@ from timeit import default_timer as dtimer
 import global_params.paths as paths
 from sfs_generator.gasol_optimization import smt_translate_block
 from sfs_generator.rbr_rule import RBRRule
-from sfs_generator.utils import get_push_number_hex, isYulInstructionUpper
+from sfs_generator.utils import get_push_number_hex, isYulInstruction
 
 '''
 It initialize the globals variables. 
@@ -69,7 +69,7 @@ def init_globals():
     opcodesZ = ["RETURNDATACOPY","RETURNDATASIZE"]
 
     global opcodesYul
-    opcodesYul = ["PUSHTAG","PUSH#[$]","PUSH[$]", "PUSHDATA", "PUSHDEPLOYADDRESS", "ASSIGNIMMUTABLE","PUSHSIZE","PUSHIMMUTABLE","PUSHLIB"]
+    opcodesYul = ["PUSH [tag]","PUSH #[$]","PUSH [$]", "PUSH data", "PUSHDEPLOYADDRESS", "ASSIGNIMMUTABLE","PUSHSIZE","PUSHIMMUTABLE","PUSHLIB"]
     
     global current_local_var
     current_local_var = 0
@@ -806,10 +806,7 @@ def translateOpcodes60(opcode, value, index_variables):
     
     if opcode == "PUSH":
         v1,updated_variables = get_new_variable(index_variables)
-        try:
-            dec_value = int(value)
-        except:
-            dec_value = int(value,16)
+        dec_value = int(value,16)
         instr = v1+" = " + str(dec_value)
     else:
         instr = "Error opcodes60: "+opcode
@@ -893,7 +890,7 @@ def translateYulOpcodes(opcode, value, index_variables):
         v0 , updated_variables = get_consume_variable(index_variables)
         v1 , updated_variables = get_consume_variable(updated_variables)
 
-        instr = "assignimmutable("+v0+","+v1+")"
+        instr = "assignimmutable("+v0+","+v1+","+value+")"
 
     elif opcode == "PUSHDEPLOYADDRESS":
         v1,updated_variables = get_new_variable(index_variables)
@@ -906,21 +903,18 @@ def translateYulOpcodes(opcode, value, index_variables):
         
     else:
         v1,updated_variables = get_new_variable(index_variables)
-        try:
-            dec_value = int(value)
-        except:
-            dec_value = int(value,16)
+        dec_value = int(value,16)
 
-        if opcode == "PUSHTAG":
+        if opcode == "PUSH [tag]":
             instr = v1+" = pushtag(" + str(dec_value)+")"
 
-        elif opcode == "PUSH#[$]":
+        elif opcode == "PUSH #[$]":
             instr = v1+" = push#[$](" + str(dec_value)+")"
 
-        elif opcode == "PUSH[$]":
+        elif opcode == "PUSH [$]":
             instr = v1+" = push[$](" + str(dec_value)+")"
             
-        elif opcode == "PUSHDATA":
+        elif opcode == "PUSH data":
             instr = v1+" = pushdata(" + str(dec_value)+")"
 
         elif opcode == "PUSHIMMUTABLE":
@@ -944,11 +938,15 @@ They are remove when displaying.
 '''
 def compile_instr(rule,evm_opcode,variables,list_jumps,cond):
     opcode = evm_opcode.split(" ")
-    opcode_name = opcode[0]
-    opcode_rest = ""
 
     if len(opcode) > 1:
-        opcode_rest = opcode[1]
+        opcode_name = ' '.join(opcode[:-1])
+        opcode_rest = opcode[-1]
+    else:
+        opcode_name = opcode[0]
+        opcode_rest = ""
+
+    print(opcode_name, opcode_rest)
 
     if opcode_name in opcodes0:
         value, index_variables = translateOpcodes0(opcode_name, variables)
@@ -972,7 +970,7 @@ def compile_instr(rule,evm_opcode,variables,list_jumps,cond):
                 rule.add_instr(ins)
         else:
             rule.add_instr(value)
-    elif opcode_name[:4] in opcodes60 and not isYulInstructionUpper(opcode_name):
+    elif opcode_name[:4] in opcodes60 and not isYulInstruction(opcode_name):
         value, index_variables = translateOpcodes60(opcode_name[:4], opcode_rest, variables)
         pushid = get_push_number_hex(opcode_rest)
         rule.add_instr(value)
@@ -1003,13 +1001,7 @@ def compile_instr(rule,evm_opcode,variables,list_jumps,cond):
         index_variables = variables
         rule.add_instr(value)
 
-    if opcode_name[:4] in opcodes60 and not isYulInstructionUpper(opcode_name):
-        rule.add_instr("nop("+opcode_name+" "+str(opcode_rest).lstrip("0").lstrip("x")+")")
-
-    elif opcode_name in opcodesYul:
-        rule.add_instr("nop("+opcode_name+" "+str(opcode_rest).lstrip("0").lstrip("x")+")")
-    else:
-        rule.add_instr("nop("+opcode_name+")")
+    rule.add_instr("nop("+evm_opcode+")")
     return index_variables
 
     

@@ -127,7 +127,7 @@ def parse_asm(file_name : str) -> AsmJSON:
 # the key "value" if the opcode has any hexadecimal value associated.
 # See https://github.com/ethereum/solidity/blob/develop/libevmasm/Assembly.cpp on how different assembly
 # items are represented
-def plain_instructions_to_asm_representation(raw_instruction_str : str):
+def plain_instructions_to_asm_representation(raw_instruction_str : str) -> [ASM_Json_T]:
     # We chain all strings contained in the raw string, splitting whenever a line is found or a whitespace
     split_str = list(itertools.chain.from_iterable([[elem for elem in line.split(" ")] for line in raw_instruction_str.splitlines()]))
 
@@ -138,7 +138,10 @@ def plain_instructions_to_asm_representation(raw_instruction_str : str):
 
     while i < len(ops):
         op = ops[i]
-        if not op.startswith("PUSH"):
+        if op.startswith("ASSIGNIMMUTABLE") or op.startswith("tag"):
+            opcodes.append({"name": op, "value": ops[i+1]})
+            i += 1
+        elif not op.startswith("PUSH"):
             opcodes.append({"name": op})
         else:
             if op.startswith("PUSH") and op.find("DEPLOYADDRESS") != -1:
@@ -164,6 +167,7 @@ def plain_instructions_to_asm_representation(raw_instruction_str : str):
             opcodes.append(final_op)
 
         i += 1
+    print(opcodes)
     return opcodes
 
 
