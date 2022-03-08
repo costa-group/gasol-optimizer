@@ -3,12 +3,12 @@ from smt_encoding.instructions.encoding_instruction import ThetaValue
 from collections import OrderedDict
 from smt_encoding.constraints.assertions import AssertSoft
 from smt_encoding.complete_encoding.instruction_bounds import InstructionBounds
-from smt_encoding.complete_encoding.synthesis_variables import t
+from smt_encoding.complete_encoding.synthesis_variables import SynthesisVariables
 from smt_encoding.constraints.connector_factory import add_eq, add_or
 
-def _soft_constraints_direct(weight_dict : Dict[ThetaValue, int],
+def _soft_constraints_direct(sv : SynthesisVariables, weight_dict : Dict[ThetaValue, int],
                              bounds : InstructionBounds, label_name: str) -> [AssertSoft]:
-    soft_constraints = [AssertSoft(add_eq(t(j), theta_value), weight, label_name)
+    soft_constraints = [AssertSoft(add_eq(sv.t(j), theta_value), weight, label_name)
                         for theta_value, weight in weight_dict.items()
                         for j in range(bounds.lower_bound(theta_value), bounds.upper_bound(theta_value) + 1)]
     return soft_constraints
@@ -42,7 +42,7 @@ def _select_intructions_position(j : int, instructions : [ThetaValue], bounds : 
 
 # Generates the soft constraints given the set of instructions and its corresponding weights, considering an or
 # clause of multiple instructions with the same weight
-def _soft_constraints_grouped_by_weight(b0 : int, weight_dict : Dict[ThetaValue, int],
+def _soft_constraints_grouped_by_weight(sv : SynthesisVariables, b0 : int, weight_dict : Dict[ThetaValue, int],
                                         bounds : InstructionBounds, label_name: str) -> [AssertSoft]:
     instr_costs = _generate_costs_ordered_dict(weight_dict)
     disjoin_sets = _generate_disjoint_sets_from_cost(instr_costs)
@@ -71,7 +71,7 @@ def _soft_constraints_grouped_by_weight(b0 : int, weight_dict : Dict[ThetaValue,
 
             # Only add a constraint if any instruction satisfies the condition
             if variables_in_range:
-                soft_constraints.append(AssertSoft(add_or(map(lambda var: add_eq(t(j), var), variables_in_range)), wi, label_name))
+                soft_constraints.append(AssertSoft(add_or(map(lambda var: add_eq(sv.t(j), var), variables_in_range)), wi, label_name))
 
         for instr in disjoin_sets[cost]:
             theta_or_variables.append(instr)
