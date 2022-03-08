@@ -17,11 +17,11 @@ class Variable:
         self._type = var_type
 
     @property
-    def name(self):
+    def name(self) -> str:
         return self.name
 
     @property
-    def type(self):
+    def type(self) -> VariableType:
         return self.type
 
     def __str__(self):
@@ -49,5 +49,5 @@ class VariableFactory:
         return created_var
 
 
-    def variables_created(self) -> List[Tuple[str, VariableType]]:
-        return [(val, self._types[key]) for key, val in self._instances.items()]
+    def variables_created(self) -> List[Variable]:
+        return [self._instances[name] for name in self._instances]
