@@ -2,7 +2,7 @@ from typing import Dict
 from smt_encoding.instructions.encoding_instruction import ThetaValue
 from collections import OrderedDict
 from smt_encoding.constraints.assertions import AssertSoft
-from smt_encoding.complete_encoding.instruction_bounds import InstructionBounds
+from smt_encoding.instructions.instruction_bounds import InstructionBounds
 from smt_encoding.complete_encoding.synthesis_variables import SynthesisVariables
 from smt_encoding.constraints.connector_factory import add_eq, add_or
 
