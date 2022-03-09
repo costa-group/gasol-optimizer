@@ -1,36 +1,39 @@
 import itertools
 
-from smt_encoding.instructions.encoding_instruction import EncodingInstruction, ThetaValue
-from typing import Tuple
+from smt_encoding.instructions.encoding_instruction import ThetaValue, InstructionSubset, Id_T
+from smt_encoding.instructions.uninterpreted_instruction import UninterpretedFunction
+from typing import Tuple, Dict, List
 
 # We generate a dict that given the id of an instruction, returns
 # the id of instructions that must be executed to obtain its input and the corresponding
 # aj. Note that aj must be only assigned when push, in other cases we just set aj value to -1.
-def generate_dependency_graph(uninterpreted_instr, order_tuples):
+def generate_dependency_graph(uninterpreted_instr : List[UninterpretedFunction], order_tuples : List[Tuple[Id_T, Id_T]],
+                              stack_elem_to_id : Dict[str, Id_T]) -> Dict[Id_T, List[Id_T]]:
     dependency_graph = {}
     for instr in uninterpreted_instr:
         instr_id = instr.id
         dependency_graph[instr_id] = list()
+
         for stack_elem in instr.input_stack:
 
             # We search for another instruction that generates the
             # stack elem as an output and add it to the set
             if type(stack_elem) == str:
-                previous_instr = list(filter(lambda instruction: len(instruction.output_stack) == 1 and
-                                                                 instruction.output_stack[0] == stack_elem, uninterpreted_instr))
 
-                # It might be in the initial stack, so the list can be empty
-                if previous_instr:
-                    # We add previous instr id
-                    dependency_graph[instr.id].append(previous_instr[0].id)
+                # This means the stack element corresponds to another uninterpreted instruction
+                if stack_elem in stack_elem_to_id:
+                    dependency_graph[instr.id].append(stack_elem_to_id[stack_elem])
 
             # If we have an int, then we must perform a PUSHx to obtain that value
             else:
                 dependency_graph[instr_id].append('PUSH')
+                if 'PUSH' not in dependency_graph:
+                    dependency_graph['PUSH'] = []
 
     # We need to consider also the order given by the tuples
     for id1, id2 in order_tuples:
-        if not list(filter(lambda x: x[0] == id1, dependency_graph[id2])):
+        # Check it has not been added yet
+        if id1 not in dependency_graph.get(id2, []):
             dependency_graph[id2].append(id1)
 
     return dependency_graph
@@ -40,7 +43,8 @@ def generate_dependency_graph(uninterpreted_instr, order_tuples):
 # # needed to obtain the output from that dict, and another dict
 # that links each instruction to the previous instructions needed to execute that instruction,
 # updates both dicts for that instruction and returns the corresponding values associated to the instruction.
-def generate_instr_dependencies(instr, number_of_instructions_to_execute, previous_values, dependency_graph):
+def generate_lower_bound_from_instr(instr : Id_T, number_of_instructions_to_execute : Dict[Id_T, int], previous_values : Dict[Id_T, set],
+                                dependency_graph : Dict[Id_T, List[Id_T]]) -> Tuple[int, set]:
 
     # Base case: it has been already analyzed, so we return the values associated.
     if instr in previous_values:
@@ -53,7 +57,7 @@ def generate_instr_dependencies(instr, number_of_instructions_to_execute, previo
     for previous_instr in dependency_graph[instr]:
 
         previous_number_of_instr_needed, previous_instructions_dependency = \
-            generate_instr_dependencies(previous_instr, number_of_instructions_to_execute,
+            generate_lower_bound_from_instr(previous_instr, number_of_instructions_to_execute,
                                         previous_values, dependency_graph)
 
         # We need the number of instructions needed for previous instruction plus one (executing that instruction)
@@ -86,124 +90,123 @@ def generate_instr_dependencies(instr, number_of_instructions_to_execute, previo
 # Given the dict containing the dependency among different instructions, we generate
 # another dict that links each instruction to the number of instructions that must be
 # executed previously to be able to execute that instruction.
-def generate_number_of_previous_instr_dict(dependency_graph):
+def generate_lower_bound_dict(dependency_graph : Dict[Id_T, List[Id_T]]) -> Dict[Id_T, int]:
     previous_values = {}
     number_of_instructions_to_execute = {}
     for instr in dependency_graph:
-        generate_instr_dependencies(instr, number_of_instructions_to_execute, previous_values, dependency_graph)
+        generate_lower_bound_from_instr(instr, number_of_instructions_to_execute, previous_values, dependency_graph)
 
     return number_of_instructions_to_execute
 
 
 # First time an instruction cannot appear is b0-h, where h is the tree height. We recursively obtain this value,
 # taking into account that we may have different trees and the final value is the min for all possible ones
-def update_with_tree_level(b0, input_stacks_dict, dependency_graph, current_idx, instr, first_position_instr_cannot_appear, theta_comm):
+def update_with_tree_level(instr : UninterpretedFunction, current_idx : int, stack_elem_to_id : Dict[str, Id_T],
+                           instr_by_id_dict : Dict[Id_T, UninterpretedFunction], dependency_graph: Dict[Id_T, List[Id_T]],
+                           first_position_instr_cannot_appear : Dict[Id_T, int]) -> None:
+
+    instr_id = instr.id
 
     # Neither we consider push instructions nor instructions that already have appeared and appear before the best
-    # result so far. On the other hand, if current index > already considered index, we need to traverse the tree in order to
+    # result so far. On the other hand, if current index <= already considered index, we need to traverse the tree in order to
     # update the values, as we neet to consider the biggest position in which the instruction cannot appear
-    if instr in first_position_instr_cannot_appear and current_idx <= first_position_instr_cannot_appear[instr] :
+    if instr_id in first_position_instr_cannot_appear and current_idx > first_position_instr_cannot_appear[instr_id]:
         return
 
-    first_position_instr_cannot_appear[instr] = current_idx
+    first_position_instr_cannot_appear[instr_id] = current_idx
 
     # If an instruction is not commutative, then only topmost previous element can be obtained
     # just before and the remaining ones need at least a SWAP to be placed in their position
-    dependent_instr = set(dependency_graph[instr])
+    dependent_instr_ids = set(dependency_graph[instr_id])
+
+    # Already analyzed instruction ids
+    analyzed_instr_ids = set()
     previous_idx = current_idx - 1
-    for prev_instr in input_stacks_dict[instr]:
-        update_with_tree_level(b0, input_stacks_dict, dependency_graph, previous_idx, prev_instr,
-                               first_position_instr_cannot_appear, theta_comm)
+    for prev_instr_stack_var in instr.input_stack:
+
+        if prev_instr_stack_var in stack_elem_to_id:
+            prev_instr_id = stack_elem_to_id[prev_instr_stack_var]
+            analyzed_instr_ids.add(prev_instr_id)
+            update_with_tree_level(instr_by_id_dict[prev_instr_id], previous_idx, stack_elem_to_id, instr_by_id_dict,
+                                   dependency_graph, first_position_instr_cannot_appear)
 
         # If an instruction is not commutative, then only topmost previous element can be obtained
         # just before and the remaining ones need at least a SWAP to be placed in their position
-        if prev_instr not in theta_comm:
+        if instr.instruction_subset != InstructionSubset.comm:
             previous_idx = current_idx - 2
 
-    # There can be other related instructions that are not considered before. As we do not know exactly
+    # There can be other related instructions that are not considered before (mem instructions). As we do not know exactly
     # where they can appear, we assume worst case (current_idx - 1)
-    for prev_instr in dependent_instr.difference(set(input_stacks_dict[instr])):
-        update_with_tree_level(b0, input_stacks_dict, dependency_graph, current_idx - 1, prev_instr,
-                               first_position_instr_cannot_appear, theta_comm)
+    for prev_instr_id in dependent_instr_ids.difference(set(analyzed_instr_ids)):
+
+        # Special case: PUSH basic opcode is just omitted
+        if prev_instr_id == "PUSH":
+            continue
+        update_with_tree_level(instr_by_id_dict[prev_instr_id], current_idx - 1, stack_elem_to_id, instr_by_id_dict,
+                               dependency_graph, first_position_instr_cannot_appear)
 
 
 # Generates a dict that given b0, returns the first position in which a instruction cannot appear
 # due to dependencies with other instructions.
-def generate_first_position_instr_cannot_appear(b0, input_stacks_dict, final_stack_instr,
-                                                dependency_graph, mem_ids, comm_ids, top_elem_is_instruction):
-    first_position_instr_cannot_appear = {}
+def generate_first_position_instr_cannot_appear(b0 : int, stack_elem_to_id : Dict[str, Id_T],
+                                                final_stack : List[str], dependency_graph : Dict[Id_T, List[Id_T]],
+                                                mem_ids : List[Id_T], instr_by_id_dict : Dict[Id_T, UninterpretedFunction]) -> Dict[Id_T, int]:
+    if 'PUSH' in dependency_graph:
+        first_position_instr_cannot_appear = {'PUSH' : b0}
+    else:
+        first_position_instr_cannot_appear = {}
 
     # We consider instructions in the final stack, as they determine which position is the last possible one (following
     # the dependencies to reach it). We are assuming each other instruction is related to these instructions. Otherwise,
     # it would mean that there exists some intermediate instructions that do not affect the final results and thus,
     # they must be omitted.
+    final_stack_with_ids = [stack_elem_to_id[stack_var] if stack_var in stack_elem_to_id else None for stack_var in final_stack]
 
     # If first instruction corresponds to top of the stack, we initialize the search with b0. Otherwise,
     # it means that another extra instruction must be performed after this, and thus, we start searching with b0 - 1.
-    if top_elem_is_instruction:
-        b0_aux = b0
-    else:
-        b0_aux = b0 - 1
+    b0_aux = b0
 
-    for final_instr in final_stack_instr:
-        update_with_tree_level(b0, input_stacks_dict, dependency_graph, b0_aux, final_instr, first_position_instr_cannot_appear, comm_ids)
+    for final_instr_id in final_stack_with_ids:
+
+        # Only those stack elements tied to an instruction must be considered, not initial stack values
+        if final_instr_id is not None:
+            update_with_tree_level(instr_by_id_dict[final_instr_id], b0_aux, stack_elem_to_id, instr_by_id_dict,
+                               dependency_graph, first_position_instr_cannot_appear)
 
         # If it isn't top of the stack, another instruction must go before it (SWAP or DUP). Only works once
         b0_aux = b0 - 1
 
-    for final_instr in mem_ids:
-        update_with_tree_level(b0, input_stacks_dict, dependency_graph, b0, final_instr, first_position_instr_cannot_appear, comm_ids)
+    for final_instr_id in mem_ids:
+        update_with_tree_level(instr_by_id_dict[final_instr_id], b0, stack_elem_to_id, instr_by_id_dict,
+                               dependency_graph, first_position_instr_cannot_appear)
 
     return first_position_instr_cannot_appear
 
 
-# Generates the corresponding structures for both instruction encoding and
-# instruction order. If flags -instruction-order is activated, then it returns
-# dependency graph, first_position_instr_appears_dict and first_position_instr_cannot_appear_dict.
-# If not, it returns empty dicts that simulates the behaviour of these structures. There's no problem
-# with being empty, as they are accessed using get method with the corresponding correct values by default.
-def generate_instruction_dicts(b0, user_instr, final_stack, flags, order_tuples):
-    # We obtain the id of those instructions whose output is in the final stack
-    final_stack_instrs = list(filter(lambda instr: instr['outpt_sk'] and (instr['outpt_sk'][0] in final_stack),user_instr))
-
-    mem_instrs = list(map(lambda instr: instr['id'],filter(lambda instr: instr['storage'],user_instr)))
-
-    comm_instrs = list(map(lambda instr: instr['id'],filter(lambda instr: instr['commutative'],user_instr)))
-
-
-    index_map = {v: i for i, v in enumerate(final_stack)}
-
-    # We order instructions according to its position in the final stack. This is important to generate
-    # the first_position_instruction_can_occur dict, as position is taken into account.
-    final_stack_ids = list(map(lambda instr: instr['id'],
-                                  sorted(final_stack_instrs, key= lambda instr: index_map[instr['outpt_sk'][0]])))
-
-    # We check if any the top element in the stack corresponds to the output of an uninterpreted function
-    top_elem_is_instruction = any([0 == index_map[instr['outpt_sk'][0]] for instr in final_stack_instrs])
-
-
 class InstructionBounds:
 
-    def __init__(self, instructions : [EncodingInstruction], order_tuples : [Tuple[str, str]], b0 : int, bs : int):
-        self._instructions = instructions
-        self._order_tuples = order_tuples
-        self._dependency_theta_graph = generate_dependency_graph(instructions, order_tuples)
+    def __init__(self, instructions : List[UninterpretedFunction], order_tuples : List[Tuple[Id_T, Id_T]], final_stack : List[str], b0 : int):
+        stack_element_to_id_dict : Dict[str, Id_T] = {instruction.output_stack : instruction.id
+                                                      for instruction in instructions if instruction.output_stack is not None}
+
+        instr_by_id_dict : Dict[Id_T, UninterpretedFunction] = {instruction.id : instruction for instruction in instructions}
+
+        dependency_graph : Dict[Id_T, List[Id_T]] = generate_dependency_graph(instructions, order_tuples, stack_element_to_id_dict)
+
+        mem_ids : List[Id_T] = [instruction.id for instruction in instructions if instruction.instruction_subset == InstructionSubset.store]
+
         self._b0 = b0
-        self._bs = bs
-        self._first_position_instr = {}
-        self._first_position_not_instr = {}
+        lower_bound_by_id = generate_lower_bound_dict(dependency_graph)
+        self._lower_bound_by_theta_value = {instr_by_id_dict[instr_id].theta_value : lb for instr_id, lb in lower_bound_by_id.items()}
+        first_position_not_instr_by_id = generate_first_position_instr_cannot_appear(b0, stack_element_to_id_dict, final_stack,
+                                                                                     dependency_graph, mem_ids, instr_by_id_dict)
+        self._first_position_not_instr_by_theta_value =  {instr_by_id_dict[instr_id].theta_value : lb
+                                                          for instr_id, lb in first_position_not_instr_by_id.items()}
 
 
-    def lower_bound(self, theta_value : ThetaValue) -> int:
-        return self._first_position_instr.get(theta_value, 0)
+    def lower_bound_theta_value(self, theta_value : ThetaValue) -> int:
+        return self._lower_bound_by_theta_value.get(theta_value, 0)
 
 
-    def upper_bound(self, theta_value : ThetaValue) -> int:
-        return self._first_position_not_instr.get(theta_value, self._b0) - 1
-
-
-
-
-
-
-
+    def upper_bound_theta_value(self, theta_value : ThetaValue) -> int:
+        return self._first_position_not_instr_by_theta_value.get(theta_value, self._b0) - 1
