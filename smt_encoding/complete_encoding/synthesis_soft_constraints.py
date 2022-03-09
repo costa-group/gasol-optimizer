@@ -10,7 +10,7 @@ def _soft_constraints_direct(sv : SynthesisVariables, weight_dict : Dict[ThetaVa
                              bounds : InstructionBounds, label_name: str) -> [AssertSoft]:
     soft_constraints = [AssertSoft(add_eq(sv.t(j), theta_value), weight, label_name)
                         for theta_value, weight in weight_dict.items()
-                        for j in range(bounds.lower_bound(theta_value), bounds.upper_bound(theta_value) + 1)]
+                        for j in range(bounds.lower_bound_theta_value(theta_value), bounds.upper_bound_theta_value(theta_value) + 1)]
     return soft_constraints
 
 
@@ -37,7 +37,7 @@ def _generate_disjoint_sets_from_cost(ordered_costs : OrderedDict[ThetaValue, in
 # Given a concrete position in the sequence and a set of instructions, returns the instructions that can happen
 # at that position
 def _select_intructions_position(j : int, instructions : [ThetaValue], bounds : InstructionBounds) -> [ThetaValue]:
-    return list(filter(lambda theta_value: bounds.lower_bound(theta_value) <= j <= bounds.upper_bound(theta_value), instructions))
+    return list(filter(lambda theta_value: bounds.lower_bound_theta_value(theta_value) <= j <= bounds.upper_bound_theta_value(theta_value), instructions))
 
 
 # Generates the soft constraints given the set of instructions and its corresponding weights, considering an or
