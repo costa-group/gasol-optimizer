@@ -1,5 +1,5 @@
-from connector import Connector
-from formula import Formula_T
+from smt_encoding.constraints.connector import Connector
+from smt_encoding.constraints.formula import Formula_T
 from smt_encoding.singleton import Singleton
 
 class Connectors(metaclass=Singleton):

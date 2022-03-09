@@ -10,6 +10,7 @@ class InstructionSubset(Enum):
     pop = 4
 
 ThetaValue = int
+Id_T = str
 
 # Interface for representing the necessary methods for encoding an instruction
 class EncodingInstruction(ABC):
@@ -23,7 +24,7 @@ class EncodingInstruction(ABC):
     # Unique id that identifies the instruction. For instance, ADD_0, POP, PUSH_2...
     @property
     @abstractmethod
-    def id(self) -> str:
+    def id(self) -> Id_T:
         raise NotImplementedError
 
     # Generic name that identifies the instruction. For instance, ADD, POP, PUSH...

@@ -1,9 +1,9 @@
 from smt_encoding.constraints.variable import Variable, VariableType, VariableFactory
 from smt_encoding.instructions.encoding_instruction import ThetaValue
-from typing import List
+from typing import List, Union
 
 
-def _sub_idx_rep(var_name: str, *indexes: int | ThetaValue) -> str:
+def _sub_idx_rep(var_name: str, *indexes: Union[int, ThetaValue]) -> str:
     return "_".join([var_name, *[str(index) for index in indexes]])
 
 

@@ -1,7 +1,6 @@
 from abc import ABC
 
-from smt_encoding.instructions.encoding_instruction import EncodingInstruction
-from encoding_instruction import InstructionSubset
+from smt_encoding.instructions.encoding_instruction import EncodingInstruction, InstructionSubset
 
 class BasicInstruction(EncodingInstruction, ABC):
 

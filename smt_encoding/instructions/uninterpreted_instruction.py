@@ -56,4 +56,4 @@ class UninterpretedFunction(EncodingInstruction, ABC):
     def output_stack(self) -> Optional[str]:
         if not self._output_stack:
             return None
-        return self._output_stack
+        return self._output_stack[0]

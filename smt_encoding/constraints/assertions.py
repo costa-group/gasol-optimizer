@@ -1,4 +1,4 @@
-from formula import Formula_T
+from smt_encoding.constraints.formula import Formula_T
 
 class Assert:
 
