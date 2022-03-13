@@ -1,7 +1,5 @@
 import global_params.constants as constants
 from smt_encoding.instructions.basic_instruction import BasicInstruction
-from smt_encoding.constraints.assertions import Assert
-
 
 
 class DupKBasic(BasicInstruction):

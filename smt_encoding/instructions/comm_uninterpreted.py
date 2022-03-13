@@ -1,7 +1,4 @@
 from smt_encoding.instructions.uninterpreted_instruction import UninterpretedFunction, SMS_T
-from smt_encoding.constraints.assertions import Assert
-from smt_encoding.constraints.connector_factory import add_eq, add_and, add_implies, add_not, add_or
-from smt_encoding.complete_encoding.synthesis_predicates import move
 from smt_encoding.instructions.encoding_instruction import InstructionSubset
 
 class CommutativeUninterpreted(UninterpretedFunction):

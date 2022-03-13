@@ -1,6 +1,6 @@
 from smt_encoding.constraints.formula import Formula_T
 
-class Assert:
+class AssertHard:
 
     def __init__(self, formula : Formula_T):
         self.formula = formula
