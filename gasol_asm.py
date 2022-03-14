@@ -369,6 +369,16 @@ def optimize_isolated_asm_block(block_name,output_file, csv_file, timeout=10, st
         update_gas_count(old_block, asm_block)
         update_size_count(old_block, asm_block)
 
+        if not compare_asm_block_asm_format(old_block, asm_block):
+            print("Optimized block " + str(block.block_id) + " from data id " + str(identifier)
+                  + " at contract " + contract_name + " has not been verified correctly")
+            print(block.instructions)
+            print(asm_block.instructions)
+            verifier_error = True
+            raise Exception
+
+            
+        
     if args.backend:
         df = pd.DataFrame(statistics_rows)
         df.to_csv(csv_file)
@@ -640,12 +650,12 @@ def optimize_asm_in_asm_format(file_name, output_file, csv_file, timeout=10, log
             # Deployment size is not considered when measuring it
             update_gas_count(old_block, optimized_block)
 
-            # if not compare_asm_block_asm_format(block, asm_block):
-            #     print("Optimized block " + str(block.block_id) + " from init code at contract " + contract_name +
-            #           " has not been verified correctly")
-            #     print(block.instructions)
-            #     print(asm_block.instructions)
-            #     verifier_error = True
+            if not compare_asm_block_asm_format(block, optimized_block):
+                print("Optimized block " + str(block.block_id) + " from init code at contract " + contract_name +
+                      " has not been verified correctly")
+                print(block.instructions)
+                print(optimized_block.instructions)
+                verifier_error = True
 
         new_contract.init_code = init_code_blocks
 
@@ -663,12 +673,12 @@ def optimize_asm_in_asm_format(file_name, output_file, csv_file, timeout=10, log
                 update_gas_count(old_block, optimized_block)
                 update_size_count(old_block, optimized_block)
 
-                # if not compare_asm_block_asm_format(block, asm_block):
-                #     print("Optimized block " + str(block.block_id) + " from data id " + str(identifier)
-                #           + " at contract " + contract_name + " has not been verified correctly")
-                #     print(block.instructions)
-                #     print(asm_block.instructions)
-                #     verifier_error = True
+                if not compare_asm_block_asm_format(block, optimized_block):
+                    print("Optimized block " + str(block.block_id) + " from data id " + str(identifier)
+                          + " at contract " + contract_name + " has not been verified correctly")
+                    print(block.instructions)
+                    print(optimized_block.instructions)
+                    verifier_error = True
 
             new_contract.set_run_code(identifier, run_code_blocks)
 
