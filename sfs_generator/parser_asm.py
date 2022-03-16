@@ -1,6 +1,7 @@
 
 import itertools
 import json
+from typing import Union, Dict, Any
 
 from sfs_generator.asm_block import AsmBlock
 from sfs_generator.asm_bytecode import AsmBytecode, ASM_Json_T
@@ -20,11 +21,18 @@ def build_asm_bytecode(instruction : ASM_Json_T) -> AsmBytecode:
     return asm_bytecode
 
 
-def build_blocks_from_asm_representation(cname : str, instr_list : [ASM_Json_T], is_init_code : bool) -> [AsmBlock]:
+def _generate_block_name_from_id(block_name_prefix : str, block_id : Union[str, int]) -> str:
+    return '_'.join([block_name_prefix, "block", str(block_id)])
+
+
+def build_blocks_from_asm_representation(cname : str, block_name_prefix : str, instr_list : [ASM_Json_T],
+                                         is_init_code : bool) -> [AsmBlock]:
     bytecodes = []
 
-    block = AsmBlock(cname,0, is_init_code)
-    blockId = 1
+    block_id = 0
+    block = AsmBlock(cname, block_id, _generate_block_name_from_id(block_name_prefix, block_id), is_init_code)
+    block_id += 1
+
     i = 0
     while i < len(instr_list):
         instr_name = instr_list[i]["name"]
@@ -34,16 +42,16 @@ def build_blocks_from_asm_representation(cname : str, instr_list : [ASM_Json_T],
         if instr_name in ["JUMP","JUMPI","STOP","RETURN","REVERT","INVALID"]:
             block.add_instruction(asm_bytecode)
             bytecodes.append(block)
-            block = AsmBlock(cname,blockId, is_init_code)
-            blockId+=1
+            block = AsmBlock(cname, block_id, _generate_block_name_from_id(block_name_prefix, block_id), is_init_code)
+            block_id+=1
 
         # Tag always correspond to the beginning of a new block. JUMPDEST is always preceded by a tag instruction
         elif instr_name == "tag":
             # There must be at least one instruction to add current block
             if block.instructions:
                 bytecodes.append(block)
-                block = AsmBlock(cname, blockId, is_init_code)
-                blockId += 1
+                block = AsmBlock(cname, block_id, _generate_block_name_from_id(block_name_prefix, block_id), is_init_code)
+                block_id += 1
             block.add_instruction(asm_bytecode)
         else:
             block.add_instruction(asm_bytecode)
@@ -56,7 +64,7 @@ def build_blocks_from_asm_representation(cname : str, instr_list : [ASM_Json_T],
     return bytecodes
 
         
-def build_asm_contract(cname,cinfo):
+def build_asm_contract(cname : str, cinfo : Dict[str, Any]) -> AsmContract:
     asm_c = AsmContract(cname)
 
     if len(cinfo) > 2:
@@ -64,7 +72,10 @@ def build_asm_contract(cname,cinfo):
 
     initCode = cinfo[".code"]
 
-    init_bytecode = build_blocks_from_asm_representation(cname, initCode, True)
+    # For blocks, we are not interested in the complete path
+    simplified_cname = (cname.split("/")[-1]).split(":")[-1]
+
+    init_bytecode = build_blocks_from_asm_representation(simplified_cname, '_'.join([simplified_cname, "initial"]), initCode, True)
     
     asm_c.init_code = init_bytecode
         
@@ -78,7 +89,7 @@ def build_asm_contract(cname,cinfo):
             asm_c.set_auxdata(elem, aux_data)
 
             code = data[elem][".code"]
-            run_bytecode = build_blocks_from_asm_representation(cname, code, False)
+            run_bytecode = build_blocks_from_asm_representation(simplified_cname, '_'.join([simplified_cname, "run_code_of", str(elem)]), code, False)
             asm_c.set_run_code(elem, run_bytecode)
 
             data1 = data[elem].get(".data", None)
@@ -89,7 +100,8 @@ def build_asm_contract(cname,cinfo):
             asm_c.set_data_field_with_address(elem, data[elem])
     return asm_c
 
-def parse_asm(file_name):
+
+def parse_asm(file_name : str) -> AsmJSON:
     with open(file_name) as f:
         data = json.load(f)
 
@@ -115,7 +127,7 @@ def parse_asm(file_name):
 # the key "value" if the opcode has any hexadecimal value associated.
 # See https://github.com/ethereum/solidity/blob/develop/libevmasm/Assembly.cpp on how different assembly
 # items are represented
-def plain_instructions_to_asm_representation(raw_instruction_str : str):
+def plain_instructions_to_asm_representation(raw_instruction_str : str) -> [ASM_Json_T]:
     # We chain all strings contained in the raw string, splitting whenever a line is found or a whitespace
     split_str = list(itertools.chain.from_iterable([[elem for elem in line.split(" ")] for line in raw_instruction_str.splitlines()]))
 
@@ -126,7 +138,10 @@ def plain_instructions_to_asm_representation(raw_instruction_str : str):
 
     while i < len(ops):
         op = ops[i]
-        if not op.startswith("PUSH"):
+        if op.startswith("ASSIGNIMMUTABLE") or op.startswith("tag"):
+            opcodes.append({"name": op, "value": ops[i+1]})
+            i += 1
+        elif not op.startswith("PUSH"):
             opcodes.append({"name": op})
         else:
             if op.startswith("PUSH") and op.find("DEPLOYADDRESS") != -1:
@@ -152,6 +167,7 @@ def plain_instructions_to_asm_representation(raw_instruction_str : str):
             opcodes.append(final_op)
 
         i += 1
+    print(opcodes)
     return opcodes
 
 
@@ -160,7 +176,7 @@ def plain_instructions_to_asm_representation(raw_instruction_str : str):
 # items are represented
 def parse_blocks_from_plain_instructions(raw_instructions_str):
     instr_list = plain_instructions_to_asm_representation(raw_instructions_str)
-    blocks = build_blocks_from_asm_representation("isolated", instr_list, False)
+    blocks = build_blocks_from_asm_representation("isolated", "isolated", instr_list, False)
     return blocks
 
 

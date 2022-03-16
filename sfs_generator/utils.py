@@ -220,9 +220,9 @@ def get_ins_size(op_name, val = None, address_length = 4):
             return (immutableOccurrences - 1) * (5 + 32) + (3 + 32)
     elif op_name == "PUSH":
         return 1 + get_num_bytes_int(val)
-    elif op_name == "PUSH#[$]" or op_name == "PUSHSIZE":
+    elif op_name == "PUSH #[$]" or op_name == "PUSHSIZE":
         return 1 + 4
-    elif op_name == "PUSHTAG" or op_name == "PUSHDATA" or op_name == "PUSH[$]":
+    elif op_name == "PUSH [tag]" or op_name == "PUSH data" or op_name == "PUSH [$]":
         return 1 + address_length
     elif op_name == "PUSHLIB" or op_name == "PUSHDEPLOYADDRESS":
         return 1 + 20
@@ -231,7 +231,7 @@ def get_ins_size(op_name, val = None, address_length = 4):
     elif not op_name.startswith("PUSH") or op_name == "tag":
         return 1
     else:
-        raise ValueError("Opcode not recognized")
+        raise ValueError("Opcode not recognized", op_name)
 
 
 # Given a sequence of opcodes in a str, returns the size associated. Note the yul operators must follow the
@@ -241,8 +241,14 @@ def get_ins_size_seq(instructions_disasm):
     instructions = list(filter(lambda x: x != '', instructions_disasm.split(' ')))
     i, bytes = 0, 0
     while i < len(instructions):
-        if instructions[i] == "PUSH":
+        if instructions[i] == "PUSH" and is_integer(instructions[i+1]):
             bytes += get_ins_size("PUSH", int(instructions[i+1], 16))
+            i += 2
+        elif instructions[i] == "PUSH" and not is_integer(instructions[i+1]):
+            bytes += get_ins_size(' '.join(instructions[i:i+2]), instructions[i+2])
+            i += 3
+        elif instructions[i] == "ASSIGNIMMUTABLE":
+            bytes += get_ins_size(instructions[i], instructions[i+1])
             i += 2
         elif instructions[i].startswith("PUSH") and not instructions[i].startswith("PUSHDEPLOYADDRESS") \
                     and not instructions[i].startswith("PUSHSIZE"):

@@ -15,9 +15,10 @@ class AsmBlock:
     Class for representing an Assembly block
     """
     
-    def __init__(self, cname : str, identifier : Block_id_T, is_init_block : bool):
+    def __init__(self, cname : str, identifier : Block_id_T, name : str, is_init_block : bool):
         self.contract_name = cname
         self.block_id = identifier
+        self.block_name = name
         self._instructions = []
         # minimum size of the source stack
         self.source_stack = 0
@@ -95,7 +96,9 @@ class AsmBlock:
         content+=str(self.source_stack)
         return content
 
-
+    def instructions_to_optimize(self) -> [ASM_Json_T]:
+        return [instruction.to_plain() for instruction in self.instructions
+                if instruction.disasm not in constants.beginning_block and instruction.disasm not in constants.end_block]
         
     def split_in_sub_blocks(self) -> [Union[List[AsmBytecode], AsmBytecode]]:
         """
