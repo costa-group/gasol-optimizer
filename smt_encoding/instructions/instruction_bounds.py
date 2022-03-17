@@ -193,6 +193,13 @@ class InstructionBounds:
 
         dependency_graph : Dict[Id_T, List[Id_T]] = generate_dependency_graph(instructions, order_tuples, stack_element_to_id_dict)
 
+        id_dict_to_theta_value: Dict[Id_T, ThetaValue] = {instruction.id: instruction.theta_value for instruction in instructions}
+
+        # Dependent instructions according to their Theta Value
+        self._dependency_instructions : Dict[ThetaValue, List[ThetaValue]] = \
+            {id_dict_to_theta_value[instr_id] : [id_dict_to_theta_value[instr_dep_id] for instr_dep_id in instr_dep_ids]
+             for instr_id, instr_dep_ids in dependency_graph.items()}
+
         mem_ids : List[Id_T] = [instruction.id for instruction in instructions if instruction.instruction_subset == InstructionSubset.store]
 
         self._b0 = b0
@@ -210,3 +217,7 @@ class InstructionBounds:
 
     def upper_bound_theta_value(self, theta_value : ThetaValue) -> int:
         return self._first_position_not_instr_by_theta_value.get(theta_value, self._b0) - 1
+
+
+    def dependent_instructions_theta_value(self, theta_value : ThetaValue) -> List[ThetaValue]:
+        return self._dependency_instructions.get(theta_value, [])
