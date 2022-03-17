@@ -1,6 +1,6 @@
 import unittest
 
-from smt_encoding.complete_encoding.instruction_bounds import generate_lower_bound_dict, \
+from smt_encoding.instructions.instruction_bounds import generate_lower_bound_dict, \
     generate_first_position_instr_cannot_appear, generate_dependency_graph
 from smt_encoding.instructions.instruction_factory import InstructionFactory
 from smt_encoding.instructions.encoding_instruction import InstructionSubset
