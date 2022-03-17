@@ -30,6 +30,9 @@ class Variable:
     def __repr__(self):
         return repr(self._name)
 
+    def __eq__(self, other):
+        return self._name == other._name and self.type == other._type
+
 
 class VariableFactory:
 
