@@ -1,8 +1,8 @@
 from smt_encoding.instructions.encoding_instruction import ThetaValue, InstructionSubset, Id_T
-from smt_encoding.instructions.uninterpreted_instruction import UninterpretedFunction
-from typing import Tuple, Dict, List, Set
+from smt_encoding.instructions.uninterpreted_instruction import UninterpretedInstruction
+from typing import Tuple, Dict, List
 from smt_encoding.instructions.instruction_dependencies import generate_dependency_graph_minimum
-
+from smt_encoding.instructions.instruction_bounds import InstructionBounds
 
 # Given an instruction, a dict that links each instruction to a lower bound to the number of instructions
 # # needed to obtain the output from that dict, and another dict
@@ -66,8 +66,8 @@ def generate_lower_bound_dict(dependency_graph : Dict[Id_T, List[Id_T]]) -> Dict
 
 # First time an instruction cannot appear is b0-h, where h is the tree height. We recursively obtain this value,
 # taking into account that we may have different trees and the final value is the min for all possible ones
-def update_with_tree_level(instr : UninterpretedFunction, current_idx : int, stack_elem_to_id : Dict[str, Id_T],
-                           instr_by_id_dict : Dict[Id_T, UninterpretedFunction], dependency_graph: Dict[Id_T, List[Id_T]],
+def update_with_tree_level(instr : UninterpretedInstruction, current_idx : int, stack_elem_to_id : Dict[str, Id_T],
+                           instr_by_id_dict : Dict[Id_T, UninterpretedInstruction], dependency_graph: Dict[Id_T, List[Id_T]],
                            first_position_instr_cannot_appear : Dict[Id_T, int]) -> None:
 
     instr_id = instr.id
@@ -115,7 +115,7 @@ def update_with_tree_level(instr : UninterpretedFunction, current_idx : int, sta
 # due to dependencies with other instructions.
 def generate_first_position_instr_cannot_appear(b0 : int, stack_elem_to_id : Dict[str, Id_T],
                                                 final_stack : List[str], dependency_graph : Dict[Id_T, List[Id_T]],
-                                                mem_ids : List[Id_T], instr_by_id_dict : Dict[Id_T, UninterpretedFunction]) -> Dict[Id_T, int]:
+                                                mem_ids : List[Id_T], instr_by_id_dict : Dict[Id_T, UninterpretedInstruction]) -> Dict[Id_T, int]:
     if 'PUSH' in dependency_graph:
         first_position_instr_cannot_appear = {'PUSH' : b0}
     else:
@@ -148,13 +148,13 @@ def generate_first_position_instr_cannot_appear(b0 : int, stack_elem_to_id : Dic
     return first_position_instr_cannot_appear
 
 
-class InstructionBounds:
+class InstructionBoundsWithDependencies(InstructionBounds):
 
-    def __init__(self, instructions : List[UninterpretedFunction], order_tuples : List[Tuple[Id_T, Id_T]], final_stack : List[str], b0 : int):
+    def __init__(self, instructions : List[UninterpretedInstruction], order_tuples : List[Tuple[Id_T, Id_T]], final_stack : List[str], b0 : int):
         stack_element_to_id_dict : Dict[str, Id_T] = {instruction.output_stack : instruction.id
                                                       for instruction in instructions if instruction.output_stack is not None}
 
-        instr_by_id_dict : Dict[Id_T, UninterpretedFunction] = {instruction.id : instruction for instruction in instructions}
+        instr_by_id_dict : Dict[Id_T, UninterpretedInstruction] = {instruction.id : instruction for instruction in instructions}
 
         dependency_graph : Dict[Id_T, List[Id_T]] = generate_dependency_graph_minimum(instructions, order_tuples, stack_element_to_id_dict)
 

@@ -1,12 +1,12 @@
 from smt_encoding.instructions.encoding_instruction import Id_T
-from smt_encoding.instructions.uninterpreted_instruction import UninterpretedFunction
-from typing import Tuple, Dict, List, Set
+from smt_encoding.instructions.uninterpreted_instruction import UninterpretedInstruction
+from typing import Tuple, Dict, List
 
 
 # We generate a dict that given the id of an instruction, returns
 # the id of instructions that must be executed to obtain its input and the corresponding
 # aj. Note that aj must be only assigned when push, in other cases we just set aj value to -1.
-def generate_dependency_graph_minimum(uninterpreted_instr : List[UninterpretedFunction], order_tuples : List[Tuple[Id_T, Id_T]],
+def generate_dependency_graph_minimum(uninterpreted_instr : List[UninterpretedInstruction], order_tuples : List[Tuple[Id_T, Id_T]],
                                       stack_elem_to_id : Dict[str, Id_T]) -> Dict[Id_T, List[Id_T]]:
     dependency_graph = {}
     for instr in uninterpreted_instr:
@@ -38,7 +38,7 @@ def generate_dependency_graph_minimum(uninterpreted_instr : List[UninterpretedFu
     return dependency_graph
 
 
-def generate_dependency_graph_transitive_closure(uninterpreted_instr : List[UninterpretedFunction], order_tuples : List[Tuple[Id_T, Id_T]],
+def generate_dependency_graph_transitive_closure(uninterpreted_instr : List[UninterpretedInstruction], order_tuples : List[Tuple[Id_T, Id_T]],
                                                  stack_elem_to_id : Dict[str, Id_T]) -> Dict[Id_T, List[Id_T]]:
     """
     Generates a dict that given an element f2, returns ALL the elements f1 such that f1 sqsubset f2

@@ -1,15 +1,14 @@
 import global_params.constants as constants
 from smt_encoding.instructions.basic_instruction import BasicInstruction
+from smt_encoding.instructions.encoding_instruction import ThetaValue
 
 
 class SwapKBasic(BasicInstruction):
 
-    def __init__(self, theta_value, k, initial_idx = 0):
-        assert 0 <= k <= constants.max_k_swap
+    def __init__(self, theta_value : ThetaValue, k: int):
+        assert 1 <= k <= constants.max_k_swap
         self._k = k
         self._theta_value = theta_value
-        self.initial_idx = initial_idx
-
 
     @property
     def theta_value(self):

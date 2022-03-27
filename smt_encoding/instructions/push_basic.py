@@ -4,21 +4,8 @@ from smt_encoding.instructions.basic_instruction import BasicInstruction
 
 class PushBasic(BasicInstruction):
 
-    def __init__(self, theta_value, initial_idx=0):
+    def __init__(self, theta_value):
         self._theta_value = theta_value
-        self.initial_idx = initial_idx
-
-    def encoding_instruction(self, **kwargs):
-        constraints = []
-
-        bs = kwargs["bs"]
-        initial_pos_seq = kwargs['initial_pos_seq']
-        final_pos_seq = kwargs['final_pos_seq']
-
-        for j in range(initial_pos_seq, final_pos_seq):
-            constraints.append(push_encoding(j, bs, self.theta_value))
-
-        return constraints
 
     @property
     def theta_value(self):

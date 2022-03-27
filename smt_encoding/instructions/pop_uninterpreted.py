@@ -1,19 +1,14 @@
 from smt_encoding.encoding_stack_instructions import pop_uninterpreted_encoding
-from smt_encoding.instructions.uninterpreted_instruction import UninterpretedFunction
+from smt_encoding.instructions.encoding_instruction import InstructionSubset
+from smt_encoding.instructions.uninterpreted_instruction import UninterpretedInstruction
 
 
-class PopUninterpreted(UninterpretedFunction):
+class PopUninterpreted(UninterpretedInstruction):
 
-    def __init__(self, sfs_instr, theta_value, var_initial_idx=0):
-        super().__init__(sfs_instr, theta_value, var_initial_idx)
+    def __init__(self, sfs_instr, theta_value):
+        super().__init__(sfs_instr, theta_value)
         self.commutative = False
 
-
-    def encoding_instruction(self, **kwargs):
-        o = self.input_stack[0]
-
-        bs = kwargs["bs"]
-
-        encoding_method = lambda j: pop_uninterpreted_encoding(j, bs, o, self.theta_value)
-
-        return super().encoding_instruction(encoding_function=encoding_method, **kwargs)
+    @property
+    def instruction_subset(self) -> InstructionSubset:
+        return InstructionSubset.basic

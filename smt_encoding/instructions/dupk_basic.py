@@ -4,11 +4,10 @@ from smt_encoding.instructions.basic_instruction import BasicInstruction
 
 class DupKBasic(BasicInstruction):
 
-    def __init__(self, theta_value : int, k : int, initial_idx : int = 0):
-        assert 0 <= k <= constants.max_k_dup
+    def __init__(self, theta_value : int, k : int):
+        assert 1 <= k <= constants.max_k_dup
         self._k = k
         self._theta_value = theta_value
-        self.initial_idx = initial_idx
 
 
     @property

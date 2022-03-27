@@ -1,14 +1,14 @@
 from abc import ABC
 
-from smt_encoding.instructions.encoding_instruction import EncodingInstruction
+from smt_encoding.instructions.encoding_instruction import EncodingInstruction, ThetaValue
 from typing import Dict, Any, Optional, List
 
 SMS_T = Dict[str, Any]
 
-class UninterpretedFunction(EncodingInstruction, ABC):
+class UninterpretedInstruction(EncodingInstruction, ABC):
 
 
-    def __init__(self, instr : SMS_T, theta_value : int, var_initial_idx : int = 0):
+    def __init__(self, instr : SMS_T, theta_value : ThetaValue):
         self._output_stack = instr['outpt_sk']
         self._input_stack = instr['inpt_sk']
         self._gas = instr["gas"]
@@ -17,8 +17,6 @@ class UninterpretedFunction(EncodingInstruction, ABC):
         self._id = instr["id"]
         self._size = instr["size"]
         self._theta_value = theta_value
-        self._initial_idx = var_initial_idx
-
 
     # An uninterpreted function is assumed to appear once in the sequence iff it does not consume
     # any other element
@@ -27,7 +25,7 @@ class UninterpretedFunction(EncodingInstruction, ABC):
         return len(self._input_stack) > 0
 
     @property
-    def theta_value(self) -> int:
+    def theta_value(self) -> ThetaValue:
         return self._theta_value
 
     @property

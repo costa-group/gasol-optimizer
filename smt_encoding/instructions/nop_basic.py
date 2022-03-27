@@ -2,9 +2,8 @@ from smt_encoding.instructions.basic_instruction import BasicInstruction
 
 class NopBasic(BasicInstruction):
 
-    def __init__(self, theta_value, initial_idx=0):
+    def __init__(self, theta_value):
         self._theta_value = theta_value
-        self.initial_idx = initial_idx
 
     @property
     def theta_value(self):

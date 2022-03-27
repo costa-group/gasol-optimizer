@@ -4,14 +4,8 @@ from smt_encoding.instructions.basic_instruction import BasicInstruction
 
 class PopBasic(BasicInstruction):
 
-    def __init__(self, theta_value, initial_idx=0):
+    def __init__(self, theta_value):
         self._theta_value = theta_value
-        self.initial_idx = initial_idx
-
-    def encoding_instruction(self, **kwargs):
-        bs = kwargs['bs']
-        j = kwargs['j']
-        return pop_encoding(j, bs, self.theta_value)
 
     @property
     def theta_value(self):
