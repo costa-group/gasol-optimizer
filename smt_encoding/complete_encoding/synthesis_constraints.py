@@ -4,9 +4,18 @@ from smt_encoding.constraints.connector_factory import add_eq, add_and, add_not,
 import global_params.constants as constants
 from smt_encoding.constraints.assertions import AssertHard
 from typing import List, Callable
-from smt_encoding.instructions.encoding_instruction import ThetaValue
+from smt_encoding.instructions.encoding_instruction import ThetaValue, EncodingInstruction
 from smt_encoding.instructions.instruction_bounds import InstructionBounds
 from smt_encoding.constraints.formula import Formula_T
+from smt_encoding.instructions.comm_uninterpreted import CommutativeUninterpreted
+from smt_encoding.instructions.push_basic import PushBasic
+from smt_encoding.instructions.non_comm_uninterpreted import NonCommutativeUninterpreted
+from smt_encoding.instructions.swapk_basic import SwapKBasic
+from smt_encoding.instructions.dupk_basic import DupKBasic
+from smt_encoding.instructions.pop_basic import PopBasic
+from smt_encoding.instructions.pop_uninterpreted import PopUninterpreted
+from smt_encoding.instructions.nop_basic import NopBasic
+from smt_encoding.instructions.store_uninterpreted import StoreUninterpreted
 
 
 def push_basic_encoding(j : int, theta_push : ThetaValue, sv : SynthesisVariables, bs : int) -> AssertHard:
@@ -84,8 +93,8 @@ def store_stack_function_encoding(j : int, theta_f : ThetaValue, sv : SynthesisV
     return AssertHard(add_implies(left_term, right_term))
 
 
-def stack_constraints_for_every_position(func: Callable[..., AssertHard], theta_val : ThetaValue,
-                                         bounds : InstructionBounds , *args, **kwargs) -> List[AssertHard]:
+def stack_constraints_with_bounds(func: Callable[..., AssertHard], theta_val : ThetaValue,
+                                  bounds : InstructionBounds , *args, **kwargs) -> List[AssertHard]:
     """
     Given a function that generates a hard constraint for a position in the sequence and the corresponding bounds, generates
     a list of hard constraints for each position within the bounds.
@@ -100,3 +109,37 @@ def stack_constraints_for_every_position(func: Callable[..., AssertHard], theta_
     """
     return [func(pos, theta_val, *args, **kwargs) for pos in range(bounds.lower_bound_theta_value(theta_val),
                                                                    bounds.upper_bound_theta_value(theta_val) + 1)]
+
+
+# def encode_instruction_stack(instruction : EncodingInstruction, bounds : InstructionBounds, sv : SynthesisVariables) -> List[AssertHard]:
+#     """
+#     Generates the encoding related to the stack for any given instruction
+#     :param instruction: instruction to consider
+#     :param bounds: bounds object to consider
+#     :return: a list of hard constraints
+#     """
+#     instruction_function
+#     args = {}
+#     kwargs = {}
+#     if isinstance(instruction, PushBasic):
+#         return stack_constraints_with_bounds(push_basic_encoding, instruction.theta_value, bounds, )
+#     elif isinstance(instruction, PopBasic):
+#
+#     elif isinstance(instruction, NopBasic):
+#
+#     elif isinstance(instruction, SwapKBasic):
+#
+#     elif isinstance(instruction, DupKBasic):
+#
+#     elif isinstance(instruction, NonCommutativeUninterpreted):
+#
+#     elif isinstance(instruction, CommutativeUninterpreted):
+#
+#     elif isinstance(instruction, StoreUninterpreted):
+#
+#     elif isinstance(instruction, PopUninterpreted):
+#
+#     else:
+#         raise ValueError(' '.join([instruction.id, "has no stack encoding tied to it"]))
+#
+#     return stack_constraints_with_bounds()
