@@ -100,7 +100,12 @@ def init_globals():
 
     global timestamp_counter
     timestamp_counter = 0
-    
+
+    global assignImmutable_counter
+    assignImmutable_counter = 0
+
+    global assignImmutable_dict
+    assignImmutable_dict = {}
 
 
 '''
@@ -885,13 +890,25 @@ def translateOpcodesZ(opcode, index_variables):
     return instr, updated_variables
 
 def translateYulOpcodes(opcode, value, index_variables):
-
+    global assignImmutable_dict
+    global assignImmutable_counter
+    
     if opcode == "ASSIGNIMMUTABLE":
         v0 , updated_variables = get_consume_variable(index_variables)
         v1 , updated_variables = get_consume_variable(updated_variables)
 
-        instr = "assignimmutable("+v0+","+v1+","+value+")"
 
+        #It is treated as a special mstore. The value is stored in a
+        #mapping bounded to a unique identifier. It is used when
+        #reconstructing the opcode in gasol_optimizer.py
+        
+        #instr = "assignimmutable("+v0+","+v1+","+value+")"
+
+        instr = "mstoreImmutable"+str(assignImmutable_counter)+"("+v0+","+v1+")"
+        assignImmutable_dict[assignImmutable_counter] = value
+        assignImmutable_counter+=1
+
+        
     elif opcode == "PUSHDEPLOYADDRESS":
         v1,updated_variables = get_new_variable(index_variables)
         instr = v1+" = pushdeployaddress"
