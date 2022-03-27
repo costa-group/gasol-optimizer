@@ -79,6 +79,9 @@ push_flag = False
 global revert_flag
 revert_flag = False
 
+global assignImm_values
+assignImm_values = {}
+
 def init_globals():
     
     global u_counter
@@ -3194,7 +3197,7 @@ def compute_max_program_len(opcodes, num_guard,block = None):
     return len(new_opcodes)
     
 
-def smt_translate_block(rule,file_name,block_name,simplification=True,storage = False, size = False, part = False, pop = False, push = False, revert = False):
+def smt_translate_block(rule,file_name,block_name,immutable_dict,simplification=True,storage = False, size = False, part = False, pop = False, push = False, revert = False):
     global s_counter
     global max_instr_size
     global int_not0
@@ -3208,7 +3211,7 @@ def smt_translate_block(rule,file_name,block_name,simplification=True,storage = 
     global pop_flag
     global push_flag
     global revert_flag
-    
+    global assignImm_values
     init_globals()
     
     if storage:
@@ -3219,6 +3222,7 @@ def smt_translate_block(rule,file_name,block_name,simplification=True,storage = 
     pop_flag = pop
     push_flag = push
     revert_flag = revert
+    assignImm_values = immutable_dict
     
     sfs_contracts = {}
 

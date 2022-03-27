@@ -1109,7 +1109,7 @@ def evm2rbr_compiler(file_name = None,block = None, block_id = -1, block_name = 
         end = dtimer()
         ethir_time = end-begin
         #print("Build RBR: "+str(ethir_time)+"s")
-        subblocks = smt_translate_block(rule,file_name,block_name,simplification,storage, size, part, pop, push, revert)
+        subblocks = smt_translate_block(rule,file_name,block_name,assignImmutable_dict,simplification,storage, size, part, pop, push, revert)
                 
         return 0, subblocks
         
