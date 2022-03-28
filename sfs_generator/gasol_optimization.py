@@ -1315,13 +1315,13 @@ def get_involved_vars(instr,var):
 
 
     elif instr.startswith("mstoreImmutable"):
-        assign_inmutable_match = re.fullmatch("mstoreImmutable([0-9]*)\((.+),(.+)\)", instr)
+        assign_inmutable_match = re.fullmatch("(mstoreImmutable[0-9]*)\((.+),(.+)\)", instr)
         var0 = assign_inmutable_match.group(2)
         var1 = assign_inmutable_match.group(3)
         var_list.append(var0)
         var_list.append(var1)
 
-        funct = "mstoreImmutable"
+        funct = assign_inmutable_match.group(1)
 
         
     else:
@@ -1817,12 +1817,14 @@ def generate_sstore_info(sstore_elem):
 
     return obj
 
-def generate_mstore_info(sstore_elem):
+def generate_mstore_info(mstore_elem):
     global user_def_counter
     global mstore_v_counter
 
     obj = {}
-    if sstore_elem[0][-1].find("mstore8")!=-1:
+
+    #TODO : case for mstoreImmutable
+    if mstore_elem[0][-1].find("mstore8")!=-1:
         idx  = user_def_counter.get("MSTORE8",0)
         instr_name = "MSTORE8"
     else:
@@ -1832,7 +1834,7 @@ def generate_mstore_info(sstore_elem):
     name = instr_name+"_"+str(idx)
 
     args_aux = []
-    for e in sstore_elem[0][0:-1]:
+    for e in mstore_elem[0][0:-1]:
         val = is_integer(e)
         if val != -1:
             args_aux.append(val)
