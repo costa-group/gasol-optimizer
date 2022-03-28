@@ -1,5 +1,6 @@
 from typing import Dict, Optional, Union
 import sfs_generator.opcodes as opcodes
+from sfs_generator.utils import get_ins_size
 
 # Assuming the value of asm is hexadecimal base. This way, we ensure the same format is respected
 ASM_Value_T = Optional[str]
@@ -39,6 +40,15 @@ class AsmBytecode:
         :return: a string containing the representation
         """
         return self.disasm if self.value is None else ' '.join([self.disasm, self.value])
+
+
+    @property
+    def bytes_required(self) -> int:
+        return get_ins_size(self.disasm, self.value)
+
+    @property
+    def gas_spent(self) -> int:
+        return opcodes.get_ins_cost(self.disasm, self.value)
 
 
     def __str__(self):

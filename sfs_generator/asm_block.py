@@ -99,7 +99,15 @@ class AsmBlock:
     def instructions_to_optimize(self) -> [ASM_Json_T]:
         return [instruction.to_plain() for instruction in self.instructions
                 if instruction.disasm not in constants.beginning_block and instruction.disasm not in constants.end_block]
-        
+
+    @property
+    def bytes_required(self) -> int:
+        return sum([instruction.bytes_required for instruction in self.instructions])
+
+    @property
+    def gas_spent(self) -> int:
+        return sum([instruction.gas_spent for instruction in self.instructions])
+
     def split_in_sub_blocks(self) -> [Union[List[AsmBytecode], AsmBytecode]]:
         """
         Split the block in a list of asm_bytecodes that contains either sub blocks or
