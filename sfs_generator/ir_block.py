@@ -1013,6 +1013,8 @@ def compile_instr(rule,evm_opcode,variables,list_jumps,cond):
     elif opcode_name in opcodesYul:
         value, index_variables = translateYulOpcodes(opcode_name,opcode_rest,variables)
         rule.add_instr(value)
+        if evm_opcode.startswith("ASSIGNIMMUTABLE"):
+            evm_opcode = "ASSIGNIMMUTABLE"
     else:
         value = "Error. No opcode matchs"
         index_variables = variables
@@ -1030,7 +1032,7 @@ The stack could be reconstructed as [s(ith)...s(0)].
 def compile_block(instrs,input_stack,block_id):
     global rbr_blocks
     global top_index
-    
+
     cont = 0
     top_index = 0
     finish = False
