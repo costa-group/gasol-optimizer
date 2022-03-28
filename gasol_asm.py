@@ -356,7 +356,6 @@ def optimize_isolated_asm_block(block_name,output_file, csv_file, timeout=10, st
         instructions = f.read()
 
     blocks = parse_blocks_from_plain_instructions(instructions)
-    print(blocks)
     asm_blocks = []
 
     for old_block in blocks:
@@ -367,9 +366,8 @@ def optimize_isolated_asm_block(block_name,output_file, csv_file, timeout=10, st
         update_size_count(old_block, asm_block)
 
         if not compare_asm_block_asm_format(old_block, asm_block):
-            print("Optimized block " + str(block.block_id) + " from data id " + str(identifier)
-                  + " at contract " + contract_name + " has not been verified correctly")
-            print(block.instructions)
+            print("Optimized block " + str(old_block.block_name) + " has not been verified correctly")
+            print(old_block.instructions)
             print(asm_block.instructions)
             verifier_error = True
             raise Exception
@@ -385,29 +383,20 @@ def optimize_isolated_asm_block(block_name,output_file, csv_file, timeout=10, st
             f.write(parse_asm_representation_from_blocks(asm_blocks))
 
 
-def update_gas_count(old_block, new_block):
+def update_gas_count(old_block : AsmBlock, new_block : AsmBlock):
     global previous_gas
     global new_gas
 
-    old_instructions = preprocess_instructions(old_block.instructions)
-    new_instructions = preprocess_instructions(new_block.instructions)
-
-    for instr in old_instructions:
-        if not isYulInstruction(instr):
-            previous_gas += op.get_ins_cost(instr)
-
-    for instr in new_instructions:
-        if not isYulInstruction(instr):
-            new_gas += op.get_ins_cost(instr)
+    previous_gas += old_block.gas_spent
+    new_gas += new_block.gas_spent
 
 
-def update_size_count(old_block, new_block):
+def update_size_count(old_block : AsmBlock, new_block : AsmBlock):
     global previous_size
     global new_size
 
-    previous_size += sum([bytes_required_asm(asm_bytecode) for asm_bytecode in old_block.instructions])
-    new_size += sum([bytes_required_asm(asm_bytecode) for asm_bytecode in new_block.instructions])
-
+    previous_size += old_block.bytes_required
+    new_size += new_block.bytes_required
 
 
 # Due to intra block optimization, we need to be wary of those cases in which the optimized outcome is determined
@@ -458,7 +447,6 @@ def optimize_asm_block_asm_format(block, timeout, storage, last_const, size_abs,
     global statistics_rows
     global total_time
 
-    bytecodes = block.instructions
     stack_size = block.source_stack
     block_id = block.block_id
     block_name = block.block_name
@@ -589,10 +577,10 @@ def optimize_asm_in_asm_format(file_name, output_file, csv_file, timeout=10, log
             # Deployment size is not considered when measuring it
             # update_gas_count(old_block, optimized_block)
 
-            if not compare_asm_block_asm_format(block, optimized_block):
-                print("Optimized block " + str(block.block_id) + " from init code at contract " + contract_name +
+            if not compare_asm_block_asm_format(old_block, optimized_block):
+                print("Optimized block " + str(old_block.block_id) + " from init code at contract " + contract_name +
                       " has not been verified correctly")
-                print(block.instructions)
+                print(old_block.instructions)
                 print(optimized_block.instructions)
                 verifier_error = True
 
@@ -613,10 +601,10 @@ def optimize_asm_in_asm_format(file_name, output_file, csv_file, timeout=10, log
                 # update_gas_count(old_block, optimized_block)
                 # update_size_count(old_block, optimized_block)
 
-                if not compare_asm_block_asm_format(block, optimized_block):
-                    print("Optimized block " + str(block.block_id) + " from data id " + str(identifier)
+                if not compare_asm_block_asm_format(old_block, optimized_block):
+                    print("Optimized block " + str(old_block.block_id) + " from data id " + str(identifier)
                           + " at contract " + contract_name + " has not been verified correctly")
-                    print(block.instructions)
+                    print(old_block.instructions)
                     print(optimized_block.instructions)
                     verifier_error = True
 
