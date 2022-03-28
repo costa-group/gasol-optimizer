@@ -24,6 +24,10 @@ def rebuild_optimized_asm_block(previous_block : AsmBlock, sub_block_list : List
         if sub_block_idx == 0:
             considered_sub_block = sub_block
         else:
+            # If it has several blocks, the block has been split. Thus, we need to add the split instruction
+            # (final instruction from previous block, or first instruction from current block)
+            assert sub_block[0] in previous_instructions[instr_idx-1].to_plain()
+            optimized_instructions.append(previous_instructions[instr_idx-1])
             considered_sub_block = sub_block[1:]
 
         optimized_block_name = previous_block.block_name + "_" + str(sub_block_idx)
