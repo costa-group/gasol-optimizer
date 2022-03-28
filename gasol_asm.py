@@ -536,9 +536,8 @@ def compare_asm_block_asm_format(old_block : AsmBlock, new_block : AsmBlock,stor
     final_comparison = verify_block_from_list_of_sfs(old_sfs_dict, new_sfs_dict)
 
     # We also must check intermediate instructions match i.e those that are not sub blocks
-    intermediate_instructions_old = list(map(lambda x: None if isinstance(x, list) else x, old_block.split_in_sub_blocks()))
-
-    intermediate_instructions_new = list(map(lambda x: None if isinstance(x, list) else x, new_block.split_in_sub_blocks()))
+    intermediate_instructions_old = old_block.instructions_not_optimized()
+    intermediate_instructions_new = new_block.instructions_not_optimized()
 
     return final_comparison and (intermediate_instructions_old == intermediate_instructions_new)
 
