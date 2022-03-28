@@ -2,6 +2,7 @@ import json
 import math
 import os
 from timeit import default_timer as dtimer
+import re
 
 import global_params.constants as constants
 import global_params.paths as paths
@@ -223,6 +224,8 @@ def generate_target_stack_idx(input_elems,list_opcodes):
         opcode = op[4:-1].strip()
         if opcode.startswith("PUSH"):
             vals = [0,0,1]
+        elif opcode.startswith("ASSIGNIMMUTABLE"):
+            vals = [0,2,0]
         else:
             vals = opcodes.get_opcode(opcode)
         init_val = init_val-vals[1]+vals[2]
@@ -429,7 +432,8 @@ def search_for_value_aux(var, instructions,source_stack,level,evaluate = True):
     ##print ("------------------------")
         
     new_vars, funct = get_involved_vars(value,vars_instr[0])
-    
+    print(value, vars_instr[0], new_vars, funct)
+
     if len(new_vars) == 1:
         
         in_sourcestack = contained_in_source_stack(new_vars[0],instructions[i:],source_stack)
@@ -1308,6 +1312,16 @@ def get_involved_vars(instr,var):
         var_list.append(var0)
 
         funct = "pushimmutable"
+
+
+    elif instr.startswith("mstoreImmutable"):
+        assign_inmutable_match = re.fullmatch("mstoreImmutable([0-9]*)\((.+),(.+)\)", instr)
+        var0 = assign_inmutable_match.group(2)
+        var1 = assign_inmutable_match.group(3)
+        var_list.append(var0)
+        var_list.append(var1)
+
+        funct = "mstoreImmutable"
 
         
     else:
