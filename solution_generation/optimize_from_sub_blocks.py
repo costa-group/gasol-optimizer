@@ -14,9 +14,9 @@ def rebuild_optimized_asm_block(previous_block : AsmBlock, sub_block_list : List
     instr_idx = 0
 
     # Tag and JUMPDEST were skipped in sub block list, and hence, we need to skip it when analyzing the optimization
-    print(sub_block_list)
+    # print(sub_block_list)
     while previous_instructions[instr_idx].to_plain() != sub_block_list[0][0]:
-        print(previous_instructions[instr_idx].to_plain(), sub_block_list[0][0])
+        # print(previous_instructions[instr_idx].to_plain(), sub_block_list[0][0])
         optimized_instructions.append(deepcopy(previous_instructions[instr_idx]))
         instr_idx += 1
 
@@ -31,14 +31,14 @@ def rebuild_optimized_asm_block(previous_block : AsmBlock, sub_block_list : List
             optimized_instructions.extend(optimize_blocks_by_name[optimized_block_name])
 
             for disasm in considered_sub_block:
-                print(disasm, previous_instructions[instr_idx].to_plain())
-                assert disasm == previous_instructions[instr_idx].to_plain()
+                # print(disasm, previous_instructions[instr_idx].to_plain())
+                assert disasm in previous_instructions[instr_idx].to_plain()
                 instr_idx += 1
 
         else:
             for disasm in considered_sub_block:
-                print(disasm, previous_instructions[instr_idx].to_plain())
-                assert disasm == previous_instructions[instr_idx].to_plain()
+                # print(disasm, previous_instructions[instr_idx].to_plain())
+                assert disasm in previous_instructions[instr_idx].to_plain()
                 optimized_instructions.append(previous_instructions[instr_idx])
                 instr_idx += 1
 
