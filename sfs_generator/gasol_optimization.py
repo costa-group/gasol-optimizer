@@ -275,6 +275,7 @@ def get_encoding_init_block(instructions,source_stack):
     sstore_count = 0
     mstore_count = 0
     mstore8_count = 0
+    mstoreImm_count = 0
     
     old_sdict = dict(s_dict)
     old_u_dict = dict(u_dict)
@@ -347,6 +348,10 @@ def get_encoding_init_block(instructions,source_stack):
                     elif exp[0][-1] == "mstore8":
                         instr = "MSTORE8_"+str(mstore8_count)
                         mstore8_count+=1
+                    elif exp[0][-1].startswith("mstoreImmutable"):
+                        instr = exp[0][-1].upper()
+                        mstore8_count+=1
+                        
 
                     opcodes.append(instr)
         i+=1
@@ -1823,10 +1828,15 @@ def generate_mstore_info(mstore_elem):
 
     obj = {}
 
-    #TODO : case for mstoreImmutable
+
     if mstore_elem[0][-1].find("mstore8")!=-1:
         idx  = user_def_counter.get("MSTORE8",0)
         instr_name = "MSTORE8"
+
+    elif mstore_elem[0][-1].find("mstoreImmutable")!=-1:
+        idx  = user_def_counter.get("ASSIGNIMMUTABLE",0)
+        instr_name = "ASSIGNIMMUTABLE"
+        
     else:
         idx  = user_def_counter.get("MSTORE",0)
         instr_name = "MSTORE"
@@ -1853,6 +1863,10 @@ def generate_mstore_info(mstore_elem):
     obj["gas"] = opcodes.get_ins_cost(instr_name)
     obj["commutative"] = False
     obj["storage"] = True
+    
+    if instr_name == "ASSIGNIMMUTABLE":
+        obj["value"] = assignImm_values[int(mstore_elem[0][-1].lstrip("mstoreImmutable"))]
+        
     user_def_counter[instr_name]=idx+1
 
     return obj
@@ -5067,6 +5081,8 @@ def compute_identifiers_storage_instructions(storage_location, location, new_use
             if location !="storage" and ins[0][-1].find(store8)!=-1:
                 storage_identifiers.append(store8_up+"_"+str(store8_count))
                 store8_count+=1
+            elif location !="storage" and ins[0][-1].find("mstoreImmutable")!=-1:
+                storage_identifiers.append(ins[0][-1])
             else:
                 storage_identifiers.append(store_up+"_"+str(store_count))
                 store_count+=1
