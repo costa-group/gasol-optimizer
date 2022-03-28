@@ -100,6 +100,11 @@ class AsmBlock:
         return [instruction.to_plain() for instruction in self.instructions
                 if instruction.disasm not in constants.beginning_block and instruction.disasm not in constants.end_block]
 
+
+    def instructions_not_optimized(self) -> [ASM_Json_T]:
+        return [instruction.to_plain() for instruction in self.instructions if instruction.disasm in constants.beginning_block
+                or instruction.disasm in constants.end_block or instruction.disasm in constants.split_block]
+
     @property
     def bytes_required(self) -> int:
         return sum([instruction.bytes_required for instruction in self.instructions])
