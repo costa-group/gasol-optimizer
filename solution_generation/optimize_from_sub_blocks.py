@@ -16,8 +16,7 @@ def rebuild_optimized_asm_block(previous_block : AsmBlock, sub_block_list : List
     previously_optimized = False
 
     # Tag and JUMPDEST were skipped in sub block list, and hence, we need to skip it when analyzing the optimization
-    # print(sub_block_list)
-    while previous_instructions[instr_idx].to_plain() != sub_block_list[0][0]:
+    while instr_idx < len(previous_instructions) and previous_instructions[instr_idx].to_plain() != sub_block_list[0][0]:
         # print(previous_instructions[instr_idx].to_plain(), sub_block_list[0][0])
         optimized_instructions.append(deepcopy(previous_instructions[instr_idx]))
         instr_idx += 1
