@@ -241,7 +241,11 @@ def generate_sub_block_asm_representation_from_instructions(instr_sol, pushed_va
 
         # If the instruction is a key in the opcode_... dict, then we need to rename it to fit the assembly format
         assembly_name = opcode_internal_representation_to_assembly_item.get(instr, instr)
-        if instr == "PUSH" or special_push_with_value_match:
+        if instr == "PUSH":
+            value = hex(int(pushed_values_decimal[position]))[2:]
+            sub_block_instructions_asm.append(AsmBytecode(-1, -1, -1, assembly_name, value))
+        elif special_push_with_value_match:
+            # TODO: remove hex, use directly the pushed values without modifying
             value = hex(int(pushed_values_decimal[position]))[2:]
             sub_block_instructions_asm.append(AsmBytecode(-1, -1, -1, assembly_name, value))
         else:

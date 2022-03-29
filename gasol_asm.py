@@ -125,8 +125,7 @@ def compute_original_sfs_with_simplifications(instructions, stack_size, block_id
                                   pop_flag, push = push_flag, revert = revert_flag)
 
     sfs_dict = get_sfs_dict()
-    print("SFS dict:", sfs_dict)
-    print("Sub-block list:", subblocks_list)
+
     return sfs_dict, subblocks_list
 
 
@@ -171,16 +170,11 @@ def optimize_block(sfs_dict, timeout, size = False):
 # contains the sfs from each block, the second one contains the sequence of instructions and
 # the third one is a set that contains all block ids.
 def generate_sfs_dicts_from_log(block, json_log,storage, last_const, size_abs, partition, pop_flag, push_flag,revert_return):
-    bytecodes = block.instructions
     stack_size = block.source_stack
     block_name = block.block_name
     block_id = block.block_id
 
     instructions =  block.instructions_to_optimize()
-
-    # No instructions to optimize
-    if not instructions:
-        return deepcopy(block)
 
     contracts_dict, sub_block_list = compute_original_sfs_with_simplifications(instructions, stack_size, block_id, block_name,
                                                          storage, last_const, size_abs, partition, pop_flag,
@@ -189,7 +183,7 @@ def generate_sfs_dicts_from_log(block, json_log,storage, last_const, size_abs, p
 
     # Contains sfs blocks considered to check the SMT problem. Therefore, a block is added from
     # sfs_original iff solver could not find an optimized solution, and from sfs_dict otherwise.
-    sfs_final = {}
+    optimized_sfs_dict = {}
 
     # Dict that contains all instr sequences
     instr_sequence_dict = {}
@@ -211,17 +205,17 @@ def generate_sfs_dicts_from_log(block, json_log,storage, last_const, size_abs, p
         sfs_block = syrup_contracts[block_id]
 
 
-        sfs_final[block_id] = sfs_block
+        optimized_sfs_dict[block_id] = sfs_block
         instr_sequence_dict[block_id] = instr_sequence
 
-    return sfs_final, instr_sequence_dict, ids
+    return syrup_contracts, optimized_sfs_dict, sub_block_list, instr_sequence_dict, ids
 
 
 # Verify information derived from log file is correct
 def check_log_file_is_correct(sfs_dict, instr_sequence_dict):
     execute_syrup_backend_combined(sfs_dict, instr_sequence_dict, "verify", "oms")
 
-    solver_output = obtain_solver_output("verify", "oms", 0)
+    solver_output, time_check = obtain_solver_output("verify", "oms", 0)
 
     return check_solver_output_is_correct(solver_output)
 
@@ -229,30 +223,28 @@ def check_log_file_is_correct(sfs_dict, instr_sequence_dict):
 
 # Given a dict with the sfs from each block and another dict that contains whether previous block was optimized or not,
 # generates the corresponding solution. All checks are assumed to have been done previously
-def optimize_asm_block_from_log(block, sfs_dict, instr_sequence_dict):
-    new_block = deepcopy(block)
+def optimize_asm_block_from_log(block, sfs_dict, sub_block_list, instr_sequence_dict):
+    # Optimized blocks. When a block is not optimized, None is pushed to the list.
     optimized_blocks = {}
 
-    for sub_block_name in sfs_dict:
-        sfs_block = sfs_dict[sub_block_name]
+    for sub_block_name, sfs_sub_block in sfs_dict.items():
 
-        user_instr = sfs_block['user_instrs']
+        if sub_block_name not in instr_sequence_dict:
+            optimized_blocks[sub_block_name] = None
+        else:
+            log_info = instr_sequence_dict[sub_block_name]
+            user_instr = sfs_sub_block['user_instrs']
+            bs = sfs_sub_block['max_sk_sz']
 
-        bs = sfs_block['max_sk_sz']
-        instr_sequence = instr_sequence_dict[sub_block_name]
-        _, instruction_theta_dict, opcodes_theta_dict, gas_theta_dict, values_dict = \
-            generate_theta_dict_from_sequence(bs, user_instr)
+            _, instruction_theta_dict, opcodes_theta_dict, gas_theta_dict, values_dict = generate_theta_dict_from_sequence(
+                bs, user_instr)
 
-        asm_sub_block = generate_sub_block_asm_representation_from_log(instr_sequence, opcodes_theta_dict,
-                                                                       instruction_theta_dict, gas_theta_dict, values_dict)
+            new_sub_block = generate_sub_block_asm_representation_from_log(log_info, opcodes_theta_dict,
+                                                                              instruction_theta_dict,
+                                                                              gas_theta_dict, values_dict)
+            optimized_blocks[sub_block_name] = new_sub_block
 
-        block_sub_index = int(sub_block_name.split("_")[-1])
-        optimized_blocks[block_sub_index] = asm_sub_block
-
-    asm_sub_blocks = list(filter(lambda x: isinstance(x, list), block.split_in_sub_blocks()))
-    optimized_blocks_list = [None if i not in optimized_blocks else optimized_blocks[i] for i in range(len(asm_sub_blocks))]
-
-    new_block.set_instructions_from_sub_blocks(optimized_blocks_list)
+    new_block = rebuild_optimized_asm_block(block, sub_block_list, optimized_blocks)
 
     return new_block
 
@@ -263,7 +255,7 @@ def optimize_asm_from_log(file_name, json_log, output_file, storage, last_const,
 
     # Blocks from all contracts are checked together. Thus, we first will obtain the needed
     # information from each block
-    sfs_dict, instr_sequence_dict, file_ids = {}, {}, set()
+    sfs_dict_to_check, instr_sequence_dict, file_ids = {}, {}, set()
     contracts = []
 
     file_name_str = file_name.split("/")[-1].split(".")[0]
@@ -288,12 +280,17 @@ def optimize_asm_from_log(file_name, json_log, output_file, storage, last_const,
         print("\nAnalyzing Init Code of: " + contract_name)
         print("-----------------------------------------\n")
         for block in init_code:
-            sfs_final_block, instr_sequence_dict_block, block_ids = \
+
+            if block.instructions_to_optimize() == []:
+                init_code_blocks.append(deepcopy(block))
+                continue
+
+            sfs_all, sfs_optimized, sub_block_list, instr_sequence_dict_block, block_ids = \
                 generate_sfs_dicts_from_log(block, json_log, storage, last_const, size_abs, partition, pop_flag,
                                             push_flag,revert_return)
 
-            new_block = optimize_asm_block_from_log(block, sfs_final_block, instr_sequence_dict_block)
-            sfs_dict.update(sfs_final_block)
+            new_block = optimize_asm_block_from_log(block, sfs_all, sub_block_list, instr_sequence_dict_block)
+            sfs_dict_to_check.update(sfs_optimized)
             instr_sequence_dict.update(instr_sequence_dict_block)
             file_ids.update(block_ids)
             init_code_blocks.append(new_block)
@@ -308,12 +305,17 @@ def optimize_asm_from_log(file_name, json_log, output_file, storage, last_const,
             run_code_blocks = []
 
             for block in blocks:
-                sfs_final_block, instr_sequence_dict_block, block_ids = \
+
+                if block.instructions_to_optimize() == []:
+                    run_code_blocks.append(deepcopy(block))
+                    continue
+
+                sfs_all, sfs_optimized, sub_block_list, instr_sequence_dict_block, block_ids = \
                     generate_sfs_dicts_from_log(block, json_log, storage,last_const, size_abs, partition, pop_flag,
                                                 push_flag, revert_return)
 
-                new_block = optimize_asm_block_from_log(block, sfs_final_block, instr_sequence_dict_block)
-                sfs_dict.update(sfs_final_block)
+                new_block = optimize_asm_block_from_log(block, sfs_all, sub_block_list, instr_sequence_dict_block)
+                sfs_dict_to_check.update(sfs_optimized)
                 instr_sequence_dict.update(instr_sequence_dict_block)
                 file_ids.update(block_ids)
                 run_code_blocks.append(new_block)
@@ -326,7 +328,7 @@ def optimize_asm_from_log(file_name, json_log, output_file, storage, last_const,
     if not set(json_log.keys()).issubset(file_ids):
         print("Log file does not match source file")
     else:
-        not_empty = {k : v for k,v in sfs_dict.items() if v != []}
+        not_empty = {k : v for k,v in sfs_dict_to_check.items() if v != []}
         correct = check_log_file_is_correct(not_empty, instr_sequence_dict)
         if correct:
             print("Solution generated from log file has been verified correctly")
@@ -652,7 +654,7 @@ if __name__ == '__main__':
     ap.add_argument("-bl", "--block", help ="Enable analysis of a single asm block", action = "store_true")
     ap.add_argument("-tout", metavar='timeout', action='store', type=int,
                     help="Timeout in seconds. By default, set to 10s per block.", default=10)
-    ap.add_argument("-optimize-gasol-from-log-file", dest='log_path', action='store', metavar="log_file",
+    ap.add_argument("-optimize-from-log", dest='log_path', action='store', metavar="log_file",
                         help="Generates the same optimized bytecode than the one associated to the log file")
     ap.add_argument("-log", "--generate-log", help ="Enable log file for Etherscan verification",
                     action = "store_true", dest='log_flag')
