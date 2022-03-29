@@ -1,6 +1,7 @@
 
 import itertools
 import json
+import re
 from typing import Union, Dict, Any
 
 from sfs_generator.asm_block import AsmBlock
@@ -149,18 +150,26 @@ def plain_instructions_to_asm_representation(raw_instruction_str : str) -> [ASM_
                 final_op = {"name": op}
             elif op.startswith("PUSH") and op.find("SIZE") != -1:
                 final_op = {"name": op}
+            # This case refers to PUSHx opcodes, that are allowed in the plain representation
+            elif re.fullmatch("PUSH([0-9]+)", op) is not None:
+                val = ops[i + 1]
+                # The hex representation omits
+                val_representation = hex(int(val[2:], 16))[2:]
+                final_op = {"name": "PUSH", "value": val_representation}
+                i = i + 1
+
             # If position t+1 is a Yul Keyword, then we need to analyze them separately
             elif not isYulKeyword(ops[i + 1]):
                 val = ops[i + 1]
                 # The hex representation omits
-                val_representation = val[2:] if val.startswith("0x") else val
+                val_representation = hex(int(val[2:], 16))[2:]
                 final_op = {"name": op, "value": val_representation}
                 i = i + 1
             else:
                 name_keyword = ops[i + 1]
                 val = ops[i + 2]
                 name = op + " " + name_keyword
-                val_representation = val[2:] if val.startswith("0x") else val
+                val_representation = hex(int(val[2:], 16))[2:]
                 final_op = {"name": name, "value": val_representation}
                 i += 2
 

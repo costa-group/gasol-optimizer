@@ -1,6 +1,6 @@
 from typing import Dict, Optional, Union
 import sfs_generator.opcodes as opcodes
-from sfs_generator.utils import get_ins_size
+from sfs_generator.utils import get_ins_size, get_push_number_hex
 
 # Assuming the value of asm is hexadecimal base. This way, we ensure the same format is respected
 ASM_Value_T = Optional[str]
@@ -41,6 +41,9 @@ class AsmBytecode:
         """
         return self.disasm if self.value is None else ' '.join([self.disasm, self.value])
 
+    def to_plain_with_byte_number(self) -> str:
+        op_name = ''.join([self.disasm, str(get_push_number_hex(self.value))]) if self.disasm == "PUSH" else self.disasm
+        return op_name if self.value is None else ' '.join([op_name, self.value])
 
     @property
     def bytes_required(self) -> int:

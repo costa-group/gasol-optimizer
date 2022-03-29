@@ -78,6 +78,9 @@ class AsmBlock:
     def to_plain(self) -> str:
         return ' '.join(map(lambda instr: instr.to_plain(), self.instructions))
 
+    def to_plain_with_byte_number(self) -> str:
+        return ' '.join(map(lambda instr: instr.to_plain_with_byte_number(), self.instructions))
+
     def __str__(self):
         content = ""
         content += "Block Id:"+str(self.block_id)+"\n"
