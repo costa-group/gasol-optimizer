@@ -154,7 +154,7 @@ def plain_instructions_to_asm_representation(raw_instruction_str : str) -> [ASM_
             elif re.fullmatch("PUSH([0-9]+)", op) is not None:
                 val = ops[i + 1]
                 # The hex representation omits
-                val_representation = hex(int(val[2:], 16))[2:]
+                val_representation = hex(int(val, 16))[2:]
                 final_op = {"name": "PUSH", "value": val_representation}
                 i = i + 1
 
@@ -162,14 +162,14 @@ def plain_instructions_to_asm_representation(raw_instruction_str : str) -> [ASM_
             elif not isYulKeyword(ops[i + 1]):
                 val = ops[i + 1]
                 # The hex representation omits
-                val_representation = hex(int(val[2:], 16))[2:]
+                val_representation = hex(int(val, 16))[2:]
                 final_op = {"name": op, "value": val_representation}
                 i = i + 1
             else:
                 name_keyword = ops[i + 1]
                 val = ops[i + 2]
                 name = op + " " + name_keyword
-                val_representation = hex(int(val[2:], 16))[2:]
+                val_representation = hex(int(val, 16))[2:]
                 final_op = {"name": name, "value": val_representation}
                 i += 2
 
