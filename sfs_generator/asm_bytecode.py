@@ -44,7 +44,11 @@ class AsmBytecode:
 
     @property
     def bytes_required(self) -> int:
-        return get_ins_size(self.disasm, self.value)
+        if self.disasm == "PUSH":
+            decimal_value = int(self.value, 16)
+        else:
+            decimal_value = None
+        return get_ins_size(self.disasm, decimal_value)
 
     @property
     def gas_spent(self) -> int:

@@ -479,7 +479,7 @@ def optimize_asm_block_asm_format(block, timeout, storage, last_const, size_abs,
         if not check_solver_output_is_correct(solver_output):
             optimized_blocks[sub_block_name] = None
             statistics_row = {"block_id": sub_block_name, "no_model_found": True, "shown_optimal": False,
-                              "solver_time_in_sec": round(solver_time, 3)}
+                              "solver_time_in_sec": round(solver_time, 3), "saved_size": 0, "saved_gas": 0}
             statistics_rows.append(statistics_row)
             total_time += solver_time
             continue
@@ -548,7 +548,7 @@ def optimize_asm_in_asm_format(file_name, output_file, csv_file, timeout=10, log
     asm = parse_asm(file_name)
     log_dicts = {}
     contracts = []
-    # verifier_error = False
+    verifier_error = False
 
     for c in asm.contracts:
 
@@ -574,14 +574,15 @@ def optimize_asm_in_asm_format(file_name, output_file, csv_file, timeout=10, log
             init_code_blocks.append(optimized_block)
 
             # Deployment size is not considered when measuring it
-            # update_gas_count(old_block, optimized_block)
+            update_gas_count(old_block, optimized_block)
 
             if not compare_asm_block_asm_format(old_block, optimized_block):
                 print("Optimized block " + str(old_block.block_id) + " from init code at contract " + contract_name +
                       " has not been verified correctly")
-                print(old_block.instructions)
-                print(optimized_block.instructions)
+                print(old_block.to_plain())
+                print(optimized_block.to_plain())
                 verifier_error = True
+                raise Exception
 
         new_contract.init_code = init_code_blocks
 
@@ -597,24 +598,25 @@ def optimize_asm_in_asm_format(file_name, output_file, csv_file, timeout=10, log
                 log_dicts.update(log_element)
                 run_code_blocks.append(optimized_block)
 
-                # update_gas_count(old_block, optimized_block)
-                # update_size_count(old_block, optimized_block)
+                update_gas_count(old_block, optimized_block)
+                update_size_count(old_block, optimized_block)
 
                 if not compare_asm_block_asm_format(old_block, optimized_block):
                     print("Optimized block " + str(old_block.block_id) + " from data id " + str(identifier)
                           + " at contract " + contract_name + " has not been verified correctly")
-                    print(old_block.instructions)
-                    print(optimized_block.instructions)
+                    print(old_block.to_plain())
+                    print(optimized_block.to_plain())
                     verifier_error = True
+                    raise Exception
 
             new_contract.set_run_code(identifier, run_code_blocks)
 
         contracts.append(new_contract)
 
-    # if not verifier_error:
-    #     print("Optimized bytecode has been checked successfully")
-    # else:
-    #     print("The optimized bytecode could not be verified")
+    if not verifier_error:
+        print("Optimized bytecode has been checked successfully")
+    else:
+        print("The optimized bytecode could not be verified")
 
     new_asm = deepcopy(asm)
     new_asm.contracts = contracts
