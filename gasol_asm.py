@@ -140,8 +140,6 @@ def optimize_block(sfs_dict, timeout, size = False):
         sfs_block = sfs_dict[block_name]
 
         current_cost = sfs_block['current_cost']
-        # original_instrs = sfs_block['original_instrs']
-        # current_size = get_ins_size_seq(original_instrs)
         current_size = 1
         user_instr = sfs_block['user_instrs']
         initial_program_length = sfs_block['init_progr_len']
@@ -150,6 +148,8 @@ def optimize_block(sfs_dict, timeout, size = False):
         args_i.solver = "oms"
         args_i.instruction_order = True
         args_i.bytecode_size_soft_constraints = size
+        args_i.default_encoding = True
+        args_i.memory_encoding = "l_vars"
 
         if args.backend:
             execute_syrup_backend(args_i, sfs_block, block_name=block_name, timeout=timeout)
@@ -249,8 +249,8 @@ def optimize_asm_block_from_log(block, sfs_dict, sub_block_list, instr_sequence_
     return new_block
 
 
-def optimize_asm_from_log(file_name, json_log, output_file, storage, last_const, size_abs, partition, pop_flag,
-                          push_flag, revert_return):
+def optimize_asm_from_log(file_name, json_log, output_file, storage = False, last_const = False, size_abs = False,
+                          partition = False, pop_flag = False, push_flag = False, revert_return = False):
     asm = parse_asm(file_name)
 
     # Blocks from all contracts are checked together. Thus, we first will obtain the needed
@@ -359,6 +359,7 @@ def optimize_isolated_asm_block(block_name,output_file, csv_file, timeout=10, st
 
     blocks = parse_blocks_from_plain_instructions(instructions)
     asm_blocks = []
+    verifier_error = False
 
     for old_block in blocks:
         asm_block, _ = optimize_asm_block_asm_format(old_block, timeout, storage, last_const, size_abs, partition, pop, push, revert)
@@ -372,11 +373,15 @@ def optimize_isolated_asm_block(block_name,output_file, csv_file, timeout=10, st
             print(old_block.instructions)
             print(asm_block.instructions)
             verifier_error = True
-            raise Exception
-
             
         
     if args.backend:
+
+        if not verifier_error:
+            print("Optimized bytecode has been checked successfully")
+        else:
+            print("The optimized bytecode could not be verified. Please, report the GASOL project to address this issue")
+
         df = pd.DataFrame(statistics_rows)
         df.to_csv(csv_file)
         print("")
@@ -584,7 +589,6 @@ def optimize_asm_in_asm_format(file_name, output_file, csv_file, timeout=10, log
                 print(old_block.to_plain())
                 print(optimized_block.to_plain())
                 verifier_error = True
-                raise Exception
 
         new_contract.init_code = init_code_blocks
 
@@ -609,22 +613,13 @@ def optimize_asm_in_asm_format(file_name, output_file, csv_file, timeout=10, log
                     print(old_block.to_plain())
                     print(optimized_block.to_plain())
                     verifier_error = True
-                    raise Exception
 
             new_contract.set_run_code(identifier, run_code_blocks)
 
         contracts.append(new_contract)
 
-    if not verifier_error:
-        print("Optimized bytecode has been checked successfully")
-    else:
-        print("The optimized bytecode could not be verified")
-
     new_asm = deepcopy(asm)
     new_asm.contracts = contracts
-
-    print("Previous number of instructions:", compute_number_of_instructions_in_asm_json_per_file(asm))
-    print("New number of instructions:", compute_number_of_instructions_in_asm_json_per_file(new_asm))
 
     if log:
         input_file_name = args.input_path.split("/")[-1].split(".")[0]
@@ -633,6 +628,12 @@ def optimize_asm_in_asm_format(file_name, output_file, csv_file, timeout=10, log
             json.dump(log_dicts, log_f)
 
     if args.backend:
+
+        if not verifier_error:
+            print("Optimized bytecode has been checked successfully")
+        else:
+            print("The optimized bytecode could not be verified. Please, report the GASOL project to address this issue")
+
         with open(output_file, 'w') as f:
             f.write(json.dumps(rebuild_asm(new_asm)))
 
@@ -661,14 +662,15 @@ if __name__ == '__main__':
     ap.add_argument("-o", help="ASM output path", dest='output_path', action='store')
     ap.add_argument("-csv", help="CSV file path", dest='csv_path', action='store')
     ap.add_argument("-storage", "--storage", help="Split using SSTORE, MSTORE and MSTORE8", action="store_true")
-    ap.add_argument("-last-constants", "--last-constants", help="It removes the last instructions of a block when they generate a constant value", dest="last_constants", action = "store_true")
-    ap.add_argument("-mem40", "--mem40", help="It assumes that pos 64 in memory is not dependant with variables", action = "store_true")
-    ap.add_argument("-size","--size",help="It enables size cost model. The simplification rules are applied only if they improve the size",action="store_true")
+    # ap.add_argument("-last-constants", "--last-constants", help="It removes the last instructions of a block when they generate a constant value", dest="last_constants", action = "store_true")
+    # ap.add_argument("-mem40", "--mem40", help="It assumes that pos 64 in memory is not dependant with variables", action = "store_true")
+    ap.add_argument("-size","--size",help="It enables size cost model. The simplification rules are applied only if they reduce the size",action="store_true")
     ap.add_argument("-partition","--partition",help="It enables the partition in blocks of 24 instructions",action="store_true")
-    ap.add_argument("-pop","--pop",help="It considers the necessary pops as uninterpreted functions",action="store_true")
-    ap.add_argument("-push","--push",help="It considers the push instructions as uninterpreted functions",action="store_true")
-    ap.add_argument("-terminal","--terminal",help="It takes into account if the last instruction is a revert or a return",action="store_true")
-    ap.add_argument("-backend","--backend",help="Enables backend",action="store_true")
+    # ap.add_argument("-pop","--pop",help="It considers the necessary pops as uninterpreted functions",action="store_true")
+    # ap.add_argument("-push","--push",help="It considers the push instructions as uninterpreted functions",action="store_true")
+    # ap.add_argument("-terminal","--terminal",help="It takes into account if the last instruction is a revert or a return",action="store_true")
+    ap.add_argument("-backend","--backend",help="Disables backend generation, so that only intermediate files are generated",
+                    action="store_false")
     args = ap.parse_args()
 
 
@@ -680,8 +682,8 @@ if __name__ == '__main__':
     if args.log_path is not None:
         with open(args.log_path) as path:
             log_dict = json.load(path)
-            optimize_asm_from_log(args.input_path, log_dict, args.output_path,  args.storage,args.last_constants,
-                                  args.size,args.partition,args.pop,args.push, args.terminal)
+            optimize_asm_from_log(args.input_path, log_dict, args.output_path,  args.storage, False,
+                                  args.size,args.partition)
             exit(0)
 
     input_file_name = args.input_path.split("/")[-1].split(".")[0]
@@ -699,23 +701,20 @@ if __name__ == '__main__':
 
     if not args.block:
         optimize_asm_in_asm_format(args.input_path, output_file, csv_file, args.tout, args.log_flag, args.storage,
-                                   args.last_constants,args.size,args.partition,args.pop,args.push, args.terminal)
+                                   False,args.size,args.partition)
     else:
-        optimize_isolated_asm_block(args.input_path, output_file, csv_file, args.tout, args.storage,args.last_constants,
-                                    args.size,args.partition,args.pop,args.push, args.terminal)
+        optimize_isolated_asm_block(args.input_path, output_file, csv_file, args.tout, args.storage, False,
+                                    args.size,args.partition)
 
 
     y = dtimer()
 
-    print("")
-    print("Total time: "+str(y-x))
-    print("")
     
     if args.backend:
         print("")
         print("Total time spent by the SMT solver in minutes: " + str(round(total_time / 60, 2)))
         print("")
-        print("Previous gas executed: "+str(previous_gas))
+        print("Estimated initial gas: "+str(previous_gas))
         print("New gas executed: " + str(new_gas))
         print("")
         print("Previous size executed: " + str(previous_size))
@@ -728,5 +727,7 @@ if __name__ == '__main__':
         print("")
         print("Previous size executed: " + str(previous_size))
 
+    print("")
+    print("Total time: "+str(y-x))
     print("")
     print("Intermediate files stored at " + paths.gasol_path)
