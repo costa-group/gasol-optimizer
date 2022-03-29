@@ -347,13 +347,6 @@ def optimize_isolated_asm_block(block_name,output_file, csv_file, timeout=10, st
 
     file_name_str = block_name.split("/")[-1].split(".")[0]
 
-    # If not output file provided, then we create a name by default.
-    if output_file is None:
-        output_file = file_name_str + "_optimized.txt"
-
-    if csv_file is None:
-        csv_file = file_name_str + "_statistics.csv"
-
     with open(block_name,"r") as f:        
         instructions = f.read()
 
@@ -373,7 +366,7 @@ def optimize_isolated_asm_block(block_name,output_file, csv_file, timeout=10, st
             print(old_block.instructions)
             print(asm_block.instructions)
             verifier_error = True
-            
+
         
     if args.backend:
 
@@ -386,8 +379,14 @@ def optimize_isolated_asm_block(block_name,output_file, csv_file, timeout=10, st
         df.to_csv(csv_file)
         print("")
         print("Optimized code stored at " + output_file)
+        print("")
+        print("Initial sequence (basic block per line):")
+        print('\n'.join([old_block.to_plain_with_byte_number() for old_block in blocks]))
+        print("")
+        print("Optimized sequence (basic block per line):")
+        print('\n'.join([asm_block.to_plain_with_byte_number() for asm_block in asm_blocks]))
         with open(output_file, 'w') as f:
-            f.write(parse_asm_representation_from_blocks(asm_blocks))
+            f.write('\n'.join([asm_block.to_plain_with_byte_number() for asm_block in asm_blocks]))
 
 
 def update_gas_count(old_block : AsmBlock, new_block : AsmBlock):
@@ -689,7 +688,10 @@ if __name__ == '__main__':
     input_file_name = args.input_path.split("/")[-1].split(".")[0]
 
     if args.output_path is None:
-        output_file = input_file_name + "_optimized.json_solc"
+        if not args.block:
+            output_file = input_file_name + "_optimized.json_solc"
+        else:
+            output_file = input_file_name + "_optimized.txt"
     else:
         output_file = args.output_path
 
@@ -702,6 +704,7 @@ if __name__ == '__main__':
     if not args.block:
         optimize_asm_in_asm_format(args.input_path, output_file, csv_file, args.tout, args.log_flag, args.storage,
                                    False,args.size,args.partition)
+
     else:
         optimize_isolated_asm_block(args.input_path, output_file, csv_file, args.tout, args.storage, False,
                                     args.size,args.partition)
@@ -709,25 +712,22 @@ if __name__ == '__main__':
 
     y = dtimer()
 
-    
+    print("")
+    print("Total time: "+str(y-x))
+    print("")
+    print("Intermediate files stored at " + paths.gasol_path)
+    print("")
+    print("Optimized file stored at " + output_file)
+
     if args.backend:
         print("")
-        print("Total time spent by the SMT solver in minutes: " + str(round(total_time / 60, 2)))
-        print("")
         print("Estimated initial gas: "+str(previous_gas))
-        print("New gas executed: " + str(new_gas))
+        print("Estimated gas optimized: " + str(new_gas))
         print("")
-        print("Previous size executed: " + str(previous_size))
-        print("New size executed: " + str(new_size))
-        print("")
-        print("Json solc optimized stored at " + output_file)
+        print("Estimated initial size: " + str(previous_size))
+        print("Estimated size optimized: " + str(new_size))
 
     else:
         print("Previous gas executed: " + str(previous_gas))
         print("")
         print("Previous size executed: " + str(previous_size))
-
-    print("")
-    print("Total time: "+str(y-x))
-    print("")
-    print("Intermediate files stored at " + paths.gasol_path)
