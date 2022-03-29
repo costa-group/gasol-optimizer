@@ -236,7 +236,7 @@ def generate_sub_block_asm_representation_from_instructions(instr_sol, pushed_va
 
         # Basic stack instructions refer to those instruction that only manage the stack: SWAPk, POP or DUPk.
         # These instructions just initialize each field in the asm format to -1
-        special_push_with_value_match = re.match(re.compile('PUSHIMMUTABLE|PUSH [tag]|PUSH #\[\$]|PUSH \[\$]|PUSH data'),
+        special_push_with_value_match = re.match(re.compile('PUSHIMMUTABLE|PUSH \[tag]|PUSH #\[\$]|PUSH \[\$]|PUSH data'),
                                                  instr)
 
         # If the instruction is a key in the opcode_... dict, then we need to rename it to fit the assembly format
