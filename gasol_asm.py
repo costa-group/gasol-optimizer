@@ -345,8 +345,6 @@ def optimize_isolated_asm_block(block_name,output_file, csv_file, timeout=10, st
                                 size_abs = False, partition = False, pop = False, push = False, revert = False):
     global statistics_rows
 
-    file_name_str = block_name.split("/")[-1].split(".")[0]
-
     with open(block_name,"r") as f:        
         instructions = f.read()
 
@@ -377,8 +375,6 @@ def optimize_isolated_asm_block(block_name,output_file, csv_file, timeout=10, st
 
         df = pd.DataFrame(statistics_rows)
         df.to_csv(csv_file)
-        print("")
-        print("Optimized code stored at " + output_file)
         print("")
         print("Initial sequence (basic block per line):")
         print('\n'.join([old_block.to_plain_with_byte_number() for old_block in blocks]))
@@ -668,8 +664,9 @@ if __name__ == '__main__':
     # ap.add_argument("-pop","--pop",help="It considers the necessary pops as uninterpreted functions",action="store_true")
     # ap.add_argument("-push","--push",help="It considers the push instructions as uninterpreted functions",action="store_true")
     # ap.add_argument("-terminal","--terminal",help="It takes into account if the last instruction is a revert or a return",action="store_true")
-    ap.add_argument("-backend","--backend",help="Disables backend generation, so that only intermediate files are generated",
-                    action="store_false")
+    ap.add_argument("-backend","--backend",help="Disables backend generation, so that only intermediate files are generated", action="store_false")
+    ap.add_argument("-intermediate", "--intermediate", help="Keeps temporary intermediate files. These files contain the sfs representation, smt encoding...", action="store_true")
+
     args = ap.parse_args()
 
 
@@ -713,11 +710,16 @@ if __name__ == '__main__':
     y = dtimer()
 
     print("")
-    print("Total time: "+str(y-x))
+    print("Total time: "+ str(round(y-x, 2)) + " s")
+
+    if args.intermediate or not args.backend:
+        print("")
+        print("Intermediate files stored at " + paths.gasol_path)
+    else:
+        shutil.rmtree(paths.gasol_path, ignore_errors=True)
+
     print("")
-    print("Intermediate files stored at " + paths.gasol_path)
-    print("")
-    print("Optimized file stored at " + output_file)
+    print("Optimized code stored at " + output_file)
 
     if args.backend:
         print("")
@@ -728,6 +730,6 @@ if __name__ == '__main__':
         print("Estimated size optimized: " + str(new_size))
 
     else:
-        print("Previous gas executed: " + str(previous_gas))
+        print("Estimated initial gas: "+str(previous_gas))
         print("")
-        print("Previous size executed: " + str(previous_size))
+        print("Estimated initial size: " + str(previous_size))
