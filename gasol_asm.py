@@ -538,7 +538,7 @@ def compare_asm_block_asm_format(old_block : AsmBlock, new_block : AsmBlock,stor
     return final_comparison and (intermediate_instructions_old == intermediate_instructions_new)
 
 
-def optimize_asm_in_asm_format(file_name, output_file, csv_file, timeout=10, log=False, storage= False, last_const = False, size_abs = False, partition = False, pop = False, push = False, revert = False):
+def optimize_asm_in_asm_format(file_name, output_file, csv_file, log_file, timeout=10, log=False, storage= False, last_const = False, size_abs = False, partition = False, pop = False, push = False, revert = False):
     global statistics_rows
 
     asm = parse_asm(file_name)
@@ -589,7 +589,7 @@ def optimize_asm_in_asm_format(file_name, output_file, csv_file, timeout=10, log
             run_code_blocks = []
             for old_block in blocks:
                 optimized_block, log_element = optimize_asm_block_asm_format(old_block, timeout, storage, last_const,size_abs,partition, pop, push, revert)
-
+                
                 if not compare_asm_block_asm_format(old_block, optimized_block):
                     print("Comparison failed, so initial block is kept")
                     print(old_block.to_plain())
@@ -613,9 +613,7 @@ def optimize_asm_in_asm_format(file_name, output_file, csv_file, timeout=10, log
     new_asm.contracts = contracts
 
     if log:
-        input_file_name = args.input_path.split("/")[-1].split(".")[0]
-
-        with open(input_file_name + ".log" , "w") as log_f:
+        with open(log_file, "w") as log_f:
             json.dump(log_dicts, log_f)
 
     if args.backend:
@@ -645,6 +643,7 @@ if __name__ == '__main__':
                         help="Generates the same optimized bytecode than the one associated to the log file")
     ap.add_argument("-log", "--generate-log", help ="Enable log file for Etherscan verification",
                     action = "store_true", dest='log_flag')
+    ap.add_argument("-dest-log", help ="Log output path", action = "store", dest='log_stored_final')
     ap.add_argument("-o", help="ASM output path", dest='output_path', action='store')
     ap.add_argument("-csv", help="CSV file path", dest='csv_path', action='store')
     ap.add_argument("-storage", "--storage", help="Split using SSTORE, MSTORE and MSTORE8", action="store_true")
@@ -665,14 +664,6 @@ if __name__ == '__main__':
     if args.storage or args.partition:
         constants.append_store_instructions_to_split()
 
-    x = dtimer()
-    if args.log_path is not None:
-        with open(args.log_path) as path:
-            log_dict = json.load(path)
-            optimize_asm_from_log(args.input_path, log_dict, args.output_path,  args.storage, False,
-                                  args.size,args.partition)
-            exit(0)
-
     input_file_name = args.input_path.split("/")[-1].split(".")[0]
 
     if args.output_path is None:
@@ -688,9 +679,22 @@ if __name__ == '__main__':
     else:
         csv_file = args.csv_path
 
+    if args.log_stored_final is None:
+        log_file = input_file_name + ".log"
+    else:
+        log_file = args.log_stored_final
+
+
+    x = dtimer()
+    if args.log_path is not None:
+        with open(args.log_path) as path:
+            log_dict = json.load(path)
+            optimize_asm_from_log(args.input_path, log_dict, output_file,  args.storage, False,
+                                  args.size,args.partition)
+            exit(0)
 
     if not args.block:
-        optimize_asm_in_asm_format(args.input_path, output_file, csv_file, args.tout, args.log_flag, args.storage,
+        optimize_asm_in_asm_format(args.input_path, output_file, csv_file, log_file, args.tout, args.log_flag, args.storage,
                                    False,args.size,args.partition)
 
     else:
