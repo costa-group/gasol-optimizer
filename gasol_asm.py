@@ -140,7 +140,8 @@ def optimize_block(sfs_dict, timeout, size = False):
         sfs_block = sfs_dict[block_name]
 
         current_cost = sfs_block['current_cost']
-        current_size = 1
+        original_instr = sfs_block['original_instrs']
+        current_size = get_ins_size_seq(original_instr)
         user_instr = sfs_block['user_instrs']
         initial_program_length = sfs_block['init_progr_len']
 
@@ -161,7 +162,7 @@ def optimize_block(sfs_dict, timeout, size = False):
             # from the solver
             else:
                 solver_output, solver_time = obtain_solver_output(block_name, "oms", timeout)
-            block_solutions.append((solver_output, block_name, current_cost, current_size, user_instr, solver_time))
+            block_solutions.append((solver_output, block_name, original_instr, current_cost, current_size, user_instr, solver_time))
 
     return block_solutions
 
@@ -257,12 +258,6 @@ def optimize_asm_from_log(file_name, json_log, output_file, storage = False, las
     # information from each block
     sfs_dict_to_check, instr_sequence_dict, file_ids = {}, {}, set()
     contracts = []
-
-    file_name_str = file_name.split("/")[-1].split(".")[0]
-
-    # If not output file provided, then we create a name by default.
-    if output_file is None:
-        output_file = file_name_str + "_optimized_from_log.json_solc"
 
     for c in asm.contracts:
 
@@ -468,14 +463,16 @@ def optimize_asm_block_asm_format(block, timeout, storage, last_const, size_abs,
         return new_block, {}
     
     sfs_dict = contracts_dict["syrup_contract"]
-    for solver_output, sub_block_name, current_cost, current_length, user_instr, solver_time \
+    for solver_output, sub_block_name, original_instr, current_cost, current_length, user_instr, solver_time \
             in optimize_block(sfs_dict, timeout, size_abs):
 
         # We weren't able to find a solution using the solver, so we just update
         if not check_solver_output_is_correct(solver_output):
             optimized_blocks[sub_block_name] = None
             statistics_row = {"block_id": sub_block_name, "no_model_found": True, "shown_optimal": False,
-                              "solver_time_in_sec": round(solver_time, 3), "saved_size": 0, "saved_gas": 0}
+                              "previous_solution": original_instr, "solver_time_in_sec": round(solver_time, 3),
+                              "saved_size": 0, "saved_gas": 0}
+
             statistics_rows.append(statistics_row)
             total_time += solver_time
             continue
@@ -493,10 +490,12 @@ def optimize_asm_block_asm_format(block, timeout, storage, last_const, size_abs,
                                                                           instruction_theta_dict,
                                                                           gas_theta_dict, values_dict)
         _, shown_optimal = analyze_file(solver_output, "oms")
-        # optimized_length = sum([bytes_required_asm(instr) for instr in new_sub_block])
-        optimized_length = 0
+        optimized_length = sum([instr.bytes_required for instr in new_sub_block])
+
         statistics_row = {"block_id": sub_block_name, "solver_time_in_sec": round(solver_time, 3), "saved_size": current_length - optimized_length,
-                          "saved_gas": current_cost - optimized_cost, "no_model_found": False, "shown_optimal": shown_optimal}
+                          "saved_gas": current_cost - optimized_cost, "no_model_found": False, "shown_optimal": shown_optimal,
+                          "previous_solution": original_instr, "new_solution": ' '.join([instr.to_plain() for instr in new_sub_block])}
+
         statistics_rows.append(statistics_row)
         total_time += solver_time
 
@@ -572,6 +571,7 @@ def optimize_asm_in_asm_format(file_name, output_file, csv_file, log_file, timeo
                 print("")
                 optimized_block = old_block
                 log_element = {}
+                raise Exception
 
             log_dicts.update(log_element)
             init_code_blocks.append(optimized_block)
@@ -597,6 +597,7 @@ def optimize_asm_in_asm_format(file_name, output_file, csv_file, log_file, timeo
                     print("")
                     optimized_block = old_block
                     log_element = {}
+                    raise Exception
 
 
                 log_dicts.update(log_element)
@@ -667,10 +668,12 @@ if __name__ == '__main__':
     input_file_name = args.input_path.split("/")[-1].split(".")[0]
 
     if args.output_path is None:
-        if not args.block:
-            output_file = input_file_name + "_optimized.json_solc"
-        else:
+        if args.block:
             output_file = input_file_name + "_optimized.txt"
+        elif args.log_stored_final:
+            output_file = input_file_name + "_optimized_from_log.json_solc"
+        else:
+            output_file = input_file_name + "_optimized.json_solc"
     else:
         output_file = args.output_path
 
