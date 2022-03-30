@@ -350,29 +350,23 @@ def optimize_isolated_asm_block(block_name,output_file, csv_file, timeout=10, st
 
     blocks = parse_blocks_from_plain_instructions(instructions)
     asm_blocks = []
-    verifier_error = False
 
     for old_block in blocks:
         asm_block, _ = optimize_asm_block_asm_format(old_block, timeout, storage, last_const, size_abs, partition, pop, push, revert)
-        asm_blocks.append(asm_block)
+
+        if not compare_asm_block_asm_format(old_block, asm_block):
+            print("Comparison failed, so initial block is kept")
+            print(old_block.to_plain())
+            print(asm_block.to_plain())
+            print("")
+            asm_block = old_block
 
         update_gas_count(old_block, asm_block)
         update_size_count(old_block, asm_block)
-
-        if not compare_asm_block_asm_format(old_block, asm_block):
-            print("Optimized block " + str(old_block.block_name) + " has not been verified correctly")
-            print(old_block.instructions)
-            print(asm_block.instructions)
-            verifier_error = True
+        asm_blocks.append(asm_block)
 
         
     if args.backend:
-
-        if not verifier_error:
-            print("Optimized bytecode has been checked successfully")
-        else:
-            print("The optimized bytecode could not be verified. Please, report the GASOL project to address this issue")
-
         df = pd.DataFrame(statistics_rows)
         df.to_csv(csv_file)
         print("")
@@ -550,7 +544,6 @@ def optimize_asm_in_asm_format(file_name, output_file, csv_file, timeout=10, log
     asm = parse_asm(file_name)
     log_dicts = {}
     contracts = []
-    verifier_error = False
 
     for c in asm.contracts:
 
@@ -572,18 +565,19 @@ def optimize_asm_in_asm_format(file_name, output_file, csv_file, timeout=10, log
         for old_block in init_code:
             optimized_block, log_element = optimize_asm_block_asm_format(old_block, timeout, storage, last_const,size_abs,partition, pop, push, revert)
 
+            if not compare_asm_block_asm_format(old_block, optimized_block):
+                print("Comparison failed, so initial block is kept")
+                print(old_block.to_plain())
+                print(optimized_block.to_plain())
+                print("")
+                optimized_block = old_block
+                log_element = {}
+
             log_dicts.update(log_element)
             init_code_blocks.append(optimized_block)
 
             # Deployment size is not considered when measuring it
             update_gas_count(old_block, optimized_block)
-
-            if not compare_asm_block_asm_format(old_block, optimized_block):
-                print("Optimized block " + str(old_block.block_id) + " from init code at contract " + contract_name +
-                      " has not been verified correctly")
-                print(old_block.to_plain())
-                print(optimized_block.to_plain())
-                verifier_error = True
 
         new_contract.init_code = init_code_blocks
 
@@ -596,18 +590,20 @@ def optimize_asm_in_asm_format(file_name, output_file, csv_file, timeout=10, log
             for old_block in blocks:
                 optimized_block, log_element = optimize_asm_block_asm_format(old_block, timeout, storage, last_const,size_abs,partition, pop, push, revert)
 
+                if not compare_asm_block_asm_format(old_block, optimized_block):
+                    print("Comparison failed, so initial block is kept")
+                    print(old_block.to_plain())
+                    print(optimized_block.to_plain())
+                    print("")
+                    optimized_block = old_block
+                    log_element = {}
+
+
                 log_dicts.update(log_element)
                 run_code_blocks.append(optimized_block)
 
                 update_gas_count(old_block, optimized_block)
                 update_size_count(old_block, optimized_block)
-
-                if not compare_asm_block_asm_format(old_block, optimized_block):
-                    print("Optimized block " + str(old_block.block_id) + " from data id " + str(identifier)
-                          + " at contract " + contract_name + " has not been verified correctly")
-                    print(old_block.to_plain())
-                    print(optimized_block.to_plain())
-                    verifier_error = True
 
             new_contract.set_run_code(identifier, run_code_blocks)
 
@@ -623,11 +619,6 @@ def optimize_asm_in_asm_format(file_name, output_file, csv_file, timeout=10, log
             json.dump(log_dicts, log_f)
 
     if args.backend:
-
-        if not verifier_error:
-            print("Optimized bytecode has been checked successfully")
-        else:
-            print("The optimized bytecode could not be verified. Please, report the GASOL project to address this issue")
 
         with open(output_file, 'w') as f:
             f.write(json.dumps(rebuild_asm(new_asm)))
@@ -726,10 +717,10 @@ if __name__ == '__main__':
         print("Estimated initial gas: "+str(previous_gas))
         print("Estimated gas optimized: " + str(new_gas))
         print("")
-        print("Estimated initial size: " + str(previous_size))
-        print("Estimated size optimized: " + str(new_size))
+        print("Estimated initial size in bytes: " + str(previous_size))
+        print("Estimated size optimized in bytes: " + str(new_size))
 
     else:
         print("Estimated initial gas: "+str(previous_gas))
         print("")
-        print("Estimated initial size: " + str(previous_size))
+        print("Estimated initial size in bytes: " + str(previous_size))
