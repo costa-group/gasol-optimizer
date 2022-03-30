@@ -241,10 +241,10 @@ def get_ins_size_seq(instructions_disasm):
     instructions = list(filter(lambda x: x != '', instructions_disasm.split(' ')))
     i, bytes = 0, 0
     while i < len(instructions):
-        if instructions[i] == "PUSH" and is_integer(instructions[i+1]):
+        if instructions[i] == "PUSH" and not(isYulKeyword(instructions[i+1])):
             bytes += get_ins_size("PUSH", int(instructions[i+1], 16))
             i += 2
-        elif instructions[i] == "PUSH" and not is_integer(instructions[i+1]):
+        elif instructions[i] == "PUSH":
             bytes += get_ins_size(' '.join(instructions[i:i+2]), instructions[i+2])
             i += 3
         elif instructions[i] == "ASSIGNIMMUTABLE":
