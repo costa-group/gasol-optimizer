@@ -332,6 +332,9 @@ def optimize_asm_from_log(file_name, json_log, output_file, storage = False, las
 
             with open(output_file, 'w') as f:
                 f.write(json.dumps(rebuild_asm(new_asm)))
+
+            print("")
+            print("Optimized code stored at " + output_file)
         else:
             print("Log file does not contain a valid solution")
 
@@ -670,7 +673,7 @@ if __name__ == '__main__':
     if args.output_path is None:
         if args.block:
             output_file = input_file_name + "_optimized.txt"
-        elif args.log_stored_final:
+        elif args.log_path is not None:
             output_file = input_file_name + "_optimized_from_log.json_solc"
         else:
             output_file = input_file_name + "_optimized.json_solc"
