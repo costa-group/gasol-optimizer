@@ -2019,7 +2019,7 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
         else:
             new_original_ins.append(e)
     
-    json_dict["original_instrs"] = " ".join(new_original_ins)
+    json_dict["original_instrs"] = " ".join(original_ins)
 
     
     if not simplification:
