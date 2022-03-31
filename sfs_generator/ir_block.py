@@ -963,7 +963,7 @@ def compile_instr(rule,evm_opcode,variables,list_jumps,cond):
         opcode_name = opcode[0]
         opcode_rest = ""
 
-    print(opcode_name, opcode_rest)
+    # print(opcode_name, opcode_rest)
 
     if opcode_name in opcodes0:
         value, index_variables = translateOpcodes0(opcode_name, variables)
@@ -1045,8 +1045,8 @@ def compile_block(instrs,input_stack,block_id):
 
     
     while not(finish) and cont< len(l_instr):
-        if l_instr[cont].find("KECCAK")!=-1 and l_instr[cont-1].find("MSTORE")!=-1:
-            print("KECCYES")
+        # if l_instr[cont].find("KECCAK")!=-1 and l_instr[cont-1].find("MSTORE")!=-1:
+        #     #print("KECCYES")
         index_variables = compile_instr(rule,l_instr[cont],index_variables,[],True)        
         cont+=1
 
@@ -1097,13 +1097,7 @@ def evm2rbr_compiler(file_name = None,block = None, block_id = -1, block_name = 
         rule = compile_block(instructions,input_stack,block_id)
 
         has_sto = has_storage_ins(instructions)
-        if has_sto:
-            if "MSTORE" in instructions or "MSTORE8" in instructions:
-                print("STORAGE BLOCK: MSTORE")
-            else:
-                print("STORAGE BLOCK: SSTORE")
-        else:
-            print("NO STORAGE BLOCK")
+
         write_rbr(rule,block_name)
 
         # print(preffix)
@@ -1117,14 +1111,7 @@ def evm2rbr_compiler(file_name = None,block = None, block_id = -1, block_name = 
         
     except Exception as e:
         traceback.print_exc()
-        if len(e.args)>1:
-            arg = e[1]
-            if arg == 5:
-                raise Exception("Error in SACO translation",5)
-            elif arg == 6:
-                raise Exception("Error in C translation",6)
-        else:    
-            raise Exception("Error in RBR generation",4)
+        raise Exception("Error in RBR generation",4)
             
 
 def has_storage_ins(instructions):
