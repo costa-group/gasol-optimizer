@@ -2813,11 +2813,11 @@ def translate_subblock(rule,instrs,sstack,tstack,sstack_idx,idx,next_block,sub_b
         pops2remove = 0
         if max_stack_size!=0 and gas !=0 and not is_identity_map(sstack,tstack,instructions):
             compute_gast = True
-            new_tstack,new_nexts = optimize_splitpop_block(tstack,sstack,next_block,opcodes)
-            if new_nexts != []:
-                pops2remove = new_nexts[2]
-                # gas = gas+2*pops2remove
-                max_instr_size+=pops2remove
+            new_tstack,new_nexts = tstack,[] #optimize_splitpop_block(tstack,sstack,next_block,opcodes)
+            # if new_nexts != []:
+            #     pops2remove = new_nexts[2]
+            #     # gas = gas+2*pops2remove
+            #     max_instr_size+=pops2remove
 
             new_opcodes = compute_opcodes2write(opcodes,0)
             new_ops = list(map(lambda x: x[4:-1],new_opcodes))
