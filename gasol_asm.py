@@ -5,6 +5,7 @@ import json
 import os
 import shutil
 import sys
+from typing import Tuple
 from copy import deepcopy
 from timeit import default_timer as dtimer
 
@@ -497,7 +498,7 @@ def optimize_asm_block_asm_format(block, timeout, storage, last_const, size_abs,
 
         statistics_row = {"block_id": sub_block_name, "solver_time_in_sec": round(solver_time, 3), "saved_size": current_length - optimized_length,
                           "saved_gas": current_cost - optimized_cost, "no_model_found": False, "shown_optimal": shown_optimal,
-                          "previous_solution": original_instr, "new_solution": ' '.join([instr.to_plain() for instr in new_sub_block])}
+                          "previous_solution": original_instr, "solution_found": ' '.join([instr.to_plain() for instr in new_sub_block])}
 
         statistics_rows.append(statistics_row)
         total_time += solver_time
@@ -505,8 +506,10 @@ def optimize_asm_block_asm_format(block, timeout, storage, last_const, size_abs,
         if (not size_abs and current_cost > optimized_cost) or (size_abs and current_length > optimized_length) :
             optimized_blocks[sub_block_name] = new_sub_block
             log_dicts[sub_block_name] = generate_solution_dict(solver_output)
+            statistics_row["block_replaced"] = True
         else:
             optimized_blocks[sub_block_name] = None
+            statistics_row["block_replaced"] = False
 
     new_block = rebuild_optimized_asm_block(block, sub_block_list, optimized_blocks)
 
@@ -629,6 +632,32 @@ def optimize_asm_in_asm_format(file_name, output_file, csv_file, log_file, timeo
         df.to_csv(csv_file)
 
 
+def final_file_names(args : argparse.Namespace) -> Tuple[str, str, str]:
+    input_file_name = args.input_path.split("/")[-1].split(".")[0]
+
+    if args.output_path is None:
+        if args.block:
+            output_file = input_file_name + "_optimized.txt"
+        elif args.log_path is not None:
+            output_file = input_file_name + "_optimized_from_log.json_solc"
+        else:
+            output_file = input_file_name + "_optimized.json_solc"
+    else:
+        output_file = args.output_path
+
+    if args.csv_path is None:
+        csv_file = input_file_name + "_statistics.csv"
+    else:
+        csv_file = args.csv_path
+
+    if args.log_stored_final is None:
+        log_file = input_file_name + ".log"
+    else:
+        log_file = args.log_stored_final
+
+    return output_file, csv_file, log_file
+
+
 if __name__ == '__main__':
     global previous_gas
     global new_gas
@@ -668,28 +697,7 @@ if __name__ == '__main__':
     if args.storage or args.partition:
         constants.append_store_instructions_to_split()
 
-    input_file_name = args.input_path.split("/")[-1].split(".")[0]
-
-    if args.output_path is None:
-        if args.block:
-            output_file = input_file_name + "_optimized.txt"
-        elif args.log_path is not None:
-            output_file = input_file_name + "_optimized_from_log.json_solc"
-        else:
-            output_file = input_file_name + "_optimized.json_solc"
-    else:
-        output_file = args.output_path
-
-    if args.csv_path is None:
-        csv_file = input_file_name + "_statistics.csv"
-    else:
-        csv_file = args.csv_path
-
-    if args.log_stored_final is None:
-        log_file = input_file_name + ".log"
-    else:
-        log_file = args.log_stored_final
-
+    output_file, csv_file, log_file = final_file_names(args)
 
     x = dtimer()
     if args.log_path is not None:
@@ -697,6 +705,8 @@ if __name__ == '__main__':
             log_dict = json.load(path)
             optimize_asm_from_log(args.input_path, log_dict, output_file,  args.storage, False,
                                   args.size,args.partition)
+            if not args.intermediate:
+                shutil.rmtree(paths.gasol_path, ignore_errors=True)
             exit(0)
 
     if not args.block:

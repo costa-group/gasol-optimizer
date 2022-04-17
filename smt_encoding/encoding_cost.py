@@ -22,7 +22,6 @@ def generate_size_costs_ordered_dict(theta_dict_instr):
     nop_dict = {theta_dict_instr["NOP"] : 0}
     push_dict = {theta_dict_instr[instr_id] : 5  for instr_id in filter(lambda x: x.startswith("PUSH") or x.startswith("ASSIGNIMMUTABLE"), theta_dict_instr.keys())}
     non_push_dict = {theta_dict_instr[instr_id] : 1 for instr_id in set(theta_dict_instr.keys()).difference(set(nop_dict.keys()).union(set(push_dict.keys())))}
-    print(theta_dict_instr, non_push_dict)
     instr_costs = dict(itertools.chain(non_push_dict.items(), push_dict.items(), nop_dict.items()))
     return collections.OrderedDict(sorted(instr_costs.items(), key=lambda x: x[1]))
 
@@ -67,8 +66,6 @@ def generate_or_constraints_with_bounds(or_variables, first_position_dict, last_
 
 # Generates the soft constraints contained in the paper.
 def group_soft_constraints(instr_costs, first_position_dict, last_position_dict, is_barcelogic=False):
-    print("instr costs: ", instr_costs)
-
     disjoin_sets = generate_disjoint_sets_from_cost(instr_costs)
     previous_cost = 0
     or_variables = []
