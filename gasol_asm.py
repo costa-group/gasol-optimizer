@@ -506,10 +506,8 @@ def optimize_asm_block_asm_format(block, timeout, storage, last_const, size_abs,
         if (not size_abs and current_cost > optimized_cost) or (size_abs and current_length > optimized_length) :
             optimized_blocks[sub_block_name] = new_sub_block
             log_dicts[sub_block_name] = generate_solution_dict(solver_output)
-            statistics_row["block_replaced"] = True
         else:
             optimized_blocks[sub_block_name] = None
-            statistics_row["block_replaced"] = False
 
     new_block = rebuild_optimized_asm_block(block, sub_block_list, optimized_blocks)
 
