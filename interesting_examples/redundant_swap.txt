@@ -1,0 +1,26 @@
+Non optimized:  SWAP1 SWAP4 DUP5 SWAP2 SWAP1
+Optimized:  DUP2 SWAP5 
+
+Criteria: Gas
+Previous gas: 15
+New gas: 6
+
+Previous size: 5
+New size: 2
+
+solc version: 0.8.11
+Command line: solc 0x8CFeA40E059Eb393f49C103EA56C80bF8D2CA20a.sol --experimental-via-ir --optimize --combined-json asm  --optimize-runs 9999999
+Block name:  0x8CFeA40E059Eb393f49C103EA56C80bF8D2CA20a_GoldFarmFaaS_initial_block23.1_input
+
+
+ASM block: 
+
+... {"begin":23419,"end":36433,"name":"SSTORE","source":0},
+
+{"begin":23419,"end":36433,"name":"SWAP1","source":0},{"begin":23419,"end":36433,"name":"SWAP4","source":0},{"begin":23419,"end":36433,"name":"DUP5","source":0},{"begin":23419,"end":36433,"name":"SWAP2","source":0},{"begin":-1,"end":-1,"name":"SWAP1","source":-1},
+
+{"begin":23419,"end":36433,"name":"JUMP","source":0} ...
+
+
+Explanation: Redundant SWAP instructions are introduced, as there exists a wiser sequence of instructions that performs the same stack state.
+
