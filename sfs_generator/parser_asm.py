@@ -154,7 +154,10 @@ def plain_instructions_to_asm_representation(raw_instruction_str : str) -> [ASM_
             elif re.fullmatch("PUSH([0-9]+)", op) is not None:
                 val = ops[i + 1]
                 # The hex representation omits
-                val_representation = hex(int(val, 16))[2:]
+                if val.startswith("0x"):
+                    val_representation = val[2:]
+                else:
+                    val_representation = hex(int(val))[2:]
                 final_op = {"name": "PUSH", "value": val_representation}
                 i = i + 1
 
@@ -176,7 +179,6 @@ def plain_instructions_to_asm_representation(raw_instruction_str : str) -> [ASM_
             opcodes.append(final_op)
 
         i += 1
-    print(opcodes)
     return opcodes
 
 
