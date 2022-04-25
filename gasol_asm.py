@@ -473,7 +473,7 @@ def optimize_asm_block_asm_format(block, timeout, storage, last_const, size_abs,
         # We weren't able to find a solution using the solver, so we just update
         if not check_solver_output_is_correct(solver_output):
             optimized_blocks[sub_block_name] = None
-            statistics_row = {"block_id": sub_block_name, "no_model_found": True, "shown_optimal": False,
+            statistics_row = {"block_id": sub_block_name, "model_found": False, "shown_optimal": False,
                               "previous_solution": original_instr, "solver_time_in_sec": round(solver_time, 3),
                               "saved_size": 0, "saved_gas": 0}
 
@@ -497,7 +497,7 @@ def optimize_asm_block_asm_format(block, timeout, storage, last_const, size_abs,
         optimized_length = sum([instr.bytes_required for instr in new_sub_block])
 
         statistics_row = {"block_id": sub_block_name, "solver_time_in_sec": round(solver_time, 3), "saved_size": current_length - optimized_length,
-                          "saved_gas": current_cost - optimized_cost, "no_model_found": False, "shown_optimal": shown_optimal,
+                          "saved_gas": current_cost - optimized_cost, "model_found": True, "shown_optimal": shown_optimal,
                           "previous_solution": original_instr, "solution_found": ' '.join([instr.to_plain() for instr in new_sub_block])}
 
         statistics_rows.append(statistics_row)
