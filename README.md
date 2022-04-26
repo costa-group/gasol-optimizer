@@ -128,7 +128,7 @@ You can find further documentation about the GASOL project [here](https://github
 ## Publications
 * [A Max-SMT Superoptimizer for EVM handling Memory and Storage](https://link.springer.com/content/pdf/10.1007/978-3-030-99524-9_11.pdf). Elvira Albert, Pablo Gordillo, Alejandro Hernández-Cerezo and Albert Rubio. 28th International Conference on Tools and Algorithms for the Construction and Analysis of Systems, TACAS 2022. Proceedings, volume 13243 of Lecture Notes in Computer Science, pages 201-2019. Springer, 2022.
 
-* [Super-Optimization of Smart Contracts](https://doi.org/10.1145/3506800). Elvira Albert, Pablo Gordillo, Alejandro Hernández-Cerezo, Albert Rubio and Maria A. Schett.  ACM Transactions on Software Engineering and Methodology, 2022. To appear.
+* [Super-Optimization of Smart Contracts](https://dl.acm.org/doi/pdf/10.1145/3506800). Elvira Albert, Pablo Gordillo, Alejandro Hernández-Cerezo, Albert Rubio and Maria A. Schett.  ACM Transactions on Software Engineering and Methodology, 2022. To appear.
 
 ## Additional information
 
