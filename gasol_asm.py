@@ -735,7 +735,7 @@ if __name__ == '__main__':
         shutil.rmtree(paths.gasol_path, ignore_errors=True)
 
     print("")
-    print("Optimized code stored at " + output_file)
+    print("Optimized code stored in " + output_file)
     print("Optimality results stored in " + csv_file)
 
     if args.backend:

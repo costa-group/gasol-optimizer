@@ -83,9 +83,10 @@ SWAP1 SWAP4 DUP5 SWAP2 SWAP1
 Optimized sequence (basic block per line):
 DUP2 SWAP5
 
-Total time: 0.08 s
+Total time: 0.06 s
 
-Optimized code stored at redundant_swap_optimized.txt
+Optimized code stored in redundant_swap_optimized.txt
+Optimality results stored in redundant_swap_statistics.csv
 
 Estimated initial gas: 15
 Estimated gas optimized: 6
