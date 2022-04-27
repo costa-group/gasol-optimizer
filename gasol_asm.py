@@ -176,7 +176,7 @@ def generate_sfs_dicts_from_log(block, json_log,storage, last_const, size_abs, p
     block_name = block.block_name
     block_id = block.block_id
 
-    instructions =  block.instructions_to_optimize()
+    instructions =  block.instructions_to_optimize_plain()
 
     contracts_dict, sub_block_list = compute_original_sfs_with_simplifications(instructions, stack_size, block_id, block_name,
                                                          storage, last_const, size_abs, partition, pop_flag,
@@ -277,7 +277,7 @@ def optimize_asm_from_log(file_name, json_log, output_file, storage = False, las
         print("-----------------------------------------\n")
         for block in init_code:
 
-            if block.instructions_to_optimize() == []:
+            if block.instructions_to_optimize_plain() == []:
                 init_code_blocks.append(deepcopy(block))
                 continue
 
@@ -302,7 +302,7 @@ def optimize_asm_from_log(file_name, json_log, output_file, storage = False, las
 
             for block in blocks:
 
-                if block.instructions_to_optimize() == []:
+                if block.instructions_to_optimize_plain() == []:
                     run_code_blocks.append(deepcopy(block))
                     continue
 
@@ -453,7 +453,7 @@ def optimize_asm_block_asm_format(block, timeout, storage, last_const, size_abs,
 
     log_dicts = {}
 
-    instructions =  block.instructions_to_optimize()
+    instructions =  block.instructions_to_optimize_plain()
 
     # No instructions to optimize
     if instructions == []:
@@ -516,29 +516,33 @@ def optimize_asm_block_asm_format(block, timeout, storage, last_const, size_abs,
 
 def compare_asm_block_asm_format(old_block : AsmBlock, new_block : AsmBlock,storage = False, last_const = False, size_abs = False, partition = False, pop = False, push = False, revert = False):
 
-    old_instructions =  old_block.instructions_to_optimize()
+    old_instructions =  old_block.instructions_to_optimize_plain()
 
     old_sfs_information, _ = compute_original_sfs_with_simplifications(old_instructions, old_block.source_stack,
                                                                        old_block.block_id, old_block.block_name,
-                                                                       storage, last_const, size_abs, partition, pop, push, revert)
+                                                                       False, last_const, size_abs, False, pop, push, revert)
 
     old_sfs_dict = old_sfs_information["syrup_contract"]
 
-    new_instructions =  new_block.instructions_to_optimize()
+    new_instructions =  new_block.instructions_to_optimize_plain()
 
     new_sfs_information, _ = compute_original_sfs_with_simplifications(new_instructions, new_block.source_stack,
                                                                        new_block.block_id, new_block.block_name,
-                                                                       storage, last_const, size_abs, partition, pop, push, revert)
+                                                                       False, last_const, size_abs, False, pop, push, revert)
 
     new_sfs_dict = new_sfs_information["syrup_contract"]
 
     final_comparison = verify_block_from_list_of_sfs(old_sfs_dict, new_sfs_dict)
 
     # We also must check intermediate instructions match i.e those that are not sub blocks
-    intermediate_instructions_old = old_block.instructions_not_optimized()
-    intermediate_instructions_new = new_block.instructions_not_optimized()
+    initial_instructions_old = old_block.instructions_initial_bytecode()
+    initial_instructions_new = new_block.instructions_initial_bytecode()
 
-    return final_comparison and (intermediate_instructions_old == intermediate_instructions_new)
+    final_instructions_old = old_block.instructions_final_bytecode()
+    final_instructions_new = new_block.instructions_final_bytecode()
+
+    return final_comparison and (initial_instructions_new == initial_instructions_old) and \
+           final_instructions_new == final_instructions_old
 
 
 def optimize_asm_in_asm_format(file_name, output_file, csv_file, log_file, timeout=10, log=False, storage= False, last_const = False, size_abs = False, partition = False, pop = False, push = False, revert = False):

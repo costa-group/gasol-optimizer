@@ -33,17 +33,17 @@ class AsmBlock:
 
     @instructions.setter
     def instructions(self, new_instructions : List[AsmBytecode]) -> None:
-        # First, we update the source stack size
-        self.source_stack = utils.compute_stack_size(map(lambda x: x.disasm, new_instructions))
-
-        # Then we update the new set of instructions
+        # First, we update the new set of instructions
         self._instructions = new_instructions
+
+        # Then we update the source stack size
+        self.source_stack = utils.compute_stack_size(map(lambda x: x.disasm, self.instructions_to_optimize_bytecode()))
 
     def add_instruction(self, bytecode : AsmBytecode) -> None:
         self._instructions.append(bytecode)
 
         # If an instruction is added, we need to update the source stack counter
-        self.source_stack = utils.compute_stack_size(map(lambda x: x.disasm, self._instructions))
+        self.source_stack = utils.compute_stack_size(map(lambda x: x.disasm, self.instructions_to_optimize_bytecode()))
 
     @property
     def jump_type(self) -> Jump_Type_T:
@@ -99,14 +99,25 @@ class AsmBlock:
         content+=str(self.source_stack)
         return content
 
-    def instructions_to_optimize(self) -> [ASM_Json_T]:
-        return [instruction.to_plain() for instruction in self.instructions
+    def instructions_to_optimize_plain(self) -> List[str]:
+        return [instruction.to_plain() for instruction in self.instructions_to_optimize_bytecode()]
+
+    def instructions_to_optimize_bytecode(self) -> List[AsmBytecode]:
+        return [instruction for instruction in self.instructions
                 if instruction.disasm not in constants.beginning_block and instruction.disasm not in constants.end_block]
 
+    def instructions_initial_bytecode(self) -> List[AsmBytecode]:
+        return [instruction for instruction in self.instructions if instruction.disasm in constants.beginning_block]
 
-    def instructions_not_optimized(self) -> [ASM_Json_T]:
-        return [instruction.to_plain() for instruction in self.instructions if instruction.disasm in constants.beginning_block
-                or instruction.disasm in constants.end_block or instruction.disasm in constants.split_block]
+    def instructions_initial_plain(self) -> List[str]:
+        return [instruction.to_plain() for instruction in self.instructions_initial_bytecode()]
+
+    def instructions_final_bytecode(self) -> List[AsmBytecode]:
+        return [instruction for instruction in self.instructions if instruction.disasm in constants.end_block]
+
+    def instructions_final_plain(self) -> List[str]:
+        return [instruction.to_plain() for instruction in self.instructions_final_bytecode()]
+
 
     @property
     def bytes_required(self) -> int:
