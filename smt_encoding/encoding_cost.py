@@ -55,8 +55,8 @@ def _select_by_position(j, variables, first_position_dict, last_position_dict):
 
 
 def generate_or_constraints_with_bounds(or_variables, first_position_dict, last_position_dict, wi, is_barcelogic=False):
-    min_index = max(map(lambda theta_instr: first_position_dict[theta_instr], or_variables))
-    max_index = min(map(lambda theta_instr: last_position_dict[theta_instr], or_variables))
+    min_index = min(map(lambda theta_instr: first_position_dict[theta_instr], or_variables))
+    max_index = max(map(lambda theta_instr: last_position_dict[theta_instr], or_variables))
 
     for j in range(min_index, max_index):
         possible_theta_instr = _select_by_position(j, or_variables, first_position_dict, last_position_dict)
