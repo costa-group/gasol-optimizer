@@ -261,11 +261,12 @@ def generate_smtlib_encoding_appending(b0, bs, usr_instr, variables, initial_sta
     comm_instr, non_comm_instr, mem_instr = divide_usr_instr(usr_instr)
     theta_dict = dict(theta_stack, **theta_comm, **theta_non_comm, **theta_mem)
 
-    initialize_variables(variables, bs, b0, theta_mem, previous_idx)
+    initialize_variables(variables, bs, b0, {}, previous_idx)
     variables_assignment_constraint(variables, previous_idx)
     stack_constraints(b0, bs, comm_instr, non_comm_instr, mem_instr, theta_stack, theta_comm, theta_non_comm, theta_mem,
                       {}, {}, previous_idx)
-    memory_model_constraints_l_conflicting(b0, order_tuples, theta_dict, theta_mem, {}, {}, previous_idx)
+
+    memory_model_constraints_direct(b0, order_tuples, theta_dict, {}, {}, previous_idx)
     initial_stack_encoding(initial_stack, bs, previous_idx)
     final_stack_encoding(final_stack, bs, b0, previous_idx)
     generate_encoding_from_log_json_dict(previous_solution, previous_idx)
