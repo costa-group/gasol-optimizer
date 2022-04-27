@@ -377,6 +377,9 @@ def optimize_isolated_asm_block(block_name,output_file, csv_file, timeout=10, st
         with open(output_file, 'w') as f:
             f.write('\n'.join([asm_block.to_plain_with_byte_number() for asm_block in asm_blocks]))
 
+        df = pd.DataFrame(statistics_rows)
+        df.to_csv(csv_file)
+
 
 def update_gas_count(old_block : AsmBlock, new_block : AsmBlock):
     global previous_gas
@@ -733,6 +736,7 @@ if __name__ == '__main__':
 
     print("")
     print("Optimized code stored at " + output_file)
+    print("Optimality results stored in " + csv_file)
 
     if args.backend:
         print("")
