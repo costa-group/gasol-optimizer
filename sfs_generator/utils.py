@@ -1,4 +1,7 @@
+import math
+
 import sfs_generator.opcodes as opcodes
+
 
 def toInt(a):
     elem = a.split("_")
@@ -46,23 +49,23 @@ def process_isolate_block(contract_name, in_stack = -1):
     print(instructions)
     
     initial = 0
-    opcodes = []
+    final_sequence = []
 
     ops = instructions.split(" ")
     i = 0
     while(i<len(ops)):
         op = ops[i]
         if not op.startswith("PUSH"):
-            opcodes.append(op.strip())
+            final_sequence.append(op.strip())
         else:
             val = ops[i+1]
-            opcodes.append(op+" "+val)
+            final_sequence.append(op+" "+val)
             i=i+1
         i+=1
 
     f.close()
     
-    return opcodes,input_stack
+    return final_sequence,input_stack
 
 def all_integers(variables):
     int_vals = []
@@ -149,23 +152,109 @@ def isYulInstruction(opcode):
         return True
 
 
-# Computes the number of bytecodes given an ASM json object
-def compute_number_of_instructions_in_asm_json_per_contract(asm_json):
-    contract_counter_dict = {}
-    for c in asm_json.getContracts():
-        number_instrs = 0
-        contract_name = (c.getContractName().split("/")[-1]).split(":")[-1]
-
-        for identifier in c.getDataIds():
-            blocks = c.getRunCodeOf(identifier)
-            for block in blocks:
-                number_instrs += len(list(filter(lambda x: x.getDisasm() != "tag", block.getInstructions())))
-
-        contract_counter_dict[contract_name] = number_instrs
-    return contract_counter_dict
+# Returns true if opcode contains tag, #, $ or data, so that composed opcodes are identified
+def isYulKeyword(opcode):
+    if opcode.find("tag") ==-1 and opcode.find("#") ==-1 and opcode.find("$") ==-1 \
+            and opcode.find("data") ==-1:
+        return False
+    else:
+        return True
 
 
-# Computes the number of bytecodes given an ASM json object
-def compute_number_of_instructions_in_asm_json_per_file(asm_json):
-    contract_counter_dict = compute_number_of_instructions_in_asm_json_per_contract(asm_json)
-    return sum(contract_counter_dict.values())
+'''
+It returns true if the instruction generates a constant value
+'''
+
+def is_constant_instruction(ins):
+    constant = False
+    if ins.find("DUP")!=-1 or ins.find("PUSH")!=-1:
+        constant = True
+    elif ins in ["ADDRESS","ORIGIN","CALLER","CALLVALUE","CALLDATASIZE","CODESIZE","GASPRICE","COINBASE","TIMESTAMP","NUMBER","DIFFICULTY","GASLIMIT","CHAINID","SELFBALANCE","PC","MSIZE","GAS","TXEXECGAS","STOP","RETURN","INVALID","REVERT"]:
+        constant = True
+    else:
+        constant = False
+
+    return constant
+
+
+def isYulInstructionUpper(opcode):
+    if opcode.find("TAG") == -1 and opcode.find("#") == -1 and opcode.find("$") == -1 \
+            and opcode.find("DATA") == -1 and opcode.find("DEPLOY") == -1 and opcode.find("SIZE") == -1 and opcode.find("IMMUTABLE") == -1:
+        return False
+    else:
+        return True
+
+
+# Number encoding size following the implementation in Solidity compiler:
+# https://github.com/ethereum/solidity/blob/develop/libsolutil/Numeric.h
+def number_encoding_size(number):
+    i = 0
+    while number != 0:
+        i += 1
+        number = number >> 8
+    return i
+
+
+# Number of bytes necessary to encode an int value
+def get_num_bytes_int(val):
+    return max(1, number_encoding_size(val))
+
+
+# Number of bytes necessary to encode a hex value. Matches the x in PUSHx opcodes
+def get_push_number_hex(val):
+    return get_num_bytes_int(int(val, 16))
+
+
+# Taken directly from https://github.com/ethereum/solidity/blob/develop/libevmasm/AssemblyItem.cpp
+# Address length: maximum address a tag can appear. By default 4 (as worst case for PushSubSize is 16 MB)
+def get_ins_size(op_name, val = None, address_length = 4):
+    if op_name == "ASSIGNIMMUTABLE":
+        # Number of PushImmutable's with the same hash. Assume 1 (?)
+        immutableOccurrences = 1
+
+        # Just in case the behaviour is changed, following code corresponds to the byte size according to
+        # immutable variable
+        if immutableOccurrences == 0:
+            return 2
+        else:
+            return (immutableOccurrences - 1) * (5 + 32) + (3 + 32)
+    elif op_name == "PUSH":
+        return 1 + get_num_bytes_int(val)
+    elif op_name == "PUSH #[$]" or op_name == "PUSHSIZE":
+        return 1 + 4
+    elif op_name == "PUSH [tag]" or op_name == "PUSH data" or op_name == "PUSH [$]":
+        return 1 + address_length
+    elif op_name == "PUSHLIB" or op_name == "PUSHDEPLOYADDRESS":
+        return 1 + 20
+    elif op_name == "PUSHIMMUTABLE":
+        return 1 + 32
+    elif not op_name.startswith("PUSH") or op_name == "tag":
+        return 1
+    else:
+        raise ValueError("Opcode not recognized", op_name)
+
+
+# Given a sequence of opcodes in a str, returns the size associated. Note the yul operators must follow the
+# corresponding convention: see sfs_generator.opcodes.opcode_internal_representation_to_assembly_item for
+# the conversion between names
+def get_ins_size_seq(instructions_disasm):
+    instructions = list(filter(lambda x: x != '', instructions_disasm.split(' ')))
+    i, bytes = 0, 0
+    while i < len(instructions):
+        if instructions[i] == "PUSH" and not(isYulKeyword(instructions[i+1])):
+            bytes += get_ins_size("PUSH", int(instructions[i+1], 16))
+            i += 2
+        elif instructions[i] == "PUSH":
+            bytes += get_ins_size(' '.join(instructions[i:i+2]), instructions[i+2])
+            i += 3
+        elif instructions[i] == "ASSIGNIMMUTABLE":
+            bytes += get_ins_size(instructions[i], instructions[i+1])
+            i += 2
+        elif instructions[i].startswith("PUSH") and not instructions[i].startswith("PUSHDEPLOYADDRESS") \
+                    and not instructions[i].startswith("PUSHSIZE"):
+            bytes += get_ins_size(instructions[i], None)
+            i += 2
+        else:
+            bytes += get_ins_size(instructions[i], None)
+            i += 1
+    return bytes

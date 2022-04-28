@@ -1,114 +1,128 @@
-#!/usr/bin/env python3
-
+import global_params.constants as constants
+import sfs_generator.opcodes as opcodes
 import sfs_generator.utils as utils
-from global_params.constants import split_block
+from sfs_generator.asm_bytecode import AsmBytecode, ASM_Json_T
+from typing import List, Union
 
-class AsmBlock():
+# Blocks are identified using an int
+Block_id_T = int
+
+# Jump types identified as strings (maybe in the future use enum)
+Jump_Type_T = str
+
+class AsmBlock:
+    """
+    Class for representing an Assembly block
+    """
     
-    def __init__(self, cname, identifier, is_init_block):
+    def __init__(self, cname : str, identifier : Block_id_T, name : str, is_init_block : bool):
         self.contract_name = cname
-        self.identifier = identifier
-        self.instructions = []
-        #minimum size of the source stack
+        self.block_id = identifier
+        self.block_name = name
+        self._instructions = []
+        # minimum size of the source stack
         self.source_stack = 0
         self.is_init_block = is_init_block
+        self._jump_type = None
+        self.jump_to = None
+        self.falls_to = None
 
-    def getContractName(self):
-        return self.contract_name
+    @property
+    def instructions(self) -> List[AsmBytecode]:
+        return self._instructions
 
-    def setContractName(self,name):
-        self.contract_name = name
+    @instructions.setter
+    def instructions(self, new_instructions : List[AsmBytecode]) -> None:
+        # First, we update the new set of instructions
+        self._instructions = new_instructions
 
-    def getBlockId(self):
-        return self.identifier
+        # Then we update the source stack size
+        self.source_stack = utils.compute_stack_size(map(lambda x: x.disasm, self.instructions_to_optimize_bytecode()))
 
-    def setBlockId(self, identifier):
-        self.identifier = identifier
+    def add_instruction(self, bytecode : AsmBytecode) -> None:
+        self._instructions.append(bytecode)
 
-    def addInstructions(self,bytecode):
-        self.instructions.append(bytecode)
-        
-    def getInstructions(self):
-        return self.instructions
+        # If an instruction is added, we need to update the source stack counter
+        self.source_stack = utils.compute_stack_size(map(lambda x: x.disasm, self.instructions_to_optimize_bytecode()))
 
-    def setInstructions(self, instructions):
-        self.instructions = instructions
+    @property
+    def jump_type(self) -> Jump_Type_T:
+        return self._jump_type
 
-    def getSourceStack(self):
-        return self.source_stack
+    @jump_type.setter
+    def jump_type(self, t : Jump_Type_T) -> None:
+        if t not in ["conditional","unconditional","terminal", "falls_to"]:
+            raise Exception("Wrong jump type")
+        else:
+            self._jump_type = t
 
-    def setSourceStack(self, val):
-        self.source_stack = val
+    def set_types(self) -> None:
+        """
+        Set the jump type matching the last instruction in the block
+        :return: None
+        """
+        last_instruction = self.instructions[-1].disasm
+        if last_instruction == "JUMP":
+            self.jump_type = "unconditional"
+        elif last_instruction == "JUMPI":
+            self.jump_type = "conditional"
+        elif last_instruction in ["INVALID","REVERT","STOP","RETURN","SUICIDE"]:
+            self.jump_type = "terminal"
+        else:
+            self.jump_type = "falls_to"
 
-    def get_is_init_block(self):
-        return self.is_init_block
+    def to_json(self) -> [ASM_Json_T]:
+        return list(map(lambda instr: instr.to_json(), self.instructions))
 
-    def set_is_init_block(self, val):
-        self.is_init_block = val
 
-    def compute_stack_size(self):
-        evm_instructions = map(lambda x: x.getDisasm(),self.instructions)
-        
-        init_stack = utils.compute_stack_size(evm_instructions)
+    def to_plain(self) -> str:
+        return ' '.join(map(lambda instr: instr.to_plain(), self.instructions))
 
-        self.source_stack = init_stack
-
-    # Split the block in a list of asm_bytecodes that contains either sub blocks or
-    # isolated instructions (JUMPs or split instructions).
-    def split_in_sub_blocks(self):
-        sub_blocks = []
-        current_sub_block = []
-        for asm_bytecode in self.instructions:
-
-            instruction = asm_bytecode.getDisasm()
-
-            # Three cases: either a instruction correspond to a jump/end or split instruction or neither of them.
-            if instruction in ["JUMP","JUMPI","STOP","RETURN","REVERT","INVALID","JUMPDEST","tag"] \
-                    or instruction in split_block:
-                if current_sub_block:
-                    sub_blocks.append(current_sub_block)
-                    current_sub_block = []
-
-                # These instructions are isolated, so we introduce them directly in the list of sub blocks
-                sub_blocks.append(asm_bytecode)
-            else:
-                current_sub_block.append(asm_bytecode)
-
-        # If there is a sub block left, we need to add it to the list
-        if current_sub_block:
-            sub_blocks.append(current_sub_block)
-
-        return sub_blocks
-
-    # Given a set of optimized sub_blocks (possibly containing None when no optimized block has been generated),
-    # rebuilds a block considering the "isolated" instructions which split the blocks
-    def set_instructions_from_sub_blocks(self, optimized_sub_blocks):
-        current_sub_block = 0
-        previous_sub_blocks = self.split_in_sub_blocks()
-
-        instructions = []
-        for elem in previous_sub_blocks:
-            if isinstance(elem, list):
-                # If no optimized block is in the list, then we just consider instructions without optimizing
-                if optimized_sub_blocks[current_sub_block] is None:
-                    instructions.extend(elem)
-                # Otherwise, instructions from current block are added
-                else:
-                    instructions.extend(optimized_sub_blocks[current_sub_block])
-                current_sub_block += 1
-            else:
-                instructions.append(elem)
-
-        # The number of sub blocks must match
-        assert (current_sub_block == len(optimized_sub_blocks))
-        self.instructions = instructions
-
+    def to_plain_with_byte_number(self) -> str:
+        return ' '.join(map(lambda instr: instr.to_plain_with_byte_number(), self.instructions))
 
     def __str__(self):
         content = ""
-        content += "Block Id:"+str(self.identifier)+"\n"
+        content += "Block Id:"+str(self.block_id)+"\n"
         for i in self.instructions:
             content += str(i)+"\n"
 
         content+=str(self.source_stack)
         return content
+
+    def __repr__(self):
+        content = ""
+        content += "Block Id:"+str(self.block_id)+"\n"
+        for i in self.instructions:
+            content += str(i)+"\n"
+
+        content+=str(self.source_stack)
+        return content
+
+    def instructions_to_optimize_plain(self) -> List[str]:
+        return [instruction.to_plain() for instruction in self.instructions_to_optimize_bytecode()]
+
+    def instructions_to_optimize_bytecode(self) -> List[AsmBytecode]:
+        return [instruction for instruction in self.instructions
+                if instruction.disasm not in constants.beginning_block and instruction.disasm not in constants.end_block]
+
+    def instructions_initial_bytecode(self) -> List[AsmBytecode]:
+        return [instruction for instruction in self.instructions if instruction.disasm in constants.beginning_block]
+
+    def instructions_initial_plain(self) -> List[str]:
+        return [instruction.to_plain() for instruction in self.instructions_initial_bytecode()]
+
+    def instructions_final_bytecode(self) -> List[AsmBytecode]:
+        return [instruction for instruction in self.instructions if instruction.disasm in constants.end_block]
+
+    def instructions_final_plain(self) -> List[str]:
+        return [instruction.to_plain() for instruction in self.instructions_final_bytecode()]
+
+
+    @property
+    def bytes_required(self) -> int:
+        return sum([instruction.bytes_required for instruction in self.instructions])
+
+    @property
+    def gas_spent(self) -> int:
+        return sum([instruction.gas_spent for instruction in self.instructions])

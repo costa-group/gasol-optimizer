@@ -1,41 +1,47 @@
-from encoding_files import write_encoding
-from encoding_utils import *
+import global_params.constants as constants
+from smt_encoding.encoding_files import write_encoding
+from smt_encoding.encoding_utils import a, add_eq, l, t, u, x
+from smt_encoding.smtlib_utils import (add_and, add_assert, add_not,
+                                       declare_boolvar, declare_intvar)
 
 # Methods for initializing the variables
 
-def _initialize_s_vars(variables):
-    for var in variables:
-        write_encoding(declare_intvar(var))
+def initialize_s_vars(variables):
+    s_vars = [declare_intvar(var) for var in variables]
+    return s_vars
 
 
-def _initialize_u_vars(bs, b0, initial_idx=0):
-    for i in range(bs):
-        for j in range(initial_idx, b0+1+initial_idx):
-            write_encoding(declare_boolvar(u(i,j)))
+def initialize_u_vars(bs, b0, initial_idx=0):
+    u_vars = [declare_boolvar(u(i,j)) for i in range(bs) for j in range(initial_idx, b0+1+initial_idx)]
+    return u_vars
 
 
-def _initialize_x_vars(bs, b0, initial_idx=0):
-    for i in range(bs):
-        for j in range(initial_idx, b0+1+initial_idx):
-            write_encoding(declare_intvar(x(i,j)))
+def initialize_x_vars(bs, b0, initial_idx=0):
+    x_vars = [declare_intvar(x(i,j)) for i in range(bs) for j in range(initial_idx, b0+1+initial_idx)]
+    return x_vars
 
 
-def _initialize_t_vars(b0, initial_idx=0):
-    for i in range(initial_idx, b0+initial_idx):
-        write_encoding(declare_intvar(t(i)))
+def initialize_t_vars(b0, initial_idx=0):
+    t_vars = [declare_intvar(t(i)) for i in range(initial_idx, b0+initial_idx)]
+    return t_vars
 
 
-def _initialize_a_vars(b0, initial_idx=0):
-    for i in range(initial_idx, b0+initial_idx):
-        write_encoding(declare_intvar(a(i)))
+def initialize_a_vars(b0, initial_idx=0):
+    a_vars = [declare_intvar(a(i)) for i in range(initial_idx, b0+initial_idx)]
+    return a_vars
+
+def initialize_l_vars(l_theta_values):
+    l_vars = [declare_intvar(l(theta_value)) for theta_value in l_theta_values]
+    return l_vars
 
 
-def initialize_variables(variables, bs, b0, initial_idx=0):
-    _initialize_s_vars(variables)
-    _initialize_u_vars(bs, b0, initial_idx)
-    _initialize_x_vars(bs, b0, initial_idx)
-    _initialize_t_vars(b0, initial_idx)
-    _initialize_a_vars(b0, initial_idx)
+def initialize_variables(variables, bs, b0, theta_mem, initial_idx=0):
+    write_encoding(*initialize_s_vars(variables))
+    write_encoding(*initialize_u_vars(bs, b0, initial_idx))
+    write_encoding(*initialize_x_vars(bs, b0, initial_idx))
+    write_encoding(*initialize_t_vars(b0, initial_idx))
+    write_encoding(*initialize_a_vars(b0, initial_idx))
+    write_encoding(*initialize_l_vars(theta_mem.values()))
 
 
 # Method for generating variable assignment (SV)
@@ -43,7 +49,7 @@ def initialize_variables(variables, bs, b0, initial_idx=0):
 def variables_assignment_constraint(variables, initial_idx=0):
     write_encoding("; Variables assignment")
     for i, var in enumerate(variables):
-        statement = add_eq(var, int_limit + i + initial_idx)
+        statement = add_eq(var, constants.int_limit + i + initial_idx)
         write_encoding(add_assert(statement))
 
 

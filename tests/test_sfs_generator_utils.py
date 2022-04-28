@@ -5,8 +5,10 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
 import unittest
 
+from properties.properties_from_asm_json import \
+    compute_number_of_instructions_in_asm_json_per_file
 from sfs_generator.parser_asm import parse_asm
-from sfs_generator.utils import compute_number_of_instructions_in_asm_json_per_file
+
 
 class TestComputeNumberOfInstructions(unittest.TestCase):
     def test_compute_number_of_instructions_in_asm_json_per_file(self):

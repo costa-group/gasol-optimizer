@@ -93,15 +93,25 @@ opcodes = {
     "KECCAK256": [0x20, 2, 1], #For evm it is representes as SHA3, for solc as KECCAK256
     "INVALID": [0xfe, 0, 0],  # Not an opcode use to cause an exception
     "SUICIDE": [0xff, 1, 0],
-    "ASSIGNIMMUTABLE": [0x00,2,0], #Yul opcode
-    "PUSHTAG": [0x00,0,1], #Yul opcode
-    "PUSH#[$]": [0x00,0,1], #Yul opcode
-    "PUSH[$]": [0x00,0,1], #Yul opcode
-    "PUSHDEPLOYADDRESS": [0x00,0,1], #Yul opcode
-    "PUSHDATA": [0x00,0,1], #Yul opcode
-    "PUSHSIZE": [0x00,0,1], #Yul opcode
-    "PUSHIMMUTABLE": [0x00,0,1], #Yul opcode
+    # See https://github.com/ethereum/solidity/blob/develop/libevmasm/Assembly.cpp for more information
+    "ASSIGNIMMUTABLE": [0x00,2,0], #Yul opcode. Assembly Item: AssignImmutable
+    "PUSH [tag]": [0x00,0,1], #Yul opcode. Assembly Item: PushTag
+    "PUSHLIB": [0x00,0,1], #Yul opcode. Assembly Item: PushLib
+    "PUSH #[$]": [0x00,0,1], #Yul opcode. Assembly Item: PushSubSize
+    "PUSH [$]": [0x00,0,1], #Yul opcode. Assembly Item: PushSub
+    "PUSHDEPLOYADDRESS": [0x00,0,1], #Yul opcode. AssemblyItem: PushDeployTimeAddress
+    "PUSH data": [0x00,0,1], #Yul opcode. Assembly Item: PushData
+    "PUSHSIZE": [0x00,0,1], #Yul opcode. Assembly Item: PushProgramSize
+    "PUSHIMMUTABLE": [0x00,0,1], #Yul opcode. Assembly Item:PushImmutable
     "---END---": [0x00, 0, 0]
+}
+
+# Opcodes that have a blank character in their name are put together in our representation
+opcode_internal_representation_to_assembly_item = {
+    "PUSHTAG": "PUSH [tag]", #Yul opcode. Assembly Item: PushTag
+    "PUSH#[$]": "PUSH #[$]", #Yul opcode. Assembly Item: PushSubSize
+    "PUSH[$]": "PUSH [$]", #Yul opcode. Assembly Item: PushSub
+    "PUSHDATA": "PUSH data", #Yul opcode. Assembly Item: PushData
 }
 
 # TO BE UPDATED IF ETHEREUM VM CHANGES their fee structure
@@ -180,7 +190,7 @@ def get_opcode(opcode):
     # # check PUSHi
     # for i in range(32):
     #     if opcode == 'PUSH' + str(i + 1):
-        return [hex(0x60), 0, 1]
+        return [0x60, 0, 1]
 
     elif opcode.startswith("tag"):
         return [hex(0x00), 0, 0]

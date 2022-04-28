@@ -1,11 +1,13 @@
 #Pablo Gordillo
+
+import os
 import traceback
 from timeit import default_timer as dtimer
 
-from rbr_rule import RBRRule
-from gasol_optimization import smt_translate_block
-from global_params.paths import *
-
+import global_params.paths as paths
+from sfs_generator.gasol_optimization import smt_translate_block
+from sfs_generator.rbr_rule import RBRRule
+from sfs_generator.utils import get_push_number_hex, isYulInstruction
 
 '''
 It initialize the globals variables. 
@@ -67,7 +69,7 @@ def init_globals():
     opcodesZ = ["RETURNDATACOPY","RETURNDATASIZE"]
 
     global opcodesYul
-    opcodesYul = ["PUSHTAG","PUSH#[$]","PUSH[$]", "PUSHDATA", "PUSHDEPLOYADDRESS", "ASSIGNIMMUTABLE","PUSHSIZE","PUSHIMMUTABLE"]
+    opcodesYul = ["PUSH [tag]","PUSH #[$]","PUSH [$]", "PUSH data", "PUSHDEPLOYADDRESS", "ASSIGNIMMUTABLE","PUSHSIZE","PUSHIMMUTABLE","PUSHLIB"]
     
     global current_local_var
     current_local_var = 0
@@ -86,7 +88,26 @@ def init_globals():
 
     global pc_cont
     pc_cont = 0
+
+    global mload_counter
+    mload_counter = 0
     
+    global sload_counter
+    sload_counter = 0
+
+    global gas_counter
+    gas_counter = 0
+
+    global timestamp_counter
+    timestamp_counter = 0
+
+    global assignImmutable_counter
+    assignImmutable_counter = 0
+
+    global assignImmutable_dict
+    assignImmutable_dict = {}
+
+
 '''
 Given a block it returns a list containingn the height of its
 stack when arriving and leaving the block.
@@ -397,7 +418,7 @@ generates variables depending on the bytecode and returns the
 corresponding translated instruction and the variables's index
 updated. It also updated the corresponding global variables.
 '''
-def translateOpcodes30(opcode, value, index_variables,block):
+def translateOpcodes30(opcode, value, index_variables):
     
     if opcode == "ADDRESS":
         v1, updated_variables = get_new_variable(index_variables)
@@ -464,7 +485,7 @@ def translateOpcodes30(opcode, value, index_variables,block):
         v2, updated_variables = get_consume_variable(updated_variables)
         v3, updated_variables = get_consume_variable(updated_variables)
 
-        instr = "extcodecopy("+v0+","+v1+","+v2++","+v3+")"  
+        instr = "extcodecopy("+v0+","+v1+","+v2+","+v3+")"
 
     elif opcode == "EXTCODEHASH":
         _, updated_variables = get_consume_variable(index_variables)
@@ -486,8 +507,9 @@ generates variables depending on the bytecode and returns the
 corresponding translated instruction and the variables's index
 updated. It also updated the corresponding global variables.
 '''
-def translateOpcodes40(opcode, index_variables,block):
+def translateOpcodes40(opcode, index_variables):
     global blockhash_cont
+    global timestamp_counter
     
     if opcode == "BLOCKHASH":
         v0, updated_variables = get_consume_variable(index_variables)
@@ -501,7 +523,8 @@ def translateOpcodes40(opcode, index_variables,block):
 
     elif opcode == "TIMESTAMP":
         v1, updated_variables = get_new_variable(index_variables)
-        instr = v1+" = timestamp"
+        instr = v1+" = timestamp"+str(timestamp_counter)
+        timestamp_counter+=1
 
     elif opcode == "NUMBER":
         v1, updated_variables = get_new_variable(index_variables)
@@ -537,8 +560,11 @@ generates variables depending on the bytecode and returns the
 corresponding translated instruction and the variables's index
 updated. It also updated the corresponding global variables.
 '''
-def translateOpcodes50(opcode, value, index_variables,block):
+def translateOpcodes50(opcode, value, index_variables):
     global pc_cont
+    global sload_counter
+    global mload_counter
+    global gas_counter
     
     if opcode == "POP":        
         v1, updated_variables = get_consume_variable(index_variables)
@@ -547,8 +573,9 @@ def translateOpcodes50(opcode, value, index_variables,block):
         _ , updated_variables = get_consume_variable(index_variables)
         v1, updated_variables = get_new_variable(updated_variables)
 
-        instr = v1+" = mload("+v1+")"
-             
+        instr = v1+" = mload"+str(mload_counter)+"("+v1+")"
+        mload_counter+=1
+        
     elif opcode == "MSTORE":
         v0 , updated_variables = get_consume_variable(index_variables)
         v1 , updated_variables = get_consume_variable(updated_variables)
@@ -565,7 +592,8 @@ def translateOpcodes50(opcode, value, index_variables,block):
         _ , updated_variables = get_consume_variable(index_variables)
         v1, updated_variables = get_new_variable(updated_variables)
 
-        instr = v1+" = sload("+v1+")"
+        instr = v1+" = sload"+str(sload_counter)+"("+v1+")"
+        sload_counter+=1
 
     elif opcode == "SSTORE":
         v0 , updated_variables = get_consume_variable(index_variables)
@@ -584,8 +612,8 @@ def translateOpcodes50(opcode, value, index_variables,block):
 
     elif opcode == "GAS":
         v1, updated_variables = get_new_variable(index_variables)
-        instr = v1+" = "+"gas"
-
+        instr = v1+" = "+"gas"+str(gas_counter)
+        gas_counter+=1
     elif opcode == "JUMPDEST":
         instr = ""
         updated_variables = index_variables
@@ -783,10 +811,7 @@ def translateOpcodes60(opcode, value, index_variables):
     
     if opcode == "PUSH":
         v1,updated_variables = get_new_variable(index_variables)
-        try:
-            dec_value = int(value)
-        except:
-            dec_value = int(value,16)
+        dec_value = int(value,16)
         instr = v1+" = " + str(dec_value)
     else:
         instr = "Error opcodes60: "+opcode
@@ -847,7 +872,7 @@ corresponding translated instruction and the variables's index
 updated. It also updated the corresponding global variables.
 Unclassified opcodes.
 '''
-def translateOpcodesZ(opcode, index_variables,block):
+def translateOpcodesZ(opcode, index_variables):
     if opcode == "RETURNDATASIZE":
         v1, updated_variables = get_new_variable(index_variables)
         instr = v1+" = returndatasize"
@@ -864,15 +889,26 @@ def translateOpcodesZ(opcode, index_variables,block):
 
     return instr, updated_variables
 
-
 def translateYulOpcodes(opcode, value, index_variables):
-
+    global assignImmutable_dict
+    global assignImmutable_counter
+    
     if opcode == "ASSIGNIMMUTABLE":
         v0 , updated_variables = get_consume_variable(index_variables)
         v1 , updated_variables = get_consume_variable(updated_variables)
 
-        instr = "assignimmutable("+v0+","+v1+")"
 
+        #It is treated as a special mstore. The value is stored in a
+        #mapping bounded to a unique identifier. It is used when
+        #reconstructing the opcode in gasol_optimizer.py
+        
+        #instr = "assignimmutable("+v0+","+v1+","+value+")"
+
+        instr = "mstoreImmutable"+str(assignImmutable_counter)+"("+v0+","+v1+")"
+        assignImmutable_dict[assignImmutable_counter] = value
+        assignImmutable_counter+=1
+
+        
     elif opcode == "PUSHDEPLOYADDRESS":
         v1,updated_variables = get_new_variable(index_variables)
         instr = v1+" = pushdeployaddress"
@@ -884,26 +920,26 @@ def translateYulOpcodes(opcode, value, index_variables):
         
     else:
         v1,updated_variables = get_new_variable(index_variables)
-        try:
-            dec_value = int(value)
-        except:
-            dec_value = int(value,16)
+        dec_value = int(value,16)
 
-        if opcode == "PUSHTAG":
+        if opcode == "PUSH [tag]":
             instr = v1+" = pushtag(" + str(dec_value)+")"
 
-        elif opcode == "PUSH#[$]":
+        elif opcode == "PUSH #[$]":
             instr = v1+" = push#[$](" + str(dec_value)+")"
 
-        elif opcode == "PUSH[$]":
+        elif opcode == "PUSH [$]":
             instr = v1+" = push[$](" + str(dec_value)+")"
             
-        elif opcode == "PUSHDATA":
+        elif opcode == "PUSH data":
             instr = v1+" = pushdata(" + str(dec_value)+")"
 
         elif opcode == "PUSHIMMUTABLE":
             instr = v1+" = pushimmutable(" + str(dec_value)+")"
-            
+
+        elif opcode == "PUSHLIB":
+            instr = v1+" = pushlib(" + str(dec_value)+")"
+
     return instr, updated_variables
 
 '''
@@ -919,11 +955,15 @@ They are remove when displaying.
 '''
 def compile_instr(rule,evm_opcode,variables,list_jumps,cond):
     opcode = evm_opcode.split(" ")
-    opcode_name = opcode[0]
-    opcode_rest = ""
 
     if len(opcode) > 1:
-        opcode_rest = opcode[1]
+        opcode_name = ' '.join(opcode[:-1])
+        opcode_rest = opcode[-1]
+    else:
+        opcode_name = opcode[0]
+        opcode_rest = ""
+
+    # print(opcode_name, opcode_rest)
 
     if opcode_name in opcodes0:
         value, index_variables = translateOpcodes0(opcode_name, variables)
@@ -935,13 +975,13 @@ def compile_instr(rule,evm_opcode,variables,list_jumps,cond):
         value, index_variables = translateOpcodes20(opcode_name, variables)
         rule.add_instr(value)
     elif opcode_name in opcodes30:
-        value, index_variables = translateOpcodes30(opcode_name,opcode_rest,variables,rule.get_Id())
+        value, index_variables = translateOpcodes30(opcode_name,opcode_rest,variables)
         rule.add_instr(value)
     elif opcode_name in opcodes40:
-        value, index_variables = translateOpcodes40(opcode_name,variables,rule.get_Id())
+        value, index_variables = translateOpcodes40(opcode_name,variables)
         rule.add_instr(value)
     elif opcode_name in opcodes50:
-        value, index_variables = translateOpcodes50(opcode_name, opcode_rest, variables,rule.get_Id())
+        value, index_variables = translateOpcodes50(opcode_name, opcode_rest, variables)
         if type(value) is list:
             for ins in value:
                 rule.add_instr(ins)
@@ -949,6 +989,7 @@ def compile_instr(rule,evm_opcode,variables,list_jumps,cond):
             rule.add_instr(value)
     elif opcode_name[:4] in opcodes60 and not isYulInstruction(opcode_name):
         value, index_variables = translateOpcodes60(opcode_name[:4], opcode_rest, variables)
+        pushid = get_push_number_hex(opcode_rest)
         rule.add_instr(value)
     elif opcode_name[:3] in opcodes80:
         value, index_variables = translateOpcodes80(opcode_name[:3], opcode_name[3:], variables)
@@ -967,52 +1008,45 @@ def compile_instr(rule,evm_opcode,variables,list_jumps,cond):
         #RETURN
         rule.add_instr(value)
     elif opcode_name in opcodesZ:
-        value, index_variables = translateOpcodesZ(opcode_name,variables,rule.get_Id())
+        value, index_variables = translateOpcodesZ(opcode_name,variables)
         rule.add_instr(value)
     elif opcode_name in opcodesYul:
         value, index_variables = translateYulOpcodes(opcode_name,opcode_rest,variables)
         rule.add_instr(value)
+        if evm_opcode.startswith("ASSIGNIMMUTABLE"):
+            evm_opcode = "ASSIGNIMMUTABLE"
     else:
         value = "Error. No opcode matchs"
         index_variables = variables
         rule.add_instr(value)
 
-    rule.add_instr("nop("+opcode_name+")")
-    
+    rule.add_instr("nop("+evm_opcode+")")
     return index_variables
 
-
-def isYulInstruction(opcode):
-    if opcode.find("TAG") == -1 and opcode.find("#") == -1 and opcode.find("$") == -1 \
-            and opcode.find("DATA") == -1 and opcode.find("DEPLOY") == -1 and opcode.find("SIZE") == -1 and opcode.find("IMMUTABLE") == -1:
-        return False
-    else:
-        return True
     
 '''
 It generates the rbr rules corresponding to a block from the CFG.
 index_variables points to the corresponding top stack index.
 The stack could be reconstructed as [s(ith)...s(0)].
 '''
-def compile_block(instrs,input_stack,blockId):
+def compile_block(instrs,input_stack,block_id):
     global rbr_blocks
     global top_index
-    
+
     cont = 0
     top_index = 0
     finish = False
     
     index_variables = input_stack-1
-    if blockId !=-1:
-        block_id = blockId
-    else:
-        block_id = 0
     rule = RBRRule(block_id, "block",False)
+
     rule.set_index_input(input_stack)
     l_instr = instrs
 
     
     while not(finish) and cont< len(l_instr):
+        # if l_instr[cont].find("KECCAK")!=-1 and l_instr[cont-1].find("MSTORE")!=-1:
+        #     #print("KECCYES")
         index_variables = compile_instr(rule,l_instr[cont],index_variables,[],True)        
         cont+=1
 
@@ -1028,14 +1062,11 @@ for each smart contract.
 -rbr is a list containing instances of rbr_rule.
 -executions refers to the number of smart contract that has been translated. int.
 '''
-def write_rbr(rule,block_id,cname = None):
-    if gasol_folder not in os.listdir(tmp_path):
-        os.mkdir(gasol_path)
+def write_rbr(rule,block_name):
+    if paths.gasol_folder not in os.listdir(paths.tmp_path):
+        os.mkdir(paths.gasol_path)
 
-    if block_id !=-1:
-        name = gasol_path+cname+"block"+str(block_id)+".rbr"
-    else:
-        name = gasol_path+cname+".rbr"
+    name = paths.gasol_path+block_name+".rbr"
         
     with open(name,"w") as f:
         f.write(rule.rule2string()+"\n")
@@ -1052,7 +1083,7 @@ Main function that build the rbr representation from the CFG of a solidity file.
 -saco_rbr is True if it has to generate the RBR in SACO syntax.
 -exe refers to the number of smart contracts analyzed.
 '''
-def evm2rbr_compiler(contract_name = None,block = None, block_id = -1,preffix = "",simplification = True):
+def evm2rbr_compiler(file_name = None,block = None, block_id = -1, block_name = "",simplification = True, storage = False, size = False, part = False, pop = False, push = False, revert = False):
     global rbr_blocks
     
     init_globals()
@@ -1065,25 +1096,26 @@ def evm2rbr_compiler(contract_name = None,block = None, block_id = -1,preffix = 
         
         rule = compile_block(instructions,input_stack,block_id)
 
-            
-        write_rbr(rule,block_id,contract_name)
+        has_sto = has_storage_ins(instructions)
+
+        write_rbr(rule,block_name)
+
+        # print(preffix)
         
         end = dtimer()
         ethir_time = end-begin
         #print("Build RBR: "+str(ethir_time)+"s")
-               
-        smt_translate_block(rule,contract_name,preffix,simplification)
+        subblocks = smt_translate_block(rule,file_name,block_name,assignImmutable_dict,simplification,storage, size, part, pop, push, revert)
                 
-        return 0
+        return 0, subblocks
         
     except Exception as e:
         traceback.print_exc()
-        if len(e.args)>1:
-            arg = e[1]
-            if arg == 5:
-                raise Exception("Error in SACO translation",5)
-            elif arg == 6:
-                raise Exception("Error in C translation",6)
-        else:    
-            raise Exception("Error in RBR generation",4)
+        raise Exception("Error in RBR generation",4)
             
+
+def has_storage_ins(instructions):
+    if "MSTORE" in instructions or "SSTORE" in instructions or "MSTORE8" in instructions:
+        return True
+    else:
+        return False

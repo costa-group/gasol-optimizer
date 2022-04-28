@@ -1,19 +1,11 @@
 # Module that contains parameter declarations and
 # other auxiliary methods to generate the encoding
-
-from smtlib_utils import *
-from collections import OrderedDict
+import copy
 import re
+from collections import OrderedDict
 
-# We set the maximum k dup and swap instructions
-# can have.
-
-max_k_dup = 16
-max_k_swap = 16
-
-# Maximum size integers have in the EVM
-
-int_limit = 2**256
+import global_params.constants as constants
+from smt_encoding.smtlib_utils import add_and, add_eq, var2str
 
 # Methods for generating string corresponding to
 # variables we will be using for the encoding
@@ -34,6 +26,10 @@ def t(i):
 def a(i):
     return var2str('a', i)
 
+
+def l(i):
+    return var2str('l', i)
+
 # Auxiliary methods for defining the constraints
 
 def move(j, alpha, beta, delta):
@@ -52,10 +48,10 @@ def move(j, alpha, beta, delta):
 def generate_stack_theta(bs):
     theta = {"PUSH": 0, "POP": 1, "NOP": 2}
     initial_index = 3
-    for i in range(1, min(bs, max_k_dup+1)):
+    for i in range(1, min(bs, constants.max_k_dup + 1)):
         theta["DUP" + str(i)] = initial_index
         initial_index += 1
-    for i in range(1, min(bs, max_k_swap+1)):
+    for i in range(1, min(bs, constants.max_k_swap + 1)):
         theta["SWAP" + str(i)] = initial_index
         initial_index += 1
     return theta
@@ -67,36 +63,43 @@ def generate_stack_theta(bs):
 def generate_uninterpreted_theta(user_instr, initial_index):
     theta_comm = {}
     theta_non_comm = {}
-    # We need to sort to ensure indexis are always generated following the same convention
+    theta_mem = {}
+
+    # We need to sort to ensure indexes are always generated following the same convention
     for instr in sorted(user_instr, key=lambda k: k['id']):
         if instr['commutative']:
             theta_comm[instr['id']] = initial_index
+        elif instr['storage']:
+            theta_mem[instr['id']] = initial_index
         else:
             theta_non_comm[instr['id']] = initial_index
         initial_index += 1
-    return theta_comm, theta_non_comm
+    return theta_comm, theta_non_comm, theta_mem
 
 
 # Separates user instructions in two groups, according to whether they
 # are commutative or not.
-def separe_usr_instr(user_instr):
+def divide_usr_instr(user_instr):
     comm_functions = []
     non_comm_functions = []
+    mem_functions = []
     for instr in user_instr:
         if instr['commutative']:
             comm_functions.append(instr)
+        elif instr['storage']:
+            mem_functions.append(instr)
         else:
             non_comm_functions.append(instr)
-    return comm_functions, non_comm_functions
+    return comm_functions, non_comm_functions, mem_functions
 
 
 # Generates an ordered dict that contains all instructions associated value of theta
 # as keys, and their gas cost as values. Ordered by increasing costs
 def generate_costs_ordered_dict(bs, user_instr, theta_dict):
     instr_costs = {theta_dict["PUSH"]: 3, theta_dict["POP"]: 2, theta_dict["NOP"]: 0}
-    for i in range(1, min(bs, max_k_dup + 1)):
+    for i in range(1, min(bs, constants.max_k_dup + 1)):
         instr_costs[theta_dict["DUP" + str(i)]] = 3
-    for i in range(1, min(bs, max_k_swap + 1)):
+    for i in range(1, min(bs, constants.max_k_swap + 1)):
         instr_costs[theta_dict["SWAP" + str(i)]] = 3
     for instr in user_instr:
         instr_costs[theta_dict[instr['id']]] = instr['gas']
@@ -115,6 +118,28 @@ def generate_disjoint_sets_from_cost(ordered_costs):
         else:
             disjoint_set[gas_cost] = [id]
     return OrderedDict(sorted(disjoint_set.items(), key=lambda t: t[0]))
+
+
+def generate_dot_from_block(current_instr, diagram, ids, f):
+    # The label of a node includes the block id associated to that node and the corresponding instruction.
+    current_id = ids[current_instr]
+    f.write("n_%s [color=blue,label=\"%s\"];\n" % (current_id, current_instr))
+    for prev_instr, _ in diagram[current_instr]:
+        prev_id = ids[prev_instr]
+        f.write("n_%s -> n_%s;\n" % (prev_id, current_id))
+
+
+# Given the blocks corresponding to the CFG of a program, and the string containing the input program,
+# generates a graphical representation of the CFG as a .dot file.
+def generate_CFG_dot(dependency_theta_graph):
+    diagram = copy.deepcopy(dependency_theta_graph)
+    diagram['PUSH'] = []
+    ids = {instr: str(i) for i, instr in enumerate(diagram)}
+    with open('cfg.dot', 'w') as f:
+        f.write("digraph G {\n")
+        for instr in diagram:
+            generate_dot_from_block(instr, diagram, ids, f)
+        f.write("}\n")
 
 
 # Given a instruction, a dict that links each instruction to a lower bound to the number of instructions
@@ -188,18 +213,39 @@ def generate_number_of_previous_instr_dict(dependency_theta_graph):
 
 # First time an instruction cannot appear is b0-h, where h is the tree height. We recursively obtain this value,
 # taking into account that we may have different trees and the final value is the min for all possible ones
-def update_with_tree_level(b0, dependency_theta_graph, current_idx, instr, first_position_instr_cannot_appear):
-    # We don't consider push instructions
-    if instr == 'PUSH':
+def update_with_tree_level(b0, input_stacks_dict, dependency_theta_graph, current_idx, instr, first_position_instr_cannot_appear, theta_comm):
+    # Neither we consider push instructions nor instructions that already have appeared and appear before the best
+    # result so far. On the other hand, if current index > already considered index, we need to traverse the tree in order to
+    # update the values, as we neet to consider the biggest position in which the instruction cannot appear
+    if instr == 'PUSH' or (instr in first_position_instr_cannot_appear and
+                           current_idx <= first_position_instr_cannot_appear[instr]) :
         return
-    first_position_instr_cannot_appear[instr] = min(current_idx, first_position_instr_cannot_appear.get(instr, b0))
-    for prev_instr, _ in dependency_theta_graph[instr]:
-        update_with_tree_level(b0, dependency_theta_graph, current_idx-1, prev_instr, first_position_instr_cannot_appear)
+
+    first_position_instr_cannot_appear[instr] = current_idx
+
+    # If a instruction is not commutative, then only topmost previous element can be obtained
+    # just before and the remaining ones need at least a SWAP to be placed in their position
+    dependent_instr = {dependency[0] for dependency in dependency_theta_graph[instr]}
+    previous_idx = current_idx - 1
+    for prev_instr in input_stacks_dict[instr]:
+        if prev_instr is not None:
+            update_with_tree_level(b0, input_stacks_dict, dependency_theta_graph, previous_idx, prev_instr,
+                                   first_position_instr_cannot_appear, theta_comm)
+        # If a instruction is not commutative, then only topmost previous element can be obtained
+        # just before and the remaining ones need at least a SWAP to be placed in their position
+        if prev_instr not in theta_comm:
+            previous_idx = current_idx - 2
+
+    # There can be other related instructions that are not considered before. As we do not know exactly
+    # where they can appear, we assume worst case (current_idx - 1)
+    for prev_instr in dependent_instr.difference(set(input_stacks_dict[instr])):
+        update_with_tree_level(b0, input_stacks_dict, dependency_theta_graph, current_idx - 1, prev_instr,
+                               first_position_instr_cannot_appear, theta_comm)
 
 
 # Generates a dict that given b0, returns the first position in which a instruction cannot appear
 # due to dependencies with other instructions.
-def generate_first_position_instr_cannot_appear(b0, final_stack_instr, dependency_graph, top_elem_is_instruction):
+def generate_first_position_instr_cannot_appear(b0, input_stacks_dict, final_stack_instr, dependency_graph, mem_ids, comm_ids, top_elem_is_instruction):
     first_position_instr_cannot_appear = {'PUSH': b0}
 
     # We consider instructions in the final stack, as they determine which position is the last possible one (following
@@ -215,17 +261,21 @@ def generate_first_position_instr_cannot_appear(b0, final_stack_instr, dependenc
         b0_aux = b0 - 1
 
     for final_instr in final_stack_instr:
-        update_with_tree_level(b0, dependency_graph, b0_aux, final_instr, first_position_instr_cannot_appear)
+        update_with_tree_level(b0, input_stacks_dict, dependency_graph, b0_aux, final_instr, first_position_instr_cannot_appear, comm_ids)
 
         # If it isn't top of the stack, another instruction must go before it (SWAP or DUP). Only works once
         b0_aux = b0 - 1
+
+    for final_instr in mem_ids:
+        update_with_tree_level(b0, input_stacks_dict, dependency_graph, b0, final_instr, first_position_instr_cannot_appear, comm_ids)
+
     return first_position_instr_cannot_appear
 
 
 # We generate a dict that given the id of an instruction, returns the
 # the id of instructions that must be executed to obtain its input and the corresponding
 # aj. Note that aj must be only assigned when push, in other cases we just set aj value to -1.
-def generate_dependency_graph(user_instr):
+def generate_dependency_graph(user_instr, order_tuples):
     dependency_theta_graph = {}
     for instr in user_instr:
         instr_id = instr['id']
@@ -234,7 +284,8 @@ def generate_dependency_graph(user_instr):
             # We search for another instruction that generates the
             # stack elem as an output and add it to the set
             if type(stack_elem) == str:
-                previous_instr = list(filter(lambda instruction: instruction['outpt_sk'][0] == stack_elem, user_instr))
+                previous_instr = list(filter(lambda instruction: len(instruction['outpt_sk']) == 1 and
+                                                                 instruction['outpt_sk'][0] == stack_elem, user_instr))
 
                 # It might be in the initial stack, so the list can be empty
                 if previous_instr:
@@ -244,17 +295,35 @@ def generate_dependency_graph(user_instr):
             else:
                 dependency_theta_graph[instr_id].append(('PUSH', stack_elem))
 
+    # We need to consider also the order given by the tuples
+    for id1, id2 in order_tuples:
+        if not list(filter(lambda x: x[0] == id1, dependency_theta_graph[id2])):
+            dependency_theta_graph[id2].append((id1, -1))
+
+
     return dependency_theta_graph
 
+
+# Generates a dict that contains a stack element as a key and its corresponding id as a value
+def generate_stack_elements_dict(user_instr):
+    stack_element_ids = dict()
+    for instr in user_instr:
+        if len(instr['outpt_sk']) == 0:
+            continue
+        stack_element_ids[instr['outpt_sk'][0]] = instr['id']
+    return stack_element_ids
 
 # Method that returns all necessary structures for generating constraints related to
 # instruction order: dependency graph, first_position_instr_appears_dict and first_position_instr_cannot_appear_dict.
 # Read the corresponding methods for more info.
-def generate_instruction_order_structures(b0, user_instr, final_stack_ids, top_elem_is_instruction):
-    dependency_graph = generate_dependency_graph(user_instr)
+def generate_instruction_order_structures(b0, user_instr, final_stack_ids, top_elem_is_instruction, comm_instr_ids, mem_instr_ids, order_tuples):
+    stack_elements_ids = generate_stack_elements_dict(user_instr)
+    input_stacks_dict = {instr['id']: list(map(lambda stack_elem: None if stack_elem not in stack_elements_ids else stack_elements_ids[stack_elem], instr['inpt_sk'])) for instr in user_instr }
+    dependency_graph = generate_dependency_graph(user_instr, order_tuples)
     first_position_instr_appears_dict = generate_number_of_previous_instr_dict(dependency_graph)
-    first_position_instr_cannot_appear_dict = generate_first_position_instr_cannot_appear(b0, final_stack_ids,
-                                                                                          dependency_graph, top_elem_is_instruction)
+    first_position_instr_cannot_appear_dict = \
+        generate_first_position_instr_cannot_appear(b0, input_stacks_dict, final_stack_ids, dependency_graph, mem_instr_ids,
+                                                    comm_instr_ids, top_elem_is_instruction)
     return dependency_graph, first_position_instr_appears_dict, first_position_instr_cannot_appear_dict
 
 
@@ -310,11 +379,11 @@ def generate_disasm_map(user_instr, theta_instr):
 # as keys and its corresponding EVM opcode as values. Note that it is similar
 # to theta_comm and theta_non_comm, but instead of using id, we directly use
 # disasm field (i.e. intead of having 14 : ADD_0, we would have 14 : ADD)
-def generate_instr_map(user_instr, theta_stack, theta_comm, theta_non_comm):
+def generate_instr_map(user_instr, theta_stack, theta_comm, theta_non_comm, theta_mem):
 
     # We will consider in general the theta associated to instructions
     # in user instr structure
-    theta_uninterpreted = dict(theta_comm, **theta_non_comm)
+    theta_uninterpreted = dict(theta_comm, **theta_non_comm, **theta_mem)
 
     # We reverse the theta stack, to have the theta value as key,
     # and its corresponding instruction as values
@@ -340,3 +409,11 @@ def generate_uninterpreted_push_map(user_instr, theta_dict):
             theta_uninterpreted_push_dict[theta_value] = value[0]
 
     return theta_uninterpreted_push_dict
+
+
+# Given the pairs of conflicting instructions, returns the identifiers of those instructions that
+# are conflicting
+def generate_conflicting_theta_dict(theta_dict, order_tuples):
+    conflicting_instr = set([instr for order_tuple in order_tuples for instr in order_tuple])
+    theta_conflicting = {instr: theta_dict[instr] for instr in conflicting_instr}
+    return theta_conflicting

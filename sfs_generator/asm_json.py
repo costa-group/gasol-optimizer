@@ -1,31 +1,49 @@
-#!/usr/bin/env python3
 
 from sfs_generator.asm_contract import AsmContract
+from typing import List, Any, Dict
 
-class AsmJSON():
 
-    def __init__(self):
-        self.solc_version = ""
-        self.contracts = []
-        
-    def getVersion(self):
-        return self.solc_version
+class AsmJSON:
+    """
+    Class that represents the whole output from solc when enabling --combined-json asm.
+    Contains multiple contracts and the solidity version in which it was compiled
+    """
 
-    def setVersion(self,v):
-        self.solc_version = v
+    def __init__(self, version : str):
+        self._solc_version = version
+        self._contracts = []
 
-    def getContracts(self):
-        return self.contracts
+    @property
+    def version(self) -> str:
+        return self._solc_version
 
-    def addContracts(self,contract):
-        if isinstance(contract,AsmContract):
-            self.contracts.append(contract)
+    @property
+    def contracts(self) -> List[AsmContract]:
+        return self._contracts
 
-        else:
-            raise TypeError("addContracts: contract is not an instance of AsmContract")
+    @contracts.setter
+    def contracts(self, contracts : List[AsmContract]) -> None:
+        self._contracts = contracts
 
-    def set_contracts(self, contracts):
-        self.contracts = contracts
+    def add_contract(self, contract : AsmContract) -> None:
+        self._contracts.append(contract)
+
+    def to_json(self) -> Dict[str, Any]:
+
+        final_asm = {"version": self.version}
+
+        contracts = {key : val for contract in self.contracts for key, val in contract.to_json().items()}
+
+        final_asm["contracts"] = contracts
+
+        return final_asm
+
+
+    def to_plain(self) -> str:
+        content_list = []
+        for c in self.contracts:
+            content_list.append(c.to_plain())
+        return "\n".join(content_list)
 
 
     def __str__(self):
@@ -33,5 +51,5 @@ class AsmJSON():
         for c in self.contracts:
             content+=str(c)+"\n"
 
-        content+=self.solc_version+"\n"
+        content+=self.version + "\n"
         return content

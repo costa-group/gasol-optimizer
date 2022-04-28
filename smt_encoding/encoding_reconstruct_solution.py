@@ -1,5 +1,6 @@
-from encoding_utils import *
-from encoding_files import write_encoding
+from smt_encoding.encoding_files import write_encoding
+from smt_encoding.encoding_utils import a, t
+from smt_encoding.smtlib_utils import add_assert, add_eq
 
 
 # Given a list that contains info from the sequence, transforms it into
@@ -16,3 +17,20 @@ def generate_encoding_from_log_json_dict(sequence_dict, initial_idx=0):
         else:
             write_encoding(add_assert(add_eq(a(int(pos) + initial_idx), -value)))
             write_encoding(add_assert(add_eq(t(int(pos)+initial_idx), 0)))
+
+
+# Given the list of instructions and the sequence of pushed values for different types of PUSH instructions,
+# returns a new list containing the id if the opcode is not PUSH or the pushed value otherwise
+def generate_instr_sequence_from_instructions_and_pushed_values(instr_sequence, pushed_values):
+    j = 0
+    final_sequence = []
+    for instr in instr_sequence:
+        if instr == "PUSH":
+            final_sequence.append(pushed_values[j])
+            j += 1
+        elif instr.startswith("PUSH"):
+            final_sequence.append(instr)
+            j += 1
+        else:
+            final_sequence.append(instr)
+    return final_sequence
