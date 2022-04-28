@@ -582,7 +582,6 @@ def optimize_asm_in_asm_format(file_name, output_file, csv_file, log_file, timeo
                 print("")
                 optimized_block = old_block
                 log_element = {}
-                raise Exception
 
             log_dicts.update(log_element)
             init_code_blocks.append(optimized_block)
@@ -608,8 +607,6 @@ def optimize_asm_in_asm_format(file_name, output_file, csv_file, log_file, timeo
                     print("")
                     optimized_block = old_block
                     log_element = {}
-                    raise Exception
-
 
                 log_dicts.update(log_element)
                 run_code_blocks.append(optimized_block)
