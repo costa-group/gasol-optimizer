@@ -6,6 +6,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 import glob
 import unittest
 from copy import deepcopy
+import json
 
 from sfs_generator.parser_asm import parse_asm
 from sfs_generator.rebuild_asm import rebuild_asm_contract
@@ -17,7 +18,7 @@ class TestRebuildBlockFromSubBlocks(unittest.TestCase):
         project_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
         for input_path in glob.glob(project_path + "/examples/jsons-solc/*.json_solc"):
             asm = parse_asm(input_path)
-            for c in asm.getContracts():
+            for c in asm.contracts:
                 new_contract = deepcopy(c)
                 prev_contract_dict = rebuild_asm_contract(c)
                 new_contract_dict = rebuild_asm_contract(new_contract)
@@ -28,8 +29,8 @@ class TestRebuildBlockFromSubBlocks(unittest.TestCase):
         project_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
         for input_path in glob.glob(project_path + "/examples/jsons-solc/*.json_solc"):
             asm = parse_asm(input_path)
-            for c in asm.getContracts():
-                init_code = c.getInitCode()
+            for c in asm.contracts:
+                init_code = c.init_code
                 new_contract = deepcopy(c)
 
                 new_init_code = []
@@ -37,16 +38,16 @@ class TestRebuildBlockFromSubBlocks(unittest.TestCase):
                     new_block = deepcopy(block)
                     new_init_code.append(new_block)
 
-                new_contract.setInitCode(new_init_code)
+                new_contract.init_code = new_init_code
 
-                for identifier in c.getDataIds():
-                    blocks = c.getRunCodeOf(identifier)
+                for identifier in c.get_data_ids_with_code():
+                    blocks = c.get_run_code(identifier)
                     new_run_code = []
                     for block in blocks:
                         new_block = deepcopy(block)
                         new_run_code.append(new_block)
 
-                    new_contract.setRunCode(identifier, new_run_code)
+                    new_contract.set_run_code(identifier, new_run_code)
 
                 prev_contract_dict = rebuild_asm_contract(c)
                 new_contract_dict = rebuild_asm_contract(new_contract)
@@ -57,8 +58,8 @@ class TestRebuildBlockFromSubBlocks(unittest.TestCase):
         project_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
         for input_path in glob.glob(project_path + "/examples/jsons-solc/*.json_solc"):
             asm = parse_asm(input_path)
-            for c in asm.getContracts():
-                init_code = c.getInitCode()
+            for c in asm.contracts:
+                init_code = c.init_code
                 new_contract = deepcopy(c)
 
                 new_init_code = []
@@ -69,10 +70,10 @@ class TestRebuildBlockFromSubBlocks(unittest.TestCase):
                     new_block.set_instructions_from_sub_blocks(non_optimized_list)
                     new_init_code.append(new_block)
 
-                new_contract.setInitCode(new_init_code)
+                new_contract.init_code = new_init_code
 
-                for identifier in c.getDataIds():
-                    blocks = c.getRunCodeOf(identifier)
+                for identifier in c.get_data_ids_with_code():
+                    blocks = c.get_run_code(identifier)
                     new_run_code = []
                     for block in blocks:
                         new_block = deepcopy(block)
@@ -81,7 +82,7 @@ class TestRebuildBlockFromSubBlocks(unittest.TestCase):
                         new_block.set_instructions_from_sub_blocks(non_optimized_list)
                         new_run_code.append(new_block)
 
-                    new_contract.setRunCode(identifier, new_run_code)
+                    new_contract.set_run_code(identifier, new_run_code)
 
                 prev_contract_dict = rebuild_asm_contract(c)
                 new_contract_dict = rebuild_asm_contract(new_contract)

@@ -1,0 +1,27 @@
+Non optimized:  CALLER PUSH FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF AND PUSH 0
+Optimized:  CALLER PUSH 0  
+
+Criteria: Gas
+
+Previous gas: 11
+New gas: 5
+
+Previous size: 25
+New size: 3
+
+
+solc version: 0.8.11
+Command line: solc 0x351B95322730E0FB6211B6CbE667fe0A71e93243.sol --experimental-via-ir --optimize --combined-json asm  --optimize-runs 9999999
+Block name:  0x351B95322730E0FB6211B6CbE667fe0A71e93243_PrivateDistribution_block165.0_input
+
+
+ASM block: 
+
+... {"begin":37873,"end":37903,"name":"JUMPDEST","source":0},
+
+{"begin":170,"end":180,"name":"CALLER","source":0},{"begin":35614,"end":44544,"name":"PUSH","source":0,"value":"FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"},{"begin":35614,"end":44544,"name":"AND","source":0},{"begin":35614,"end":44544,"name":"PUSH","source":0,"value":"0"} 
+
+...
+
+Explanation: CALLER returns the 20-byte address of the caller account. Applying a mask of 20 bytes to the address is meaningless. 
+(Not sure if there could be any extreme case in which it doesn't hold)

@@ -4,29 +4,29 @@ from sfs_generator.utils import get_ins_size, isYulInstruction
 
 
 def asm_instruction_to_plain(asm_bytecode):
-    op = asm_bytecode.getDisasm()
+    op = asm_bytecode.disasm
 
     if op.startswith("PUSH") and not isYulInstruction(op):
-        op = op + " 0x" + asm_bytecode.getValue()
+        op = op + " 0x" + asm_bytecode.value
 
     else:
         if op.startswith("PUSH") and op.find("tag") != -1:
-            op = "PUSHTAG" + " 0x" + asm_bytecode.getValue()
+            op = "PUSHTAG" + " 0x" + asm_bytecode.value
 
         elif op.startswith("PUSH") and op.find("#[$]") != -1:
-            op = "PUSH#[$]" + " 0x" + asm_bytecode.getValue()
+            op = "PUSH#[$]" + " 0x" + asm_bytecode.value
 
         elif op.startswith("PUSH") and op.find("[$]") != -1:
-            op = "PUSH[$]" + " 0x" + asm_bytecode.getValue()
+            op = "PUSH[$]" + " 0x" + asm_bytecode.value
 
         elif op.startswith("PUSH") and op.find("data") != -1:
-            op = "PUSHDATA" + " 0x" + asm_bytecode.getValue()
+            op = "PUSHDATA" + " 0x" + asm_bytecode.value
 
         elif op.startswith("PUSH") and op.find("IMMUTABLE") != -1:
-            op = "PUSHIMMUTABLE" + " 0x" + asm_bytecode.getValue()
+            op = "PUSHIMMUTABLE" + " 0x" + asm_bytecode.value
 
         elif op.startswith("PUSH") and op.find("LIB") != -1:
-            op = "PUSHLIB" + " 0x" + asm_bytecode.getValue()
+            op = "PUSHLIB" + " 0x" + asm_bytecode.value
 
         elif op.startswith("PUSH") and op.find("DEPLOYADDRESS") != -1:
             # Fixme: add ALL PUSH variants: PUSH data, PUSH DEPLOYADDRESS
@@ -48,14 +48,14 @@ def preprocess_instructions(bytecodes):
 # Computes the number of bytecodes given an ASM json object
 def compute_number_of_instructions_in_asm_json_per_contract(asm_json):
     contract_counter_dict = {}
-    for c in asm_json.getContracts():
+    for c in asm_json.contracts:
         number_instrs = 0
-        contract_name = (c.getContractName().split("/")[-1]).split(":")[-1]
+        contract_name = (c.contract_name.split("/")[-1]).split(":")[-1]
 
-        for identifier in c.getDataIds():
-            blocks = c.getRunCodeOf(identifier)
+        for identifier in c.get_data_ids_with_code():
+            blocks = c.get_run_code(identifier)
             for block in blocks:
-                number_instrs += len(list(filter(lambda x: x.getDisasm() != "tag", block.getInstructions())))
+                number_instrs += len(list(filter(lambda x: x.disasm != "tag", block.instructions)))
 
         contract_counter_dict[contract_name] = number_instrs
     return contract_counter_dict
@@ -87,10 +87,10 @@ def compute_bytecode_size_in_asm_json_per_contract(asm_json):
     contract_counter_dict = {}
     for c in asm_json.getContracts():
         bytecode_size = 0
-        contract_name = (c.getContractName().split("/")[-1]).split(":")[-1]
+        contract_name = (c.contract_name.split("/")[-1]).split(":")[-1]
 
-        for identifier in c.getDataIds():
-            blocks = c.getRunCodeOf(identifier)
+        for identifier in c.get_data_ids_with_code():
+            blocks = c.get_run_code(identifier)
             for block in blocks:
                 bytecode_size += compute_bytecode_size_in_asm_json_per_block(block)
         contract_counter_dict[contract_name] = bytecode_size

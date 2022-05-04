@@ -1,32 +1,38 @@
 #!/usr/bin/python3
 import argparse
-import os
 import glob
+import json
+import os
 import pathlib
+import re
+import resource
 import shlex
 import subprocess
-import re
-import json
-import pandas as pd
 import sys
-import resource
+
+import pandas as pd
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))+"/global_params")
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))+"/sfs_generator")
+from paths import (bclt_exec, gasol_path, json_path, oms_exec, project_path,
+                   smt_encoding_path, solutions_path, z3_exec)
 from utils import compute_stack_size
-from paths import project_path, oms_exec, gasol_path, smt_encoding_path, json_path, z3_exec, bclt_exec, solutions_path
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))+"/smt_encoding")
 from encoding_utils import generate_phi_dict
 from gasol_encoder import execute_syrup_backend
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))+"/verification")
 from sfs_verify import are_equals
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))+"/scripts")
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))+"/solution_generation")
-from disasm_generation import generate_disasm_sol
 import ir_block
+from disasm_generation import generate_disasm_sol
 from gasol_optimization import get_sfs_dict
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from gasol_asm import preprocess_instructions_plain_text
-
 
 
 def modifiable_path_files_init():
@@ -35,7 +41,7 @@ def modifiable_path_files_init():
                         help="folder that contains the jsons to analyze. It must be in the proper format",
                         required=True)
     parser.add_argument("-csv-folder", metavar='csv_folder', action='store', type=str,
-                        help="folder that will store the csvs containing the statistics per file. Inside that folder, "
+                        help="folder that will store the csvs containing the properties per file. Inside that folder, "
                              "another subfolder is created: solver_name + _ + timeout + 's'", required=True)
 
 

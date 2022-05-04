@@ -3,6 +3,11 @@ import argparse
 import copy
 import json
 import re
+import sys
+import os
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+
 
 from smt_encoding.encoding_files import (initialize_dir_and_streams,
                                          write_encoding)
@@ -62,9 +67,8 @@ def parse_data(json_path, var_initial_idx=0, with_simplifications=True):
     variables = list(map(lambda x: add_bars_and_index_to_string(x, var_initial_idx), data['vars']))
 
     current_cost = data['current_cost']
-    instr_seq = data.get('init_info', dict()).get('opcodes_seq', [])
-    pushed_values = data.get('init_info', dict()).get('push_vals', [])
-    combined_instr_seq = generate_instr_sequence_from_instructions_and_pushed_values(instr_seq, pushed_values)
+
+    combined_instr_seq = data['original_instrs']
     mem_order = [*data['storage_dependences'], *data.get('memory_dependences')]
     return b0, bs, new_user_instr, variables, initial_stack, final_stack, current_cost, combined_instr_seq, mem_order
 
@@ -79,6 +83,7 @@ def initialize_flags_and_additional_info(args_i, current_cost, instr_seq, previo
              'instruction-order': args_i_dict.get('instruction_order', False),
              'no-output-before-pop': args_i_dict.get('no_output_before_pop', False),
              'inequality-gas-model': args_i_dict.get('inequality_gas_model', False),
+             'inequality-size-model': args_i_dict.get('inequality_gas_model', False),
              'initial-solution': args_i_dict.get('initial_solution', False),
              'default-encoding': args_i_dict.get('default_encoding', False),
              'number-instruction-gas-model': args_i_dict.get('number_instruction_gas_model',False),
@@ -126,7 +131,7 @@ def execute_syrup_backend_combined(sfs_dict, instr_sequence_dict, contract_name,
 
     es = initialize_dir_and_streams(solver, contract_name)
 
-    write_encoding(set_logic('QF_LIA'))
+    write_encoding(set_logic('QF_IDL'))
 
     for block in sfs_dict:
 
@@ -198,7 +203,7 @@ if __name__ == "__main__":
     ap.add_argument("-complex-bytecode-size-soft-constraints", dest='complex_bytecode_size_soft_constraints', action='store_true',
                         help="")
     ap.add_argument("-memory-encoding", help="Choose the memory encoding model", choices = ["l_vars","direct"], default="l_vars")
-    ap.add_argument("-instr-seq", help="Choose the memory encoding model")
+    ap.add_argument("-instr-seq", help="Choose the memory encoding model", action="store", type=str)
 
 
 
@@ -209,8 +214,11 @@ if __name__ == "__main__":
     timeout = args['tout']
     memory_model = args['memory_encoding']
 
-    b0, bs, user_instr, variables, initial_stack, final_stack, current_cost, _, mem_order = parse_data(json_path, 0, True)
+    b0, bs, user_instr, variables, initial_stack, final_stack, current_cost, original_sol, mem_order = parse_data(json_path, 0, True)
     instr_seq = list(filter(lambda x: x != "" and x != "PUSH", args['instr_seq'].split(" ")))
+    instr_seq_original = list(filter(lambda x: x != "" and x != "PUSH", original_sol.split(" ")))
+
+    # print(instr_seq, instr_seq_original)
 
     flags = {'at-most': args.get('at_most', False), 'pushed-at-least': args.get('pushed_once', False),
              'instruction-order': args.get('instruction_order', False),
@@ -227,6 +235,8 @@ if __name__ == "__main__":
 
     if args['instr_seq']:
         obtained_stack = compute_final_stack_from_solution(initial_stack, user_instr, instr_seq)
+        # final_stack = compute_final_stack_from_solution(initial_stack, user_instr, instr_seq_original)
+
         if obtained_stack == final_stack:
             print("Check")
         else:

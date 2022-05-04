@@ -19,7 +19,10 @@ def l_variable_order_constraint(theta_uninterpreted_1, theta_uninterpreted_2):
 # Given two conflicting instructions, returns a general constraint that avoids an incorrect order between them
 def direct_order_constraint(j, theta_conflicting1, theta_conflicting2, final_idx):
     left_term = add_eq(t(j), theta_conflicting2)
-    right_term = add_and(*[add_not(add_eq(t(i), theta_conflicting1)) for i in range(j+1, final_idx)])
+    positions_restricted = [add_not(add_eq(t(i), theta_conflicting1)) for i in range(j+1, final_idx)]
+    if positions_restricted == []:
+        return True
+    right_term = add_and(*positions_restricted)
     return add_assert(add_implies(left_term, right_term))
 
 
@@ -62,4 +65,9 @@ def memory_model_constraints_direct(b0, order_tuples, theta_dict, first_position
 
 
         for j in range(initial_possible_idx_el1, final_possible_idx_el1):
-            write_encoding(direct_order_constraint(j, theta_val_1, theta_val_2, final_possible_idx_el2))
+            direct_constraint = direct_order_constraint(j, theta_val_1, theta_val_2, final_possible_idx_el2)
+
+            # If it's true, then we don't have to consider this constraint
+            if direct_constraint:
+                continue
+            write_encoding(direct_constraint)
