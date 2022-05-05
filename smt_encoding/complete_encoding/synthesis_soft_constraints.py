@@ -5,6 +5,7 @@ from smt_encoding.constraints.assertions import AssertSoft
 from smt_encoding.instructions.instruction_bounds import InstructionBounds
 from smt_encoding.complete_encoding.synthesis_variables import SynthesisVariables
 from smt_encoding.constraints.connector_factory import add_eq, add_or
+from smt_encoding.complete_encoding.synthesis_utils import select_intructions_position
 
 def _soft_constraints_direct(sv : SynthesisVariables, weight_dict : Dict[ThetaValue, int],
                              bounds : InstructionBounds, label_name: str) -> [AssertSoft]:
@@ -34,11 +35,6 @@ def _generate_disjoint_sets_from_cost(ordered_costs : OrderedDict[ThetaValue, in
             disjoint_set[gas_cost] = [id]
     return OrderedDict([(k,v) for k,v in sorted(disjoint_set.items(), key=lambda elem: elem[0])])
 
-# Given a concrete position in the sequence and a set of instructions, returns the instructions that can happen
-# at that position
-def _select_intructions_position(j : int, instructions : [ThetaValue], bounds : InstructionBounds) -> [ThetaValue]:
-    return list(filter(lambda theta_value: bounds.lower_bound_theta_value(theta_value) <= j <= bounds.upper_bound_theta_value(theta_value), instructions))
-
 
 # Generates the soft constraints given the set of instructions and its corresponding weights, considering an or
 # clause of multiple instructions with the same weight
@@ -66,8 +62,7 @@ def _soft_constraints_grouped_by_weight(sv : SynthesisVariables, b0 : int, weigh
         # the constraints for each tj.
         for j in range(b0):
 
-            # Not so efficient... But easier to understand
-            variables_in_range = _select_intructions_position(j, theta_or_variables, bounds)
+            variables_in_range = select_intructions_position(j, theta_or_variables, bounds)
 
             # Only add a constraint if any instruction satisfies the condition
             if variables_in_range:
