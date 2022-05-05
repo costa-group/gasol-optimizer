@@ -1,0 +1,27 @@
+Non optimized: PUSH 8 SLOAD SWAP1 MLOAD SWAP1 DUP2 MSTORE SWAP1 DUP2 SWAP1 PUSH 20 DUP3 ADD SWAP1
+Optimized:  MLOAD PUSH 8 SLOAD DUP2 MSTORE PUSH 20 DUP2 ADD DUP2 SWAP3  
+
+Criteria: Gas
+
+Previous gas (estimation): 739
+New gas (estimation): 727
+
+Previous size: 16
+New size: 12
+
+solc version: 0.8.11
+Command line: solc 0x0c9C2e9647f65118EffB3d87C6D025d95845E930.sol --experimental-via-ir --optimize --combined-json asm  --optimize-runs 9999999
+Block name:  0x0c9C2e9647f65118EffB3d87C6D025d95845E930_Rugpull_block117_input
+
+
+ASM block: 
+
+... {"begin":38080,"end":40675,"name":"JUMPDEST","source":0},
+
+{"begin":32808,"end":32818,"name":"PUSH","source":0,"value":"8"},{"begin":38080,"end":40675,"name":"SLOAD","source":0},{"begin":38080,"end":40675,"name":"SWAP1","source":0},{"begin":38080,"end":40675,"name":"MLOAD","source":0},{"begin":38080,"end":40675,"name":"SWAP1","source":0},{"begin":38080,"end":40675,"name":"DUP2","source":0},{"begin":38080,"end":40675,"name":"MSTORE","source":0},{"begin":38080,"end":40675,"name":"SWAP1","source":0},{"begin":38080,"end":40675,"name":"DUP2","source":0},{"begin":38080,"end":40675,"name":"SWAP1","source":0},{"begin":38080,"end":40675,"name":"PUSH","source":0,"value":"20"},{"begin":38080,"end":40675,"name":"DUP3","source":0},{"begin":38080,"end":40675,"name":"ADD","source":0},{"begin":38080,"end":40675,"name":"SWAP1","source":0},
+
+{"begin":38080,"end":40675,"name":"JUMP","source":0} ... 
+
+Explanation: The order among load instructions is relevant, as applying MLOAD before SLOAD allows to remove two SWAP1: the one for bringing the initial
+top of the stack again to the top after SLOAD, and the one used for ordering the arguments of MSTORE. 
+Rearranging the instruction after MSTORE also leads to saving other two SWAP instructions.

@@ -95,12 +95,12 @@ opcodes = {
     "SUICIDE": [0xff, 1, 0],
     # See https://github.com/ethereum/solidity/blob/develop/libevmasm/Assembly.cpp for more information
     "ASSIGNIMMUTABLE": [0x00,2,0], #Yul opcode. Assembly Item: AssignImmutable
-    "PUSHTAG": [0x00,0,1], #Yul opcode. Assembly Item: PushTag
+    "PUSH [tag]": [0x00,0,1], #Yul opcode. Assembly Item: PushTag
     "PUSHLIB": [0x00,0,1], #Yul opcode. Assembly Item: PushLib
-    "PUSH#[$]": [0x00,0,1], #Yul opcode. Assembly Item: PushSubSize
-    "PUSH[$]": [0x00,0,1], #Yul opcode. Assembly Item: PushSub
+    "PUSH #[$]": [0x00,0,1], #Yul opcode. Assembly Item: PushSubSize
+    "PUSH [$]": [0x00,0,1], #Yul opcode. Assembly Item: PushSub
     "PUSHDEPLOYADDRESS": [0x00,0,1], #Yul opcode. AssemblyItem: PushDeployTimeAddress
-    "PUSHDATA": [0x00,0,1], #Yul opcode. Assembly Item: PushData
+    "PUSH data": [0x00,0,1], #Yul opcode. Assembly Item: PushData
     "PUSHSIZE": [0x00,0,1], #Yul opcode. Assembly Item: PushProgramSize
     "PUSHIMMUTABLE": [0x00,0,1], #Yul opcode. Assembly Item:PushImmutable
     "---END---": [0x00, 0, 0]

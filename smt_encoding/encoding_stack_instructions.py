@@ -213,4 +213,4 @@ def stack_constraints(b0, bs, comm_instr, non_comm_instr, mem_instr, theta_stack
     _non_comm_function_constraints(b0, bs, non_comm_instr, theta_non_comm, first_position_instr_appears_dict,
                                    first_position_instr_cannot_appear_dict, initial_idx)
     _store_stack_constraints(b0, bs, mem_instr, theta_mem, first_position_instr_appears_dict,
-                             first_position_instr_cannot_appear_dict)
+                             first_position_instr_cannot_appear_dict, initial_idx)
