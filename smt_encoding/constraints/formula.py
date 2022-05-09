@@ -1,4 +1,4 @@
 from typing import Union
-from smt_encoding.constraints.variable import Variable
+from smt_encoding.constraints.function import Function
 
-Formula_T = Union['Connector', Variable, bool, int]
+Formula_T = Union['Connector', Function, bool, int]
