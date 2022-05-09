@@ -75,3 +75,7 @@ class TestInstructionBoundsWithDependencies(unittest.TestCase):
                             'INSTR_7': ['INSTR_4', 'INSTR_1', 'INSTR_6'],
                             'PUSH': []}
         self.assertDictEqual(dependency_graph, expected_dependency_graph)
+
+
+if __name__ == '__main__':
+    unittest.main()
