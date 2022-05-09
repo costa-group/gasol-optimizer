@@ -33,3 +33,7 @@ class SwapKBasic(BasicInstruction):
     @property
     def gas_cost(self):
         return 3
+
+    @property
+    def k(self) -> int:
+        return self._k

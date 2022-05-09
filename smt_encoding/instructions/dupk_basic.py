@@ -29,3 +29,7 @@ class DupKBasic(BasicInstruction):
     @property
     def gas_cost(self) -> int:
         return 3
+
+    @property
+    def k(self) -> int:
+        return self._k
