@@ -39,7 +39,7 @@ class Function:
         return repr(self._name)
 
     def __eq__(self, other):
-        return self.name == other.name and self.type == other.type
+        return type(self) == type(other) and self.name == other.name and self.type == other.type
 
 
 class VariableFactory:
