@@ -3,9 +3,8 @@ from smt_encoding.complete_encoding.synthesis_predicates import move
 from smt_encoding.constraints.connector_factory import add_eq, add_and, add_not, add_implies, add_leq, add_lt, add_or
 import global_params.constants as constants
 from smt_encoding.constraints.assertions import AssertHard
-from typing import List, Callable
+from typing import List
 from smt_encoding.instructions.encoding_instruction import ThetaValue
-from smt_encoding.instructions.instruction_bounds import InstructionBounds
 from smt_encoding.constraints.formula import Formula_T
 
 
@@ -86,22 +85,3 @@ def store_stack_function_encoding(j: int, theta_f: ThetaValue, sf: SynthesisFunc
     right_term = add_and(sf.u(0, j), sf.u(1, j), add_and(add_eq(sf.x(0, j), o0), add_eq(sf.x(1, j), o1)),
                          move(sf, j, 2, bs - 1, -2), add_not(sf.u(bs - 1, j + 1)), add_not(sf.u(bs - 2, j + 1)))
     return AssertHard(add_implies(left_term, right_term))
-
-
-def stack_constraints_with_bounds(func: Callable[..., AssertHard], theta_val: ThetaValue,
-                                  bounds: InstructionBounds, sf: SynthesisFunctions, *args, **kwargs) -> List[AssertHard]:
-    """
-    Given a function that generates a hard constraint for a position in the sequence and the corresponding bounds,
-    generates a list of hard constraints for each position within the bounds.
-
-    :param func: Function that generates the encoding. First positional argument is the current position in the sequence
-    to represent, and the second one the corresponding theta value.
-    :param theta_val: theta value
-    :param bounds: bound object containing the necessary info
-    :param sf: SynthesisFunctions object that creates the corresponding variables of the encoding
-    :param args: args params passed to func
-    :param kwargs: kwargs params passed to func
-    :return: a list with a hard constraint for each position within the bounds
-    """
-    return [func(pos, theta_val, sf, *args, **kwargs) for pos in range(bounds.lower_bound_theta_value(theta_val),
-                                                                       bounds.upper_bound_theta_value(theta_val) + 1)]
