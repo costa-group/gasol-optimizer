@@ -5,10 +5,10 @@ from typing import Dict, Any, Optional, List
 
 SMS_T = Dict[str, Any]
 
+
 class UninterpretedInstruction(EncodingInstruction, ABC):
 
-
-    def __init__(self, instr : SMS_T, theta_value : ThetaValue):
+    def __init__(self, instr: SMS_T, theta_value: ThetaValue):
         self._output_stack = instr['outpt_sk']
         self._input_stack = instr['inpt_sk']
         self._gas = instr["gas"]

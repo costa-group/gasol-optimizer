@@ -11,9 +11,9 @@ from smt_encoding.instructions.pop_uninterpreted import PopUninterpreted
 from smt_encoding.instructions.push_basic import PushBasic
 from smt_encoding.instructions.store_uninterpreted import StoreUninterpreted
 from smt_encoding.instructions.swapk_basic import SwapKBasic
-from smt_encoding.instructions.uninterpreted_instruction import UninterpretedInstruction
+from smt_encoding.instructions.uninterpreted_instruction import UninterpretedInstruction, SMS_T
 from smt_encoding.instructions.basic_instruction import BasicInstruction
-from typing import Dict, Any
+
 
 class InstructionFactory:
 
@@ -21,9 +21,7 @@ class InstructionFactory:
         self._next_theta_value = 0
         self._instructions_ids = {}
 
-
-    def create_instruction_json_format(self, json_instr : Dict[str, Any]) -> UninterpretedInstruction:
-
+    def create_instruction_json_format(self, json_instr: SMS_T) -> UninterpretedInstruction:
         instr_id = json_instr["id"]
 
         # If it was already created, then we return the previous instance, as two instructions
@@ -44,7 +42,6 @@ class InstructionFactory:
         self._instructions_ids[instr_id] = instance
         self._next_theta_value += 1
         return instance
-
 
     # Given a name that identifies a basic stack operation, returns the corresponding EncodingInstruction object.
     def create_instruction_name(self, name : str) -> BasicInstruction:
