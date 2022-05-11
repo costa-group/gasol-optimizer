@@ -11,7 +11,7 @@ class Connector:
         self._args = list(args)
 
     @property
-    def connector(self) -> str:
+    def connector_name(self) -> str:
         return self._name
 
     @property
@@ -41,8 +41,8 @@ class Connector:
                     if correct_permutation:
                         exists_correct = True
                         break
-                return self.connector == other.connector and exists_correct
+                return self.connector_name == other.connector_name and exists_correct
             else:
                 return False
-        return self.connector == other.connector and len(self.arguments) == len(other.arguments) and \
+        return self.connector_name == other.connector_name and len(self.arguments) == len(other.arguments) and \
                all(arg1 == arg2 for arg1, arg2 in zip(self.arguments, other.arguments))
