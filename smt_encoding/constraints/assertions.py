@@ -1,4 +1,5 @@
-from smt_encoding.constraints.formula import Formula_T
+from smt_encoding.constraints.connector import Formula_T
+
 
 class AssertHard:
 
@@ -13,6 +14,7 @@ class AssertHard:
 
     def __eq__(self, other):
         return self.formula == other.formula
+
 
 class AssertSoft:
 

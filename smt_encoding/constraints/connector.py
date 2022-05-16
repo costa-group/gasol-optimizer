@@ -1,6 +1,6 @@
-from typing import List
-from smt_encoding.constraints.formula import Formula_T
+from typing import List, Union
 import itertools
+from smt_encoding.constraints.function import ExpressionReference
 
 
 class Connector:
@@ -15,7 +15,7 @@ class Connector:
         return self._name
 
     @property
-    def arguments(self) -> List[Formula_T]:
+    def arguments(self) -> List['Formula_T']:
         return self._args
 
     @property
@@ -36,8 +36,7 @@ class Connector:
             if len(self.arguments) == len(other.arguments):
                 exists_correct = False
                 for permutation in itertools.permutations(self.arguments):
-                    correct_permutation = all(arg1 == arg2 for arg1, arg2 in zip(permutation, other.arguments))
-
+                    correct_permutation = all(arg1 == arg2 for arg1, arg2 in zip(list(permutation), other.arguments))
                     if correct_permutation:
                         exists_correct = True
                         break
@@ -46,3 +45,6 @@ class Connector:
                 return False
         return self.connector_name == other.connector_name and len(self.arguments) == len(other.arguments) and \
                all(arg1 == arg2 for arg1, arg2 in zip(self.arguments, other.arguments))
+
+
+Formula_T = Union[Connector, ExpressionReference, bool, int]

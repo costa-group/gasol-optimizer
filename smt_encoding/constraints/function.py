@@ -1,4 +1,3 @@
-from smt_encoding.singleton import Singleton
 from enum import Enum, unique
 from typing import List, Tuple
 
@@ -85,6 +84,7 @@ class ExpressionReference:
 
     def __repr__(self):
         arguments_expression = "(" + ','.join([str(arg) for arg in self._args]) + ")" if len(self._args) == 0 else ' '
+        print(arguments_expression)
         return str(self._func) + arguments_expression
 
     def __eq__(self, other):
@@ -93,22 +93,12 @@ class ExpressionReference:
                all((self_arg1 == other_arg1 for self_arg1, other_arg1 in zip(self.arguments, other.arguments)))
 
 
-class VariableFactory:
-
-    def __init__(self):
-        self._instances = {}
-        self._types = {}
-
-    def create_variable(self, name: str, var_type: Sort) -> Function:
-        if name in self._instances:
-            if self._types[name] == var_type:
-                return self._instances[name]
-            else:
-                raise ValueError("Variable " + name + " was already created using type " + self._types[name])
-        created_var = Function(name, var_type)
-        self._instances[name] = created_var
-        self._types[name] = var_type
-        return created_var
-
-    def variables_created(self) -> List[Function]:
-        return [self._instances[name] for name in self._instances]
+def Const(name: str, sort: Sort) -> ExpressionReference:
+    """
+    Shortcut to initialize constant expressions directly, without declaring explicitly the corresponding function and
+    then calling
+    :param name: name of the constant
+    :param sort: sort of the constant
+    :return: an expression that represents the constant
+    """
+    return Function(name, sort)()

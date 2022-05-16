@@ -1,11 +1,10 @@
 from smt_encoding.complete_encoding.synthesis_functions import SynthesisFunctions
 from smt_encoding.complete_encoding.synthesis_predicates import move
-from smt_encoding.constraints.connector_factory import add_eq, add_and, add_not, add_implies, add_leq, add_lt, add_or
+from smt_encoding.constraints.connector_factory import add_eq, add_and, add_not, add_implies, add_leq, add_lt, add_or, Formula_T
 import global_params.constants as constants
 from smt_encoding.constraints.assertions import AssertHard
 from typing import List
 from smt_encoding.instructions.encoding_instruction import ThetaValue
-from smt_encoding.constraints.formula import Formula_T
 
 
 def push_basic_encoding(j: int, theta_push: ThetaValue, sf: SynthesisFunctions, bs: int) -> AssertHard:

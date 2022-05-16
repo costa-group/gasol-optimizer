@@ -1,6 +1,5 @@
-from smt_encoding.constraints.connector_factory import add_eq, add_and
+from smt_encoding.constraints.connector_factory import add_eq, add_and, Formula_T
 from smt_encoding.complete_encoding.synthesis_functions import SynthesisFunctions
-from smt_encoding.constraints.formula import Formula_T
 
 
 def move(sf: SynthesisFunctions, j: int, alpha: int, beta: int, delta: int) -> Formula_T:

@@ -1,7 +1,6 @@
-from smt_encoding.constraints.connector import Connector
-from smt_encoding.constraints.formula import Formula_T
+from smt_encoding.constraints.connector import Connector, Formula_T
 from smt_encoding.singleton import Singleton
-from typing import Callable, Dict
+from typing import Callable
 
 
 class Connectors(metaclass=Singleton):
