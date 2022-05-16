@@ -1,6 +1,6 @@
 import unittest
 from smt_encoding.complete_encoding.synthesis_encoding_instructions_stack import EncodingForStack
-from smt_encoding.complete_encoding.synthesis_constraints import push_basic_encoding, pop_uninterpreted_encoding, \
+from smt_encoding.complete_encoding.synthesis_stack_constraints import push_basic_encoding, pop_uninterpreted_encoding, \
     non_comm_function_encoding
 from smt_encoding.instructions.push_basic import PushBasic
 from smt_encoding.instructions.pop_uninterpreted import PopUninterpreted
@@ -57,16 +57,15 @@ class TestSynthesisConstraints(unittest.TestCase):
         pop_function = PopUninterpreted(pop_sms, theta_value)
 
         encoding_factory = EncodingForStack()
-        encoding_factory.register_function_for_encoding(pop_function, pop_uninterpreted_encoding,
-                                                        o=pop_function.input_stack[0])
+        encoding_factory.register_function_for_encoding(pop_function, pop_uninterpreted_encoding)
 
         bounds = DumbInstructionBounds(4, 4)
         sf = SynthesisFunctions()
 
-        hard_constraints = encoding_factory.encode_instruction(pop_function, bounds, sf, 5)
+        hard_constraints = encoding_factory.encode_instruction(pop_function, bounds, sf, 5, o=sf.s(1))
         other_sf = SynthesisFunctions()
         expected_hard_constraints = [AssertHard(add_implies(add_eq(other_sf.t(4), theta_value),
-                                                            add_and(other_sf.u(0, 4), add_eq(other_sf.x(0, 4), "s_1"),
+                                                            add_and(other_sf.u(0, 4), add_eq(other_sf.x(0, 4), sf.s(1)),
                                                                     add_not(other_sf.u(4, 5)),
                                                                     move(other_sf, 4, 1, 4, -1))))]
         self.assertListEqual(hard_constraints, expected_hard_constraints)
@@ -78,19 +77,19 @@ class TestSynthesisConstraints(unittest.TestCase):
         push_uninterpreted = NonCommutativeUninterpreted(push_sms, theta_value)
 
         encoding_factory = EncodingForStack()
-        encoding_factory.register_function_for_encoding(push_uninterpreted, non_comm_function_encoding,
-                                                        o=push_uninterpreted.input_stack,
-                                                        r=push_uninterpreted.output_stack)
+        encoding_factory.register_function_for_encoding(push_uninterpreted, non_comm_function_encoding)
 
         bounds = DumbInstructionBounds(5, 5)
         sf = SynthesisFunctions()
 
-        hard_constraints = encoding_factory.encode_instruction(push_uninterpreted, bounds, sf, 1)
+        hard_constraints = encoding_factory.encode_instruction(push_uninterpreted, bounds, sf, 1,
+                                                               o=[], r=sf.s(2))
+
         other_sf = SynthesisFunctions()
         expected_hard_constraints = [AssertHard(add_implies(add_eq(other_sf.t(5), theta_value),
                                                             add_and(add_not(other_sf.u(0, 5)),
                                                                     other_sf.u(0, 6),
-                                                                    add_eq(other_sf.x(0, 6), "s_2"),
+                                                                    add_eq(other_sf.x(0, 6), sf.s(2)),
                                                                     move(other_sf, 5, 0, -1, 1))))]
         self.assertListEqual(hard_constraints, expected_hard_constraints)
 

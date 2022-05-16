@@ -33,22 +33,17 @@ class EncodingForStack:
     def __init__(self):
         self._instructions_registered = set()
         self._encoding_function = dict()
-        self._args = dict()
-        self._kwargs = dict()
 
     def register_function_for_encoding(self, instruction: EncodingInstruction,
-                                       encoding_function: Callable[..., AssertHard], *args, **kwargs) -> None:
+                                       encoding_function: Callable[..., AssertHard]) -> None:
         instruction_id = instruction.id
         self._instructions_registered.add(instruction_id)
         self._encoding_function[instruction_id] = encoding_function
-        self._args[instruction_id] = args
-        self._kwargs[instruction_id] = kwargs
 
     def encode_instruction(self, instruction: EncodingInstruction, bounds: InstructionBounds,
-                           sf: SynthesisFunctions, bs: int) -> List[AssertHard]:
+                           sf: SynthesisFunctions, bs: int, *args, **kwargs) -> List[AssertHard]:
         instruction_id = instruction.id
         if instruction_id not in self._instructions_registered:
             raise ValueError(instruction_id + " has no encoding function linked")
         return stack_constraints_with_bounds(self._encoding_function[instruction_id],
-                                             instruction.theta_value, bounds, sf, bs,
-                                             *self._args[instruction_id], **self._kwargs[instruction_id])
+                                             instruction.theta_value, bounds, sf, bs, *args, **kwargs)
