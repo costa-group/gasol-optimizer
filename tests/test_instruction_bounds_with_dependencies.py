@@ -2,7 +2,7 @@ import unittest
 
 from smt_encoding.instructions.instruction_dependencies import generate_dependency_graph_minimum
 from smt_encoding.instructions.instruction_bounds_with_dependencies import generate_lower_bound_dict, \
-    generate_first_position_instr_cannot_appear
+    generate_first_position_instr_cannot_appear, InstructionBoundsWithDependencies
 from smt_encoding.instructions.instruction_factory import InstructionFactory
 from smt_encoding.instructions.encoding_instruction import InstructionSubset
 
@@ -232,6 +232,46 @@ class TestInstructionBoundsWithDependencies(unittest.TestCase):
                                                              dependency_graph, mem_ids, instr_by_id_dict)
 
         self.assertDictEqual(expected_output, output)
+
+
+    def test_bound_object_is_well_generated(self):
+        instruction_jsons = [
+            {"id": 'INSTR_0', 'outpt_sk': ["s(0)"], 'inpt_sk': [5, 6], 'gas': 0, 'disasm': "a", 'opcode': "a",
+             'size': 0, 'storage': False, 'commutative': False},
+            {"id": 'INSTR_1', 'outpt_sk': ["s(1)"], 'inpt_sk': [], 'gas': 0, 'disasm': "a", 'opcode': "a",
+             'size': 0, 'storage': False, 'commutative': False},
+            {"id": 'INSTR_2', 'outpt_sk': ["s(2)"], 'inpt_sk': ["s(0)", 7, "s(1)"], 'gas': 0, 'disasm': "a",
+             'opcode': "a",
+             'size': 0, 'storage': False, 'commutative': False},
+            {"id": 'INSTR_3', 'outpt_sk': ["s(3)"], 'inpt_sk': ["s(2)", 8, "s(2)"], 'gas': 0, 'disasm': "a",
+             'opcode': "a",
+             'size': 0, 'storage': False, 'commutative': False},
+            {"id": 'INSTR_4', 'outpt_sk': ["s(4)"], 'inpt_sk': ["s(3)", "s(1)", "s(2)"], 'gas': 0, 'disasm': "a",
+             'opcode': "a", 'size': 0, 'storage': False, 'commutative': False},
+
+            {"id": 'INSTR_5', 'outpt_sk': [], 'inpt_sk': ["s(0)", "s(2)"], 'gas': 0, 'disasm': "a",
+             'opcode': "a", 'size': 0, 'storage': True, 'commutative': False},
+            {"id": 'INSTR_6', 'outpt_sk': [], 'inpt_sk': ["s(2)", "s(3)"], 'gas': 0, 'disasm': "a",
+             'opcode': "a", 'size': 0, 'storage': True, 'commutative': False},
+            {"id": 'INSTR_7', 'outpt_sk': [], 'inpt_sk': ["s(4)", "s(1)"], 'gas': 0, 'disasm': "a",
+             'opcode': "a", 'size': 0, 'storage': True, 'commutative': False},
+        ]
+        factory = InstructionFactory()
+        instructions = []
+        for instr_json in instruction_jsons:
+            instructions.append(factory.create_instruction_json_format(instr_json))
+
+        order_tuples = [('INSTR_5', 'INSTR_6'), ('INSTR_6', 'INSTR_7')]
+
+        final_stack_instr = ['s(2)', 's(4)', 's(0)']
+
+        b0 = 17
+
+        ib = InstructionBoundsWithDependencies(instructions, order_tuples, final_stack_instr, b0, 5)
+
+        expected_output = {0: 11, 1: 10, 2: 12, 3: 14, 4: 16, 5: 15, 6: 16, 7: 17}
+
+        self.assertDictEqual(ib._first_position_not_instr_by_theta_value, expected_output)
 
 
 if __name__ == '__main__':

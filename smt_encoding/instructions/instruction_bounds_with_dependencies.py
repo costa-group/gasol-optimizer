@@ -150,7 +150,9 @@ def generate_first_position_instr_cannot_appear(b0 : int, stack_elem_to_id : Dic
 
 class InstructionBoundsWithDependencies(InstructionBounds):
 
-    def __init__(self, instructions : List[UninterpretedInstruction], order_tuples : List[Tuple[Id_T, Id_T]], final_stack : List[str], b0 : int):
+    def __init__(self, instructions : List[UninterpretedInstruction], order_tuples : List[Tuple[Id_T, Id_T]],
+                 final_stack : List[str], b0 : int, initial_idx: int = 0):
+
         stack_element_to_id_dict : Dict[str, Id_T] = {instruction.output_stack : instruction.id
                                                       for instruction in instructions if instruction.output_stack is not None}
 
@@ -161,17 +163,18 @@ class InstructionBoundsWithDependencies(InstructionBounds):
         mem_ids : List[Id_T] = [instruction.id for instruction in instructions if instruction.instruction_subset == InstructionSubset.store]
 
         self._b0 = b0
+        self._initial_idx = initial_idx
         lower_bound_by_id = generate_lower_bound_dict(dependency_graph)
-        self._lower_bound_by_theta_value = {instr_by_id_dict[instr_id].theta_value : lb for instr_id, lb in lower_bound_by_id.items()}
+        self._lower_bound_by_theta_value = {instr_by_id_dict[instr_id].theta_value: lb
+                                            for instr_id, lb in lower_bound_by_id.items() if instr_id != 'PUSH'}
         first_position_not_instr_by_id = generate_first_position_instr_cannot_appear(b0, stack_element_to_id_dict, final_stack,
                                                                                      dependency_graph, mem_ids, instr_by_id_dict)
         self._first_position_not_instr_by_theta_value =  {instr_by_id_dict[instr_id].theta_value : lb
-                                                          for instr_id, lb in first_position_not_instr_by_id.items()}
-
+                                                          for instr_id, lb in first_position_not_instr_by_id.items()
+                                                          if instr_id != 'PUSH'}
 
     def lower_bound_theta_value(self, theta_value : ThetaValue) -> int:
-        return self._lower_bound_by_theta_value.get(theta_value, 0)
-
+        return self._lower_bound_by_theta_value.get(theta_value, self._initial_idx)
 
     def upper_bound_theta_value(self, theta_value : ThetaValue) -> int:
-        return self._first_position_not_instr_by_theta_value.get(theta_value, self._b0) - 1
+        return self._first_position_not_instr_by_theta_value.get(theta_value, self._b0) - 1 + self._initial_idx
