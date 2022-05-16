@@ -11,7 +11,7 @@ from smt_encoding.instructions.pop_uninterpreted import PopUninterpreted
 from smt_encoding.instructions.push_basic import PushBasic
 from smt_encoding.instructions.store_uninterpreted import StoreUninterpreted
 from smt_encoding.instructions.swapk_basic import SwapKBasic
-from smt_encoding.instructions.uninterpreted_instruction import UninterpretedInstruction, SMS_T
+from smt_encoding.instructions.uninterpreted_instruction import UninterpretedInstruction, Instruction_JSON_T
 from smt_encoding.instructions.basic_instruction import BasicInstruction
 
 
@@ -21,7 +21,7 @@ class InstructionFactory:
         self._next_theta_value = 0
         self._instructions_ids = {}
 
-    def create_instruction_json_format(self, json_instr: SMS_T) -> UninterpretedInstruction:
+    def create_instruction_json_format(self, json_instr: Instruction_JSON_T) -> UninterpretedInstruction:
         instr_id = json_instr["id"]
 
         # If it was already created, then we return the previous instance, as two instructions
