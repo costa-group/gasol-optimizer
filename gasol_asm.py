@@ -152,9 +152,9 @@ def optimize_block(sfs_dict, timeout, size = False):
         args_i.bytecode_size_soft_constraints = size
         args_i.default_encoding = True
         args_i.memory_encoding = "l_vars"
+        execute_syrup_backend(args_i, sfs_block, block_name=block_name, timeout=timeout)
 
         if args.backend:
-            execute_syrup_backend(args_i, sfs_block, block_name=block_name, timeout=timeout)
 
             if initial_program_length > 40:
                 solver_output = "unsat"
@@ -466,10 +466,12 @@ def optimize_asm_block_asm_format(block, timeout, storage, last_const, size_abs,
                                                                                block_name,storage, last_const,size_abs,
                                                                                partition,pop_flag, push_flag, revert_return)
 
-    if not args.backend:
-        return new_block, {}
-    
     sfs_dict = contracts_dict["syrup_contract"]
+
+    if not args.backend:
+        optimize_block(sfs_dict, timeout, size_abs)
+        return new_block, {}
+
     for solver_output, sub_block_name, original_instr, current_cost, current_length, user_instr, solver_time \
             in optimize_block(sfs_dict, timeout, size_abs):
 
@@ -731,11 +733,11 @@ if __name__ == '__main__':
     else:
         shutil.rmtree(paths.gasol_path, ignore_errors=True)
 
-    print("")
-    print("Optimized code stored in " + output_file)
-    print("Optimality results stored in " + csv_file)
 
     if args.backend:
+        print("")
+        print("Optimized code stored in " + output_file)
+        print("Optimality results stored in " + csv_file)
         print("")
         print("Estimated initial gas: "+str(previous_gas))
         print("Estimated gas optimized: " + str(new_gas))
@@ -744,6 +746,7 @@ if __name__ == '__main__':
         print("Estimated size optimized in bytes: " + str(new_size))
 
     else:
+        print("")
         print("Estimated initial gas: "+str(previous_gas))
         print("")
         print("Estimated initial size in bytes: " + str(previous_size))
