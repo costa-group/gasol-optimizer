@@ -6,6 +6,7 @@ from typing import List, Tuple, Union
 class Sort(Enum):
     boolean = 0
     integer = 1
+    sample_sort = 2
 
 
 class Function:
