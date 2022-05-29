@@ -118,14 +118,14 @@ class MyTestCase(unittest.TestCase):
         for instr_json in instruction_jsons:
             instructions.append(factory.create_instruction_json_format(instr_json))
 
-        uop_creation = UninterpretedOpcodeTermCreation(instructions, Sort.sample_sort)
+        uop_creation = UninterpretedOpcodeTermCreation(instructions, Sort.uninterpreted)
         created_dict, created_functions = uop_creation.opcode_rep_with_uf()
 
-        push_ini = Function('push', Sort.sample_sort)
-        push_1_f = Function('push[$]', Sort.sample_sort)
-        push_2_f = Function('push#[$]', Sort.sample_sort, Sort.sample_sort, Sort.sample_sort, Sort.sample_sort)
-        sub_f = Function('sub', Sort.sample_sort, Sort.sample_sort, Sort.sample_sort, Sort.sample_sort)
-        addmod_f = Function('addmod', Sort.sample_sort, Sort.sample_sort, Sort.sample_sort, Sort.sample_sort)
+        push_ini = Function('push', Sort.uninterpreted)
+        push_1_f = Function('push[$]', Sort.uninterpreted)
+        push_2_f = Function('push#[$]', Sort.uninterpreted, Sort.uninterpreted, Sort.uninterpreted, Sort.uninterpreted)
+        sub_f = Function('sub', Sort.uninterpreted, Sort.uninterpreted, Sort.uninterpreted, Sort.uninterpreted)
+        addmod_f = Function('addmod', Sort.uninterpreted, Sort.uninterpreted, Sort.uninterpreted, Sort.uninterpreted)
 
         instr_0 = push_ini()
         instr_1 = push_1_f()
