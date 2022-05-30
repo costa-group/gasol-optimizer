@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from enum import Enum, unique
+from typing import Union
 
 @unique
 class InstructionSubset(Enum):
@@ -11,6 +12,7 @@ class InstructionSubset(Enum):
 
 ThetaValue = int
 Id_T = str
+Stack_Var_T = Union[str, int]
 
 # Interface for representing the necessary methods for encoding an instruction
 class EncodingInstruction(ABC):

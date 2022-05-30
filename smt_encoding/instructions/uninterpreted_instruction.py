@@ -1,6 +1,6 @@
 from abc import ABC
 
-from smt_encoding.instructions.encoding_instruction import EncodingInstruction, ThetaValue, Id_T
+from smt_encoding.instructions.encoding_instruction import EncodingInstruction, ThetaValue, Id_T, Stack_Var_T
 from typing import Dict, Any, Optional, List, Union
 
 Instruction_JSON_T = Dict[str, Any]
@@ -47,7 +47,7 @@ class UninterpretedInstruction(EncodingInstruction, ABC):
         return self._size
 
     @property
-    def input_stack(self) -> List[Union[str, int]]:
+    def input_stack(self) -> List[Stack_Var_T]:
         return self._input_stack
 
     @property
