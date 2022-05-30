@@ -5,6 +5,9 @@ from smt_encoding.constraints.function import ExpressionReference, Function, Sor
 from smt_encoding.constraints.connector import Formula_T
 from typing import List, Dict, Tuple, Union
 
+# TODO: instead of returning Dict[str, Formula_T], return Dict[str, List[Formula_T]] to allow stack vars being obtained
+#  from different operations e.g. LT(a, b) and GE(b, a)
+
 
 class UninterpretedOpcodeTermCreation:
 
