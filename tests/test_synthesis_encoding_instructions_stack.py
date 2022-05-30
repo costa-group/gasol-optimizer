@@ -58,12 +58,13 @@ class TestSynthesisConstraints(unittest.TestCase):
         pop_function = PopUninterpreted(pop_sms, theta_value)
 
         encoding_factory = EncodingForStack()
-        encoding_factory.register_function_for_encoding(pop_function, pop_uninterpreted_encoding)
+        encoding_factory.register_function_for_encoding(pop_function, pop_uninterpreted_encoding,
+                                                        o0=pop_function.input_stack[0])
 
         bounds = DumbInstructionBounds(4, 4)
         sf = SynthesisFunctions({"s_1": Function('ex', Sort.integer)()})
 
-        hard_constraints = encoding_factory.encode_instruction(pop_function, bounds, sf, 5, o0=pop_function.input_stack[0])
+        hard_constraints = encoding_factory.encode_instruction(pop_function, bounds, sf, 5)
         other_sf = SynthesisFunctions({"s_1": Function('ex', Sort.integer)()})
 
         expected_hard_constraints = [AssertHard(add_implies(add_eq(other_sf.t(4), theta_value),
@@ -82,14 +83,14 @@ class TestSynthesisConstraints(unittest.TestCase):
         push_uninterpreted = NonCommutativeUninterpreted(push_sms, theta_value)
 
         encoding_factory = EncodingForStack()
-        encoding_factory.register_function_for_encoding(push_uninterpreted, non_comm_function_encoding)
+        encoding_factory.register_function_for_encoding(push_uninterpreted, non_comm_function_encoding,
+                                                        o=push_uninterpreted.input_stack,
+                                                        r=push_uninterpreted.output_stack)
 
         bounds = DumbInstructionBounds(5, 5)
         sf = SynthesisFunctions({"s_2": 0})
 
-        hard_constraints = encoding_factory.encode_instruction(push_uninterpreted, bounds, sf, 1,
-                                                               o=push_uninterpreted.input_stack,
-                                                               r=push_uninterpreted.output_stack)
+        hard_constraints = encoding_factory.encode_instruction(push_uninterpreted, bounds, sf, 1)
 
         other_sf = SynthesisFunctions({"s_2": 0})
         expected_hard_constraints = [AssertHard(add_implies(add_eq(other_sf.t(5), theta_value),
@@ -101,7 +102,6 @@ class TestSynthesisConstraints(unittest.TestCase):
         self.assertListEqual(hard_constraints, expected_hard_constraints)
         self.assertListEqual(sf.created_expressions(), other_sf.created_expressions())
         self.assertListEqual(sf.created_functions(), other_sf.created_functions())
-
 
 
 if __name__ == '__main__':
