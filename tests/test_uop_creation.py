@@ -40,7 +40,7 @@ class MyTestCase(unittest.TestCase):
         uop_creation = UninterpretedOpcodeTermCreation(instructions)
         created_dict, created_functions = uop_creation.opcode_rep_with_int()
 
-        expected_dict = {'INSTR_0': 0, 'INSTR_1': 1, 'INSTR_2': 2, 'INSTR_3': 3, 'INSTR_4': 4}
+        expected_dict = {'s(0)': 0, 's(1)': 1, 's(2)': 2, 's(3)': 3, 's(4)': 4}
 
         expected_functions = []
         self.assertDictEqual(created_dict, expected_dict)
@@ -86,7 +86,7 @@ class MyTestCase(unittest.TestCase):
         instr_3 = sub_f(instr_2, 8, instr_2)
         instr_4 = addmod_f(instr_3, instr_1, instr_2)
 
-        expected_dict = {'INSTR_0': instr_0, 'INSTR_1': instr_1, 'INSTR_2': instr_2, 'INSTR_3': instr_3, 'INSTR_4': instr_4}
+        expected_dict = {'s(0)': instr_0, 's(1)': instr_1, 's(2)': instr_2, 's(3)': instr_3, 's(4)': instr_4}
 
         expected_functions = [add_f, push_1_f, push_2_f, sub_f, addmod_f]
         self.assertDictEqual(created_dict, expected_dict)
@@ -133,7 +133,7 @@ class MyTestCase(unittest.TestCase):
         instr_3 = sub_f(instr_2, instr_0, instr_2)
         instr_4 = addmod_f(instr_3, instr_1, instr_2)
 
-        expected_dict = {'INSTR_0': instr_0, 'INSTR_1': instr_1, 'INSTR_2': instr_2, 'INSTR_3': instr_3, 'INSTR_4': instr_4}
+        expected_dict = {'s(0)': instr_0, 's(1)': instr_1, 's(2)': instr_2, 's(3)': instr_3, 's(4)': instr_4}
 
         expected_functions = [push_ini, push_1_f, push_2_f, sub_f, addmod_f]
         self.assertDictEqual(created_dict, expected_dict)
@@ -173,7 +173,7 @@ class MyTestCase(unittest.TestCase):
         s_3_f = Function('s_3', Sort.integer)
         s_4_f = Function('s_4', Sort.integer)
 
-        expected_dict = {'INSTR_0': s_0_f(), 'INSTR_1': s_1_f(), 'INSTR_2': s_2_f(), 'INSTR_3': s_3_f(), 'INSTR_4': s_4_f()}
+        expected_dict = {'s(0)': s_0_f(), 's(1)': s_1_f(), 's(2)': s_2_f(), 's(3)': s_3_f(), 's(4)': s_4_f()}
 
         expected_functions = [s_0_f, s_1_f, s_2_f, s_3_f, s_4_f]
         self.assertDictEqual(created_dict, expected_dict)
