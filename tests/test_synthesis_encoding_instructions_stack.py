@@ -51,7 +51,7 @@ class TestSynthesisConstraints(unittest.TestCase):
                                                                     add_eq(other_sf.x(0, 3), other_sf.a(2)),
                                                                     move(other_sf, 2, 0, 0, 1))))]
         self.assertListEqual(hard_constraints, expected_hard_constraints)
-        self.assertListEqual(sf.created_expressions(), other_sf.created_expressions())
+        self.assertListEqual(sf.created_stack_vars(), other_sf.created_stack_vars())
         self.assertListEqual(sf.created_functions(), other_sf.created_functions())
 
     def test_swap_encoding(self):
@@ -73,11 +73,9 @@ class TestSynthesisConstraints(unittest.TestCase):
                                                                     add_eq(other_sf.x(2, 6), other_sf.x(0, 5)),
                                                                     move(other_sf, 5, 1, 1, 0),
                                                                     move(other_sf, 5, 3, 6, 0))))]
-        print(hard_constraints)
-        print(expected_hard_constraints)
 
         self.assertListEqual(hard_constraints, expected_hard_constraints)
-        self.assertListEqual(sf.created_expressions(), other_sf.created_expressions())
+        self.assertListEqual(sf.created_stack_vars(), other_sf.created_stack_vars())
         self.assertListEqual(sf.created_functions(), other_sf.created_functions())
 
     def test_pop_uninterpreted_encoding(self):
@@ -102,7 +100,7 @@ class TestSynthesisConstraints(unittest.TestCase):
                                                                     add_not(other_sf.u(4, 5)),
                                                                     move(other_sf, 4, 1, 4, -1))))]
         self.assertListEqual(hard_constraints, expected_hard_constraints)
-        self.assertListEqual(sf.created_expressions(), other_sf.created_expressions())
+        self.assertListEqual(sf.created_stack_vars(), other_sf.created_stack_vars())
         self.assertListEqual(sf.created_functions(), other_sf.created_functions())
 
     def test_push_uninterpreted_encoding(self):
@@ -129,7 +127,7 @@ class TestSynthesisConstraints(unittest.TestCase):
                                                                     move(other_sf, 5, 0, -1, 1))))]
 
         self.assertListEqual(hard_constraints, expected_hard_constraints)
-        self.assertListEqual(sf.created_expressions(), other_sf.created_expressions())
+        self.assertListEqual(sf.created_stack_vars(), other_sf.created_stack_vars())
         self.assertListEqual(sf.created_functions(), other_sf.created_functions())
 
 

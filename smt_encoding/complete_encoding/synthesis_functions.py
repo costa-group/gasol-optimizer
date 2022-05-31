@@ -79,5 +79,5 @@ class SynthesisFunctions:
     def created_functions(self) -> List[Function]:
         return [func for func in self._func_instances.values()]
 
-    def created_expressions(self) -> List[Formula_T]:
-        return [expr for expr in self._expression_instances.values()]
+    def created_stack_vars(self) -> List[ExpressionReference]:
+        return [expr for expr in self._expression_instances.values() if type(expr) == ExpressionReference]
