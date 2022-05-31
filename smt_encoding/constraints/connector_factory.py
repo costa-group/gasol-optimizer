@@ -147,6 +147,8 @@ _connectors.register_connector("lt", 2, False, lambda x: x)
 
 _connectors.register_connector("leq", 2, False, lambda x: x)
 
+_connectors.register_connector("distinct", -1, True, lambda x: x)
+
 # Methods to generate logical connective asserts.
 
 
@@ -176,3 +178,7 @@ def add_lt(form1: Formula_T, form2: Formula_T) -> Connector:
 
 def add_leq(form1: Formula_T, form2: Formula_T) -> Connector:
     return _connectors.create_connector_and_simplify("leq", form1, form2)
+
+
+def add_distinct(*formulas: Formula_T) -> Connector:
+    return _connectors.create_connector_and_simplify("distinct", *formulas)
