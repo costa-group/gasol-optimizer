@@ -15,14 +15,14 @@ def push_basic_encoding(j: int, theta_push: ThetaValue, sf: SynthesisFunctions, 
     return AssertHard(add_implies(left_term, right_term))
 
 
-def dupk_encoding(j: int, theta_dupk: ThetaValue, sf: SynthesisFunctions, k: int, bs: int) -> AssertHard:
+def dupk_encoding(j: int, theta_dupk: ThetaValue, sf: SynthesisFunctions, bs: int, k: int) -> AssertHard:
     left_term = add_eq(sf.t(j), theta_dupk)
     right_term = add_and(add_not(sf.u(bs - 1, j)), sf.u(k - 1, j), sf.u(0, j + 1),
                          add_eq(sf.x(0, j + 1), sf.x(k - 1, j)), move(sf, j, 0, bs - 2, 1))
     return AssertHard(add_implies(left_term, right_term))
 
 
-def swapk_encoding(j: int, theta_swapk: ThetaValue, sf: SynthesisFunctions, k: int, bs: int) -> AssertHard:
+def swapk_encoding(j: int, theta_swapk: ThetaValue, sf: SynthesisFunctions, bs: int,  k: int) -> AssertHard:
     left_term = add_eq(sf.t(j), theta_swapk)
     right_term = add_and(sf.u(k, j), sf.u(0, j + 1), add_eq(sf.x(0, j + 1), sf.x(k, j)),
                          sf.u(k, j + 1), add_eq(sf.x(k, j + 1), sf.x(0, j)),

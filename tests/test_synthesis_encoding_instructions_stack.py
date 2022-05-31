@@ -1,9 +1,10 @@
 import unittest
 from smt_encoding.complete_encoding.synthesis_encoding_instructions_stack import EncodingForStack
 from smt_encoding.complete_encoding.synthesis_stack_constraints import push_basic_encoding, pop_uninterpreted_encoding, \
-    non_comm_function_encoding
+    non_comm_function_encoding, swapk_encoding
 from smt_encoding.instructions.push_basic import PushBasic
 from smt_encoding.instructions.pop_uninterpreted import PopUninterpreted
+from smt_encoding.instructions.swapk_basic import SwapKBasic
 from smt_encoding.complete_encoding.synthesis_functions import SynthesisFunctions
 from smt_encoding.instructions.instruction_bounds_simple import DumbInstructionBounds
 from smt_encoding.constraints.connector_factory import add_eq, add_and, add_implies, add_leq, add_lt, add_not
@@ -50,6 +51,34 @@ class TestSynthesisConstraints(unittest.TestCase):
                                                                     add_eq(other_sf.x(0, 3), other_sf.a(2)),
                                                                     move(other_sf, 2, 0, 0, 1))))]
         self.assertListEqual(hard_constraints, expected_hard_constraints)
+        self.assertListEqual(sf.created_expressions(), other_sf.created_expressions())
+        self.assertListEqual(sf.created_functions(), other_sf.created_functions())
+
+    def test_swap_encoding(self):
+        k = 2
+        swapk = SwapKBasic(0, k)
+
+        encoding_factory = EncodingForStack()
+        encoding_factory.register_function_for_encoding(swapk, swapk_encoding, k=2)
+
+        bounds = DumbInstructionBounds(5, 5)
+        sf = SynthesisFunctions(dict())
+        hard_constraints = encoding_factory.encode_instruction(swapk, bounds, sf, 7)
+
+        other_sf = SynthesisFunctions(dict())
+        expected_hard_constraints = [AssertHard(add_implies(add_eq(other_sf.t(5), 0),
+                                                            add_and(other_sf.u(2, 5), other_sf.u(0, 6),
+                                                                    add_eq(other_sf.x(0, 6), other_sf.x(2, 5)),
+                                                                    other_sf.u(2, 6),
+                                                                    add_eq(other_sf.x(2, 6), other_sf.x(0, 5)),
+                                                                    move(other_sf, 5, 1, 1, 0),
+                                                                    move(other_sf, 5, 3, 6, 0))))]
+        print(hard_constraints)
+        print(expected_hard_constraints)
+
+        self.assertListEqual(hard_constraints, expected_hard_constraints)
+        self.assertListEqual(sf.created_expressions(), other_sf.created_expressions())
+        self.assertListEqual(sf.created_functions(), other_sf.created_functions())
 
     def test_pop_uninterpreted_encoding(self):
         pop_sms = {'outpt_sk': [], 'inpt_sk': ["s_1"], 'gas': 2, 'disasm': "POP",
