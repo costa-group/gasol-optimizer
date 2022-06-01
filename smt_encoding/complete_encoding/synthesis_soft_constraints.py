@@ -13,13 +13,15 @@ def soft_constraints_direct(sf: SynthesisFunctions, weight_dict: Dict[ThetaValue
     soft_constraints = [AssertSoft(add_eq(sf.t(j), theta_value), weight, label_name)
                         for theta_value, weight in weight_dict.items()
                         for j in range(bounds.lower_bound_theta_value(theta_value),
-                                       bounds.upper_bound_theta_value(theta_value) + 1)]
+                                       bounds.upper_bound_theta_value(theta_value) + 1)
+                        if weight > 0]
+
     return soft_constraints
 
 
 # Generates an ordered dict that contains all instructions
 # as keys, and their gas cost as values. Ordered by increasing costs
-def _generate_costs_ordered_dict(weight_dict: Dict[ThetaValue, int]) -> OrderedDict[int, int]:
+def _generate_costs_ordered_dict(weight_dict: Dict[ThetaValue, int]) -> OrderedDict:
     instr_costs = {instr: weight for instr, weight in weight_dict.items()}
     return OrderedDict(sorted(instr_costs.items(), key=lambda elem: elem[1]))
 
@@ -27,7 +29,7 @@ def _generate_costs_ordered_dict(weight_dict: Dict[ThetaValue, int]) -> OrderedD
 # Generates an ordered dict that has the cost of Wp sets as keys
 # and the theta value of opcodes with that cost as values.
 # Ordered by increasing costs
-def _generate_disjoint_sets_from_cost(ordered_costs: OrderedDict[ThetaValue, int]) -> OrderedDict[int, [int]]:
+def _generate_disjoint_sets_from_cost(ordered_costs: OrderedDict) -> OrderedDict:
     disjoint_set = {}
     for instr_id in ordered_costs:
         gas_cost = ordered_costs[instr_id]
