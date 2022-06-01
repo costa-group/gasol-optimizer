@@ -53,5 +53,5 @@ def l_conflicting_constraints(instructions: List[EncodingInstruction], bounds: I
                                                       for instruction in instructions}
     dependency_graph_set_theta = {theta_value_by_id_dict[instr_id]:
                                       {theta_value_by_id_dict[dependent_id] for dependent_id in dependency_ids}
-                                  for instr_id, dependency_ids in dependency_graph}
+                                  for instr_id, dependency_ids in dependency_graph.items()}
     return l_conflicting_constraints_from_theta_values(l_theta_values, bounds, dependency_graph_set_theta, sf)
