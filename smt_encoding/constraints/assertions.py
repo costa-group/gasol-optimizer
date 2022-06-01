@@ -24,10 +24,10 @@ class AssertSoft:
         self.group = group
 
     def __str__(self):
-        return ' '.join([str(self.formula), "weight:", self.weight, "group:", self.group])
+        return ' '.join([str(self.formula), "weight:", str(self.weight), "group:", str(self.group)])
 
     def __repr__(self):
-        return ' '.join([str(self.formula), "weight:", self.weight, "group:", self.group])
+        return ' '.join([str(self.formula), "weight:", str(self.weight), "group:", str(self.group)])
 
     def __eq__(self, other):
         return self.formula == other.formula and self.weight == other.weight and self.group == other.group
