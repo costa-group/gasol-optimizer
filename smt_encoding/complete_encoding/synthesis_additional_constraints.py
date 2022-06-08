@@ -53,5 +53,5 @@ def push_each_element_at_least_once(sf: SynthesisFunctions, bounds: InstructionB
             for val in pushed_elements]
 
 
-def uf_stack_variables_are_distinct(stack_variables: List[ExpressionReference]) -> List[AssertHard]:
+def expressions_are_distinct(*stack_variables: ExpressionReference) -> List[AssertHard]:
     return [AssertHard(add_distinct(*stack_variables))]
