@@ -178,3 +178,11 @@ class InstructionBoundsWithDependencies(InstructionBounds):
 
     def upper_bound_theta_value(self, theta_value : ThetaValue) -> int:
         return self._first_position_not_instr_by_theta_value.get(theta_value, self._b0) - 1 + self._initial_idx
+
+    @property
+    def first_position_sequence(self) -> int:
+        return self._initial_idx
+
+    @property
+    def last_position_sequence(self) -> int:
+        return self._b0 - 1 + self._initial_idx

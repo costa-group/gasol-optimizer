@@ -15,3 +15,11 @@ class DumbInstructionBounds(InstructionBounds):
 
     def lower_bound_theta_value(self, theta_value: ThetaValue) -> int:
         return self._lb
+
+    @property
+    def first_position_sequence(self) -> int:
+        return self._lb
+
+    @property
+    def last_position_sequence(self) -> int:
+        return self._ub

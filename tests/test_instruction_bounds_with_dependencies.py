@@ -272,6 +272,8 @@ class TestInstructionBoundsWithDependencies(unittest.TestCase):
         expected_output = {0: 11, 1: 10, 2: 12, 3: 14, 4: 16, 5: 15, 6: 16, 7: 17}
 
         self.assertDictEqual(ib._first_position_not_instr_by_theta_value, expected_output)
+        self.assertEqual(ib.first_position_sequence, 5)
+        self.assertEqual(ib.last_position_sequence, 21)
 
 
 if __name__ == '__main__':

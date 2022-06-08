@@ -15,3 +15,15 @@ class InstructionBounds(ABC):
     @abstractmethod
     def upper_bound_theta_value(self, theta_value : ThetaValue) -> int:
         raise NotImplementedError
+
+    # Initial possible position
+    @property
+    @abstractmethod
+    def first_position_sequence(self) -> int:
+        pass
+
+    # Initial possible position
+    @property
+    @abstractmethod
+    def last_position_sequence(self) -> int:
+        pass
