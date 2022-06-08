@@ -89,12 +89,12 @@ class TestSynthesisConstraints(unittest.TestCase):
                                                         o0=pop_function.input_stack[0])
 
         bounds = DumbInstructionBounds(4, 4)
-        sf = SynthesisFunctions({"s_1": Function('ex', Sort.integer)()})
+        sf = SynthesisFunctions({"s_1": Function('ex', Sort.integer)()}, Sort.uninterpreted, Sort.uninterpreted)
 
         hard_constraints = encoding_factory.encode_instruction(pop_function, bounds, sf, 5)
-        other_sf = SynthesisFunctions({"s_1": Function('ex', Sort.integer)()})
+        other_sf = SynthesisFunctions({"s_1": Function('ex', Sort.integer)()}, Sort.uninterpreted, Sort.uninterpreted)
 
-        expected_hard_constraints = [AssertHard(add_implies(add_eq(other_sf.t(4), theta_value),
+        expected_hard_constraints = [AssertHard(add_implies(add_eq(other_sf.t(4), other_sf.theta_value(theta_value)),
                                                             add_and(other_sf.u(0, 4), add_eq(other_sf.x(0, 4),
                                                                                              other_sf.stack_var("s_1")),
                                                                     add_not(other_sf.u(4, 5)),

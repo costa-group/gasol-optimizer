@@ -11,7 +11,7 @@ from smt_encoding.instructions.encoding_instruction import EncodingInstruction
 
 
 def mem_variable_equivalence_constraint(j: int, theta_uninterpreted: ThetaValue, sf: SynthesisFunctions) -> AssertHard:
-    left_term = add_eq(sf.t(j), theta_uninterpreted)
+    left_term = add_eq(sf.t(j), sf.theta_value(theta_uninterpreted))
     right_term = add_eq(sf.l(theta_uninterpreted), j)
     return AssertHard(add_eq(left_term, right_term))
 

@@ -21,9 +21,7 @@ def stack_encoding_for_position(j: int, sf: SynthesisFunctions, stack_state: Lis
     """
 
     # Constraints for asserting the state of the stack
-    constraints = [AssertHard(add_and(sf.u(alpha, j), add_eq(sf.x(alpha, j), stack_var)))
-                   if type(stack_var) == int else
-                   AssertHard(add_and(sf.u(alpha, j), add_eq(sf.x(alpha, j), sf.stack_var(stack_var))))
+    constraints = [AssertHard(add_and(sf.u(alpha, j), add_eq(sf.x(alpha, j), sf.stack_var(stack_var))))
                    for alpha, stack_var in enumerate(stack_state)]
 
     # Constraints for asserting the remaining positions have no elements

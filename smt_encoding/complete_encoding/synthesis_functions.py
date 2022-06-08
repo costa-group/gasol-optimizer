@@ -15,7 +15,8 @@ class SynthesisFunctions:
     Class that generates the necessary functions and terms for the GASOL encoding
     """
 
-    def __init__(self, term_to_formula: Dict[str, Formula_T], evm_repr_sort: Sort = Sort.integer):
+    def __init__(self, term_to_formula: Dict[str, Formula_T], evm_repr_sort: Sort = Sort.integer,
+                 theta_repr_sort=Sort.integer):
         """
 
         :param evm_repr_sort: sort used for representing evm words in the stack. By default, they are represented
@@ -27,7 +28,9 @@ class SynthesisFunctions:
                                                      term_to_formula
                                                      if type(term_to_formula[stack_var]) == ExpressionReference}
         self._expression_instances: Dict[str, Formula_T] = copy.deepcopy(term_to_formula)
+        self._theta_expressions = {}
         self._evm_repr_sort = evm_repr_sort
+        self._theta_repr_sort = theta_repr_sort
 
     def _create_func(self, name: str, var_type: Tuple[Sort]) -> Function:
         if name in self._func_instances:
@@ -57,7 +60,7 @@ class SynthesisFunctions:
 
     def t(self, i: int) -> ExpressionReference:
         str_rep = _sub_idx_rep("t", i)
-        return self._create_term(str_rep, (Sort.integer,), tuple(), str_rep)
+        return self._create_term(str_rep, (self._theta_repr_sort,), tuple(), str_rep)
 
     def a(self, i: int) -> ExpressionReference:
         str_rep = _sub_idx_rep("a", i)
@@ -76,8 +79,22 @@ class SynthesisFunctions:
         else:
             raise ValueError(f"Stack var {stack_var} has no formula tied to it")
 
+    def theta_value(self, theta_value: ThetaValue) -> Formula_T:
+        if self._theta_repr_sort == Sort.integer:
+            return theta_value
+        else:
+            str_rep = _sub_idx_rep("theta", theta_value)
+            if str_rep in self._theta_expressions:
+                return self._theta_expressions[str_rep]
+            term = self._create_term(str_rep, (self._theta_repr_sort, ), tuple(), str_rep)
+            self._theta_expressions[str_rep] = term
+            return term
+
     def created_functions(self) -> List[Function]:
         return [func for func in self._func_instances.values()]
 
     def created_stack_vars(self) -> List[ExpressionReference]:
         return [expr for expr in self._expression_instances.values() if type(expr) == ExpressionReference]
+
+    def created_theta_values(self) -> List[ExpressionReference]:
+        return [expr for expr in self._theta_expressions.values() if type(expr) == ExpressionReference]

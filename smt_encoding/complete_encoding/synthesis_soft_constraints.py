@@ -10,7 +10,7 @@ from smt_encoding.complete_encoding.synthesis_utils import select_instructions_p
 
 def soft_constraints_direct(sf: SynthesisFunctions, weight_dict: Dict[ThetaValue, int],
                             bounds: InstructionBounds, label_name: str) -> List[AssertSoft]:
-    soft_constraints = [AssertSoft(add_eq(sf.t(j), theta_value), weight, label_name)
+    soft_constraints = [AssertSoft(add_eq(sf.t(j), sf.theta_value(theta_value)), weight, label_name)
                         for theta_value, weight in weight_dict.items()
                         for j in range(bounds.lower_bound_theta_value(theta_value),
                                        bounds.upper_bound_theta_value(theta_value) + 1)
@@ -65,11 +65,12 @@ def soft_constraints_grouped_by_weight(sf: SynthesisFunctions, b0: int, weight_d
         # the constraints for each tj.
         for j in range(b0):
 
-            variables_in_range = select_instructions_position(j, theta_or_variables, bounds)
+            theta_in_range = select_instructions_position(j, theta_or_variables, bounds)
 
             # Only add a constraint if any instruction satisfies the condition
-            if variables_in_range:
-                soft_constraints.append(AssertSoft(add_or(*map(lambda var: add_eq(sf.t(j), var), variables_in_range)),
+            if theta_in_range:
+                soft_constraints.append(AssertSoft(add_or(*(add_eq(sf.t(j), sf.theta_value(theta_val))
+                                                            for theta_val in theta_in_range)),
                                                    wi, label_name))
 
         for instr in disjoint_sets[cost]:
