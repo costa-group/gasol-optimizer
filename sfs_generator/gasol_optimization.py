@@ -1752,6 +1752,7 @@ def generate_mstore_info(mstore_elem):
     obj["outpt_sk"] = []
     
     obj["gas"] = opcodes.get_ins_cost(instr_name)
+    obj["size"] = get_ins_size(instr_name)
     obj["commutative"] = False
     obj["storage"] = True
     
@@ -5070,6 +5071,7 @@ def generate_pops(not_used_variables):
         obj["inpt_sk"] = [v]
         obj["outpt_sk"] = []
         obj["gas"] = opcodes.get_ins_cost("POP")
+        obj["size"] = get_ins_size("POP")
         obj["commutative"] = False
         obj["storage"] = False #It is true only for MSTORE and SSTORE
 
