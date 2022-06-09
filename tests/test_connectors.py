@@ -72,7 +72,7 @@ class TestConnectors(unittest.TestCase):
         w = Const('w', Sort.integer)
 
         formula = add_and(True, add_lt(v, w), True)
-        expected_result = Connector('lt', False, v, w)
+        expected_result = Connector('<', False, v, w)
         self.assertEqual(formula, expected_result)
 
     def test_connector_and_nested(self):
@@ -118,7 +118,7 @@ class TestConnectors(unittest.TestCase):
         w = Const('w', Sort.integer)
 
         formula = add_or(False, add_lt(v, w), False)
-        expected_result = Connector('lt', False, v, w)
+        expected_result = Connector('<', False, v, w)
         self.assertEqual(formula, expected_result)
 
     def test_connector_or_nested(self):

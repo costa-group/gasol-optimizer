@@ -64,7 +64,7 @@ def _simplify_implies(simplify_connector: Connector) -> Formula_T:
         return simplify_connector
 
 
-_connectors.register_connector("implies", 2, False, _simplify_implies)
+_connectors.register_connector("=>", 2, False, _simplify_implies)
 
 
 def _simplify_and(and_connector: Connector) -> Formula_T:
@@ -141,11 +141,11 @@ def _simplify_equal(equal_connector: Connector) -> Formula_T:
         return equal_connector
 
 
-_connectors.register_connector("equal", 2, True, _simplify_equal)
+_connectors.register_connector("=", 2, True, _simplify_equal)
 
-_connectors.register_connector("lt", 2, False, lambda x: x)
+_connectors.register_connector("<", 2, False, lambda x: x)
 
-_connectors.register_connector("leq", 2, False, lambda x: x)
+_connectors.register_connector("<=", 2, False, lambda x: x)
 
 _connectors.register_connector("distinct", -1, True, lambda x: x)
 
@@ -153,7 +153,7 @@ _connectors.register_connector("distinct", -1, True, lambda x: x)
 
 
 def add_implies(form1: Formula_T, form2: Formula_T) -> Connector:
-    return _connectors.create_connector_and_simplify("implies", form1, form2)
+    return _connectors.create_connector_and_simplify("=>", form1, form2)
 
 
 def add_and(*formulas: Formula_T) -> Connector:
@@ -169,15 +169,15 @@ def add_not(form: Formula_T) -> Connector:
 
 
 def add_eq(form1: Formula_T, form2: Formula_T) -> Connector:
-    return _connectors.create_connector_and_simplify("equal", form1, form2)
+    return _connectors.create_connector_and_simplify("=", form1, form2)
 
 
 def add_lt(form1: Formula_T, form2: Formula_T) -> Connector:
-    return _connectors.create_connector_and_simplify("lt", form1, form2)
+    return _connectors.create_connector_and_simplify("<", form1, form2)
 
 
 def add_leq(form1: Formula_T, form2: Formula_T) -> Connector:
-    return _connectors.create_connector_and_simplify("leq", form1, form2)
+    return _connectors.create_connector_and_simplify("<=", form1, form2)
 
 
 def add_distinct(*formulas: Formula_T) -> Connector:
