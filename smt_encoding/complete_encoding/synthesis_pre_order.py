@@ -30,10 +30,10 @@ def l_conflicting_constraints_from_theta_values(l_theta_values: List[ThetaValue]
         for pos in range(bounds.lower_bound_theta_value(theta_value), bounds.upper_bound_theta_value(theta_value) + 1):
             constraints.append(mem_variable_equivalence_constraint(pos, theta_value, sf))
 
-            # Only consider the order among instructions with instructions also in l_theta_values
-            constraints.extend([l_variable_order_constraint(conflicting_theta_value, theta_value, sf)
-                                for conflicting_theta_value in dependency_graph_set_theta[theta_value]
-                                if conflicting_theta_value in l_theta_values])
+        # Only consider the order among instructions with instructions also in l_theta_values
+        constraints.extend([l_variable_order_constraint(conflicting_theta_value, theta_value, sf)
+                            for conflicting_theta_value in dependency_graph_set_theta[theta_value]
+                            if conflicting_theta_value in l_theta_values])
     return constraints
 
 
