@@ -43,3 +43,8 @@ def restrict_t_domain(sf: SynthesisFunctions, bounds: InstructionBounds,
 
 def expressions_are_distinct(*expressions: ExpressionReference) -> List[AssertHard]:
     return [AssertHard(add_distinct(*expressions))]
+
+
+def initialize_stack_variables(sf: SynthesisFunctions, initial_index: int) -> List[AssertHard]:
+    return [AssertHard(add_eq(stack_var, initial_index + i)) for i, stack_var in enumerate(sf.created_stack_vars())]
+
