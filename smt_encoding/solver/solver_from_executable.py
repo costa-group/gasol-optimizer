@@ -36,7 +36,8 @@ def translate_formula(formula: Formula_T) -> str:
         else:
             return "false"
     elif type(formula) == ExpressionReference:
-        return str(formula)
+        return str(formula) if len(formula.arguments) == 0 else \
+            f"({str(formula.func)} {' '.join(translate_formula(arg) for arg in formula.arguments)})"
     else:
         return f"({formula.connector_name}  {' '.join((translate_formula(argument) for argument in formula.arguments))})"
 
