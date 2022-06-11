@@ -7,6 +7,7 @@ class Sort(Enum):
     boolean = 0
     integer = 1
     uninterpreted = 2
+    uninterpreted_theta = 3
 
 
 class Function:
