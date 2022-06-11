@@ -79,6 +79,10 @@ class UninterpretedOpcodeTermCreation:
         for input_element in instruction.input_stack:
             if type(input_element) == int:
                 arguments.append(input_element)
+            # Element is part of the initial stack, as it has no instruction tied to it. Therefore, already contained
+            # in stack_var_to_term dict
+            elif input_element not in self._stack_element_to_instr:
+                arguments.append(stack_var_to_term[input_element])
             else:
                 arguments.append(self._opcode_rep_with_uf(self._stack_element_to_instr[input_element],
                                                           sort_type, stack_var_to_term, functors))
