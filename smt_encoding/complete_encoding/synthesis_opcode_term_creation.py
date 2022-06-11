@@ -90,9 +90,9 @@ class UninterpretedOpcodeTermCreation:
         # Functor name: remove all whitespaces (such as "PUSH [$]" or "PUSH #[$]") and lower the opcode name.
         # If the functor has arity zero, then use id instead
         if not arguments:
-            functor_name = instruction.id.replace(' ', '').lower()
+            functor_name = instruction.id.replace(' ', '').upper()
         else:
-            functor_name = instruction.opcode_name.replace(' ', '').lower()
+            functor_name = instruction.opcode_name.replace(' ', '').upper()
 
         functor = Function(functor_name,
                            *[arg.type if type(arg) == ExpressionReference else Sort.integer for arg in arguments],
