@@ -92,12 +92,11 @@ class ExpressionReference:
         return [*self._args]
 
     def __str__(self):
-        arguments_expression = "(" + ','.join([str(arg) for arg in self._args]) + ")" if len(self._args) > 0 else ' '
-        return str(self._func) + arguments_expression
+        return f"{str(self._func)}" if len(self._args) == 0 else \
+            f"{str(self._func)} {' '.join((str(arg) for arg in self._args))}"
 
     def __repr__(self):
-        arguments_expression = "(" + ','.join([str(arg) for arg in self._args]) + ")" if len(self._args) > 0 else ' '
-        return str(self._func) + arguments_expression
+        return str(self)
 
     def __eq__(self, other):
         return type(self) == type(other) and self.func == other.func and self.type == other.type and \

@@ -87,8 +87,13 @@ class UninterpretedOpcodeTermCreation:
                 arguments.append(self._opcode_rep_with_uf(self._stack_element_to_instr[input_element],
                                                           sort_type, stack_var_to_term, functors))
 
-        # Functor name: remove all whitespaces (such as "PUSH [$]" or "PUSH #[$]") and lower the opcode name
-        functor_name = instruction.opcode_name.replace(' ', '').lower()
+        # Functor name: remove all whitespaces (such as "PUSH [$]" or "PUSH #[$]") and lower the opcode name.
+        # If the functor has arity zero, then use id instead
+        if not arguments:
+            functor_name = instruction.id.replace(' ', '').lower()
+        else:
+            functor_name = instruction.opcode_name.replace(' ', '').lower()
+
         functor = Function(functor_name,
                            *[arg.type if type(arg) == ExpressionReference else Sort.integer for arg in arguments],
                            sort_type)
@@ -109,8 +114,8 @@ class UninterpretedOpcodeTermCreation:
             functors[stack_var] = function
 
         for instruction in self._instructions:
-            # We are considering only non-store operations, as store operations do not have an uninterpreted
-            # function so far
-            if instruction.instruction_subset != InstructionSubset.store:
+            # We are considering only operations that produce a stack variable, so we wkip store and pops
+            if instruction.instruction_subset != InstructionSubset.store \
+                    and instruction.instruction_subset != InstructionSubset.pop:
                 self._opcode_rep_with_uf(instruction, self._sort_type, stack_var_to_term, functors)
         return stack_var_to_term, list(functors.values())
