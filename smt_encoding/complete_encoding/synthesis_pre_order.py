@@ -1,13 +1,19 @@
 from smt_encoding.complete_encoding.synthesis_functions import SynthesisFunctions
-from smt_encoding.constraints.connector_factory import add_eq, add_lt
+from smt_encoding.constraints.connector_factory import add_eq, add_lt, add_or
 from smt_encoding.constraints.assertions import AssertHard
 from typing import List, Dict, Set
 from smt_encoding.instructions.encoding_instruction import ThetaValue, Id_T
 from smt_encoding.instructions.instruction_bounds import InstructionBounds
 from smt_encoding.instructions.encoding_instruction import EncodingInstruction
-
+from smt_encoding.complete_encoding.synthesis_utils import select_instructions_position
 
 # Methods for generating the constraints for both memory and storage (Ls)
+
+
+def restrict_l_domain(sf: SynthesisFunctions, bounds: InstructionBounds, theta_value: ThetaValue) -> AssertHard:
+    return AssertHard(add_or(*(add_eq(sf.l(theta_value), j)
+                               for j in range(bounds.lower_bound_theta_value(theta_value),
+                                              bounds.upper_bound_theta_value(theta_value) + 1))))
 
 
 def mem_variable_equivalence_constraint(j: int, theta_uninterpreted: ThetaValue, sf: SynthesisFunctions) -> AssertHard:
@@ -27,6 +33,9 @@ def l_conflicting_constraints_from_theta_values(l_theta_values: List[ThetaValue]
                                                 sf: SynthesisFunctions) -> List[AssertHard]:
     constraints = []
     for theta_value in l_theta_values:
+
+        constraints.append(restrict_l_domain(sf, bounds, theta_value))
+
         for pos in range(bounds.lower_bound_theta_value(theta_value), bounds.upper_bound_theta_value(theta_value) + 1):
             constraints.append(mem_variable_equivalence_constraint(pos, theta_value, sf))
 
