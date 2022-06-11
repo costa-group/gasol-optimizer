@@ -13,8 +13,8 @@ from smt_encoding.constraints.function import ExpressionReference
 def fromnop_encoding(sf: SynthesisFunctions, bounds: InstructionBounds, theta_nop: ThetaValue) -> List[AssertHard]:
     constraints = []
     for j in range(bounds.lower_bound_theta_value(theta_nop), bounds.upper_bound_theta_value(theta_nop)):
-        left_term = add_eq(sf.t(j), theta_nop)
-        right_term = add_eq(sf.t(j+1), theta_nop)
+        left_term = add_eq(sf.t(j), sf.theta_value(theta_nop))
+        right_term = add_eq(sf.t(j+1), sf.theta_value(theta_nop))
         constraints.append(AssertHard(add_implies(left_term, right_term)))
     return constraints
 
@@ -30,28 +30,25 @@ def no_output_before_pop(sf: SynthesisFunctions, bounds: InstructionBounds, thet
         for j in range(bounds.lower_bound_theta_value(theta_pop) - 1, bounds.upper_bound_theta_value(theta_pop)):
             selected_theta_values = select_instructions_position(j, no_output_instr_theta, bounds)
             if selected_theta_values:
-                constraints.append(AssertHard(add_implies(add_eq(sf.t(j+1), theta_pop),
-                                                          add_or(*list(map(lambda instr: add_eq(sf.t(j), instr), 
-                                                                           selected_theta_values))))))
+                constraints.append(AssertHard(add_implies(add_eq(sf.t(j+1), sf.theta_value(theta_pop)),
+                                                          add_or(*(add_eq(sf.t(j), sf.theta_value(theta_val))
+                                                                   for theta_val in selected_theta_values)))))
     return constraints
 
 
-def each_instruction_is_used_at_least_once_with_bounds(sf: SynthesisFunctions, bounds: InstructionBounds,
-                                                       theta_values: List[ThetaValue]) -> List[AssertHard]:
-    return [AssertHard(add_or(*[add_eq(sf.t(j), theta_value) for j in range(bounds.lower_bound_theta_value(theta_value),
-                                                                            bounds.upper_bound_theta_value(theta_value) + 1)]))
+def each_instruction_is_used_at_least_once(sf: SynthesisFunctions, bounds: InstructionBounds,
+                                           theta_values: List[ThetaValue]) -> List[AssertHard]:
+    return [AssertHard(add_or(*[add_eq(sf.t(j), sf.theta_value(theta_value))
+                                for j in range(bounds.lower_bound_theta_value(theta_value),
+                                               bounds.upper_bound_theta_value(theta_value) + 1)]))
             for theta_value in theta_values]
 
 
 # As we assume that each value that appears in the ops is needed, then we need to
 # push each value at least once. Only valid if push basic is in the encoding
-def push_each_element_at_least_once(sf: SynthesisFunctions, bounds: InstructionBounds, theta_push_basic: ThetaValue,
-                                    pushed_elements: List[int]) -> List[AssertHard]:
-    return [AssertHard(add_or(*[add_and(add_eq(sf.t(j), theta_push_basic), add_eq(sf.a(j), val)) 
+def push_each_element_basic(sf: SynthesisFunctions, bounds: InstructionBounds, theta_push_basic: ThetaValue,
+                            pushed_elements: List[int]) -> List[AssertHard]:
+    return [AssertHard(add_or(*[add_and(add_eq(sf.t(j), sf.theta_value(theta_push_basic)), add_eq(sf.a(j), val))
                                 for j in range(bounds.lower_bound_theta_value(theta_push_basic),
                                                bounds.upper_bound_theta_value(theta_push_basic) + 1)])) 
             for val in pushed_elements]
-
-
-def expressions_are_distinct(*stack_variables: ExpressionReference) -> List[AssertHard]:
-    return [AssertHard(add_distinct(*stack_variables))]

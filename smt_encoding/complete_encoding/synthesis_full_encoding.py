@@ -21,6 +21,8 @@ from smt_encoding.complete_encoding.synthesis_pre_order import l_conflicting_con
 from smt_encoding.instructions.encoding_instruction import EncodingInstruction
 from smt_encoding.complete_encoding.synthesis_soft_constraints import soft_constraints_direct, \
     soft_constraints_grouped_by_weight
+from smt_encoding.complete_encoding.synthesis_additional_constraints import fromnop_encoding, \
+    each_instruction_is_used_at_least_once, no_output_before_pop
 from itertools import chain
 
 SMS_T = Dict[str, Any]
@@ -169,7 +171,19 @@ class FullEncoding:
 
     def _select_additional_constraints_from_flags(self) -> List[AssertHard]:
         # From nop encoding and each uninterpreted function is used at least once are always included by default
-        return []
+
+        theta_nop = [instruction.theta_value for instruction in self._basic_instructions if instruction.opcode_name == "NOP"][0]
+        theta_pops = [instruction.theta_value for instruction in self._instructions if instruction.opcode_name.startswith("POP")]
+        theta_swaps = [instruction.theta_value for instruction in self._basic_instructions if instruction.opcode_name.startswith("SWAP")]
+        theta_mem = [instruction.theta_value for instruction in self._uninterpreted_instructions
+                     if instruction.instruction_subset == InstructionSubset.store]
+        theta_uninterpreted = [instruction.theta_value for instruction in self._uninterpreted_instructions]
+
+        additional_constraints = [*fromnop_encoding(self._term_factory, self._bounds, theta_nop),
+                                  *each_instruction_is_used_at_least_once(self._term_factory,
+                                                                          self._bounds, theta_uninterpreted),
+                                  *no_output_before_pop(self._term_factory, self._bounds, theta_swaps, theta_mem, theta_pops)]
+        return additional_constraints
 
     def generate_hard_constraints(self) -> List[AssertHard]:
         initialization_constraints = restrict_t_domain(self._term_factory, self._bounds,
