@@ -10,7 +10,7 @@ from smt_encoding.constraints.function import Sort, ExpressionReference
 from typing import List, Dict, Optional
 
 
-sort_to_str = {Sort.integer: 'Int', Sort.boolean: 'Bool', Sort.uninterpreted: 'S'}
+sort_to_str = {Sort.integer: 'Int', Sort.boolean: 'Bool', Sort.uninterpreted: 'S', Sort.uninterpreted_theta: 'T'}
 
 
 def run_command(cmd):
@@ -53,7 +53,7 @@ class SolverFromExecutable(Solver):
 
         self._logic = None
         self._options = dict()
-        self._sorts = dict()
+        self._sorts = []
         self._soft: List[AssertSoft] = []
         self._hard: List[AssertHard] = []
         self._functions: Dict[str, Function] = dict()
@@ -66,8 +66,8 @@ class SolverFromExecutable(Solver):
     def set_option(self, option: str, value: str) -> None:
         self._options[option] = value
 
-    def declare_sort(self, sort_name: str) -> None:
-        pass
+    def declare_sort(self, sort_name: Sort) -> None:
+        self._sorts.append(sort_name)
 
     def assert_hard(self, *hard_constraints: AssertHard):
         self._hard.extend(hard_constraints)
@@ -99,7 +99,7 @@ class SolverFromExecutable(Solver):
         sentences = [f"(set-logic {self._logic})"]
         sentences.extend(f"(set-option :{option} {value})" for option, value in self._options.items())
         sentences.extend(f"(declare-sort {sort_to_str[sort]} 0)" for sort in self._sorts)
-        sentences.extend(f"(declare-fun {function.name} ({','.join((sort_to_str[sort] for sort in function.domain))}) "
+        sentences.extend(f"(declare-fun {function.name} ({' '.join((sort_to_str[sort] for sort in function.domain))}) "
                          f"{sort_to_str[function.range]})" for function in self._functions.values())
         sentences.extend(f"(assert {translate_assert_hard(hard_constraint)})" for hard_constraint in self._hard)
         sentences.extend(self.write_soft(soft_constraint) for soft_constraint in self._soft)
