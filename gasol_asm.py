@@ -688,8 +688,8 @@ if __name__ == '__main__':
     # ap.add_argument("-mem40", "--mem40", help="It assumes that pos 64 in memory is not dependant with variables", action = "store_true")
     ap.add_argument("-size","--size",help="It enables size cost model. The simplification rules are applied only if they reduce the size",action="store_true")
     ap.add_argument("-partition","--partition",help="It enables the partition in blocks of 24 instructions",action="store_true")
-    # ap.add_argument("-pop","--pop",help="It considers the necessary pops as uninterpreted functions",action="store_true")
-    # ap.add_argument("-push","--push",help="It considers the push instructions as uninterpreted functions",action="store_true")
+    ap.add_argument("-pop","--pop",help="It considers the necessary pops as uninterpreted functions",action="store_true")
+    ap.add_argument("-push","--push",help="It considers the push instructions as uninterpreted functions",action="store_true")
     # ap.add_argument("-terminal","--terminal",help="It takes into account if the last instruction is a revert or a return",action="store_true")
     ap.add_argument("-backend","--backend",help="Disables backend generation, so that only intermediate files are generated", action="store_false")
     ap.add_argument("-intermediate", "--intermediate", help="Keeps temporary intermediate files. These files contain the sfs representation, smt encoding...", action="store_true")
@@ -708,18 +708,18 @@ if __name__ == '__main__':
         with open(args.log_path) as path:
             log_dict = json.load(path)
             optimize_asm_from_log(args.input_path, log_dict, output_file,  args.storage, False,
-                                  args.size,args.partition)
+                                  args.size,args.partition, args.pop, args.push)
             if not args.intermediate:
                 shutil.rmtree(paths.gasol_path, ignore_errors=True)
             exit(0)
 
     if not args.block:
         optimize_asm_in_asm_format(args.input_path, output_file, csv_file, log_file, args.tout, args.log_flag, args.storage,
-                                   False,args.size,args.partition)
+                                   False,args.size,args.partition, args.pop, args.push)
 
     else:
         optimize_isolated_asm_block(args.input_path, output_file, csv_file, args.tout, args.storage, False,
-                                    args.size,args.partition)
+                                    args.size,args.partition, args.pop, args.push)
 
 
     y = dtimer()
