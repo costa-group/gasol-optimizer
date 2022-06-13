@@ -2,12 +2,13 @@ import os
 import resource
 import shlex
 import subprocess
+import re
 
 from abc import abstractmethod
 from .solver import Solver, Function
 from smt_encoding.constraints.assertions import AssertHard, AssertSoft, Formula_T
 from smt_encoding.constraints.function import Sort, ExpressionReference
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Union
 
 
 sort_to_str = {Sort.integer: 'Int', Sort.boolean: 'Bool', Sort.uninterpreted: 'S', Sort.uninterpreted_theta: 'T'}
@@ -136,5 +137,24 @@ class SolverFromExecutable(Solver):
     def get_objectives(self):
         return "a"
 
-    def get_value(self, variable: Function) -> str:
-        return "a"
+    @abstractmethod
+    def get_value_pattern(self, var_name: str) -> str:
+        """
+        Generates the corresponding pattern string for obtaining a value from the model,
+        so that calling re.search().group(1) returns the corresponding representation
+
+        :return: the pattern verifying the condition
+        """
+        pass
+
+    def get_value(self, variable: Union[Function, str]) -> str:
+        if self._model is None:
+            raise ValueError("No model has been generated yet")
+
+        # Format:〈function_def 〉 ::= 〈symbol〉(〈sorted_var〉∗) 〈sort〉〈term〉
+        pattern = re.compile(self.get_value_pattern(str(variable)))
+        occurrence = re.search(pattern, self._model)
+        if occurrence is not None:
+            return occurrence.group(1)
+        else:
+            raise ValueError("Invalid variable")

@@ -1,5 +1,6 @@
-from smt_encoding.solver.solver_from_executable import SolverFromExecutable, AssertSoft, List, translate_formula
+from smt_encoding.solver.solver_from_executable import SolverFromExecutable, AssertSoft, List, translate_formula, Function
 from global_params.paths import oms_exec
+import re
 
 
 class OMSExecutable(SolverFromExecutable):
@@ -24,3 +25,6 @@ class OMSExecutable(SolverFromExecutable):
 
     def command_line(self) -> str:
         return f"{oms_exec} {self._file_path} -optimization=True"
+
+    def get_value_pattern(self, var_name: str) -> str:
+        return f"\(define-fun {re.escape(var_name)} \(.*\) \S+ (.+)\)"

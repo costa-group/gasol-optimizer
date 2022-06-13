@@ -1,5 +1,6 @@
 from smt_encoding.solver.solver_from_executable import SolverFromExecutable, AssertSoft, List, translate_formula
 from global_params.paths import z3_exec
+import re
 
 
 class Z3Executable(SolverFromExecutable):
@@ -15,11 +16,13 @@ class Z3Executable(SolverFromExecutable):
                    f":id {soft_constraint.group})"
 
     def load_model(self) -> List[str]:
-        return ["(get-model)"]
+        return ["(get-objectives)", "(get-model)"]
 
-    def cost_function(self) -> str:
-        return ""
+    def cost_function(self) -> None:
+        return None
 
     def command_line(self) -> str:
         return f"{z3_exec} -smt2 {self._file_path}"
 
+    def get_value_pattern(self, var_name: str) -> str:
+        return f"\(define-fun {re.escape(var_name)} \(.*\) \S+\n(.+)\)"
