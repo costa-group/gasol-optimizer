@@ -101,10 +101,15 @@ def remove_last_constant_instructions(instructions):
     return new_stack_size, cons_instructions[::-1]
 
 
-def compute_original_sfs_with_simplifications(instructions, stack_size, block_id, block_name,
-                                              storage, last_const, size_abs, partition, pop_flag, push_flag,revert_return):
+def compute_original_sfs_with_simplifications(block: AsmBlock, storage: bool, last_const: bool, size_abs: bool,
+                                              partition: bool, pop_flag: bool, push_flag: bool, revert_return: bool):
 
-    block_ins = list(filter(lambda x: x not in constants.beginning_block and x not in constants.end_block, instructions))
+    stack_size = block.source_stack
+    block_name = block.block_name
+    block_id = block.block_id
+    instructions = block.to_plain()
+
+    instructions_to_optimize = block.instructions_to_optimize_plain()
 
     if ("REVERT" in instructions or "RETURN" in instructions) and revert_return:
         revert_flag = True
@@ -112,12 +117,11 @@ def compute_original_sfs_with_simplifications(instructions, stack_size, block_id
         revert_flag = False
         
     if last_const:
-        new_stack_size , rest_instructions = remove_last_constant_instructions(block_ins)
-        
+        new_stack_size, rest_instructions = remove_last_constant_instructions(instructions_to_optimize)
     else:
         new_stack_size = stack_size
     
-    block_data = {"instructions": block_ins, "input": new_stack_size}
+    block_data = {"instructions": instructions_to_optimize, "input": new_stack_size}
 
     fname = args.input_path.split("/")[-1].split(".")[0]
     exit_code, subblocks_list = \
@@ -172,15 +176,9 @@ def optimize_block(sfs_dict, timeout, size = False):
 # contains the sfs from each block, the second one contains the sequence of instructions and
 # the third one is a set that contains all block ids.
 def generate_sfs_dicts_from_log(block, json_log,storage, last_const, size_abs, partition, pop_flag, push_flag,revert_return):
-    stack_size = block.source_stack
-    block_name = block.block_name
-    block_id = block.block_id
 
-    instructions =  block.instructions_to_optimize_plain()
-
-    contracts_dict, sub_block_list = compute_original_sfs_with_simplifications(instructions, stack_size, block_id, block_name,
-                                                         storage, last_const, size_abs, partition, pop_flag,
-                                                         push_flag,revert_return)
+    contracts_dict, sub_block_list = compute_original_sfs_with_simplifications(block,storage, last_const, size_abs,
+                                                                               partition, pop_flag, push_flag,revert_return)
     syrup_contracts = contracts_dict["syrup_contract"]
 
     # Contains sfs blocks considered to check the SMT problem. Therefore, a block is added from
@@ -445,10 +443,6 @@ def optimize_asm_block_asm_format(block, timeout, storage, last_const, size_abs,
     global statistics_rows
     global total_time
 
-    stack_size = block.source_stack
-    block_id = block.block_id
-    block_name = block.block_name
-
     new_block = deepcopy(block)
 
     # Optimized blocks. When a block is not optimized, None is pushed to the list.
@@ -456,14 +450,13 @@ def optimize_asm_block_asm_format(block, timeout, storage, last_const, size_abs,
 
     log_dicts = {}
 
-    instructions =  block.instructions_to_optimize_plain()
+    instructions = block.instructions_to_optimize_plain()
 
     # No instructions to optimize
     if instructions == []:
         return new_block, {}
 
-    contracts_dict, sub_block_list = compute_original_sfs_with_simplifications(instructions,stack_size,block_id,
-                                                                               block_name,storage, last_const,size_abs,
+    contracts_dict, sub_block_list = compute_original_sfs_with_simplifications(block,storage, last_const,size_abs,
                                                                                partition,pop_flag, push_flag, revert_return)
 
     sfs_dict = contracts_dict["syrup_contract"]
@@ -521,19 +514,13 @@ def optimize_asm_block_asm_format(block, timeout, storage, last_const, size_abs,
 
 def compare_asm_block_asm_format(old_block : AsmBlock, new_block : AsmBlock,storage = False, last_const = False, size_abs = False, partition = False, pop = False, push = False, revert = False):
 
-    old_instructions =  old_block.instructions_to_optimize_plain()
-
-    old_sfs_information, _ = compute_original_sfs_with_simplifications(old_instructions, old_block.source_stack,
-                                                                       old_block.block_id, old_block.block_name,
-                                                                       False, last_const, size_abs, False, pop, push, revert)
+    old_sfs_information, _ = compute_original_sfs_with_simplifications(old_block, False, last_const,
+                                                                       size_abs, False, pop, push, revert)
 
     old_sfs_dict = old_sfs_information["syrup_contract"]
 
-    new_instructions =  new_block.instructions_to_optimize_plain()
-
-    new_sfs_information, _ = compute_original_sfs_with_simplifications(new_instructions, new_block.source_stack,
-                                                                       new_block.block_id, new_block.block_name,
-                                                                       False, last_const, size_abs, False, pop, push, revert)
+    new_sfs_information, _ = compute_original_sfs_with_simplifications(new_block, False, last_const, size_abs,
+                                                                       False, pop, push, revert)
 
     new_sfs_dict = new_sfs_information["syrup_contract"]
 
@@ -690,7 +677,7 @@ if __name__ == '__main__':
     ap.add_argument("-partition","--partition",help="It enables the partition in blocks of 24 instructions",action="store_true")
     ap.add_argument("-pop","--pop",help="It considers the necessary pops as uninterpreted functions",action="store_true")
     ap.add_argument("-push","--push",help="It considers the push instructions as uninterpreted functions",action="store_true")
-    # ap.add_argument("-terminal","--terminal",help="It takes into account if the last instruction is a revert or a return",action="store_true")
+    ap.add_argument("-terminal","--terminal",help="It takes into account if the last instruction is a revert or a return",action="store_true")
     ap.add_argument("-backend","--backend",help="Disables backend generation, so that only intermediate files are generated", action="store_false")
     ap.add_argument("-intermediate", "--intermediate", help="Keeps temporary intermediate files. These files contain the sfs representation, smt encoding...", action="store_true")
 
