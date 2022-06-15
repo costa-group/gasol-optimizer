@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from enum import Enum, unique
-from typing import Union
+from typing import Union, Optional
 
 @unique
 class InstructionSubset(Enum):
@@ -57,4 +57,10 @@ class EncodingInstruction(ABC):
     @property
     @abstractmethod
     def instruction_subset(self) -> InstructionSubset:
+        raise NotImplementedError
+
+    # If it has an additional value tied. Useful for some special PUSH pseudo-instructions
+    @property
+    @abstractmethod
+    def value(self) -> Optional[int]:
         raise NotImplementedError

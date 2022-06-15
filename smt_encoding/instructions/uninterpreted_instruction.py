@@ -16,6 +16,8 @@ class UninterpretedInstruction(EncodingInstruction, ABC):
         self._hex = instr["opcode"]
         self._id = instr["id"]
         self._size = instr["size"]
+        # Value field may not appear in the instruction representation
+        self._value = instr.get('value', None)
         self._theta_value = theta_value
 
     # An uninterpreted function is assumed to appear once in the sequence iff it does not consume
@@ -55,3 +57,9 @@ class UninterpretedInstruction(EncodingInstruction, ABC):
         if not self._output_stack:
             return None
         return self._output_stack[0]
+
+    @property
+    def value(self) -> Optional[int]:
+        if self._value is not None:
+            return self._value[0]
+        return self._value

@@ -1,6 +1,6 @@
 from abc import ABC
 
-from smt_encoding.instructions.encoding_instruction import EncodingInstruction, InstructionSubset
+from smt_encoding.instructions.encoding_instruction import EncodingInstruction, InstructionSubset, Optional
 
 class BasicInstruction(EncodingInstruction, ABC):
 
@@ -13,3 +13,8 @@ class BasicInstruction(EncodingInstruction, ABC):
     @property
     def instruction_subset(self) -> InstructionSubset:
         return InstructionSubset.basic
+
+    # No value tied to basic instructions
+    @property
+    def value(self) -> Optional[int]:
+        return None
