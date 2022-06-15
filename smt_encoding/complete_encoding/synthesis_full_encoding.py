@@ -41,6 +41,7 @@ class FullEncoding:
         self._initialize_basic_instructions_with_encoding(self._encoding_stack)
         self._encoding_for_uninterpreted(self._encoding_stack)
         self._instructions : List[EncodingInstruction] = [*self._basic_instructions, *self._uninterpreted_instructions]
+        self.theta_to_instr = self._instruction_factory.theta_value_to_instr()
 
         self._stack_var_to_term = self._initialize_term_to_variable_conversion()
         self._term_factory = None
@@ -54,9 +55,13 @@ class FullEncoding:
                                                      for instruction in self._uninterpreted_instructions
                                                      if instruction.output_stack is not None}
 
-        # Allow complete dependency graph in the encoding by changing the way it is initialized (future)
-        self._dependency_graph = generate_dependency_graph_minimum(self._uninterpreted_instructions, self.mem_order,
-                                                                   stack_element_to_id_dict)
+        if flags.order_conflicts:
+            # Allow complete dependency graph in the encoding by changing the way it is initialized (future)
+            self._dependency_graph = generate_dependency_graph_minimum(self._uninterpreted_instructions, self.mem_order,
+                                                                       stack_element_to_id_dict)
+        else:
+            self._dependency_graph = generate_dependency_graph_minimum([], self.mem_order,
+                                                                       stack_element_to_id_dict)
 
         self._bounds = self._initialize_bounds()
 
@@ -198,9 +203,12 @@ class FullEncoding:
 
         initial_stack_constraints = stack_encoding_for_position(self._initial_idx, self._term_factory,
                                                                 self.initial_stack, self.bs)
-
-        final_stack_constraints = stack_encoding_for_position(self._initial_idx + self.b0, self._term_factory,
-                                                              self.final_stack, self.bs)
+        if self._flags.revert:
+            final_stack_constraints = stack_encoding_for_position(self._initial_idx + self.b0, self._term_factory,
+                                                                  self.final_stack, self.bs)
+        else:
+            final_stack_constraints = stack_encoding_for_position(self._initial_idx + self.b0, self._term_factory,
+                                                                  self.final_stack, self.bs)
         distinct_constraints = []
 
         # Only works for UF encoding

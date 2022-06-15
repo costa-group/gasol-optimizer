@@ -13,6 +13,8 @@ from smt_encoding.instructions.store_uninterpreted import StoreUninterpreted
 from smt_encoding.instructions.swapk_basic import SwapKBasic
 from smt_encoding.instructions.uninterpreted_instruction import UninterpretedInstruction, Instruction_JSON_T
 from smt_encoding.instructions.basic_instruction import BasicInstruction
+from smt_encoding.instructions.encoding_instruction import ThetaValue, EncodingInstruction
+from typing import Dict
 
 
 class InstructionFactory:
@@ -20,6 +22,7 @@ class InstructionFactory:
     def __init__(self):
         self._next_theta_value = 0
         self._instructions_ids = {}
+        self._theta_to_instr = dict()
 
     def create_instruction_json_format(self, json_instr: Instruction_JSON_T) -> UninterpretedInstruction:
         instr_id = json_instr["id"]
@@ -40,6 +43,7 @@ class InstructionFactory:
 
         # The instruction was recognized, thus, we need to update theta and store the corresponding instance
         self._instructions_ids[instr_id] = instance
+        self._theta_to_instr[self._next_theta_value] = instance
         self._next_theta_value += 1
         return instance
 
@@ -72,6 +76,9 @@ class InstructionFactory:
 
         # The instruction was recognized, thus, we need to update theta and store the corresponding instance
         self._instructions_ids[name] = instance
+        self._theta_to_instr[self._next_theta_value] = instance
         self._next_theta_value += 1
         return instance
 
+    def theta_value_to_instr(self) -> Dict[ThetaValue, EncodingInstruction]:
+        return self._theta_to_instr
