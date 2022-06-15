@@ -2,7 +2,13 @@ from abc import abstractmethod, ABC
 from typing import Any, Union
 from smt_encoding.constraints.function import Function
 from smt_encoding.constraints.assertions import AssertHard, AssertSoft
+from enum import Enum, unique
 
+@unique
+class OptimizeOutcome(Enum):
+    no_model = 0
+    non_optimal = 1
+    optimal = 2
 
 class Solver(ABC):
     """
@@ -41,6 +47,10 @@ class Solver(ABC):
         :param kwargs: arguments needed for the execution
         :return: no value is returned as a result
         """
+        pass
+
+    @abstractmethod
+    def optimization_outcome(self) -> OptimizeOutcome:
         pass
 
     @abstractmethod

@@ -1,3 +1,4 @@
+from smt_encoding.solver.solver import OptimizeOutcome
 from smt_encoding.solver.solver_from_executable import SolverFromExecutable, AssertSoft, List, translate_formula, Function
 from global_params.paths import oms_exec
 import re
@@ -22,6 +23,16 @@ class OMSExecutable(SolverFromExecutable):
 
     def cost_function(self) -> str:
         return "(minimize cost)"
+
+    def optimization_outcome(self) -> OptimizeOutcome:
+        if self._model is None:
+            raise ValueError("Check-sat has not been called")
+        if "error" in self._model:
+            return OptimizeOutcome.no_model
+        elif "partial" in self._model:
+            return OptimizeOutcome.non_optimal
+        else:
+            return OptimizeOutcome.optimal
 
     def command_line(self) -> str:
         return f"{oms_exec} {self._file_path} -optimization=True"
