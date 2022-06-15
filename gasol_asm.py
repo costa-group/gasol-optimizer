@@ -702,11 +702,11 @@ if __name__ == '__main__':
 
     if not args.block:
         optimize_asm_in_asm_format(args.input_path, output_file, csv_file, log_file, args.tout, args.log_flag, args.storage,
-                                   False,args.size,args.partition, args.pop, args.push)
+                                   False,args.size,args.partition, args.pop, args.push, args.terminal)
 
     else:
         optimize_isolated_asm_block(args.input_path, output_file, csv_file, args.tout, args.storage, False,
-                                    args.size,args.partition, args.pop, args.push)
+                                    args.size,args.partition, args.pop, args.push, args.terminal)
 
 
     y = dtimer()
