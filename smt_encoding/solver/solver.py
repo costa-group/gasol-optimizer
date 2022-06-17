@@ -40,17 +40,13 @@ class Solver(ABC):
         pass
 
     @abstractmethod
-    def check_sat(self) -> None:
+    def check_sat(self) -> OptimizeOutcome:
         """
         Execute the SMT solver
 
         :param kwargs: arguments needed for the execution
-        :return: no value is returned as a result
+        :return: the outcome after performing the optimization process
         """
-        pass
-
-    @abstractmethod
-    def optimization_outcome(self) -> OptimizeOutcome:
         pass
 
     @abstractmethod

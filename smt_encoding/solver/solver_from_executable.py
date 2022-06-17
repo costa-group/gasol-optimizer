@@ -5,7 +5,7 @@ import subprocess
 import re
 
 from abc import abstractmethod
-from .solver import Solver, Function
+from smt_encoding.solver.solver import Solver, Function, OptimizeOutcome
 from smt_encoding.constraints.assertions import AssertHard, AssertSoft, Formula_T
 from smt_encoding.constraints.function import Sort, ExpressionReference
 from typing import List, Dict, Optional, Union
@@ -114,7 +114,11 @@ class SolverFromExecutable(Solver):
         sentences.extend(self.load_model())
         return '\n'.join(sentences)
 
-    def check_sat(self) -> None:
+    @abstractmethod
+    def optimization_outcome(self) -> OptimizeOutcome:
+        pass
+
+    def check_sat(self) -> OptimizeOutcome:
         """
         Execute the SMT solver
         """
@@ -128,6 +132,7 @@ class SolverFromExecutable(Solver):
         model, total_time = run_and_measure_command(self.command_line())
         self._model = model
         self._time = total_time
+        return self.optimization_outcome()
 
     def get_model(self):
         if self._model is None:
