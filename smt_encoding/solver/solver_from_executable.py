@@ -134,6 +134,11 @@ class SolverFromExecutable(Solver):
         self._time = total_time
         return self.optimization_outcome()
 
+    def time_statistics(self) -> float:
+        if self._model is None:
+            raise ValueError("No model has been generated yet")
+        return round(self._time, 2)
+
     def get_model(self):
         if self._model is None:
             raise ValueError("No model has been generated yet")

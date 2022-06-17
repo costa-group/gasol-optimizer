@@ -50,6 +50,20 @@ class Solver(ABC):
         pass
 
     @abstractmethod
+    def time_statistics(self) -> float:
+        pass
+
+    @abstractmethod
+    def to_smt2(self) -> str:
+        """
+        Returns the current SMT problem . Note that smt2 has no standard for soft constraints, and thus, each solver
+        may use their own representation
+
+        :return: a string with the representation of the current problem
+        """
+        pass
+
+    @abstractmethod
     def get_objectives(self):
         pass
 
