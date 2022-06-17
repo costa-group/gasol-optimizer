@@ -8,6 +8,7 @@ import sys
 from typing import Tuple
 from copy import deepcopy
 from timeit import default_timer as dtimer
+from argparse import ArgumentParser, Namespace
 
 import pandas as pd
 
@@ -41,6 +42,7 @@ from verification.solver_solution_verify import (
     check_solver_output_is_correct, generate_solution_dict)
 from solution_generation.optimize_from_sub_blocks import rebuild_optimized_asm_block
 from sfs_generator.asm_block import AsmBlock
+from smt_encoding.block_optimizer import BlockOptimizer
 
 def init():
     global previous_gas
@@ -101,8 +103,7 @@ def remove_last_constant_instructions(instructions):
     return new_stack_size, cons_instructions[::-1]
 
 
-def compute_original_sfs_with_simplifications(block: AsmBlock, storage: bool, last_const: bool, size_abs: bool,
-                                              partition: bool, pop_flag: bool, push_flag: bool, revert_return: bool):
+def compute_original_sfs_with_simplifications(block: AsmBlock, parsed_args: Namespace):
 
     stack_size = block.source_stack
     block_name = block.block_name
@@ -111,23 +112,23 @@ def compute_original_sfs_with_simplifications(block: AsmBlock, storage: bool, la
 
     instructions_to_optimize = block.instructions_to_optimize_plain()
 
-    if ("REVERT" in instructions or "RETURN" in instructions) and revert_return:
+    if ("REVERT" in instructions or "RETURN" in instructions) and parsed_args.terminal:
         revert_flag = True
     else:
         revert_flag = False
         
-    if last_const:
-        new_stack_size, rest_instructions = remove_last_constant_instructions(instructions_to_optimize)
-    else:
-        new_stack_size = stack_size
+    # if last_const:
+    #     new_stack_size, rest_instructions = remove_last_constant_instructions(instructions_to_optimize)
+    # else:
+    #     new_stack_size = stack_size
     
-    block_data = {"instructions": instructions_to_optimize, "input": new_stack_size}
+    block_data = {"instructions": instructions_to_optimize, "input": stack_size}
 
-    fname = args.input_path.split("/")[-1].split(".")[0]
+    fname = parsed_args.input_path.split("/")[-1].split(".")[0]
     exit_code, subblocks_list = \
         ir_block.evm2rbr_compiler(file_name = fname, block=block_data, block_name=block_name, block_id=block_id,
-                                  simplification=True, storage=storage, size = size_abs, part = partition,pop =
-                                  pop_flag, push = push_flag, revert = revert_flag)
+                                  simplification=True, storage=parsed_args.storage, size = parsed_args.size, part = parsed_args.partition,
+                                  pop= not parsed_args.pop_basic, push =not parsed_args.push_basic, revert=parsed_args.terminal)
 
     sfs_dict = get_sfs_dict()
 
@@ -158,7 +159,7 @@ def optimize_block(sfs_dict, timeout, size = False):
         args_i.memory_encoding = "l_vars"
         execute_syrup_backend(args_i, sfs_block, block_name=block_name, timeout=timeout)
 
-        if args.backend:
+        if parsed_args.backend:
 
             if initial_program_length > 40:
                 solver_output = "unsat"
@@ -175,10 +176,9 @@ def optimize_block(sfs_dict, timeout, size = False):
 # Given the log file loaded in json format, current block and the contract name, generates three dicts: one that
 # contains the sfs from each block, the second one contains the sequence of instructions and
 # the third one is a set that contains all block ids.
-def generate_sfs_dicts_from_log(block, json_log,storage, last_const, size_abs, partition, pop_flag, push_flag,revert_return):
+def generate_sfs_dicts_from_log(block, json_log, parsed_args: Namespace):
 
-    contracts_dict, sub_block_list = compute_original_sfs_with_simplifications(block,storage, last_const, size_abs,
-                                                                               partition, pop_flag, push_flag,revert_return)
+    contracts_dict, sub_block_list = compute_original_sfs_with_simplifications(block, parsed_args)
     syrup_contracts = contracts_dict["syrup_contract"]
 
     # Contains sfs blocks considered to check the SMT problem. Therefore, a block is added from
@@ -249,8 +249,7 @@ def optimize_asm_block_from_log(block, sfs_dict, sub_block_list, instr_sequence_
     return new_block
 
 
-def optimize_asm_from_log(file_name, json_log, output_file, storage = False, last_const = False, size_abs = False,
-                          partition = False, pop_flag = False, push_flag = False, revert_return = False):
+def optimize_asm_from_log(file_name, json_log, output_file, parsed_args: Namespace):
     asm = parse_asm(file_name)
 
     # Blocks from all contracts are checked together. Thus, we first will obtain the needed
@@ -280,8 +279,7 @@ def optimize_asm_from_log(file_name, json_log, output_file, storage = False, las
                 continue
 
             sfs_all, sfs_optimized, sub_block_list, instr_sequence_dict_block, block_ids = \
-                generate_sfs_dicts_from_log(block, json_log, storage, last_const, size_abs, partition, pop_flag,
-                                            push_flag,revert_return)
+                generate_sfs_dicts_from_log(block, json_log, parsed_args)
 
             new_block = optimize_asm_block_from_log(block, sfs_all, sub_block_list, instr_sequence_dict_block)
             sfs_dict_to_check.update(sfs_optimized)
@@ -305,8 +303,7 @@ def optimize_asm_from_log(file_name, json_log, output_file, storage = False, las
                     continue
 
                 sfs_all, sfs_optimized, sub_block_list, instr_sequence_dict_block, block_ids = \
-                    generate_sfs_dicts_from_log(block, json_log, storage,last_const, size_abs, partition, pop_flag,
-                                                push_flag, revert_return)
+                    generate_sfs_dicts_from_log(block, json_log, parsed_args)
 
                 new_block = optimize_asm_block_from_log(block, sfs_all, sub_block_list, instr_sequence_dict_block)
                 sfs_dict_to_check.update(sfs_optimized)
@@ -338,8 +335,7 @@ def optimize_asm_from_log(file_name, json_log, output_file, storage = False, las
             print("Log file does not contain a valid solution")
 
 
-def optimize_isolated_asm_block(block_name,output_file, csv_file, timeout=10, storage= False, last_const = False,
-                                size_abs = False, partition = False, pop = False, push = False, revert = False):
+def optimize_isolated_asm_block(block_name,output_file, csv_file, parsed_args: Namespace, timeout=10):
     global statistics_rows
 
     with open(block_name,"r") as f:        
@@ -349,9 +345,9 @@ def optimize_isolated_asm_block(block_name,output_file, csv_file, timeout=10, st
     asm_blocks = []
 
     for old_block in blocks:
-        asm_block, _ = optimize_asm_block_asm_format(old_block, timeout, storage, last_const, size_abs, partition, pop, push, revert)
+        asm_block, _ = optimize_asm_block_asm_format(old_block, timeout, parsed_args)
 
-        if not compare_asm_block_asm_format(old_block, asm_block):
+        if not compare_asm_block_asm_format(old_block, asm_block, parsed_args):
             print("Comparison failed, so initial block is kept")
             print(old_block.to_plain())
             print(asm_block.to_plain())
@@ -362,8 +358,7 @@ def optimize_isolated_asm_block(block_name,output_file, csv_file, timeout=10, st
         update_size_count(old_block, asm_block)
         asm_blocks.append(asm_block)
 
-        
-    if args.backend:
+    if parsed_args.backend:
         df = pd.DataFrame(statistics_rows)
         df.to_csv(csv_file)
         print("")
@@ -438,8 +433,9 @@ def filter_optimized_blocks_by_intra_block_optimization(asm_sub_blocks, optimize
     # Finally, as we were working with reversed list, we reverse the solution to obtain the proper one
     return list(reversed(final_sub_blocks))
 
+
 # Given an asm_block and its contract name, returns the asm block after the optimization
-def optimize_asm_block_asm_format(block, timeout, storage, last_const, size_abs, partition,pop_flag, push_flag, revert_return):
+def optimize_asm_block_asm_format(block: AsmBlock, timeout: int, parsed_args: Namespace):
     global statistics_rows
     global total_time
 
@@ -456,17 +452,16 @@ def optimize_asm_block_asm_format(block, timeout, storage, last_const, size_abs,
     if instructions == []:
         return new_block, {}
 
-    contracts_dict, sub_block_list = compute_original_sfs_with_simplifications(block,storage, last_const,size_abs,
-                                                                               partition,pop_flag, push_flag, revert_return)
+    contracts_dict, sub_block_list = compute_original_sfs_with_simplifications(block, parsed_args)
 
     sfs_dict = contracts_dict["syrup_contract"]
 
-    if not args.backend:
-        optimize_block(sfs_dict, timeout, size_abs)
+    if not parsed_args.backend:
+        optimize_block(sfs_dict, timeout, parsed_args.size)
         return new_block, {}
 
     for solver_output, sub_block_name, original_instr, current_cost, current_length, user_instr, solver_time \
-            in optimize_block(sfs_dict, timeout, size_abs):
+            in optimize_block(sfs_dict, timeout, parsed_args.size):
 
         # We weren't able to find a solution using the solver, so we just update
         if not check_solver_output_is_correct(solver_output):
@@ -483,7 +478,6 @@ def optimize_asm_block_asm_format(block, timeout, storage, last_const, size_abs,
 
         _, instruction_theta_dict, opcodes_theta_dict, gas_theta_dict, values_dict = generate_theta_dict_from_sequence(bs, user_instr)
 
-        
         instruction_output, _, pushed_output, optimized_cost = \
             generate_info_from_solution(solver_output, opcodes_theta_dict, instruction_theta_dict,
                                         gas_theta_dict, values_dict)
@@ -501,7 +495,7 @@ def optimize_asm_block_asm_format(block, timeout, storage, last_const, size_abs,
         statistics_rows.append(statistics_row)
         total_time += solver_time
 
-        if (not size_abs and current_cost > optimized_cost) or (size_abs and current_length > optimized_length) :
+        if (not parsed_args.size and current_cost > optimized_cost) or (parsed_args.size and current_length > optimized_length) :
             optimized_blocks[sub_block_name] = new_sub_block
             log_dicts[sub_block_name] = generate_solution_dict(solver_output)
         else:
@@ -512,15 +506,13 @@ def optimize_asm_block_asm_format(block, timeout, storage, last_const, size_abs,
     return new_block, log_dicts
 
 
-def compare_asm_block_asm_format(old_block : AsmBlock, new_block : AsmBlock,storage = False, last_const = False, size_abs = False, partition = False, pop = False, push = False, revert = False):
+def compare_asm_block_asm_format(old_block: AsmBlock, new_block: AsmBlock, parsed_args: Namespace) -> bool:
 
-    old_sfs_information, _ = compute_original_sfs_with_simplifications(old_block, False, last_const,
-                                                                       size_abs, False, pop, push, revert)
+    old_sfs_information, _ = compute_original_sfs_with_simplifications(old_block, parsed_args)
 
     old_sfs_dict = old_sfs_information["syrup_contract"]
 
-    new_sfs_information, _ = compute_original_sfs_with_simplifications(new_block, False, last_const, size_abs,
-                                                                       False, pop, push, revert)
+    new_sfs_information, _ = compute_original_sfs_with_simplifications(new_block, parsed_args)
 
     new_sfs_dict = new_sfs_information["syrup_contract"]
 
@@ -537,7 +529,7 @@ def compare_asm_block_asm_format(old_block : AsmBlock, new_block : AsmBlock,stor
            final_instructions_new == final_instructions_old
 
 
-def optimize_asm_in_asm_format(file_name, output_file, csv_file, log_file, timeout=10, log=False, storage= False, last_const = False, size_abs = False, partition = False, pop = False, push = False, revert = False):
+def optimize_asm_in_asm_format(file_name, output_file, csv_file, log_file, parsed_args: Namespace, timeout=10):
     global statistics_rows
 
     asm = parse_asm(file_name)
@@ -562,9 +554,9 @@ def optimize_asm_in_asm_format(file_name, output_file, csv_file, log_file, timeo
         init_code_blocks = []
 
         for old_block in init_code:
-            optimized_block, log_element = optimize_asm_block_asm_format(old_block, timeout, storage, last_const,size_abs,partition, pop, push, revert)
+            optimized_block, log_element = optimize_asm_block_asm_format(old_block, timeout, parsed_args)
 
-            if not compare_asm_block_asm_format(old_block, optimized_block):
+            if not compare_asm_block_asm_format(old_block, optimized_block, parsed_args):
                 print("Comparison failed, so initial block is kept")
                 print(old_block.to_plain())
                 print(optimized_block.to_plain())
@@ -587,9 +579,9 @@ def optimize_asm_in_asm_format(file_name, output_file, csv_file, log_file, timeo
 
             run_code_blocks = []
             for old_block in blocks:
-                optimized_block, log_element = optimize_asm_block_asm_format(old_block, timeout, storage, last_const,size_abs,partition, pop, push, revert)
+                optimized_block, log_element = optimize_asm_block_asm_format(old_block, timeout, parsed_args)
                 
-                if not compare_asm_block_asm_format(old_block, optimized_block):
+                if not compare_asm_block_asm_format(old_block, optimized_block, parsed_args):
                     print("Comparison failed, so initial block is kept")
                     print(old_block.to_plain())
                     print(optimized_block.to_plain())
@@ -610,11 +602,11 @@ def optimize_asm_in_asm_format(file_name, output_file, csv_file, log_file, timeo
     new_asm = deepcopy(asm)
     new_asm.contracts = contracts
 
-    if log:
+    if parsed_args.log:
         with open(log_file, "w") as log_f:
             json.dump(log_dicts, log_f)
 
-    if args.backend:
+    if parsed_args.backend:
 
         with open(output_file, 'w') as f:
             f.write(json.dumps(rebuild_asm(new_asm)))
@@ -623,30 +615,119 @@ def optimize_asm_in_asm_format(file_name, output_file, csv_file, log_file, timeo
         df.to_csv(csv_file)
 
 
-def final_file_names(args : argparse.Namespace) -> Tuple[str, str, str]:
-    input_file_name = args.input_path.split("/")[-1].split(".")[0]
+def final_file_names(parsed_args: argparse.Namespace) -> Tuple[str, str, str]:
+    input_file_name = parsed_args.input_path.split("/")[-1].split(".")[0]
 
-    if args.output_path is None:
-        if args.block:
+    if parsed_args.output_path is None:
+        if parsed_args.block:
             output_file = input_file_name + "_optimized.txt"
-        elif args.log_path is not None:
+        elif parsed_args.log_path is not None:
             output_file = input_file_name + "_optimized_from_log.json_solc"
         else:
             output_file = input_file_name + "_optimized.json_solc"
     else:
-        output_file = args.output_path
+        output_file = parsed_args.output_path
 
-    if args.csv_path is None:
+    if parsed_args.csv_path is None:
         csv_file = input_file_name + "_statistics.csv"
     else:
-        csv_file = args.csv_path
+        csv_file = parsed_args.csv_path
 
-    if args.log_stored_final is None:
+    if parsed_args.log_stored_final is None:
         log_file = input_file_name + ".log"
     else:
-        log_file = args.log_stored_final
+        log_file = parsed_args.log_stored_final
 
     return output_file, csv_file, log_file
+
+
+def parse_encoding_args() -> Namespace:
+    # Unused options
+    # ap.add_argument("-last-constants", "--last-constants", help="It removes the last instructions of a block when they generate a constant value", dest="last_constants", action = "store_true")
+    # ap.add_argument("-mem40", "--mem40", help="It assumes that pos 64 in memory is not dependant with variables", action = "store_true")
+
+    ap = ArgumentParser(description='GASOL, the EVM super-optimizer')
+
+    input = ap.add_argument_group('Input options')
+
+    input.add_argument('input_path', help='Path to input file that contains the code to optimize. Can be either asm or'
+                                          'plain instructions, with the bl flag enabled')
+    input.add_argument("-bl", "--block", help="Enable analysis of a single asm block", action = "store_true")
+
+    output = ap.add_argument_group('Output options')
+
+    output.add_argument("-o", help="Path for storing the optimized code", dest='output_path', action='store')
+    output.add_argument("-csv", help="CSV file path", dest='csv_path', action='store')
+    output.add_argument("-backend","--backend", action="store_false",
+                        help="Disables backend generation, so that only intermediate files are generated")
+    output.add_argument("-intermediate", "--intermediate", action="store_true",
+                        help="Keeps temporary intermediate files. "
+                             "These files contain the sfs representation, smt encoding...")
+
+    log_generation = ap.add_argument_group('Log generation options', 'Options for managing the log generation')
+
+    log_generation.add_argument("-log", "--generate-log", help ="Enable log file for Etherscan verification",
+                                action = "store_true", dest='log')
+    log_generation.add_argument("-dest-log", help ="Log output path", action = "store", dest='log_stored_final')
+    log_generation.add_argument("-optimize-from-log", dest='log_path', action='store', metavar="log_file",
+                                help="Generates the same optimized bytecode than the one associated to the log file")
+
+    basic = ap.add_argument_group('Max-SMT solver general options',
+                                  'Basic options for solving the corresponding Max-SMT problem')
+
+    basic.add_argument("-solver", "--solver", help="Choose the solver", choices=["z3", "barcelogic", "oms"],
+                       default="z3")
+    basic.add_argument("-tout", metavar='timeout', action='store', type=int,
+                       help="Timeout in seconds. By default, set to 10s per block.", default=10)
+
+    blocks = ap.add_argument_group('Split block options', 'Options for deciding how to split blocks when optimizing')
+
+    blocks.add_argument("-storage", "--storage", help="Split using SSTORE, MSTORE and MSTORE8", action="store_true")
+    blocks.add_argument("-partition","--partition",help="It enables the partition in blocks of 24 instructions",action="store_true")
+
+    hard = ap.add_argument_group('Hard constraints', 'Options for modifying the hard constraint generation')
+
+    hard.add_argument("-memory-encoding", help="Choose the memory encoding model", choices=["l_vars", "direct"],
+                      default="l_vars", dest='sort_type')
+    hard.add_argument('-push-uninterpreted', action='store_false', dest='push_basic',
+                      help='Encodes push instruction as uninterpreted functions')
+    hard.add_argument('-pop-uninterpreted', action='store_false', dest='pop_basic',
+                      help='Encodes pop instruction as uninterpreted functions')
+    hard.add_argument('-order-bounds', action='store_true', dest='order_bounds',
+                      help='Consider bounds on the position instructions can appear in the encoding')
+    hard.add_argument('-term-encoding', action='store', dest='term_encoding',
+                      choices=['int', 'stack_var', 'uninterpreted'],
+                      help='Decides how terms are encoded in the SMT encoding: directly as numbers, using stack'
+                           'variables or introducing uninterpreted functions')
+    hard.add_argument('-terminal', action='store_true', dest='terminal',
+                      help='(UNSUPPORTED) Encoding for terminal blocks that end with REVERT or RETURN. '
+                           'Instead of considering the full stack order, just considers the two top elements')
+    hard.add_argument('-ac', action='store_true', dest='ac_solver',
+                      help='(UNSUPPORTED) Commutativity in operations is considered as an extension inside the solver. '
+                           'Can only be combined with Z3')
+
+    soft = ap.add_argument_group('Soft constraints', 'Options for modifying the soft constraint generation')
+    soft.add_argument("-size", "--size", action="store_true",
+                      help="It enables size cost model for optimization and disables rules that increase the size"
+                           "The simplification rules are applied only if they reduce the size")
+
+    soft.add_argument("-direct-inequalities", dest='direct', action='store_true',
+                      help="Soft constraints with inequalities instead of equalities and without grouping")
+
+    additional = ap.add_argument_group('Additional constraints',
+                                       'Constraints that can help to speed up the optimization process, but are not '
+                                       'necessary')
+    additional.add_argument('-at-most', action='store_true', dest='at_most',
+                            help='add a constraint for each uninterpreted function so that they are used at most once')
+    additional.add_argument('-pushed-once', action='store_true', dest='pushed_once',
+                            help='add a constraint to indicate that each pushed value is pushed at least once')
+    additional.add_argument("-no-output-before-pop", action='store_true', dest='no_output_before_pop',
+                            help='Add a constraint representing the fact that the previous instruction'
+                                 'of a pop can only be a instruction that does not produce an element')
+    additional.add_argument('-order-conflicts', action='store_true', dest='order_conflicts',
+                            help='Consider the order among the uninterpreted opcodes in the encoding')
+
+    return ap.parse_args()
 
 
 if __name__ == '__main__':
@@ -658,55 +739,28 @@ if __name__ == '__main__':
 
     init()
     clean_dir()
-    ap = argparse.ArgumentParser(description='GASOL tool')
-    ap.add_argument('input_path', help='Path to input file that contains the asm')
-    ap.add_argument("-bl", "--block", help ="Enable analysis of a single asm block", action = "store_true")
-    ap.add_argument("-tout", metavar='timeout', action='store', type=int,
-                    help="Timeout in seconds. By default, set to 10s per block.", default=10)
-    ap.add_argument("-optimize-from-log", dest='log_path', action='store', metavar="log_file",
-                        help="Generates the same optimized bytecode than the one associated to the log file")
-    ap.add_argument("-log", "--generate-log", help ="Enable log file for Etherscan verification",
-                    action = "store_true", dest='log_flag')
-    ap.add_argument("-dest-log", help ="Log output path", action = "store", dest='log_stored_final')
-    ap.add_argument("-o", help="ASM output path", dest='output_path', action='store')
-    ap.add_argument("-csv", help="CSV file path", dest='csv_path', action='store')
-    ap.add_argument("-storage", "--storage", help="Split using SSTORE, MSTORE and MSTORE8", action="store_true")
-    # ap.add_argument("-last-constants", "--last-constants", help="It removes the last instructions of a block when they generate a constant value", dest="last_constants", action = "store_true")
-    # ap.add_argument("-mem40", "--mem40", help="It assumes that pos 64 in memory is not dependant with variables", action = "store_true")
-    ap.add_argument("-size","--size",help="It enables size cost model. The simplification rules are applied only if they reduce the size",action="store_true")
-    ap.add_argument("-partition","--partition",help="It enables the partition in blocks of 24 instructions",action="store_true")
-    ap.add_argument("-pop","--pop",help="It considers the necessary pops as uninterpreted functions",action="store_true")
-    ap.add_argument("-push","--push",help="It considers the push instructions as uninterpreted functions",action="store_true")
-    ap.add_argument("-terminal","--terminal",help="It takes into account if the last instruction is a revert or a return",action="store_true")
-    ap.add_argument("-backend","--backend",help="Disables backend generation, so that only intermediate files are generated", action="store_false")
-    ap.add_argument("-intermediate", "--intermediate", help="Keeps temporary intermediate files. These files contain the sfs representation, smt encoding...", action="store_true")
-
-    args = ap.parse_args()
-
+    parsed_args = parse_encoding_args()
 
     # If storage or partition flag are activated, the blocks are split using store instructions
-    if args.storage or args.partition:
+    if parsed_args.storage or parsed_args.partition:
         constants.append_store_instructions_to_split()
 
-    output_file, csv_file, log_file = final_file_names(args)
+    output_file, csv_file, log_file = final_file_names(parsed_args)
 
     x = dtimer()
-    if args.log_path is not None:
-        with open(args.log_path) as path:
+    if parsed_args.log_path is not None:
+        with open(parsed_args.log_path) as path:
             log_dict = json.load(path)
-            optimize_asm_from_log(args.input_path, log_dict, output_file,  args.storage, False,
-                                  args.size,args.partition, args.pop, args.push)
-            if not args.intermediate:
+            optimize_asm_from_log(parsed_args.input_path, log_dict, output_file,  parsed_args)
+            if not parsed_args.intermediate:
                 shutil.rmtree(paths.gasol_path, ignore_errors=True)
             exit(0)
 
-    if not args.block:
-        optimize_asm_in_asm_format(args.input_path, output_file, csv_file, log_file, args.tout, args.log_flag, args.storage,
-                                   False,args.size,args.partition, args.pop, args.push, args.terminal)
+    if not parsed_args.block:
+        optimize_asm_in_asm_format(parsed_args.input_path, output_file, csv_file, log_file, parsed_args, parsed_args.tout)
 
     else:
-        optimize_isolated_asm_block(args.input_path, output_file, csv_file, args.tout, args.storage, False,
-                                    args.size,args.partition, args.pop, args.push, args.terminal)
+        optimize_isolated_asm_block(parsed_args.input_path, output_file, csv_file, parsed_args, parsed_args.tout)
 
 
     y = dtimer()
@@ -714,14 +768,14 @@ if __name__ == '__main__':
     print("")
     print("Total time: "+ str(round(y-x, 2)) + " s")
 
-    if args.intermediate or not args.backend:
+    if parsed_args.intermediate or not parsed_args.backend:
         print("")
         print("Intermediate files stored at " + paths.gasol_path)
     else:
         shutil.rmtree(paths.gasol_path, ignore_errors=True)
 
 
-    if args.backend:
+    if parsed_args.backend:
         print("")
         print("Optimized code stored in " + output_file)
         print("Optimality results stored in " + csv_file)
