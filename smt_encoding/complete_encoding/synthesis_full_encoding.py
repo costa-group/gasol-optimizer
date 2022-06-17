@@ -132,7 +132,7 @@ class FullEncoding:
 
             elif instruction.instruction_subset == InstructionSubset.non_comm:
                 # If block is terminal with REVERT, only two top elements in the stack must be checked
-                if self._flags.revert:
+                if self._flags.terminal:
                     stack_encoding.register_function_for_encoding(instruction, non_comm_function_encoding,
                                                                   o=instruction.input_stack,
                                                                   r=instruction.output_stack)
