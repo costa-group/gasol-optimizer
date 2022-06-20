@@ -42,7 +42,7 @@ from verification.solver_solution_verify import (
     check_solver_output_is_correct, generate_solution_dict)
 from solution_generation.optimize_from_sub_blocks import rebuild_optimized_asm_block
 from sfs_generator.asm_block import AsmBlock
-from smt_encoding.block_optimizer import BlockOptimizer
+from smt_encoding.block_optimizer import BlockOptimizer, OptimizeOutcome
 
 def init():
     global previous_gas
@@ -138,37 +138,26 @@ def compute_original_sfs_with_simplifications(block: AsmBlock, parsed_args: Name
 # Given the sequence of bytecodes, the initial stack size, the contract name and the
 # block id, returns the output given by the solver, the name given to that block and current gas associated
 # to that sequence.
-def optimize_block(sfs_dict, timeout, size = False):
+def optimize_block(sfs_dict, timeout, parsed_args: Namespace):
 
     block_solutions = []
     # SFS dict of syrup contract contains all sub-blocks derived from a block after splitting
     for block_name in sfs_dict:
         sfs_block = sfs_dict[block_name]
-
-        current_cost = sfs_block['current_cost']
-        original_instr = sfs_block['original_instrs']
-        current_size = get_ins_size_seq(original_instr)
-        user_instr = sfs_block['user_instrs']
         initial_program_length = sfs_block['init_progr_len']
+        original_instr = sfs_block['original_instrs']
 
-        args_i = argparse.Namespace()
-        args_i.solver = "oms"
-        args_i.instruction_order = True
-        args_i.bytecode_size_soft_constraints = size
-        args_i.default_encoding = True
-        args_i.memory_encoding = "l_vars"
-        execute_syrup_backend(args_i, sfs_block, block_name=block_name, timeout=timeout)
+        optimizer = BlockOptimizer(block_name, sfs_block, parsed_args)
 
         if parsed_args.backend:
-
             if initial_program_length > 40:
-                solver_output = "unsat"
-                solver_time = 0
-            # At this point, solution is a string that contains the output directly
-            # from the solver
+                optimization_outcome, optimized_asm = OptimizeOutcome.no_model, []
+                time = 0
             else:
-                solver_output, solver_time = obtain_solver_output(block_name, "oms", timeout)
-            block_solutions.append((solver_output, block_name, original_instr, current_cost, current_size, user_instr, solver_time))
+                optimization_outcome, time, optimized_asm = optimizer.optimize_block()
+            block_solutions.append((block_name, optimization_outcome, time, optimized_asm, original_instr))
+        else:
+            optimizer.generate_intermediate_files()
 
     return block_solutions
 
@@ -203,7 +192,6 @@ def generate_sfs_dicts_from_log(block, json_log, parsed_args: Namespace):
         instr_sequence = json_log[block_id]
 
         sfs_block = syrup_contracts[block_id]
-
 
         optimized_sfs_dict[block_id] = sfs_block
         instr_sequence_dict[block_id] = instr_sequence
@@ -457,14 +445,13 @@ def optimize_asm_block_asm_format(block: AsmBlock, timeout: int, parsed_args: Na
     sfs_dict = contracts_dict["syrup_contract"]
 
     if not parsed_args.backend:
-        optimize_block(sfs_dict, timeout, parsed_args.size)
+        optimize_block(sfs_dict, timeout, parsed_args)
         return new_block, {}
 
-    for solver_output, sub_block_name, original_instr, current_cost, current_length, user_instr, solver_time \
-            in optimize_block(sfs_dict, timeout, parsed_args.size):
+    for sub_block_name, optimization_outcome, solver_time, new_sub_block, original_instr in optimize_block(sfs_dict, timeout, parsed_args):
 
         # We weren't able to find a solution using the solver, so we just update
-        if not check_solver_output_is_correct(solver_output):
+        if optimization_outcome == OptimizeOutcome.no_model:
             optimized_blocks[sub_block_name] = None
             statistics_row = {"block_id": sub_block_name, "model_found": False, "shown_optimal": False,
                               "previous_solution": original_instr, "solver_time_in_sec": round(solver_time, 3),
@@ -474,30 +461,30 @@ def optimize_asm_block_asm_format(block: AsmBlock, timeout: int, parsed_args: Na
             total_time += solver_time
             continue
 
-        bs = sfs_dict[sub_block_name]['max_sk_sz']
+        # To obtain easily the size and gas, we parse the original instructions. Only one block should be obtained
+        origina_blocks_split = parse_blocks_from_plain_instructions(original_instr)
+        assert(len(origina_blocks_split) == 1)
+        original_block_split = origina_blocks_split[0]
 
-        _, instruction_theta_dict, opcodes_theta_dict, gas_theta_dict, values_dict = generate_theta_dict_from_sequence(bs, user_instr)
+        initial_length = original_block_split.bytes_required
+        initial_gas = original_block_split.gas_spent
 
-        instruction_output, _, pushed_output, optimized_cost = \
-            generate_info_from_solution(solver_output, opcodes_theta_dict, instruction_theta_dict,
-                                        gas_theta_dict, values_dict)
-
-        new_sub_block = generate_sub_block_asm_representation_from_output(solver_output, opcodes_theta_dict,
-                                                                          instruction_theta_dict,
-                                                                          gas_theta_dict, values_dict)
-        _, shown_optimal = analyze_file(solver_output, "oms")
+        shown_optimal = optimization_outcome == OptimizeOutcome.optimal
         optimized_length = sum([instr.bytes_required for instr in new_sub_block])
+        optimized_gas = sum([instr.gas_spent for instr in new_sub_block])
 
-        statistics_row = {"block_id": sub_block_name, "solver_time_in_sec": round(solver_time, 3), "saved_size": current_length - optimized_length,
-                          "saved_gas": current_cost - optimized_cost, "model_found": True, "shown_optimal": shown_optimal,
-                          "previous_solution": original_instr, "solution_found": ' '.join([instr.to_plain() for instr in new_sub_block])}
+        statistics_row = {"block_id": sub_block_name, "solver_time_in_sec": round(solver_time, 3),
+                          "saved_size": initial_length - optimized_length, "saved_gas": initial_gas - optimized_gas,
+                          "model_found": True, "shown_optimal": shown_optimal, "previous_solution": original_instr,
+                          "solution_found": ' '.join([instr.to_plain() for instr in new_sub_block])}
 
         statistics_rows.append(statistics_row)
         total_time += solver_time
 
-        if (not parsed_args.size and current_cost > optimized_cost) or (parsed_args.size and current_length > optimized_length) :
+        if (not parsed_args.size and initial_gas > optimized_gas) or \
+                (parsed_args.size and initial_length > optimized_length):
             optimized_blocks[sub_block_name] = new_sub_block
-            log_dicts[sub_block_name] = generate_solution_dict(solver_output)
+            # log_dicts[sub_block_name] = generate_solution_dict(solver_output)
         else:
             optimized_blocks[sub_block_name] = None
 
@@ -695,7 +682,7 @@ def parse_encoding_args() -> Namespace:
                       help='Encodes pop instruction as uninterpreted functions')
     hard.add_argument('-order-bounds', action='store_true', dest='order_bounds',
                       help='Consider bounds on the position instructions can appear in the encoding')
-    hard.add_argument('-term-encoding', action='store', dest='term_encoding',
+    hard.add_argument('-term-encoding', action='store', dest='encode_terms',
                       choices=['int', 'stack_var', 'uninterpreted'],
                       help='Decides how terms are encoded in the SMT encoding: directly as numbers, using stack'
                            'variables or introducing uninterpreted functions')
