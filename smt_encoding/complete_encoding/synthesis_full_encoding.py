@@ -203,7 +203,7 @@ class FullEncoding:
 
         initial_stack_constraints = stack_encoding_for_position(self._initial_idx, self._term_factory,
                                                                 self.initial_stack, self.bs)
-        if self._flags.revert:
+        if self._flags.terminal:
             final_stack_constraints = stack_encoding_for_position(self._initial_idx + self.b0, self._term_factory,
                                                                   self.final_stack, self.bs)
         else:

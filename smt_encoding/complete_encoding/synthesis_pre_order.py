@@ -41,7 +41,7 @@ def l_conflicting_constraints_from_theta_values(l_theta_values: List[ThetaValue]
 
         # Only consider the order among instructions with instructions also in l_theta_values
         constraints.extend([l_variable_order_constraint(conflicting_theta_value, theta_value, sf)
-                            for conflicting_theta_value in dependency_graph_set_theta[theta_value]
+                            for conflicting_theta_value in dependency_graph_set_theta.get(theta_value, [])
                             if conflicting_theta_value in l_theta_values])
     return constraints
 
