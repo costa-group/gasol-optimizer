@@ -9,6 +9,10 @@ class Z3Executable(SolverFromExecutable):
     def __init__(self, file_path: str):
         super(Z3Executable, self).__init__(z3_exec, file_path)
 
+    def set_timeout(self, timeout: int) -> None:
+        # Timeout is given in ms
+        self.set_option('timeout', str(1000 * timeout))
+
     def write_soft(self, soft_constraint: AssertSoft) -> str:
         if soft_constraint.group is None:
             return f"(assert-soft {translate_formula(soft_constraint.formula)} :weight {str(soft_constraint.weight)})"

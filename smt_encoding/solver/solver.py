@@ -24,6 +24,16 @@ class Solver(ABC):
         pass
 
     @abstractmethod
+    def set_timeout(self, timeout: int) -> None:
+        """
+        Set the timeout for the overall execution of the SMT solver
+
+        :param timeout: timeout in seconds!
+        :return: None
+        """
+        pass
+
+    @abstractmethod
     def declare_sort(self, sort_name: str) -> None:
         pass
 

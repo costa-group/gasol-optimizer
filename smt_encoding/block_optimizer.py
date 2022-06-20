@@ -30,6 +30,7 @@ class BlockOptimizer:
 
     def _initialize_solver(self) -> None:
         solver = self._choose_solver()
+        solver.set_timeout(self._flags.tout)
 
         full_encoding = FullEncoding(self._sms, self._flags, self._initial_idx)
         self._full_encoding = full_encoding

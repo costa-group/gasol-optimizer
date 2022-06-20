@@ -11,6 +11,10 @@ class OMSExecutable(SolverFromExecutable):
         # Need this option to produce models
         self.set_option("produce-models", "true")
 
+    def set_timeout(self, timeout: int) -> None:
+        # Timeout must be given as a float number
+        self.set_option('timeout', str(float(timeout)))
+
     def write_soft(self, soft_constraint: AssertSoft) -> str:
         if soft_constraint.group is None:
             return f"(assert-soft {translate_formula(soft_constraint.formula)} :weight {str(soft_constraint.weight)})"
