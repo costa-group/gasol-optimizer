@@ -37,11 +37,15 @@ class BlockOptimizer:
 
         declared_functions, hard_constraints, soft_constraints = full_encoding.generate_full_encoding()
 
-        if self._flags.encode_terms == "uninterpreted":
+        if self._flags.encode_terms.startswith("uninterpreted"):
             # Uninterpreted encoding needs to declare two sorts: one for evm elements (Sort.uninterpreted) and one
             # for theta values (Sort.uninterpreted_theta)
-            solver.declare_sort(Sort.uninterpreted)
-            solver.declare_sort(Sort.uninterpreted_theta)
+
+            if any(function.range == Sort.uninterpreted for function in declared_functions):
+                solver.declare_sort(Sort.uninterpreted)
+
+            if any(function.range == Sort.uninterpreted_theta for function in declared_functions):
+                solver.declare_sort(Sort.uninterpreted_theta)
 
             # Logic depends on whether there is some on the sort integer or not (QF_UFIDL) or not (QF_UF)
             # TODO: allow memory instructions to be dealt directly with UF, by adding alternative memory encoding
@@ -77,7 +81,7 @@ class BlockOptimizer:
         theta_val_encoding_to_instr = dict()
         asm_instructions = []
 
-        if self._flags.encode_terms == "uninterpreted":
+        if self._flags.encode_terms == "uninterpreted_uf":
             # Theta values are UF, so the getting the associated values returns a representation on that internal value.
             # Thus, we are going to associate that representation with the instr
             for theta_val, instr in theta_to_instr.items():

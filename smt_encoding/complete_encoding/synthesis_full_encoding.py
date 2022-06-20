@@ -46,8 +46,9 @@ class FullEncoding:
         self._stack_var_to_term = self._initialize_term_to_variable_conversion()
         self._term_factory = None
 
-        if self._flags.encode_terms == "uninterpreted":
-            self._term_factory = SynthesisFunctions(self._stack_var_to_term, Sort.uninterpreted, Sort.uninterpreted_theta)
+        if self._flags.encode_terms == "uninterpreted_uf":
+            self._term_factory = SynthesisFunctions(self._stack_var_to_term, Sort.uninterpreted,
+                                                    Sort.uninterpreted_theta)
         else:
             self._term_factory = SynthesisFunctions(self._stack_var_to_term)
 
@@ -156,14 +157,14 @@ class FullEncoding:
             return DumbInstructionBounds(self._initial_idx, self._initial_idx + self.b0 - 1)
 
     def _initialize_term_to_variable_conversion(self) -> Dict[str, Formula_T]:
-        if self._flags.encode_terms == "uninterpreted":
+        if self._flags.encode_terms == "uninterpreted_uf":
             # Uninterpreted opcode creation must use their own Sort for evm representation when using UF
             uop_creation = UninterpretedOpcodeTermCreation(self._uninterpreted_instructions, self.initial_stack,
                                                            Sort.uninterpreted)
         else:
             uop_creation = UninterpretedOpcodeTermCreation(self._uninterpreted_instructions, self.initial_stack)
 
-        if self._flags.encode_terms == "uninterpreted":
+        if self._flags.encode_terms.startswith("uninterpreted"):
             return uop_creation.opcode_rep_with_uf()[0]
         elif self._flags.encode_terms == "stack_vars":
             return uop_creation.opcode_rep_with_stack_vars()[0]
@@ -212,9 +213,14 @@ class FullEncoding:
         distinct_constraints = []
 
         # Only works for UF encoding
-        if self._flags.encode_terms == "uninterpreted":
+        if self._flags.encode_terms.startswith("uninterpreted"):
             distinct_constraints = expressions_are_distinct(*self._term_factory.created_stack_vars())
-            distinct_constraints.extend(expressions_are_distinct(*self._term_factory.created_theta_values()))
+            theta_values = self._term_factory.created_theta_values()
+
+            if theta_values != []:
+                # It can be empty, if uninterpreted_int is activated and theta values are considered as numbers
+                distinct_constraints.extend(expressions_are_distinct(*self._term_factory.created_theta_values()))
+
         elif self._flags.encode_terms == "stack_vars":
             if self._flags.push_basic:
                 distinct_constraints.extend(initialize_stack_variables(self._term_factory, constants.int_limit))

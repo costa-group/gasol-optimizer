@@ -128,7 +128,7 @@ def compute_original_sfs_with_simplifications(block: AsmBlock, parsed_args: Name
     exit_code, subblocks_list = \
         ir_block.evm2rbr_compiler(file_name = fname, block=block_data, block_name=block_name, block_id=block_id,
                                   simplification=True, storage=parsed_args.storage, size = parsed_args.size, part = parsed_args.partition,
-                                  pop= not parsed_args.pop_basic, push =not parsed_args.push_basic, revert=parsed_args.terminal)
+                                  pop= not parsed_args.pop_basic, push =not parsed_args.push_basic, revert=revert_flag)
 
     sfs_dict = get_sfs_dict()
 
@@ -146,6 +146,10 @@ def optimize_block(sfs_dict, timeout, parsed_args: Namespace):
         sfs_block = sfs_dict[block_name]
         initial_program_length = sfs_block['init_progr_len']
         original_instr = sfs_block['original_instrs']
+
+        # To match previous results, multiply timeout by number of storage instructions
+        # TODO devise better heuristics to deal with timeouts
+        parsed_args.tout = parsed_args.tout * (1+len([True for instr in sfs_block['user_instrs'] if instr["storage"]]))
 
         optimizer = BlockOptimizer(block_name, sfs_block, parsed_args)
 
@@ -683,7 +687,7 @@ def parse_encoding_args() -> Namespace:
     hard.add_argument('-order-bounds', action='store_true', dest='order_bounds',
                       help='Consider bounds on the position instructions can appear in the encoding')
     hard.add_argument('-term-encoding', action='store', dest='encode_terms',
-                      choices=['int', 'stack_var', 'uninterpreted'],
+                      choices=['int', 'stack_vars', 'uninterpreted_uf', 'uninterpreted_int'],
                       help='Decides how terms are encoded in the SMT encoding: directly as numbers, using stack'
                            'variables or introducing uninterpreted functions')
     hard.add_argument('-terminal', action='store_true', dest='terminal',
