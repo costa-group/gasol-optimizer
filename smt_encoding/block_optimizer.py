@@ -12,11 +12,12 @@ import pathlib
 
 class BlockOptimizer:
 
-    def __init__(self, block_id: str, sms: SMS_T, flags: Namespace, initial_idx: int = 0):
+    def __init__(self, block_id: str, sms: SMS_T, flags: Namespace, timeout: int = 10, initial_idx: int = 0):
         self._sms = sms
         self._flags = flags
         self._initial_idx = initial_idx
         self._block_id = block_id
+        self._tout = timeout
         self._initialize_solver()
 
     def _choose_solver(self) -> Solver:
@@ -30,7 +31,7 @@ class BlockOptimizer:
 
     def _initialize_solver(self) -> None:
         solver = self._choose_solver()
-        solver.set_timeout(self._flags.tout)
+        solver.set_timeout(self._tout)
 
         full_encoding = FullEncoding(self._sms, self._flags, self._initial_idx)
         self._full_encoding = full_encoding

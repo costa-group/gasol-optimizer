@@ -149,9 +149,10 @@ def optimize_block(sfs_dict, timeout, parsed_args: Namespace):
 
         # To match previous results, multiply timeout by number of storage instructions
         # TODO devise better heuristics to deal with timeouts
-        parsed_args.tout = parsed_args.tout * (1+len([True for instr in sfs_block['user_instrs'] if instr["storage"]]))
+        tout = parsed_args.tout * (1+len([True for instr in sfs_block['user_instrs'] if instr["storage"]]))
 
-        optimizer = BlockOptimizer(block_name, sfs_block, parsed_args)
+        optimizer = BlockOptimizer(block_name, sfs_block, parsed_args, tout)
+        print(f"Optimizing {block_name}... Timeout:{str(tout)}")
 
         if parsed_args.backend:
             if initial_program_length > 40:
