@@ -24,7 +24,7 @@ def fromnop_encoding(sf: SynthesisFunctions, bounds: InstructionBounds, theta_no
 def no_output_before_pop(sf: SynthesisFunctions, bounds: InstructionBounds, theta_swaps: List[ThetaValue],
                          theta_mems: List[ThetaValue], theta_pops: List[ThetaValue]) -> List[AssertHard]:
     constraints = []
-    no_output_instr_theta = [*theta_swaps, *theta_mems]
+    no_output_instr_theta = [*theta_swaps, *theta_mems, *theta_pops]
 
     for theta_pop in theta_pops:
         for j in range(bounds.lower_bound_theta_value(theta_pop) - 1, bounds.upper_bound_theta_value(theta_pop)):
