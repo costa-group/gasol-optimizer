@@ -1709,6 +1709,7 @@ def generate_sstore_info(sstore_elem):
     obj["gas"] = opcodes.get_ins_cost(instr_name)
     obj["commutative"] = False
     obj["storage"] = True
+    obj["size"] = get_ins_size(instr_name)
     user_def_counter["SSTORE"]=idx+1
 
     return obj

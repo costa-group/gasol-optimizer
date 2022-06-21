@@ -39,7 +39,7 @@ class AsmBytecode:
         by the corresponding value in hexadecimal if any
         :return: a string containing the representation
         """
-        return self.disasm if self.value is None else ' '.join([self.disasm, self.value])
+        return self.disasm if self.value is None else ' '.join([self.disasm, str(self.value)])
 
     def to_plain_with_byte_number(self) -> str:
         op_name = ''.join([self.disasm, str(get_push_number_hex(self.value))]) if self.disasm == "PUSH" else self.disasm
