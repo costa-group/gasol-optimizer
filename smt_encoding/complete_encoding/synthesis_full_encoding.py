@@ -2,7 +2,7 @@ from smt_encoding.instructions.instruction_factory import InstructionFactory
 from typing import Dict, Any, Tuple, List
 from argparse import Namespace
 from smt_encoding.complete_encoding.synthesis_encoding_instructions_stack import AssertHard, EncodingForStack
-from smt_encoding.complete_encoding.synthesis_initialize_variables import SynthesisFunctions
+from smt_encoding.complete_encoding.synthesis_functions import SynthesisFunctions
 from smt_encoding.instructions.instruction_bounds import InstructionBounds
 from smt_encoding.instructions.instruction_bounds_simple import DumbInstructionBounds
 from smt_encoding.instructions.instruction_bounds_with_dependencies import InstructionBoundsWithDependencies
@@ -12,7 +12,7 @@ from smt_encoding.constraints.function import Function, Sort
 from smt_encoding.instructions.encoding_instruction import InstructionSubset, Id_T
 from smt_encoding.complete_encoding.synthesis_opcode_term_creation import UninterpretedOpcodeTermCreation, Formula_T
 from smt_encoding.complete_encoding.synthesis_initialize_variables import stack_encoding_for_position, restrict_t_domain, \
-    expressions_are_distinct, initialize_stack_variables
+    expressions_are_distinct, initialize_stack_variables, stack_encoding_for_terminal
 from smt_encoding.complete_encoding.synthesis_stack_constraints import push_basic_encoding, pop_encoding, nop_encoding, \
     swapk_encoding, dupk_encoding, non_comm_function_encoding, comm_function_encoding, store_stack_function_encoding, \
     pop_uninterpreted_encoding
@@ -82,6 +82,10 @@ class FullEncoding:
         self.final_stack = sms['tgt_ws']
         self.variables = sms['vars']
 
+        # Terminal flag appears in the SMS because when splitting the block,
+        # only the last sub-block must have it enabled
+        self._terminal = sms['is_revert']
+
     def _initialize_basic_instructions_with_encoding(self, stack_encoding: EncodingForStack) -> None:
         nop_instruction = self._instruction_factory.create_instruction_name("NOP")
         basic_instructions = [nop_instruction]
@@ -132,15 +136,9 @@ class FullEncoding:
                                                                   r=instruction.output_stack)
 
             elif instruction.instruction_subset == InstructionSubset.non_comm:
-                # If block is terminal with REVERT, only two top elements in the stack must be checked
-                if self._flags.terminal:
-                    stack_encoding.register_function_for_encoding(instruction, non_comm_function_encoding,
-                                                                  o=instruction.input_stack,
-                                                                  r=instruction.output_stack)
-                else:
-                    stack_encoding.register_function_for_encoding(instruction, non_comm_function_encoding,
-                                                                  o=instruction.input_stack,
-                                                                  r=instruction.output_stack)
+                stack_encoding.register_function_for_encoding(instruction, non_comm_function_encoding,
+                                                              o=instruction.input_stack,
+                                                              r=instruction.output_stack)
 
             elif instruction.instruction_subset == InstructionSubset.pop:
                 # Uninterpreted pop
@@ -204,9 +202,10 @@ class FullEncoding:
 
         initial_stack_constraints = stack_encoding_for_position(self._initial_idx, self._term_factory,
                                                                 self.initial_stack, self.bs)
-        if self._flags.terminal:
-            final_stack_constraints = stack_encoding_for_position(self._initial_idx + self.b0, self._term_factory,
-                                                                  self.final_stack, self.bs)
+        if self._terminal:
+            # If block is terminal with REVERT, only two top elements in the stack must be checked
+            final_stack_constraints = stack_encoding_for_terminal(self._initial_idx + self.b0, self._term_factory,
+                                                                  self.final_stack)
         else:
             final_stack_constraints = stack_encoding_for_position(self._initial_idx + self.b0, self._term_factory,
                                                                   self.final_stack, self.bs)

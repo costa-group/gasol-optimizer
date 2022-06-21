@@ -31,6 +31,24 @@ def stack_encoding_for_position(j: int, sf: SynthesisFunctions, stack_state: Lis
 
     return constraints
 
+
+def stack_encoding_for_terminal(j: int, sf: SynthesisFunctions, stack_state: List[Stack_Var_T]) -> List[AssertHard]:
+    """
+    Methods for defining the state of the stack before RETURN or REVERT
+
+    :param j: position in the sequence represented
+    :param sf: factory for creating the corresponding terms
+    :param stack_state: list of terms representing the elements in the stack, from top to bottom
+    :param bs: maximum stack size
+    :return: a list of hard constraints with the corresponding representation
+    """
+
+    # Constraints for asserting the state of the stack
+    constraints = [AssertHard(add_and(sf.u(0, j), add_eq(sf.x(0, j), sf.stack_var(stack_state[0])))),
+                   AssertHard(add_and(sf.u(1, j), add_eq(sf.x(1, j), sf.stack_var(stack_state[1]))))]
+
+    return constraints
+
 # Methods related to the initialization of certain variables
 
 
