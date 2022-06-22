@@ -14,10 +14,11 @@ from sfs_generator.opcodes import encoding_functor_name
 class UninterpretedOpcodeTermCreation:
 
     def __init__(self, instructions: List[UninterpretedInstruction], initial_stack: List[Stack_Var_T],
-                 sort_type: Sort = Sort.integer):
+                 has_empty: bool = False, sort_type: Sort = Sort.integer):
         """
         :param instructions: instructions to generate an ExpressionReference
         :param initial_stack: elements contained in the initial stack (ground elements)
+        :param has_empty: whether there exists the empty stack element or not
         :param sort_type: sort range for the uninterpreted generated expressions
         """
         self._instructions = instructions
@@ -26,6 +27,7 @@ class UninterpretedOpcodeTermCreation:
         # using that representation
         self._ground_stack_elements = initial_stack
         self._sort_type = sort_type
+        self._has_empty = has_empty
 
         self._stack_element_to_instr = {instruction.output_stack: instruction
                                         for instruction in instructions if instruction.output_stack is not None}
@@ -49,6 +51,11 @@ class UninterpretedOpcodeTermCreation:
                 stack_var_to_term[instruction.output_stack] = function()
                 created_functions.append(function)
 
+        if self._has_empty:
+            function = Function("empty", self._sort_type)
+            stack_var_to_term["empty"] = function()
+            created_functions.append(function)
+
         return stack_var_to_term, created_functions
 
     def opcode_rep_with_int(self, initial_int: int = 0) -> Tuple[Dict[str, Formula_T], List[Function]]:
@@ -65,6 +72,9 @@ class UninterpretedOpcodeTermCreation:
         
         instr_stack_var_to_term = {instruction.output_stack: (i + next_int) for i, instruction in
                                    enumerate((instr for instr in self._instructions if instr.output_stack is not None))}
+
+        if self._has_empty:
+            instr_stack_var_to_term["empty"] = next_int + len(instr_stack_var_to_term)
         
         return dict(ground_stack_var_to_term, **instr_stack_var_to_term), []
 
@@ -122,4 +132,10 @@ class UninterpretedOpcodeTermCreation:
             if instruction.instruction_subset != InstructionSubset.store \
                     and instruction.instruction_subset != InstructionSubset.pop:
                 self._opcode_rep_with_uf(instruction, self._sort_type, stack_var_to_term, functors)
+
+        if self._has_empty:
+            function = Function("empty", self._sort_type)
+            stack_var_to_term["empty"] = function()
+            functors["empty"] = function
+
         return stack_var_to_term, list(functors.values())

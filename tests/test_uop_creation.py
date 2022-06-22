@@ -46,13 +46,13 @@ class MyTestCase(unittest.TestCase):
         self.assertDictEqual(created_dict, expected_dict)
         self.assertListEqual(created_functions, expected_functions)
 
-    def test_uop_creation_with_uf(self):
+    def test_uop_creation_with_uf_empty(self):
         instruction_jsons = [
             {"id": 'INSTR_0', 'outpt_sk': ["s(0)"], 'inpt_sk': [5, 6], 'gas': 0, 'disasm': "ADD", 'opcode': "a",
              'size': 0, 'storage': False, 'commutative': False},
             {"id": 'INSTR_1', 'outpt_sk': ["s(1)"], 'inpt_sk': [], 'gas': 0, 'disasm': "PUSH [$]", 'opcode': "a",
              'size': 0, 'storage': False, 'commutative': True},
-            {"id": 'INSTR_2', 'outpt_sk': ["s(2)"], 'inpt_sk': ["s(0)", 7, "s(1)"], 'gas': 0, 'disasm': "PUSH #[$]",
+            {"id": 'INSTR_2', 'outpt_sk': ["s(2)"], 'inpt_sk': ["s(0)", 7, "s(1)"], 'gas': 0, 'disasm': "triple",
              'opcode': "a",
              'size': 0, 'storage': False, 'commutative': False},
             {"id": 'INSTR_3', 'outpt_sk': ["s(3)"], 'inpt_sk': ["s(2)", 8, "s(2)"], 'gas': 0, 'disasm': "SUB",
@@ -71,14 +71,15 @@ class MyTestCase(unittest.TestCase):
         instructions = []
         for instr_json in instruction_jsons:
             instructions.append(factory.create_instruction_json_format(instr_json))
-        uop_creation = UninterpretedOpcodeTermCreation(instructions, [], Sort.integer)
+        uop_creation = UninterpretedOpcodeTermCreation(instructions, [], True, Sort.integer)
         created_dict, created_functions = uop_creation.opcode_rep_with_uf()
 
-        add_f = Function('add', Sort.integer, Sort.integer, Sort.integer)
-        push_1_f = Function('push[$]', Sort.integer)
-        push_2_f = Function('push#[$]', Sort.integer, Sort.integer, Sort.integer, Sort.integer)
-        sub_f = Function('sub', Sort.integer, Sort.integer, Sort.integer, Sort.integer)
-        addmod_f = Function('addmod', Sort.integer, Sort.integer, Sort.integer, Sort.integer)
+        empty = Function('empty', Sort.integer)
+        add_f = Function('ADD', Sort.integer, Sort.integer, Sort.integer)
+        push_1_f = Function('INSTR_1', Sort.integer)
+        push_2_f = Function('TRIPLE', Sort.integer, Sort.integer, Sort.integer, Sort.integer)
+        sub_f = Function('SUB', Sort.integer, Sort.integer, Sort.integer, Sort.integer)
+        addmod_f = Function('ADDMOD', Sort.integer, Sort.integer, Sort.integer, Sort.integer)
 
         instr_0 = add_f(5, 6)
         instr_1 = push_1_f()
@@ -86,9 +87,11 @@ class MyTestCase(unittest.TestCase):
         instr_3 = sub_f(instr_2, 8, instr_2)
         instr_4 = addmod_f(instr_3, instr_1, instr_2)
 
-        expected_dict = {'s(0)': instr_0, 's(1)': instr_1, 's(2)': instr_2, 's(3)': instr_3, 's(4)': instr_4}
+        expected_dict = {'empty': empty(), 's(0)': instr_0, 's(1)': instr_1, 's(2)': instr_2,
+                         's(3)': instr_3, 's(4)': instr_4}
 
-        expected_functions = [add_f, push_1_f, push_2_f, sub_f, addmod_f]
+        expected_functions = [add_f, push_1_f, push_2_f, sub_f, addmod_f, empty]
+
         self.assertDictEqual(created_dict, expected_dict)
         self.assertListEqual(created_functions, expected_functions)
 
@@ -118,14 +121,14 @@ class MyTestCase(unittest.TestCase):
         for instr_json in instruction_jsons:
             instructions.append(factory.create_instruction_json_format(instr_json))
 
-        uop_creation = UninterpretedOpcodeTermCreation(instructions, [], Sort.uninterpreted)
+        uop_creation = UninterpretedOpcodeTermCreation(instructions, [], False, Sort.uninterpreted)
         created_dict, created_functions = uop_creation.opcode_rep_with_uf()
 
-        push_ini = Function('push', Sort.uninterpreted)
-        push_1_f = Function('push[$]', Sort.uninterpreted)
-        push_2_f = Function('push#[$]', Sort.uninterpreted, Sort.uninterpreted, Sort.uninterpreted, Sort.uninterpreted)
-        sub_f = Function('sub', Sort.uninterpreted, Sort.uninterpreted, Sort.uninterpreted, Sort.uninterpreted)
-        addmod_f = Function('addmod', Sort.uninterpreted, Sort.uninterpreted, Sort.uninterpreted, Sort.uninterpreted)
+        push_ini = Function('INSTR_0', Sort.uninterpreted)
+        push_1_f = Function('INSTR_1', Sort.uninterpreted)
+        push_2_f = Function('PUSHSUBSIZE', Sort.uninterpreted, Sort.uninterpreted, Sort.uninterpreted, Sort.uninterpreted)
+        sub_f = Function('SUB', Sort.uninterpreted, Sort.uninterpreted, Sort.uninterpreted, Sort.uninterpreted)
+        addmod_f = Function('ADDMOD', Sort.uninterpreted, Sort.uninterpreted, Sort.uninterpreted, Sort.uninterpreted)
 
         instr_0 = push_ini()
         instr_1 = push_1_f()
@@ -185,7 +188,7 @@ class MyTestCase(unittest.TestCase):
              'size': 0, 'storage': False, 'commutative': False},
             {"id": 'INSTR_1', 'outpt_sk': ["s(1)"], 'inpt_sk': [], 'gas': 0, 'disasm': "PUSH [$]", 'opcode': "a",
              'size': 0, 'storage': False, 'commutative': True},
-            {"id": 'INSTR_2', 'outpt_sk': ["s(2)"], 'inpt_sk': ["s(0)", "s(0)", "s(1)"], 'gas': 0, 'disasm': "PUSH #[$]",
+            {"id": 'INSTR_2', 'outpt_sk': ["s(2)"], 'inpt_sk': ["s(0)", "s(0)", "s(1)"], 'gas': 0, 'disasm': "triple",
              'opcode': "a",
              'size': 0, 'storage': False, 'commutative': False},
             {"id": 'INSTR_3', 'outpt_sk': ["s(3)"], 'inpt_sk': ["s(2)", "s(0)", "s(2)"], 'gas': 0, 'disasm': "SUB",
@@ -205,14 +208,14 @@ class MyTestCase(unittest.TestCase):
         for instr_json in instruction_jsons:
             instructions.append(factory.create_instruction_json_format(instr_json))
 
-        uop_creation = UninterpretedOpcodeTermCreation(instructions, ["s(5)", "s(6)"], Sort.uninterpreted)
+        uop_creation = UninterpretedOpcodeTermCreation(instructions, ["s(5)", "s(6)"], False, Sort.uninterpreted)
         created_dict, created_functions = uop_creation.opcode_rep_with_uf()
 
-        push_ini = Function('push', Sort.uninterpreted)
-        push_1_f = Function('push[$]', Sort.uninterpreted)
-        push_2_f = Function('push#[$]', Sort.uninterpreted, Sort.uninterpreted, Sort.uninterpreted, Sort.uninterpreted)
-        sub_f = Function('sub', Sort.uninterpreted, Sort.uninterpreted, Sort.uninterpreted, Sort.uninterpreted)
-        addmod_f = Function('addmod', Sort.uninterpreted, Sort.uninterpreted, Sort.uninterpreted, Sort.uninterpreted)
+        push_ini = Function('INSTR_0', Sort.uninterpreted)
+        push_1_f = Function('INSTR_1', Sort.uninterpreted)
+        push_2_f = Function('TRIPLE', Sort.uninterpreted, Sort.uninterpreted, Sort.uninterpreted, Sort.uninterpreted)
+        sub_f = Function('SUB', Sort.uninterpreted, Sort.uninterpreted, Sort.uninterpreted, Sort.uninterpreted)
+        addmod_f = Function('ADDMOD', Sort.uninterpreted, Sort.uninterpreted, Sort.uninterpreted, Sort.uninterpreted)
         s_5 = Function('s_0', Sort.uninterpreted)
         s_6 = Function('s_1', Sort.uninterpreted)
 
