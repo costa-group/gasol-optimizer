@@ -15,7 +15,9 @@ from smt_encoding.complete_encoding.synthesis_initialize_variables import stack_
     expressions_are_distinct, initialize_stack_variables, stack_encoding_for_terminal
 from smt_encoding.complete_encoding.synthesis_stack_constraints import push_basic_encoding, pop_encoding, nop_encoding, \
     swapk_encoding, dupk_encoding, non_comm_function_encoding, comm_function_encoding, store_stack_function_encoding, \
-    pop_uninterpreted_encoding
+    pop_uninterpreted_encoding, push_basic_encoding_empty, pop_uninterpreted_encoding_empty, nop_encoding_empty, \
+    swapk_encoding_empty, dupk_encoding_empty, non_comm_function_encoding_empty, comm_function_encoding_empty,\
+    store_stack_function_encoding_empty, pop_encoding_empty
 from smt_encoding.instructions.instruction_dependencies import generate_dependency_graph_minimum
 from smt_encoding.complete_encoding.synthesis_pre_order import l_conflicting_constraints
 from smt_encoding.instructions.encoding_instruction import EncodingInstruction
@@ -155,12 +157,14 @@ class FullEncoding:
             return DumbInstructionBounds(self._initial_idx, self._initial_idx + self.b0 - 1)
 
     def _initialize_term_to_variable_conversion(self) -> Dict[str, Formula_T]:
+        # Uninterpreted opcode creation must use their own Sort for evm representation when using UF
         if self._flags.encode_terms == "uninterpreted_uf":
-            # Uninterpreted opcode creation must use their own Sort for evm representation when using UF
-            uop_creation = UninterpretedOpcodeTermCreation(self._uninterpreted_instructions, self.initial_stack,
-                                                           Sort.uninterpreted)
+            sort_type = Sort.uninterpreted
         else:
-            uop_creation = UninterpretedOpcodeTermCreation(self._uninterpreted_instructions, self.initial_stack)
+            sort_type = Sort.integer
+
+        uop_creation = UninterpretedOpcodeTermCreation(self._uninterpreted_instructions, self.initial_stack,
+                                                       self._flags.empty, sort_type)
 
         if self._flags.encode_terms.startswith("uninterpreted"):
             return uop_creation.opcode_rep_with_uf()[0]

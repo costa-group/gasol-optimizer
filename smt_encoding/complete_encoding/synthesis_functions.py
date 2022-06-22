@@ -70,6 +70,13 @@ class SynthesisFunctions:
         str_rep = _sub_idx_rep("l", i)
         return self._create_term(str_rep, (Sort.integer,), tuple(), str_rep)
 
+    def empty(self) -> ExpressionReference:
+        stack_var = "empty"
+        if stack_var in self._expression_instances:
+            return self._expression_instances[stack_var]
+        else:
+            raise ValueError(f"Stack var {stack_var} has no formula tied to it")
+
     def stack_var(self, stack_var: Stack_Var_T) -> Formula_T:
         # If the stack corresponds to an integer, then we return the same value as a formula
         if type(stack_var) == int:
