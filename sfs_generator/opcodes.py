@@ -107,6 +107,14 @@ opcodes = {
 }
 
 # Opcodes that have a blank character in their name are put together in our representation
+encoding_functor_name = {
+    "PUSH [tag]": "PUSHTAG" , #Yul opcode. Assembly Item: PushTag
+    "PUSH #[$]": "PUSHSUBSIZE", #Yul opcode. Assembly Item: PushSubSize
+    "PUSH [$]": "PUSHSUB" , #Yul opcode. Assembly Item: PushSub
+    "PUSH data": "PUSHDATA", #Yul opcode. Assembly Item: PushData
+}
+
+# Opcodes that have a blank character in their name are put together in our representation
 opcode_internal_representation_to_assembly_item = {
     "PUSHTAG": "PUSH [tag]", #Yul opcode. Assembly Item: PushTag
     "PUSH#[$]": "PUSH #[$]", #Yul opcode. Assembly Item: PushSubSize

@@ -3,8 +3,9 @@ from smt_encoding.instructions.uninterpreted_instruction import UninterpretedIns
 from smt_encoding.instructions.encoding_instruction import InstructionSubset, Stack_Var_T
 from smt_encoding.constraints.function import ExpressionReference, Function, Sort
 from smt_encoding.constraints.connector import Formula_T
-from collections import Set
+import re
 from typing import List, Dict, Tuple, Union
+from sfs_generator.opcodes import encoding_functor_name
 
 # TODO: instead of returning Dict[str, Formula_T], return Dict[str, List[Formula_T]] to allow stack vars being obtained
 #  from different operations e.g. LT(a, b) and GE(b, a)
@@ -87,12 +88,15 @@ class UninterpretedOpcodeTermCreation:
                 arguments.append(self._opcode_rep_with_uf(self._stack_element_to_instr[input_element],
                                                           sort_type, stack_var_to_term, functors))
 
-        # Functor name: remove all whitespaces (such as "PUSH [$]" or "PUSH #[$]") and lower the opcode name.
+        # Functor name: use the representation in encoding_functor_name to avoid conflicts with opcodes.
         # If the functor has arity zero, then use id instead
+        op_name = instruction.opcode_name
+        new_op_name = encoding_functor_name.get(op_name, op_name)
+
         if not arguments:
-            functor_name = instruction.id.replace(' ', '').upper()
+            functor_name = re.sub(re.escape(op_name), new_op_name, instruction.id).upper()
         else:
-            functor_name = instruction.opcode_name.replace(' ', '').upper()
+            functor_name = re.sub(re.escape(op_name), new_op_name, instruction.opcode_name).upper()
 
         functor = Function(functor_name,
                            *[arg.type if type(arg) == ExpressionReference else Sort.integer for arg in arguments],
