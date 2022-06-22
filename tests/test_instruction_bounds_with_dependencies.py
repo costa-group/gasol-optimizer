@@ -82,7 +82,7 @@ class TestInstructionBoundsWithDependencies(unittest.TestCase):
         b0 = 15
 
         final_stack_instr = ['s(2)', 's(4)', 's(0)']
-        expected_output = {'INSTR_0': 10, 'INSTR_1': 9, 'INSTR_2': 11, 'INSTR_3': 13, 'INSTR_4': 14, 'PUSH': 15}
+        expected_output = {'INSTR_0': 10, 'INSTR_1': 13, 'INSTR_2': 11, 'INSTR_3': 13, 'INSTR_4': 14, 'PUSH': 15}
         output = generate_first_position_instr_cannot_appear(b0, stack_element_to_id_dict, final_stack_instr,
                                                              dependency_graph, [], instr_by_id_dict)
 
@@ -128,7 +128,7 @@ class TestInstructionBoundsWithDependencies(unittest.TestCase):
         b0 = 17
 
         final_stack_instr = ['s(0)', 's(2)', 's(6)', 's(5)']
-        expected_output = {'INSTR_0': 10, 'INSTR_1': 9, 'INSTR_2': 11, 'INSTR_3': 13, 'INSTR_4': 14, 'INSTR_5': 16,
+        expected_output = {'INSTR_0': 10, 'INSTR_1': 14, 'INSTR_2': 11, 'INSTR_3': 13, 'INSTR_4': 14, 'INSTR_5': 16,
                           'INSTR_6': 16, 'PUSH': 17}
         output = generate_first_position_instr_cannot_appear(b0, stack_element_to_id_dict, final_stack_instr,
                                                              dependency_graph, [], instr_by_id_dict)
@@ -174,7 +174,7 @@ class TestInstructionBoundsWithDependencies(unittest.TestCase):
         b0 = 17
 
         final_stack_instr = ['s(0)', 's(2)', 's(6)', 's(5)']
-        expected_output = {'INSTR_0': 12, 'INSTR_1': 11, 'INSTR_2': 13, 'INSTR_3': 14, 'INSTR_4': 15, 'INSTR_5': 16,
+        expected_output = {'INSTR_0': 12, 'INSTR_1': 14, 'INSTR_2': 13, 'INSTR_3': 14, 'INSTR_4': 15, 'INSTR_5': 16,
                           'INSTR_6': 16, 'PUSH': 17}
         output = generate_first_position_instr_cannot_appear(b0, stack_element_to_id_dict, final_stack_instr,
                                                              dependency_graph, [], instr_by_id_dict)
@@ -225,7 +225,7 @@ class TestInstructionBoundsWithDependencies(unittest.TestCase):
         final_stack_instr = ['s(2)', 's(4)', 's(0)']
 
 
-        expected_output = {'INSTR_0': 11, 'INSTR_1': 10, 'INSTR_2': 12, 'INSTR_3': 14, 'INSTR_4': 16, 'INSTR_5': 15,
+        expected_output = {'INSTR_0': 11, 'INSTR_1': 15, 'INSTR_2': 12, 'INSTR_3': 14, 'INSTR_4': 16, 'INSTR_5': 15,
                            'INSTR_6': 16, 'INSTR_7': 17,'PUSH': 17}
 
         output = generate_first_position_instr_cannot_appear(b0, stack_element_to_id_dict, final_stack_instr,
@@ -269,7 +269,7 @@ class TestInstructionBoundsWithDependencies(unittest.TestCase):
 
         ib = InstructionBoundsWithDependencies(instructions, order_tuples, final_stack_instr, b0, 5)
 
-        expected_output = {0: 11, 1: 10, 2: 12, 3: 14, 4: 16, 5: 15, 6: 16, 7: 17}
+        expected_output = {0: 11, 1: 15, 2: 12, 3: 14, 4: 16, 5: 15, 6: 16, 7: 17}
 
         self.assertDictEqual(ib._first_position_not_instr_by_theta_value, expected_output)
         self.assertEqual(ib.first_position_sequence, 5)

@@ -72,10 +72,11 @@ def update_with_tree_level(instr : UninterpretedInstruction, current_idx : int, 
 
     instr_id = instr.id
 
-    # Neither we consider push instructions nor instructions that already have appeared and appear before the best
-    # result so far. On the other hand, if current index <= already considered index, we need to traverse the tree in order to
-    # update the values, as we neet to consider the biggest position in which the instruction cannot appear
-    if instr_id in first_position_instr_cannot_appear and current_idx > first_position_instr_cannot_appear[instr_id]:
+    # If the instruction can only appear once, then we need to consider the min among all positions in which it cannot
+    # appear. Otherwise, consider the max, because it could appear repeated in several of those positions
+    if instr_id in first_position_instr_cannot_appear and (
+            (instr.unique_ui and current_idx >= first_position_instr_cannot_appear[instr_id]) or (
+            not instr.unique_ui and current_idx <= first_position_instr_cannot_appear[instr_id])):
         return
 
     first_position_instr_cannot_appear[instr_id] = current_idx
