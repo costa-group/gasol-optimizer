@@ -32,6 +32,29 @@ def stack_encoding_for_position(j: int, sf: SynthesisFunctions, stack_state: Lis
     return constraints
 
 
+def stack_encoding_for_position_empty(j: int, sf: SynthesisFunctions, stack_state: List[Stack_Var_T],
+                                      bs: int) -> List[AssertHard]:
+    """
+    Methods for defining the state of the stack in the encoding at a given position
+
+    :param j: position in the sequence represented
+    :param sf: factory for creating the corresponding terms
+    :param stack_state: list of terms representing the elements in the stack, from top to bottom
+    :param bs: maximum stack size
+    :return: a list of hard constraints with the corresponding representation
+    """
+
+    # Constraints for asserting the state of the stack
+    constraints = [AssertHard(add_eq(sf.x(alpha, j), sf.stack_var(stack_var)))
+                   for alpha, stack_var in enumerate(stack_state)]
+
+    # Constraints for asserting the remaining positions have no elements
+    constraints.extend([AssertHard(add_eq(sf.x(beta, j), sf.empty())) for beta in range(len(stack_state), bs)])
+
+    return constraints
+
+
+
 def stack_encoding_for_terminal(j: int, sf: SynthesisFunctions, stack_state: List[Stack_Var_T]) -> List[AssertHard]:
     """
     Methods for defining the state of the stack before RETURN or REVERT
