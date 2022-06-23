@@ -1,5 +1,5 @@
 from smt_encoding.instructions.instruction_factory import InstructionFactory
-from typing import Dict, Any, Tuple, List
+from typing import Dict, Any, Tuple, List, Callable
 from argparse import Namespace
 from smt_encoding.complete_encoding.synthesis_encoding_instructions_stack import AssertHard, EncodingForStack
 from smt_encoding.complete_encoding.synthesis_functions import SynthesisFunctions
@@ -12,7 +12,7 @@ from smt_encoding.constraints.function import Function, Sort
 from smt_encoding.instructions.encoding_instruction import InstructionSubset, Id_T
 from smt_encoding.complete_encoding.synthesis_opcode_term_creation import UninterpretedOpcodeTermCreation, Formula_T
 from smt_encoding.complete_encoding.synthesis_initialize_variables import stack_encoding_for_position, restrict_t_domain, \
-    expressions_are_distinct, initialize_stack_variables, stack_encoding_for_terminal
+    expressions_are_distinct, initialize_stack_variables, stack_encoding_for_terminal, stack_encoding_for_position_empty
 from smt_encoding.complete_encoding.synthesis_stack_constraints import push_basic_encoding, pop_encoding, nop_encoding, \
     swapk_encoding, dupk_encoding, non_comm_function_encoding, comm_function_encoding, store_stack_function_encoding, \
     pop_uninterpreted_encoding, push_basic_encoding_empty, pop_uninterpreted_encoding_empty, nop_encoding_empty, \
@@ -54,6 +54,8 @@ class FullEncoding:
         else:
             self._term_factory = SynthesisFunctions(self._stack_var_to_term)
 
+        print(*((instr.id, instr.theta_value)for instr in self._instructions))
+
         stack_element_to_id_dict: Dict[str, Id_T] = {instruction.output_stack: instruction.id
                                                      for instruction in self._uninterpreted_instructions
                                                      if instruction.output_stack is not None}
@@ -91,27 +93,32 @@ class FullEncoding:
     def _initialize_basic_instructions_with_encoding(self, stack_encoding: EncodingForStack) -> None:
         nop_instruction = self._instruction_factory.create_instruction_name("NOP")
         basic_instructions = [nop_instruction]
-        stack_encoding.register_function_for_encoding(nop_instruction, nop_encoding)
+        encoding_function = nop_encoding_empty if self._flags.empty else nop_encoding
+        stack_encoding.register_function_for_encoding(nop_instruction, encoding_function)
 
         if self._flags.pop_basic:
             pop_instruction = self._instruction_factory.create_instruction_name("POP")
             basic_instructions.append(pop_instruction)
-            stack_encoding.register_function_for_encoding(pop_instruction, pop_encoding)
+            encoding_function = pop_encoding_empty if self._flags.empty else pop_encoding
+            stack_encoding.register_function_for_encoding(pop_instruction, encoding_function)
 
         if self._flags.push_basic:
             push_basic = self._instruction_factory.create_instruction_name("PUSH")
             basic_instructions.append(push_basic)
-            stack_encoding.register_function_for_encoding(push_basic, push_basic_encoding)
+            encoding_function = push_basic_encoding_empty if self._flags.empty else push_basic_encoding
+            stack_encoding.register_function_for_encoding(push_basic, encoding_function)
 
         for k in range(1, min(self.bs, constants.max_k_dup + 1)):
             dupk_instruction = self._instruction_factory.create_instruction_name(''.join(('DUP', str(k))))
             basic_instructions.append(dupk_instruction)
-            stack_encoding.register_function_for_encoding(dupk_instruction, dupk_encoding, k=k)
+            encoding_function = dupk_encoding_empty if self._flags.empty else dupk_encoding
+            stack_encoding.register_function_for_encoding(dupk_instruction, encoding_function, k=k)
 
         for k in range(1, min(self.bs, constants.max_k_swap + 1)):
             swapk_instruction = self._instruction_factory.create_instruction_name(''.join(('SWAP', str(k))))
             basic_instructions.append(swapk_instruction)
-            stack_encoding.register_function_for_encoding(swapk_instruction, swapk_encoding, k=k)
+            encoding_function = swapk_encoding_empty if self._flags.empty else swapk_encoding
+            stack_encoding.register_function_for_encoding(swapk_instruction, encoding_function, k=k)
 
         self._basic_instructions = basic_instructions
 
@@ -119,32 +126,35 @@ class FullEncoding:
 
         for instruction in self._uninterpreted_instructions:
             if instruction.instruction_subset == InstructionSubset.store:
-                stack_encoding.register_function_for_encoding(instruction, store_stack_function_encoding,
+
+                encoding_function = store_stack_function_encoding_empty if self._flags.empty \
+                    else store_stack_function_encoding
+                stack_encoding.register_function_for_encoding(instruction, encoding_function,
                                                               o0=instruction.input_stack[0],
                                                               o1=instruction.input_stack[1])
 
             elif instruction.instruction_subset == InstructionSubset.comm:
-                # Encoding function depends on whether commutativity is considered in
-                # the encoding or at the level of the solver
-                if self._flags.ac_solver:
-                    stack_encoding.register_function_for_encoding(instruction, comm_function_encoding,
-                                                                  o0=instruction.input_stack[0],
-                                                                  o1=instruction.input_stack[1],
-                                                                  r=instruction.output_stack)
-                else:
-                    stack_encoding.register_function_for_encoding(instruction, comm_function_encoding,
-                                                                  o0=instruction.input_stack[0],
-                                                                  o1=instruction.input_stack[1],
-                                                                  r=instruction.output_stack)
+                # TODO add ac_solver option
+                encoding_function = comm_function_encoding_empty if self._flags.empty else comm_function_encoding
+                stack_encoding.register_function_for_encoding(instruction, encoding_function,
+                                                              o0=instruction.input_stack[0],
+                                                              o1=instruction.input_stack[1],
+                                                              r=instruction.output_stack)
 
             elif instruction.instruction_subset == InstructionSubset.non_comm:
-                stack_encoding.register_function_for_encoding(instruction, non_comm_function_encoding,
+
+                encoding_function = non_comm_function_encoding_empty if self._flags.empty else non_comm_function_encoding
+
+                stack_encoding.register_function_for_encoding(instruction, encoding_function,
                                                               o=instruction.input_stack,
                                                               r=instruction.output_stack)
 
             elif instruction.instruction_subset == InstructionSubset.pop:
+
+                encoding_function = pop_uninterpreted_encoding_empty if self._flags.empty else pop_uninterpreted_encoding
+
                 # Uninterpreted pop
-                stack_encoding.register_function_for_encoding(instruction, pop_uninterpreted_encoding,
+                stack_encoding.register_function_for_encoding(instruction, encoding_function,
                                                               o0=instruction.input_stack[0])
             else:
                 raise ValueError(f"{instruction.id} is a basic operation and should not appear in the list of uop")
@@ -204,15 +214,17 @@ class FullEncoding:
         pre_order_constraints = l_conflicting_constraints(self._instructions, self._bounds,
                                                           self._dependency_graph, self._term_factory)
 
-        initial_stack_constraints = stack_encoding_for_position(self._initial_idx, self._term_factory,
+        stack_encoding_f = stack_encoding_for_position_empty if self._flags.empty else stack_encoding_for_position
+
+        initial_stack_constraints = stack_encoding_f(self._initial_idx, self._term_factory,
                                                                 self.initial_stack, self.bs)
         if self._terminal:
             # If block is terminal with REVERT, only two top elements in the stack must be checked
             final_stack_constraints = stack_encoding_for_terminal(self._initial_idx + self.b0, self._term_factory,
                                                                   self.final_stack)
         else:
-            final_stack_constraints = stack_encoding_for_position(self._initial_idx + self.b0, self._term_factory,
-                                                                  self.final_stack, self.bs)
+            final_stack_constraints = stack_encoding_f(self._initial_idx + self.b0, self._term_factory,
+                                                       self.final_stack, self.bs)
         distinct_constraints = []
 
         # Only works for UF encoding

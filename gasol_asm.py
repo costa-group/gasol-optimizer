@@ -687,6 +687,9 @@ def parse_encoding_args() -> Namespace:
                       help='Encodes pop instruction as uninterpreted functions')
     hard.add_argument('-order-bounds', action='store_true', dest='order_bounds',
                       help='Consider bounds on the position instructions can appear in the encoding')
+    hard.add_argument('-empty', action='store_true', dest='empty',
+                      help='Consider "empty" value as part of the encoding to reflect some stack position is empty,'
+                           'instead of using a boolean term')
     hard.add_argument('-term-encoding', action='store', dest='encode_terms',
                       choices=['int', 'stack_vars', 'uninterpreted_uf', 'uninterpreted_int'],
                       help='Decides how terms are encoded in the SMT encoding: directly as numbers, using stack'
