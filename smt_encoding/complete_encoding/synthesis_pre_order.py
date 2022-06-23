@@ -1,5 +1,5 @@
 from smt_encoding.complete_encoding.synthesis_functions import SynthesisFunctions
-from smt_encoding.constraints.connector_factory import add_eq, add_lt, add_or
+from smt_encoding.constraints.connector_factory import add_eq, add_lt, add_or, add_and, add_implies
 from smt_encoding.constraints.assertions import AssertHard
 from typing import List, Dict, Set
 from smt_encoding.instructions.encoding_instruction import ThetaValue, Id_T
@@ -66,3 +66,44 @@ def l_conflicting_constraints(instructions: List[EncodingInstruction], bounds: I
                                       {theta_value_by_id_dict[dependent_id] for dependent_id in dependency_ids}
                                   for instr_id, dependency_ids in dependency_graph.items()}
     return l_conflicting_constraints_from_theta_values(l_theta_values, bounds, dependency_graph_set_theta, sf)
+
+
+# Alternative encoding using direct constraints instead of l variables
+
+# Given two conflicting instructions, returns a general constraint that avoids an incorrect order between them
+def happens_before_direct(j: int, sf: SynthesisFunctions, bounds: InstructionBounds,
+                          theta_conflicting1: ThetaValue, theta_conflicting2: ThetaValue) -> AssertHard:
+    left_term = add_eq(sf.t(j), sf.theta_value(theta_conflicting2))
+    positions_restricted = [add_eq(sf.t(i), sf.theta_value(theta_conflicting1))
+                            for i in range(bounds.lower_bound_theta_value(theta_conflicting1), j)]
+
+    if positions_restricted == []:
+        raise ValueError("Empty conflict order direct")
+
+    right_term = add_or(*positions_restricted)
+    return AssertHard(add_implies(left_term, right_term))
+
+
+def happens_before_from_dependency_graph(dependency_graph_set_theta: Dict[ThetaValue, Set[ThetaValue]],
+                                         bounds: InstructionBounds, sf: SynthesisFunctions) -> List[AssertHard]:
+    # We consider max(1, lb(theta_confl1), lb(theta_confl2)) to start either by the first position in which
+    # theta_confl2 can appear and has a previous theta_confl1. In general, you could assume
+    # lb(theta_confl2) > lb(theta_confl1), but in the case of no bounds, both are equal.
+    constraints = [happens_before_direct(j, sf, bounds, theta_confl1, theta_confl2)
+                   for theta_confl2 in dependency_graph_set_theta
+                   for theta_confl1 in dependency_graph_set_theta[theta_confl2]
+                   for j in range(max(1, bounds.lower_bound_theta_value(theta_confl2),
+                                      bounds.lower_bound_theta_value(theta_confl1)),
+                                  bounds.upper_bound_theta_value(theta_confl2))]
+
+    return constraints
+
+
+def direct_conflict_constraints(instructions: List[EncodingInstruction], bounds: InstructionBounds,
+                                dependency_graph: Dict[Id_T, List[Id_T]], sf: SynthesisFunctions) -> List[AssertHard]:
+    theta_value_by_id_dict: Dict[Id_T, ThetaValue] = {instruction.id: instruction.theta_value
+                                                      for instruction in instructions}
+    dependency_graph_set_theta = {theta_value_by_id_dict[instr_id]:
+                                      {theta_value_by_id_dict[dependent_id] for dependent_id in dependency_ids}
+                                  for instr_id, dependency_ids in dependency_graph.items()}
+    return happens_before_from_dependency_graph(dependency_graph_set_theta, bounds, sf)

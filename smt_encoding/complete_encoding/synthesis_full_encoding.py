@@ -19,7 +19,7 @@ from smt_encoding.complete_encoding.synthesis_stack_constraints import push_basi
     swapk_encoding_empty, dupk_encoding_empty, non_comm_function_encoding_empty, comm_function_encoding_empty,\
     store_stack_function_encoding_empty, pop_encoding_empty
 from smt_encoding.instructions.instruction_dependencies import generate_dependency_graph_minimum
-from smt_encoding.complete_encoding.synthesis_pre_order import l_conflicting_constraints
+from smt_encoding.complete_encoding.synthesis_pre_order import l_conflicting_constraints, direct_conflict_constraints
 from smt_encoding.instructions.encoding_instruction import EncodingInstruction
 from smt_encoding.complete_encoding.synthesis_soft_constraints import soft_constraints_direct, \
     soft_constraints_grouped_by_weight
@@ -211,8 +211,9 @@ class FullEncoding:
                              self._encoding_stack.encode_instruction(instruction, self._bounds,
                                                                      self._term_factory, self.bs)]
 
-        pre_order_constraints = l_conflicting_constraints(self._instructions, self._bounds,
-                                                          self._dependency_graph, self._term_factory)
+        pre_order_encoding_function = l_conflicting_constraints if self._flags.memory_encoding == "l_vars" else direct_conflict_constraints
+
+        pre_order_constraints = pre_order_encoding_function(self._instructions, self._bounds, self._dependency_graph, self._term_factory)
 
         stack_encoding_f = stack_encoding_for_position_empty if self._flags.empty else stack_encoding_for_position
 

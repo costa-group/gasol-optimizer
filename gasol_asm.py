@@ -680,7 +680,7 @@ def parse_encoding_args() -> Namespace:
     hard = ap.add_argument_group('Hard constraints', 'Options for modifying the hard constraint generation')
 
     hard.add_argument("-memory-encoding", help="Choose the memory encoding model", choices=["l_vars", "direct"],
-                      default="l_vars", dest='sort_type')
+                      default="l_vars", dest='memory_encoding')
     hard.add_argument('-push-uninterpreted', action='store_false', dest='push_basic',
                       help='Encodes push instruction as uninterpreted functions')
     hard.add_argument('-pop-uninterpreted', action='store_false', dest='pop_basic',
