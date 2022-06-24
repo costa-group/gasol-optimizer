@@ -105,7 +105,7 @@ class BlockOptimizer:
                 value = hex(int(a_j))[2:]
                 asm_instructions.append(AsmBytecode(-1, -1, -1, associated_instr.opcode_name, value))
             # If it is a PUSH instruction, we need to convert the value to hexadecimal
-            elif associated_instr.opcode_name == "PUSH":
+            elif associated_instr.opcode_name == "PUSH" or associated_instr.opcode_name == "PUSH [tag]":
                 value = hex(int(associated_instr.value))[2:]
                 asm_instructions.append(AsmBytecode(-1, -1, -1, associated_instr.opcode_name, value))
             else:
