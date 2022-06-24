@@ -52,3 +52,21 @@ def push_each_element_basic(sf: SynthesisFunctions, bounds: InstructionBounds, t
                                 for j in range(bounds.lower_bound_theta_value(theta_push_basic),
                                                bounds.upper_bound_theta_value(theta_push_basic) + 1)])) 
             for val in pushed_elements]
+
+
+def each_function_is_used_at_most_once(sf: SynthesisFunctions, bounds: InstructionBounds,
+                                       theta_value: ThetaValue) -> List[AssertHard]:
+    # We need at least two elements to be a valid restriction
+    if bounds.upper_bound_theta_value(theta_value) == bounds.lower_bound_theta_value(theta_value):
+        return []
+
+    constraints = []
+    positions = set(range(bounds.lower_bound_theta_value(theta_value), bounds.upper_bound_theta_value(theta_value) + 1))
+
+    for j in range(bounds.lower_bound_theta_value(theta_value), bounds.upper_bound_theta_value(theta_value) + 1):
+        positions.remove(j)
+        constraints.append(AssertHard(add_implies(add_eq(sf.t(j), sf.theta_value(theta_value)),
+                                                  add_and(*(add_distinct(sf.t(k), sf.theta_value(theta_value)) for k in positions)))))
+        positions.add(j)
+
+    return constraints
