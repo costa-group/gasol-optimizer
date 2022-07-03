@@ -11,12 +11,13 @@ import global_params.constants as constants
 from smt_encoding.constraints.function import Function, Sort
 from smt_encoding.instructions.encoding_instruction import InstructionSubset, Id_T
 from smt_encoding.complete_encoding.synthesis_opcode_term_creation import UninterpretedOpcodeTermCreation, Formula_T
-from smt_encoding.complete_encoding.synthesis_initialize_variables import stack_encoding_for_position, restrict_t_domain, \
+from smt_encoding.complete_encoding.synthesis_initialize_variables import stack_encoding_for_position, \
+    restrict_t_domain, \
     expressions_are_distinct, initialize_stack_variables, stack_encoding_for_terminal, stack_encoding_for_position_empty
 from smt_encoding.complete_encoding.synthesis_stack_constraints import push_basic_encoding, pop_encoding, nop_encoding, \
     swapk_encoding, dupk_encoding, non_comm_function_encoding, comm_function_encoding, store_stack_function_encoding, \
     pop_uninterpreted_encoding, push_basic_encoding_empty, pop_uninterpreted_encoding_empty, nop_encoding_empty, \
-    swapk_encoding_empty, dupk_encoding_empty, non_comm_function_encoding_empty, comm_function_encoding_empty,\
+    swapk_encoding_empty, dupk_encoding_empty, non_comm_function_encoding_empty, comm_function_encoding_empty, \
     store_stack_function_encoding_empty, pop_encoding_empty
 from smt_encoding.instructions.instruction_dependencies import generate_dependency_graph_minimum
 from smt_encoding.complete_encoding.synthesis_pre_order import l_conflicting_constraints, direct_conflict_constraints
@@ -24,7 +25,7 @@ from smt_encoding.instructions.encoding_instruction import EncodingInstruction
 from smt_encoding.complete_encoding.synthesis_soft_constraints import soft_constraints_direct, \
     soft_constraints_grouped_by_weight
 from smt_encoding.complete_encoding.synthesis_additional_constraints import fromnop_encoding, \
-    each_instruction_is_used_at_least_once, no_output_before_pop
+    each_instruction_is_used_at_least_once, no_output_before_pop, each_function_is_used_at_most_once
 from itertools import chain
 
 SMS_T = Dict[str, Any]
@@ -42,7 +43,7 @@ class FullEncoding:
         self._initialize_from_sms(sms)
         self._initialize_basic_instructions_with_encoding(self._encoding_stack)
         self._encoding_for_uninterpreted(self._encoding_stack)
-        self._instructions : List[EncodingInstruction] = [*self._basic_instructions, *self._uninterpreted_instructions]
+        self._instructions: List[EncodingInstruction] = [*self._basic_instructions, *self._uninterpreted_instructions]
         self.theta_to_instr = self._instruction_factory.theta_value_to_instr()
 
         self._stack_var_to_term = self._initialize_term_to_variable_conversion()
@@ -53,8 +54,6 @@ class FullEncoding:
                                                     Sort.uninterpreted_theta)
         else:
             self._term_factory = SynthesisFunctions(self._stack_var_to_term)
-
-        print(*((instr.id, instr.theta_value)for instr in self._instructions))
 
         stack_element_to_id_dict: Dict[str, Id_T] = {instruction.output_stack: instruction.id
                                                      for instruction in self._uninterpreted_instructions
@@ -190,9 +189,12 @@ class FullEncoding:
     def _select_additional_constraints_from_flags(self) -> List[AssertHard]:
         # From nop encoding and each uninterpreted function is used at least once are always included by default
 
-        theta_nop = [instruction.theta_value for instruction in self._basic_instructions if instruction.opcode_name == "NOP"][0]
-        theta_pops = [instruction.theta_value for instruction in self._instructions if instruction.opcode_name.startswith("POP")]
-        theta_swaps = [instruction.theta_value for instruction in self._basic_instructions if instruction.opcode_name.startswith("SWAP")]
+        theta_nop = \
+            [instruction.theta_value for instruction in self._basic_instructions if instruction.opcode_name == "NOP"][0]
+        theta_pops = [instruction.theta_value for instruction in self._instructions if
+                      instruction.opcode_name.startswith("POP")]
+        theta_swaps = [instruction.theta_value for instruction in self._basic_instructions if
+                       instruction.opcode_name.startswith("SWAP")]
         theta_mem = [instruction.theta_value for instruction in self._uninterpreted_instructions
                      if instruction.instruction_subset == InstructionSubset.store]
         theta_uninterpreted = [instruction.theta_value for instruction in self._uninterpreted_instructions]
@@ -200,7 +202,16 @@ class FullEncoding:
         additional_constraints = [*fromnop_encoding(self._term_factory, self._bounds, theta_nop),
                                   *each_instruction_is_used_at_least_once(self._term_factory,
                                                                           self._bounds, theta_uninterpreted),
-                                  *no_output_before_pop(self._term_factory, self._bounds, theta_swaps, theta_mem, theta_pops)]
+                                  *no_output_before_pop(self._term_factory, self._bounds, theta_swaps, theta_mem,
+                                                        theta_pops)]
+
+        if self._flags.memory_encoding == "direct":
+            additional_constraints.extend([constraint for instruction in self._uninterpreted_instructions
+                                           if instruction.instruction_subset == InstructionSubset.store
+                                           for constraint in
+                                           each_function_is_used_at_most_once(self._term_factory, self._bounds,
+                                                                              instruction.theta_value)])
+
         return additional_constraints
 
     def generate_hard_constraints(self) -> List[AssertHard]:
@@ -213,12 +224,13 @@ class FullEncoding:
 
         pre_order_encoding_function = l_conflicting_constraints if self._flags.memory_encoding == "l_vars" else direct_conflict_constraints
 
-        pre_order_constraints = pre_order_encoding_function(self._instructions, self._bounds, self._dependency_graph, self._term_factory)
+        pre_order_constraints = pre_order_encoding_function(self._instructions, self._bounds, self._dependency_graph,
+                                                            self._term_factory)
 
         stack_encoding_f = stack_encoding_for_position_empty if self._flags.empty else stack_encoding_for_position
 
         initial_stack_constraints = stack_encoding_f(self._initial_idx, self._term_factory,
-                                                                self.initial_stack, self.bs)
+                                                     self.initial_stack, self.bs)
         if self._terminal:
             # If block is terminal with REVERT, only two top elements in the stack must be checked
             final_stack_constraints = stack_encoding_for_terminal(self._initial_idx + self.b0, self._term_factory,
@@ -245,16 +257,33 @@ class FullEncoding:
 
         additional_constraints = self._select_additional_constraints_from_flags()
 
-        return list(chain(initialization_constraints, stack_constraints, pre_order_constraints, initial_stack_constraints,
-                          final_stack_constraints, distinct_constraints, additional_constraints))
+        return list(
+            chain(initialization_constraints, stack_constraints, pre_order_constraints, initial_stack_constraints,
+                  final_stack_constraints, distinct_constraints, additional_constraints))
 
     def generate_soft_constraints(self) -> List[AssertSoft]:
+
+        # Direct encoding considers all non-store operations susceptible of appearing multiple times
+        def direct_encoding_filter(instruction: EncodingInstruction) -> bool:
+            return instruction.instruction_subset != InstructionSubset.store
+
+        # L_vars encoding only considers all not unique instructions in the soft constraints
+        def l_vars_encoding_filter(instruction: EncodingInstruction) -> bool:
+            return not instruction.unique_ui
+
+        if self._flags.memory_encoding == "direct":
+            soft_instruction_filter = direct_encoding_filter
+        else:
+            soft_instruction_filter = l_vars_encoding_filter
+
         if self._flags.size:
-            weight_dict = {instruction.theta_value: instruction.size_cost
-                           for instruction in self._instructions if not instruction.unique_ui}
+            weight_dict = {instruction.theta_value: min(instruction.size_cost, 5)
+                           for instruction in self._instructions if soft_instruction_filter(instruction)}
         else:
             weight_dict = {instruction.theta_value: instruction.gas_cost
-                           for instruction in self._instructions if not instruction.unique_ui}
+                           for instruction in self._instructions if soft_instruction_filter(instruction)}
+
+        print(weight_dict)
 
         if self._flags.direct:
             return soft_constraints_direct(self._term_factory, weight_dict, self._bounds, "cost")
