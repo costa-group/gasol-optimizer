@@ -500,13 +500,13 @@ def optimize_asm_block_asm_format(block: AsmBlock, timeout: int, parsed_args: Na
 
 def compare_asm_block_asm_format(old_block: AsmBlock, new_block: AsmBlock, parsed_args: Namespace) -> bool:
 
-    old_sfs_information, _ = compute_original_sfs_with_simplifications(old_block, parsed_args)
-
-    old_sfs_dict = old_sfs_information["syrup_contract"]
-
     new_sfs_information, _ = compute_original_sfs_with_simplifications(new_block, parsed_args)
 
     new_sfs_dict = new_sfs_information["syrup_contract"]
+
+    old_sfs_information, _ = compute_original_sfs_with_simplifications(old_block, parsed_args)
+
+    old_sfs_dict = old_sfs_information["syrup_contract"]
 
     final_comparison = verify_block_from_list_of_sfs(old_sfs_dict, new_sfs_dict)
 
