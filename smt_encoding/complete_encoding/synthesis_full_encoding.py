@@ -283,8 +283,6 @@ class FullEncoding:
             weight_dict = {instruction.theta_value: instruction.gas_cost
                            for instruction in self._instructions if soft_instruction_filter(instruction)}
 
-        print(weight_dict)
-
         if self._flags.direct:
             return soft_constraints_direct(self._term_factory, weight_dict, self._bounds, "cost")
         else:
