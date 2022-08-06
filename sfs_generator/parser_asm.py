@@ -68,9 +68,6 @@ def build_blocks_from_asm_representation(cname : str, block_name_prefix : str, i
 def build_asm_contract(cname : str, cinfo : Dict[str, Any]) -> AsmContract:
     asm_c = AsmContract(cname)
 
-    if len(cinfo) > 2:
-        raise Exception("ERROR. Check")
-
     initCode = cinfo[".code"]
 
     # For blocks, we are not interested in the complete path
