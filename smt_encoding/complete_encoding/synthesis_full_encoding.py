@@ -242,12 +242,17 @@ class FullEncoding:
 
         # Only works for UF encoding
         if self._flags.encode_terms.startswith("uninterpreted"):
-            distinct_constraints = expressions_are_distinct(*self._term_factory.created_stack_vars())
+            distinct_constraints = []
             theta_values = self._term_factory.created_theta_values()
+            created_vars = self._term_factory.created_stack_vars()
 
-            if theta_values != []:
+            if len(created_vars) > 1:
+                # Only include a distinct constraint if there are at least two expressions in the encoding
+                distinct_constraints.extend(expressions_are_distinct(*created_vars))
+
+            if len(theta_values) > 1:
                 # It can be empty, if uninterpreted_int is activated and theta values are considered as numbers
-                distinct_constraints.extend(expressions_are_distinct(*self._term_factory.created_theta_values()))
+                distinct_constraints.extend(expressions_are_distinct(*theta_values))
 
         elif self._flags.encode_terms == "stack_vars":
             if self._flags.push_basic:
