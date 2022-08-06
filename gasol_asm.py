@@ -160,7 +160,8 @@ def optimize_block(sfs_dict, timeout, parsed_args: Namespace):
                 time = 0
             else:
                 optimization_outcome, time, optimized_asm = optimizer.optimize_block()
-            block_solutions.append((block_name, optimization_outcome, time, optimized_asm, original_instr))
+            block_solutions.append((block_name, optimization_outcome, time, optimized_asm, original_instr,
+                                    initial_program_length, tout))
         else:
             optimizer.generate_intermediate_files()
 
@@ -453,14 +454,14 @@ def optimize_asm_block_asm_format(block: AsmBlock, timeout: int, parsed_args: Na
         optimize_block(sfs_dict, timeout, parsed_args)
         return new_block, {}
 
-    for sub_block_name, optimization_outcome, solver_time, new_sub_block, original_instr in optimize_block(sfs_dict, timeout, parsed_args):
+    for sub_block_name, optimization_outcome, solver_time, new_sub_block, original_instr, initial_program_l, tout in optimize_block(sfs_dict, timeout, parsed_args):
 
         # We weren't able to find a solution using the solver, so we just update
         if optimization_outcome == OptimizeOutcome.no_model:
             optimized_blocks[sub_block_name] = None
             statistics_row = {"block_id": sub_block_name, "model_found": False, "shown_optimal": False,
                               "previous_solution": original_instr, "solver_time_in_sec": round(solver_time, 3),
-                              "saved_size": 0, "saved_gas": 0}
+                              "saved_size": 0, "saved_gas": 0, "initial_n_instrs": initial_program_l, "timeout": tout}
 
             statistics_rows.append(statistics_row)
             total_time += solver_time
@@ -481,7 +482,9 @@ def optimize_asm_block_asm_format(block: AsmBlock, timeout: int, parsed_args: Na
         statistics_row = {"block_id": sub_block_name, "solver_time_in_sec": round(solver_time, 3),
                           "saved_size": initial_length - optimized_length, "saved_gas": initial_gas - optimized_gas,
                           "model_found": True, "shown_optimal": shown_optimal, "previous_solution": original_instr,
-                          "solution_found": ' '.join([instr.to_plain() for instr in new_sub_block])}
+                          "solution_found": ' '.join([instr.to_plain() for instr in new_sub_block]),
+                          "initial_n_instrs": initial_program_l, "optimized_n_instrs": len(new_sub_block),
+                          "timeout": tout}
 
         statistics_rows.append(statistics_row)
         total_time += solver_time
