@@ -8,7 +8,7 @@ import global_params.constants as constants
 import global_params.paths as paths
 import sfs_generator.opcodes as opcodes
 from sfs_generator.utils import (all_integers, find_sublist, get_num_bytes_int,
-                                 is_integer, isYulInstructionUpper, get_ins_size)
+                                 is_integer, isYulInstructionUpper, get_ins_size,check_and_print_debug_info)
 
 terminate_block = ["ASSERTFAIL","RETURN","REVERT","SUICIDE","STOP"]
 
@@ -154,6 +154,9 @@ def init_globals():
     global sto_delete_pos
     sto_delete_pos = []
 
+    global debug
+    debug = False
+    
 def filter_opcodes(rule):
     instructions = rule.get_instructions()
     rbr_ins_aux = list(filter(lambda x: x.find("nop(")==-1, instructions))
@@ -1345,11 +1348,13 @@ def compute_binary(expression,level):
             
             if (funct in ["+","*","and","or","xor","eq","shl","shr","sar"]) and (exp_str not in already_considered):
                 discount_op+=2
-                #print("[RULE]: Evaluate expression "+str(expression))
+                msg = "[RULE]: Evaluate expression "+str(expression)
+                check_and_print_debug_info(debug, msg)
 
             elif funct not in ["+","*","and","or","xor","eq","shl","shr","sar"]:
                 discount_op+=2
-                #print("[RULE]: Evaluate expression "+str(expression))
+                msg = "[RULE]: Evaluate expression "+str(expression)
+                check_and_print_debug_info(debug, msg)
 
 
         already_considered.append(exp_str)
@@ -1372,7 +1377,9 @@ def compute_ternary(expression):
     r, vals = all_integers([v0,v1,v2])
     if r and funct in ["+","*"]:
         val = evaluate_expression_ter(funct,vals[0],vals[1],vals[2])
-        #print("[RULE]: Evaluate expression "+str(expression))
+        msg = "[RULE]: Evaluate expression "+str(expression)
+        check_and_print_debug_info(debug, msg)
+        
         gas_saved_op+=8
         saved_push+=3
         
@@ -2812,6 +2819,16 @@ def translate_last_subblock(rule,block,sstack,sstack_idx,idx,isolated,block_name
             
             tstack = generate_target_stack_idx(len(sstack),opcodes)[::-1]
         get_s_counter(sstack,tstack)
+
+        if idx is not None:
+            block_nm = block_name + "_" + str(idx)
+        else:
+            block_nm = block_name + "_0"
+
+        
+        msg = paths.json_path+"/"+ block_nm + "_input.json"
+        check_and_print_debug_info(debug, msg)
+
         generate_encoding(instructions,tstack,sstack,simp)
     
         build_userdef_instructions()
@@ -3071,7 +3088,7 @@ def compute_max_program_len(opcodes, num_guard,block = None):
     return len(new_opcodes)
     
 
-def smt_translate_block(rule,file_name,block_name,immutable_dict,simplification=True,storage = False, size = False, part = False, pop = False, push = False, revert = False):
+def smt_translate_block(rule,file_name,block_name,immutable_dict,simplification=True,storage = False, size = False, part = False, pop = False, push = False, revert = False, debug_info = False):
     global s_counter
     global max_instr_size
     global int_not0
@@ -3086,6 +3103,8 @@ def smt_translate_block(rule,file_name,block_name,immutable_dict,simplification=
     global push_flag
     global revert_flag
     global assignImm_values
+    global debug
+    
     init_globals()
     
     if storage:
@@ -3097,6 +3116,8 @@ def smt_translate_block(rule,file_name,block_name,immutable_dict,simplification=
     push_flag = push
     revert_flag = revert
     assignImm_values = immutable_dict
+    debug = debug_info
+
     
     sfs_contracts = {}
 
@@ -3482,7 +3503,8 @@ def apply_transform_rules(user_def_instrs,list_vars,tstack):
             r = apply_transform(instr)
 
             if r!=-1:
-                # print("[RULE]: Simplification rule type 1: "+str(instr))
+                msg = "[RULE]: Simplification rule type 1: "+str(instr)
+                check_and_print_debug_info(debug, msg)
                 
                 replace_var_userdef(instr["outpt_sk"][0],r,user_def_instrs)
                 target_stack = replace_var(instr["outpt_sk"][0],r,target_stack)
@@ -3556,7 +3578,8 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
 
                 discount_op+=2
 
-                #print("ISZ(GT(X,0))")
+                msg = "ISZ(GT(X,0))"
+                check_and_print_debug_info(debug, msg)
                 return True, [instr]
             else:
                 return False, []
@@ -3574,7 +3597,8 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
 
             user_def_counter["ISZERO"]=idx+1
             
-            #print("GT(1,X)")
+            msg = "GT(1,X)"
+            check_and_print_debug_info(debug, msg)
             return True, []
 
 
@@ -3594,8 +3618,9 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
 
                     gas_saved_op+=6
 
-                    #print("ISZ(ISZ(GT(X,Y)))")
-
+                    msg = "ISZ(ISZ(GT(X,Y)))"
+                    check_and_print_debug_info(debug, msg)
+                    
                     update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
                     
                     return True, [zero,zero2[0]]
@@ -3628,7 +3653,8 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                 
                 gas_saved_op+=6
 
-                #print("ISZ(ISZ(ISZ(X)))")
+                msg = "ISZ(ISZ(ISZ(X)))"
+                check_and_print_debug_info(debug, msg)
 
                 update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
                 
@@ -3649,7 +3675,8 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                 saved_push+=1
                 gas_saved_op+=3
 
-                #print("EQ(1,ISZ(X))")
+                msg = "EQ(1,ISZ(X))"
+                check_and_print_debug_info(debug, msg)
 
                 update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
                 
@@ -3674,7 +3701,8 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                 saved_push+=1
                 gas_saved_op+=3
 
-                #print("ISZ(LT(0,X))")
+                msg = "ISZ(LT(0,X))"
+                check_and_print_debug_info(debug, msg)
                 
                 return True, [instr]
             else:
@@ -3694,7 +3722,8 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
 
             user_def_counter["ISZERO"]=idx+1
             
-            #print("LT(X,1)")
+            msg = "LT(X,1)"
+            check_and_print_debug_info(debug, msg)
             return True, []
         
          else:
@@ -3713,7 +3742,8 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
 
                     gas_saved_op+=6
 
-                    #print("ISZ(ISZ(LT(X,Y)))")
+                    msg = "ISZ(ISZ(LT(X,Y)))"
+                    check_and_print_debug_info(debug, msg)
 
                     update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
                     
@@ -3740,8 +3770,9 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
             discount_op+=1
             saved_push+=1
 
-            #print("EQ(0,X)")
-
+            msg = "EQ(0,X)"
+            check_and_print_debug_info(debug, msg)
+            
             user_def_counter["ISZERO"]=idx+1
             
             return True, []
@@ -3764,7 +3795,8 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                     gas_saved_op+=6
 
 
-                    #print("ISZ(ISZ(EQ(X,Y)))")
+                    msg = "ISZ(ISZ(EQ(X,Y)))"
+                    check_and_print_debug_info(debug, msg)
 
                     update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
                     
@@ -3794,7 +3826,8 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                 saved_push+=1
                 gas_saved_op+=3
 
-                #print("AND(X,AND(X,Y))")
+                msg = "AND(X,AND(X,Y))"
+                check_and_print_debug_info(debug, msg)
 
                 update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
                 
@@ -3839,7 +3872,8 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
             gas_saved_op+=6
 
 
-            #print("OR(X,AND(X,Y))")
+            msg = "OR(X,AND(X,Y))"
+            check_and_print_debug_info(debug, msg)
             
             return True, [or_instr,instr]
             
@@ -3860,7 +3894,8 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                 saved_push+=1
                 gas_saved_op+=3
 
-                #print("OR(OR(X,Y),Y)")
+                msg = "OR(OR(X,Y),Y)"
+                check_and_print_debug_info(debug, msg)
                 
                 return True, [or_instr]
             else:
@@ -3902,7 +3937,8 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
             discount_op+=2
             gas_saved_op+=6
 
-            #print("AND(X,OR(X,Y))")
+            msg = "AND(X,OR(X,Y))"
+            check_and_print_debug_info(debug, msg)
             
             return True, [and_instr,instr]
             
@@ -3951,7 +3987,8 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
             discount_op+=2
             gas_saved_op+=6
 
-            #print("XOR(X,XOR(X,Y))")
+            msg = "XOR(X,XOR(X,Y))"
+            check_and_print_debug_info(debug, msg)
             
             return True, [xor_instr,instr]
 
@@ -3969,7 +4006,8 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
             gas_saved_op+=3
 
             user_def_counter["EQ"]=idx+1
-            #print("ISZ(XOR(X,Y))")
+            msg = "ISZ(XOR(X,Y))"
+            check_and_print_debug_info(debug, msg)
             
             return True, [isz_instr]
                 
@@ -4001,7 +4039,8 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                 discount_op+=2
                 gas_saved_op+=6
 
-                #print("NOT(NOT(X))")
+                msg = "NOT(NOT(X))"
+                check_and_print_debug_info(debug, msg)
                 
                 return True, [not_instr,instr]
             else:
@@ -4026,7 +4065,8 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                 discount_op+=2
                 gas_saved_op+=6
 
-                #print("AND(X,NOT(X))")
+                msg = "AND(X,NOT(X))"
+                check_and_print_debug_info(debug, msg)
                 
                 return True, [and_instr,instr]
 
@@ -4052,7 +4092,8 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                 discount_op+=2
                 gas_saved_op+=6
 
-                #print("OR(X,NOT(X))")
+                msg = "OR(X,NOT(X))"
+                check_and_print_debug_info(debug, msg)
                 
                 return True, [or_instr,instr]
 
@@ -4075,7 +4116,8 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                 saved_push+=1
                 gas_saved_op+=3
 
-                #print("AND(ORIGIN,2^160-1)")
+                msg = "AND(ORIGIN,2^160-1)"
+                check_and_print_debug_info(debug, msg)
 
                 update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
                 
@@ -4109,7 +4151,8 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
             gas_saved_op+=3
 
             user_def_counter["EQ"]=idx+1
-            #print("ISZ(SUB(X,Y))")
+            msg = "ISZ(SUB(X,Y))"
+            check_and_print_debug_info(debug, msg)
 
             update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
             
@@ -4135,7 +4178,8 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                 gas_saved_op+=5
                 saved_push+=1
 
-                #print("MUL(X,SHL(Y,1)")
+                msg = "MUL(X,SHL(Y,1)"
+                check_and_print_debug_info(debug, msg)
 
                 update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
                 
@@ -4152,7 +4196,8 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                 gas_saved_op+=5
                 saved_push+=1
 
-                #print("MUL(SHL(X,1),Y)")
+                msg = "MUL(SHL(X,1),Y)"
+                check_and_print_debug_info(debug, msg)
 
                 update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
                 
@@ -4184,7 +4229,8 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                 saved_push+=1
 
                 user_def_counter["SHR"]=idx+1
-                #print("DIV(X,SHL(Y,1))")
+                msg = "DIV(X,SHL(Y,1))"
+                check_and_print_debug_info(debug, msg)
 
                 update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
                 
@@ -4219,7 +4265,8 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
             gas_saved_op+=397 #BALANCE 400 ADDRESS 2 SELFBALANCE 5
 
             user_def_counter["SELFBALANCE"]=idx+1
-            #print("BALANCE(ADDRESS)")
+            msg = "BALANCE(ADDRESS)"
+            check_and_print_debug_info(debug, msg)
 
             update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
             
@@ -4238,7 +4285,8 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                 saved_push+=1
                 gas_saved_op+=3
 
-                #print("AND(ADDRESS,2^160)")
+                msg = "AND(ADDRESS,2^160)"
+                check_and_print_debug_info(debug, msg)
 
                 update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
                 
@@ -4263,7 +4311,8 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
             gas_saved_op+=57
 
             user_def_counter["ISZERO"]=idx+1
-            #print("EXP(0,X)")
+            msg = "EXP(0,X)"
+            check_and_print_debug_info(debug, msg)
             
             return True, []
 
@@ -4280,7 +4329,9 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
             gas_saved_op+=57 #EXP-SHL
 
             user_def_counter["SHL"]=idx+1
-            #print("EXP(2,X)")
+            msg = "EXP(2,X)"
+            check_and_print_debug_info(debug, msg)
+            
             return True, []
 
         else:
@@ -4294,7 +4345,8 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
 def apply_all_comparison(user_def_instrs,tstack):
     modified = True
     while(modified):
-        ##print ("********************IT*********************")
+        msg = "********************IT*********************"
+        check_and_print_debug_info(debug, msg)
         modified = apply_comparation_rules(user_def_instrs,tstack)
 
         
@@ -4306,8 +4358,10 @@ def apply_comparation_rules(user_def_instrs,tstack):
         r, d_instr = apply_cond_transformation(instr,user_def_instrs,tstack)
 
         if r:
-            # print("[RULE]: Simplification rule type 2: "+str(instr))
-            # print("[RULE]: Delete rules: "+str(d_instr))
+            msg = "[RULE]: Simplification rule type 2: "+str(instr)
+            msg = msg+"\n[RULE]: Delete rules: "+str(d_instr)
+            check_and_print_debug_info(debug, msg)
+            
             modified = True
             for b in d_instr:
                 idx = user_def_instrs.index(b)
@@ -4413,10 +4467,14 @@ def replace_loads_by_sstores(storage_location, location):
                 dep = list(map(lambda x: are_dependent(var,x[0][0],elem[0][-1],x[0][-1]),rest_list))
                 if True not in dep and elem[0][-1].find("mstore8") == -1: #it does not work for mstore8
                     if location == "storage":
-                        # print("[OPT]: Replaced sload by its value")
+                        msg = "[OPT]: Replaced sload by its value"
+                        check_and_print_debug_info(debug, msg)
+                        
                         gas_store_op+=700
                     else:
-                        # print("[OPT]: Replaced mload by its value")
+                        msg = "[OPT]: Replaced mload by its value"
+                        check_and_print_debug_info(debug, msg)
+                        
                         gas_memory_op+=3
                     storage_location.pop(i+pos+1)
                     discount_op+=1
@@ -4481,12 +4539,16 @@ def remove_store_recursive_dif(storage_location, location):
                     storage_location.pop(i)
                     discount_op+=1
                     if location == "storage":
-                        # print("[OPT]: Removed sstore sstore ")
+                        msg = "[OPT]: Removed sstore sstore "
+                        check_and_print_debug_info(debug, msg)
+                        
                         gas_store_op+=5000
                     else:
-                        # print("[OPT]: Removed mstore mstore ")
+                        msg = "[OPT]: Removed mstore mstore "
+                        check_and_print_debug_info(debug, msg)
+                        
                         gas_memory_op+=3
-                    print(storage_location)
+                    
                     remove_store_recursive_dif(storage_location,location)
                     finish = True
                     
@@ -4524,10 +4586,14 @@ def remove_store_loads(storage_location, location):
                         discount_op+=1
                         finished = True
                         if storage_location == "storage":
-                            # print("[OPT]: OPTIMIZATION sstore OF sload")
+                            msg = "[OPT]: OPTIMIZATION sstore OF sload"
+                            check_and_print_debug_info(debug, msg)
+                            
                             gas_store_op+=5000
                         else:
-                            # print("[OPT]: OPTIMIZATION mstore OF mload")
+                            msg = "[OPT]: OPTIMIZATION mstore OF mload"
+                            check_and_print_debug_info(debug, msg)
+                            
                             gas_memory_op+=3
                         remove_store_loads(storage_location,location)
         i+=1

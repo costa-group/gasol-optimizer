@@ -258,3 +258,7 @@ def get_ins_size_seq(instructions_disasm):
             bytes += get_ins_size(instructions[i], None)
             i += 1
     return bytes
+
+def check_and_print_debug_info(debug,msg):
+    if debug:
+        print(msg)
