@@ -3,6 +3,20 @@ from smt_encoding.instructions.uninterpreted_instruction import UninterpretedIns
 from typing import Tuple, Dict, List
 
 
+def happens_before(current_id: Id_T, prev_id: Id_T, dependency_graph: Dict[Id_T, List[Id_T]]) -> bool:
+    """
+    Checks whether prev_id belongs to the dependency graph of current_id recursively
+    """
+    # TODO SUGGESTION: introduce a new map with all the recursive dependencies to avoid redundant computations.
+    #  As dependencies are not that deep, we just iterate directly. Note that adding new elements to the dependency
+    #  graph outside this scope requires updating the map
+
+    for other_id in dependency_graph[current_id]:
+        if current_id == prev_id or happens_before(other_id, prev_id, dependency_graph):
+            return True
+    return False
+
+
 # We generate a dict that given the id of an instruction, returns
 # the id of instructions that must be executed to obtain its input and the corresponding
 # aj. Note that aj must be only assigned when push, in other cases we just set aj value to -1.
@@ -31,8 +45,9 @@ def generate_dependency_graph_minimum(uninterpreted_instr : List[UninterpretedIn
 
     # We need to consider also the order given by the tuples
     for id1, id2 in order_tuples:
-        # Check it has not been added yet
-        if id1 not in dependency_graph.get(id2, []):
+        # Stronger check: if id1 happens before id2 at some point, then we don't consider it in the graph.
+        # See test_lb_tight_dependencies in tests/test_instruction_bounds_with_dependencies
+        if not happens_before(id2, id1, dependency_graph):
             dependency_graph[id2].append(id1)
 
     return dependency_graph
