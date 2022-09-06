@@ -431,7 +431,7 @@ def filter_optimized_blocks_by_intra_block_optimization(asm_sub_blocks, optimize
 
 
 # Given an asm_block and its contract name, returns the asm block after the optimization
-def optimize_asm_block_asm_format(block, timeout, storage, last_const, size_abs, partition,pop_flag, push_flag, revert_return):
+def optimize_asm_block_asm_format(block: AsmBlock, timeout: int, parsed_args: Namespace):
     global statistics_rows
     global total_time
 
@@ -660,7 +660,7 @@ def parse_encoding_args() -> Namespace:
     output.add_argument("-intermediate", "--intermediate", action="store_true",
                         help="Keeps temporary intermediate files. "
                              "These files contain the sfs representation, smt encoding...")
-    output.add_argument("-d", "--debug", help="It prints debugging information", action="store_true")
+    output.add_argument("-d", "--debug", help="It prints debugging information", dest='debug_flag', action="store_true")
 
     log_generation = ap.add_argument_group('Log generation options', 'Options for managing the log generation')
 
