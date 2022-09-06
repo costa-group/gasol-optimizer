@@ -105,6 +105,7 @@ def remove_last_constant_instructions(instructions):
 
 def compute_original_sfs_with_simplifications(block: AsmBlock, parsed_args: Namespace):
 
+
     stack_size = block.source_stack
     block_name = block.block_name
     block_id = block.block_id
@@ -125,10 +126,11 @@ def compute_original_sfs_with_simplifications(block: AsmBlock, parsed_args: Name
     block_data = {"instructions": instructions_to_optimize, "input": stack_size}
 
     fname = parsed_args.input_path.split("/")[-1].split(".")[0]
+
     exit_code, subblocks_list = \
         ir_block.evm2rbr_compiler(file_name = fname, block=block_data, block_name=block_name, block_id=block_id,
                                   simplification=True, storage=parsed_args.storage, size = parsed_args.size, part = parsed_args.partition,
-                                  pop= not parsed_args.pop_basic, push =not parsed_args.push_basic, revert=revert_flag)
+                                  pop= not parsed_args.pop_basic, push =not parsed_args.push_basic, revert=revert_flag, debug_info = parsed_args.debug_flag)
 
     sfs_dict = get_sfs_dict()
 
@@ -429,7 +431,7 @@ def filter_optimized_blocks_by_intra_block_optimization(asm_sub_blocks, optimize
 
 
 # Given an asm_block and its contract name, returns the asm block after the optimization
-def optimize_asm_block_asm_format(block: AsmBlock, timeout: int, parsed_args: Namespace):
+def optimize_asm_block_asm_format(block, timeout, storage, last_const, size_abs, partition,pop_flag, push_flag, revert_return):
     global statistics_rows
     global total_time
 
@@ -658,6 +660,7 @@ def parse_encoding_args() -> Namespace:
     output.add_argument("-intermediate", "--intermediate", action="store_true",
                         help="Keeps temporary intermediate files. "
                              "These files contain the sfs representation, smt encoding...")
+    output.add_argument("-d", "--debug", help="It prints debugging information", action="store_true")
 
     log_generation = ap.add_argument_group('Log generation options', 'Options for managing the log generation')
 

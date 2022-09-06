@@ -1083,13 +1083,13 @@ Main function that build the rbr representation from the CFG of a solidity file.
 -saco_rbr is True if it has to generate the RBR in SACO syntax.
 -exe refers to the number of smart contracts analyzed.
 '''
-def evm2rbr_compiler(file_name = None,block = None, block_id = -1, block_name = "",simplification = True, storage = False, size = False, part = False, pop = False, push = False, revert = False):
+def evm2rbr_compiler(file_name = None,block = None, block_id = -1, block_name = "",simplification = True, storage = False, size = False, part = False, pop = False, push = False, revert = False, debug_info = False):
     global rbr_blocks
     
     init_globals()
     
     begin = dtimer()
-    
+
     try:
         instructions = block["instructions"]
         input_stack = int(block["input"])
@@ -1105,7 +1105,8 @@ def evm2rbr_compiler(file_name = None,block = None, block_id = -1, block_name = 
         end = dtimer()
         ethir_time = end-begin
         #print("Build RBR: "+str(ethir_time)+"s")
-        subblocks = smt_translate_block(rule,file_name,block_name,assignImmutable_dict,simplification,storage, size, part, pop, push, revert)
+
+        subblocks = smt_translate_block(rule,file_name,block_name,assignImmutable_dict,simplification,storage, size, part, pop, push, revert,debug_info)
                 
         return 0, subblocks
         
