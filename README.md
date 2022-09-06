@@ -179,3 +179,10 @@ follows the same idea but links the associated hexadecimal value
 instead and a gas file that links the numerical representation
 with the inferred gas cost associated.  This way, all relevant
 information can be conveyed from these files.
+
+
+## Contributors
+* Elvira Albert
+* Pablo Gordillo
+* Alejandro Hernández-Cerezo
+* Albert Rubio

@@ -4470,9 +4470,12 @@ def remove_store_recursive_dif(storage_location, location):
     while(i<len(storage_location) and not finish):
         elem = storage_location[i]
         
-        if elem[0][-1].find(instruction)!=-1: #it can be mstore8 or mstore but the second has to be mstore
+        if elem[0][-1].find(instruction)!=-1:
             var = elem[0][0]
-            rest = list(filter(lambda x: x[0][0] == var and x[0][-1].find(instruction)!=-1 and x[0][-1].find("mstore8")==-1, storage_location[i+1::]))
+            # If instruction is mstore and the next one is mstore8, then i cannot remove any of them. Otherwise, it is
+            # possible if both instructions are dependent
+            rest = list(filter(lambda x: x[0][-1].find(instruction)!=-1 and (elem[0][-1] != "mstore" or x[0][-1] != "mstore8") and
+                                         are_dependent(x[0][0],var,x[0][-1],elem[0][-1]), storage_location[i+1::]))
             if rest !=[]:
                 next_ins = rest[0]
                 pos = storage_location[i+1::].index(next_ins)
@@ -4488,7 +4491,7 @@ def remove_store_recursive_dif(storage_location, location):
                     else:
                         # print("[OPT]: Removed mstore mstore ")
                         gas_memory_op+=3
-                    print(storage_location)
+
                     remove_store_recursive_dif(storage_location,location)
                     finish = True
                     
@@ -4860,9 +4863,14 @@ def are_dependent(var1,var2,ins1,ins2):
                 dep = True
 
         else: #two int values
-            if ins1.find("mstore8")!=-1 and var1>=var2 and var1<var2+32:
+            var1_int, var2_int = int(var1), int(var2)
+            # Two mstore8 are dependant if they affect the same memory position
+            if ins1.find("mstore8") != -1 and ins2.find("mstore8") != -1:
+                dep = var1_int == var2_int
+            # ins1 is mstore8 and ins2 is mstore
+            elif ins1.find("mstore8")!=-1 and var1_int>=var2_int and var1_int<var2_int+32:
                 dep = True
-            elif ins2.find("mstore8")!=-1 and var2>=var1 and var2<var1+32:
+            elif ins2.find("mstore8")!=-1 and var2_int>=var1_int and var2_int<var1_int+32:
                 dep = True
             else:
                 dep = False
