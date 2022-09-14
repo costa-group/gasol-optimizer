@@ -157,6 +157,9 @@ def init_globals():
     global debug
     debug = False
 
+    global rule_applied
+    rule_applied = False
+    
 def filter_opcodes(rule):
     instructions = rule.get_instructions()
     rbr_ins_aux = list(filter(lambda x: x.find("nop(")==-1, instructions))
@@ -407,6 +410,7 @@ def search_for_value_aux(var, instructions,source_stack,level,evaluate = True):
             update_unary_func(funct,var,new_vars[0],evaluate)
             
         else:
+
             if new_vars[0] not in zero_ary and new_vars[0].find("gas")==-1 and new_vars[0].find("timestamp")==-1:
                 search_for_value_aux(new_vars[0],instructions[i:],source_stack,level,evaluate)
                 val = s_dict[new_vars[0]]
@@ -448,7 +452,7 @@ def search_for_value_aux(var, instructions,source_stack,level,evaluate = True):
             s_dict[var] = u_var
 
             
-def generate_sstore_mstore(store_ins,instructions,source_stack,pos):
+def generate_sstore_mstore(store_ins,instructions,source_stack,pos,simp):
     level = 0
     new_vars, funct = get_involved_vars(store_ins,"")
     
@@ -457,16 +461,16 @@ def generate_sstore_mstore(store_ins,instructions,source_stack,pos):
     pre = already_considered 
 
     for v in new_vars:
-        search_for_value_aux(v,instructions,source_stack,pos)
+        search_for_value_aux(v,instructions,source_stack,pos,simp)
     
         values[v] = s_dict[v]
 
-    exp_join = rebuild_expression(new_vars,funct,values,level)
+    exp_join = rebuild_expression(new_vars,funct,values,level,simp)
 
     return exp_join[1],exp_join[2]
 
 
-def generate_sload_mload(load_ins,instructions,source_stack,pos):
+def generate_sload_mload(load_ins,instructions,source_stack,pos,simp):
 
     level = pos
 
@@ -491,7 +495,7 @@ def generate_sload_mload(load_ins,instructions,source_stack,pos):
             
     else:
         if new_vars[0] not in zero_ary and new_vars[0].find("gas")==-1 and new_vars[0].find("timestamp")==-1:
-            search_for_value_aux(new_vars[0],instructions,source_stack,level)
+            search_for_value_aux(new_vars[0],instructions,source_stack,level,simp)
             val = s_dict[new_vars[0]]
         else:
             val = new_vars[0]
@@ -502,7 +506,7 @@ def generate_sload_mload(load_ins,instructions,source_stack,pos):
         return new_uvar,elem
 
 
-def generate_instruction(load_ins,instructions,source_stack,pos):
+def generate_instruction(load_ins,instructions,source_stack,pos,simp):
 
     level = pos
 
@@ -516,13 +520,12 @@ def generate_instruction(load_ins,instructions,source_stack,pos):
 
     pre = already_considered 
 
-    # print(new_vars)
     for v in new_vars:
-        search_for_value_aux(v,instructions,source_stack,pos)
+        search_for_value_aux(v,instructions,source_stack,pos,simp)
     
         values[v] = s_dict[v]
 
-    exp_join = rebuild_expression(new_vars,funct,values,level)
+    exp_join = rebuild_expression(new_vars,funct,values,level,simp)
 
     return exp_join[1],exp_join[2]
     
@@ -597,7 +600,6 @@ def update_unary_func(func,var,val,evaluate):
 
                 
         else:
-        
             u_var = create_new_svar()
 
             if val in zero_ary or val.find("gas")!=-1 or val.find("timestamp")!=-1:
@@ -1390,7 +1392,7 @@ def compute_binary(expression,level):
 
         already_considered.append(exp_str)
         
-        return True, val
+        return True, str(val)
         
     else:
         return False, expression
@@ -1415,7 +1417,7 @@ def compute_ternary(expression):
         saved_push+=3
         
         discount_op+=3
-        return True, val
+        return True, str(val)
     else:
         return False, expression
 
@@ -1458,6 +1460,7 @@ def rebuild_expression(vars_input,funct,values,level,evaluate = True):
             r, expression = compute_ternary(expression_without_simp)
         else:
             r = False
+            expression = expression_without_simp
         arity = 3
 
     else:
@@ -1526,12 +1529,12 @@ def generate_encoding(instructions,variables,source_stack,simplification=True):
         variable_content[v] = s_dict[v]
         
     if not split_sto:
-        generate_storage_info(instructions,source_stack)
+        generate_storage_info(instructions,source_stack,simplification)
     else:
         memory_order = []
         storage_order = []
         
-def generate_storage_info(instructions,source_stack):
+def generate_storage_info(instructions,source_stack,simplification=True):
     global sstore_seq
     global mstore_seq
     global storage_order
@@ -1547,17 +1550,17 @@ def generate_storage_info(instructions,source_stack):
 
         if instructions[x].find("sstore")!=-1:
             ins_list = [] if x == 0 else instructions[x-1::-1]
-            exp = generate_sstore_mstore(instructions[x],ins_list,source_stack,len(instructions)-x)
+            exp = generate_sstore_mstore(instructions[x],ins_list,source_stack,len(instructions)-x, simplification)
             sstore_seq.append(exp)
 
         elif instructions[x].find("keccak")!=-1 or instructions[x].find("sha3")!=-1:
             ins_list = [] if x == 0 else instructions[x-1::-1]
-            exp = generate_instruction(instructions[x],ins_list,source_stack,len(instructions)-x)
+            exp = generate_instruction(instructions[x],ins_list,source_stack,len(instructions)-x,simplification)
             sstore_seq.append(exp)
             mstore_seq.append(exp)
         elif instructions[x].find("mstore")!=-1:
             ins_list = [] if x == 0 else instructions[x-1::-1]
-            exp = generate_sstore_mstore(instructions[x],ins_list,source_stack,len(instructions)-x)
+            exp = generate_sstore_mstore(instructions[x],ins_list,source_stack,len(instructions)-x,simplification)
             mstore_seq.append(exp)
 
     last_sload = ""
@@ -1572,7 +1575,7 @@ def generate_storage_info(instructions,source_stack):
     for x in range(0,len(instructions)):
         if instructions[x].find("sload")!=-1:
             ins_list = [] if x == 0 else instructions[x-1::-1]
-            exp,r = generate_sload_mload(instructions[x],ins_list,source_stack,len(instructions)-x)
+            exp,r = generate_sload_mload(instructions[x],ins_list,source_stack,len(instructions)-x,simplification)
             last_sload = exp
             storage_order.append(r)
             
@@ -1582,7 +1585,7 @@ def generate_storage_info(instructions,source_stack):
             
         elif instructions[x].find("mload")!=-1:
             ins_list = [] if x == 0 else instructions[x-1::-1]
-            exp,r = generate_sload_mload(instructions[x],ins_list,source_stack,len(instructions)-x)
+            exp,r = generate_sload_mload(instructions[x],ins_list,source_stack,len(instructions)-x,simplification)
             last_mload = exp
             memory_order.append(r)
             
@@ -1598,19 +1601,20 @@ def generate_storage_info(instructions,source_stack):
             
     remove_loads_instructions()
 
-
-    simp = True
-    while(simp):
-        simp = simplify_memory(storage_order,"storage")
+    if simplification:
+        simp = True
+        while(simp):
+            simp = simplify_memory(storage_order,"storage")
 
     storage_order = list(filter(lambda x: type(x) == tuple, storage_order))
     unify_loads_instructions(storage_order, "storage")
     stdep = generate_dependences(storage_order,"storage")
     stdep = simplify_dependencies(stdep)
-    
-    simp = True
-    while(simp):
-        simp = simplify_memory(memory_order,"memory")
+
+    if simplification:
+        simp = True
+        while(simp):
+            simp = simplify_memory(memory_order,"memory")
 
     memory_order = list(filter(lambda x: type(x) == tuple, memory_order))    
     unify_loads_instructions(memory_order, "memory")
@@ -1880,10 +1884,10 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
 
     new_user_defins = update_user_defins(new_ts,new_user_defins)
         
-    if simplification:
-        vars_list = recompute_vars_set(new_ss,new_ts,new_user_defins,[])
-    else:
-        vars_list = recompute_vars_set(new_ss,new_ts,new_user_defins,opcodes_seq["non_inter"])
+    # if simplification:
+    vars_list = recompute_vars_set(new_ss,new_ts,new_user_defins,[])
+    # else:
+    #     vars_list = recompute_vars_set(new_ss,new_ts,new_user_defins,opcodes_seq["non_inter"])
         
     total_inpt_vars = []
     
@@ -1952,10 +1956,10 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     json_dict["original_instrs"] = " ".join(original_ins)
 
     
-    if not simplification:
-        op = opcodes_seq["non_inter"]
-        opcodes_seq["non_inter"] = op+sto_objs+mem_objs
-        json_dict["init_info"] = opcodes_seq
+    # if not simplification:
+    #     op = opcodes_seq["non_inter"]
+    #     opcodes_seq["non_inter"] = op+sto_objs+mem_objs
+    #     json_dict["init_info"] = opcodes_seq
 
         
     if subblock is not None:
@@ -1965,12 +1969,11 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
 
     blocks_json_dict[block_nm] = json_dict
 
-    if simplification:
-        if "jsons" not in os.listdir(paths.gasol_path):
-            os.mkdir(paths.json_path)
+    if "jsons" not in os.listdir(paths.gasol_path):
+        os.mkdir(paths.json_path)
 
-        with open(paths.json_path+"/"+ block_nm + "_input.json","w") as json_file:
-            json.dump(json_dict,json_file)
+    with open(paths.json_path+"/"+ block_nm + "_input.json","w") as json_file:
+        json.dump(json_dict,json_file)
 
     return split_by,""
 
@@ -2593,11 +2596,11 @@ def translate_block(rule,instructions,opcodes,isolated,sub_block_name,simp):
         
         new_opcodes = compute_opcodes2write(opcodes,num_guard)
 
-        if not simp:
-            index, fin = find_sublist(rule.get_instructions(),new_opcodes)
-            init_info = get_encoding_init_block(rule.get_instructions()[index:fin+1],source_stack)
-        else:
-            init_info = {}
+        # if not simp:
+        #     index, fin = find_sublist(rule.get_instructions(),new_opcodes)
+        #     init_info = get_encoding_init_block(rule.get_instructions()[index:fin+1],source_stack)
+        # else:
+        init_info = {}
         generate_json(sub_block_name,source_stack,t_vars,source_stack_idx-1,gas, init_info,simplification = simp)
         if simp:
             write_instruction_block(sub_block_name,new_opcodes)
@@ -2719,11 +2722,11 @@ def translate_subblock(rule,instrs,sstack,tstack,sstack_idx,idx,next_block,sub_b
             new_ops = list(map(lambda x: x[4:-1],new_opcodes))
             original_ins = new_ops
 
-            if not simp:
-                index, fin = find_sublist(instructions,new_opcodes)
-                init_info = get_encoding_init_block(instructions[index:fin+1],sstack)
-            else:
-                init_info = {}
+            # if not simp:
+            #     index, fin = find_sublist(instructions,new_opcodes)
+            #     init_info = get_encoding_init_block(instructions[index:fin+1],sstack)
+            # else:
+            init_info = {}
 
             if prev_pops != 0:
                 gas = gas+2*prev_pops
@@ -2880,11 +2883,11 @@ def translate_last_subblock(rule,block,sstack,sstack_idx,idx,isolated,block_name
 
             original_ins = new_ops
             
-            if not simp:
-                index, fin = find_sublist(block,new_opcodes)
-                init_info = get_encoding_init_block(block[index:fin+1],sstack)
-            else:
-                init_info = {}
+            # if not simp:
+            #     index, fin = find_sublist(block,new_opcodes)
+            #     init_info = get_encoding_init_block(block[index:fin+1],sstack)
+            # else:
+            init_info = {}
 
             if prev_pops!=0:
                 gas+=2*prev_pops

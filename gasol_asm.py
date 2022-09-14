@@ -126,10 +126,10 @@ def compute_original_sfs_with_simplifications(block: AsmBlock, parsed_args: Name
     block_data = {"instructions": instructions_to_optimize, "input": stack_size}
 
     fname = parsed_args.input_path.split("/")[-1].split(".")[0]
-
+    
     exit_code, subblocks_list = \
         ir_block.evm2rbr_compiler(file_name = fname, block=block_data, block_name=block_name, block_id=block_id,
-                                  simplification=True, storage=parsed_args.storage, size = parsed_args.size, part = parsed_args.partition,
+                                  simplification=not parsed_args.no_simp, storage=parsed_args.storage, size = parsed_args.size, part = parsed_args.partition,
                                   pop= not parsed_args.pop_basic, push =not parsed_args.push_basic, revert=revert_flag, debug_info = parsed_args.debug_flag)
 
     sfs_dict = get_sfs_dict()
@@ -342,7 +342,7 @@ def optimize_isolated_asm_block(block_name,output_file, csv_file, parsed_args: N
 
     for old_block in blocks:
         asm_block, _ = optimize_asm_block_asm_format(old_block, timeout, parsed_args)
-
+        
         if not compare_asm_block_asm_format(old_block, asm_block, parsed_args):
             print("Comparison failed, so initial block is kept")
             print(old_block.to_plain())
@@ -687,6 +687,8 @@ def parse_encoding_args() -> Namespace:
 
     hard.add_argument("-memory-encoding", help="Choose the memory encoding model", choices=["l_vars", "direct"],
                       default="l_vars", dest='memory_encoding')
+    hard.add_argument('-no-simplification',"--no-simplification", action='store_true', dest='no_simp',
+                      help='Disables the application of simplification rules')
     hard.add_argument('-push-uninterpreted', action='store_false', dest='push_basic',
                       help='Encodes push instruction as uninterpreted functions')
     hard.add_argument('-pop-uninterpreted', action='store_false', dest='pop_basic',
