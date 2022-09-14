@@ -461,11 +461,10 @@ def generate_sstore_mstore(store_ins,instructions,source_stack,pos):
     
         values[v] = s_dict[v]
 
-    post = already_considered
-
     exp_join = rebuild_expression(new_vars,funct,values,level)
 
     return exp_join[1],exp_join[2]
+
 
 def generate_sload_mload(load_ins,instructions,source_stack,pos):
 
@@ -502,6 +501,31 @@ def generate_sload_mload(load_ins,instructions,source_stack,pos):
         new_uvar, defined = is_already_defined(elem)
         return new_uvar,elem
 
+
+def generate_instruction(load_ins,instructions,source_stack,pos):
+
+    level = pos
+
+    if load_ins.find("=")!=-1:
+        load_ins = load_ins.split("=")[-1].strip()
+
+    
+    new_vars, funct = get_involved_vars(load_ins,"")
+    
+    values = {}
+
+    pre = already_considered 
+
+    # print(new_vars)
+    for v in new_vars:
+        search_for_value_aux(v,instructions,source_stack,pos)
+    
+        values[v] = s_dict[v]
+
+    exp_join = rebuild_expression(new_vars,funct,values,level)
+
+    return exp_join[1],exp_join[2]
+    
 
 def is_already_defined(elem):
     for u_var in u_dict.keys():
@@ -667,30 +691,37 @@ def get_involved_vars(instr,var):
         var_list.append("msize")
         funct =  "msize"
 
-    elif instr.find("sha3(",0)!=-1:
+    elif instr.find("sha3",0)!=-1:
         instr_new = instr.strip("\n")
-        pos = instr_new.find("sha3(")
-        arg01 = instr[pos+5:-1]
+        pos = instr_new.find("(")
+        arg01 = instr[pos+1:-1]
         var01 = arg01.split(",")
         var0 = var01[0].strip()
         var1 = var01[1].strip()
         var_list.append(var0)
         var_list.append(var1)
 
-        funct = "sha3"
-
-    elif instr.find("keccak256(",0)!=-1:
+        if not split_sto:
+            funct = instr_new[:pos]
+        else:
+            funct = "sha3"
+            
+    elif instr.find("keccak256",0)!=-1:
+        
         instr_new = instr.strip("\n")
-        pos = instr_new.find("keccak256(")
-        arg01 = instr[pos+10:-1]
+        pos = instr_new.find("(")
+        arg01 = instr[pos+1:-1]
         var01 = arg01.split(",")
         var0 = var01[0].strip()
         var1 = var01[1].strip()
         var_list.append(var0)
         var_list.append(var1)
 
-        funct = "keccak256"
-
+        
+        if not split_sto: 
+            funct = instr_new[:pos]
+        else:
+            funct = "keccak256"
         
     elif instr.find("signextend(",0)!=-1:
         instr_new = instr.strip("\n")
@@ -1520,8 +1551,10 @@ def generate_storage_info(instructions,source_stack):
             sstore_seq.append(exp)
 
         elif instructions[x].find("keccak")!=-1 or instructions[x].find("sha3")!=-1:
-            mstore_seq.append("keccak")
-            sstore_seq.append("keccak")
+            ins_list = [] if x == 0 else instructions[x-1::-1]
+            exp = generate_instruction(instructions[x],ins_list,source_stack,len(instructions)-x)
+            sstore_seq.append(exp)
+            mstore_seq.append(exp)
         elif instructions[x].find("mstore")!=-1:
             ins_list = [] if x == 0 else instructions[x-1::-1]
             exp = generate_sstore_mstore(instructions[x],ins_list,source_stack,len(instructions)-x)
@@ -1532,6 +1565,7 @@ def generate_storage_info(instructions,source_stack):
     last_mload = ""
     mstores = list(mstore_seq)
 
+    
     storage_order = []
     memory_order = []
     
@@ -1561,7 +1595,7 @@ def generate_storage_info(instructions,source_stack):
             keccak1 = sstores.pop(0)
             memory_order.append(keccak)
             storage_order.append(keccak)
-
+            
     remove_loads_instructions()
 
 
@@ -1573,13 +1607,16 @@ def generate_storage_info(instructions,source_stack):
     unify_loads_instructions(storage_order, "storage")
     stdep = generate_dependences(storage_order,"storage")
     stdep = simplify_dependencies(stdep)
-
+    
     simp = True
     while(simp):
         simp = simplify_memory(memory_order,"memory")
 
     memory_order = list(filter(lambda x: type(x) == tuple, memory_order))    
     unify_loads_instructions(memory_order, "memory")
+
+    unify_keccak_instructions(memory_order,storage_order)
+
     memdep = generate_dependences(memory_order,"memory")
     memdep = simplify_dependencies(memdep)
 
@@ -1928,7 +1965,6 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
 
     blocks_json_dict[block_nm] = json_dict
 
-
     if simplification:
         if "jsons" not in os.listdir(paths.gasol_path):
             os.mkdir(paths.json_path)
@@ -2033,7 +2069,7 @@ def build_userdef_instructions():
         exp = u_dict[u_var]
         arity_exp = exp[1]
         args_exp = exp[0]
-        
+
         if arity_exp ==0 or arity_exp == 1:
             funct = args_exp[1]
             args = args_exp[0]
@@ -2321,6 +2357,7 @@ def generate_userdefname(u_var,funct,args,arity,init=False):
             defined = check_inputs(instr_name,args)
     else:
         defined = -1
+
         # if instr_name not in ["PUSH [tag]","PUSH #[$]","PUSH [$]","PUSH data"]:
         already_defined_userdef.append(instr_name)
             
@@ -4466,7 +4503,7 @@ def replace_loads_by_sstores(storage_location, location):
                 load = l_ins[0]
                 pos = storage_location[i+1::].index(load)
                 rest_list = storage_location[i+1:i+pos+1]
-                dep = list(map(lambda x: are_dependent(var,x[0][0],elem[0][-1],x[0][-1]),rest_list))
+                dep = list(map(lambda x: are_dependent(elem,x),rest_list))
                 if True not in dep and elem[0][-1].find("mstore8") == -1: #it does not work for mstore8
                     if location == "storage":
                         msg = "[OPT]: Replaced sload by its value"
@@ -4530,17 +4567,20 @@ def remove_store_recursive_dif(storage_location, location):
         
         if elem[0][-1].find(instruction)!=-1:
             var = elem[0][0]
-            # If instruction is mstore and the next one is mstore8, then i cannot remove any of them. Otherwise, it is
-            # possible if both instructions are dependent
-            rest = list(filter(lambda x: x[0][-1].find(instruction)!=-1 and (elem[0][-1] != "mstore" or x[0][-1] != "mstore8") and
-                                         are_dependent(x[0][0],var,x[0][-1],elem[0][-1]), storage_location[i+1::]))
+            rest = list(filter(lambda x: x[0][0] == var and x[0][-1].find(instruction)!=-1 and x[0][-1].find("mstore8")==-1, storage_location[i+1::]))
+            # # If instruction is mstore and the next one is mstore8, then i cannot remove any of them. Otherwise, it is
+            # # possible if both instructions are dependent
+            # rest = list(filter(lambda x: x[0][-1].find(instruction)!=-1 and (elem[0][-1] != "mstore" or x[0][-1] != "mstore8") and
+            #                              are_dependent(x[0][0],var,x[0][-1],elem[0][-1]), storage_location[i+1::]))
             if rest !=[]:
                 next_ins = rest[0]
                 pos = storage_location[i+1::].index(next_ins)
                 sublist = storage_location[i+1:pos+i+1]
-                dep = list(map(lambda x: are_dependent(x[0][0],var,x[0][-1],elem[0][-1]),sublist)) #It checks for loads betweeen the stores
 
-                if True not in dep and "keccak" not in sublist:
+                dep = list(map(lambda x: are_dependent(elem, x),sublist)) #It checks for loads and and keccaks betweeen the stores
+                
+                #Keccaks are considered in dep list
+                if True not in dep:
                     storage_location.pop(i)
                     discount_op+=1
                     if location == "storage":
@@ -4549,6 +4589,7 @@ def remove_store_recursive_dif(storage_location, location):
 
                         gas_store_op+=5000
                     else:
+                        raise Exception
                         msg = "[OPT]: Removed mstore mstore "
                         check_and_print_debug_info(debug, msg)
 
@@ -4556,6 +4597,27 @@ def remove_store_recursive_dif(storage_location, location):
 
                     remove_store_recursive_dif(storage_location,location)
                     finish = True
+
+                elif True in dep and next_ins == elem and location == "memory": #It may happend that two mstores can be optimized though a keccak is between them. mstore(x,y) keccak(x,z), mstore(x,y)
+                    #All trues have to correspond to keccaks
+                    j = 0
+                    all_keccaks = True
+                    while(j < len(sublist) and all_keccaks):
+                        ins = sublist[j]
+                        if dep[j]:
+                            if ins[0][-1].find("keccak256")==-1:
+                                all_keccaks = False
+                        j+=1
+
+                    if all_keccaks:
+                        storage_location.pop(i+pos+1)
+                        discount_op+=1
+                        msg = "[OPT]: Removed mstore mstore with KECCAK"
+                        check_and_print_debug_info(debug, msg)
+                        gas_memory_op+=3
+                        remove_store_recursive_dif(storage_location,location)
+                        finish = True
+
                     
         i+=1
 
@@ -4585,8 +4647,10 @@ def remove_store_loads(storage_location, location):
                 if symb_ins[0][-1].find(load_ins)!=-1 and symb_ins[0][0] == var:
                     pos = storage_location.index(symb_ins)
                     rest_instructions = storage_location[i+1:pos]
-                    variables = list(map(lambda x: are_dependent(var,x[0][0],elem[0][-1],x[0][-1]),rest_instructions))
-                    if True not in variables and "keccak" not in rest_instructions:
+                    variables = list(map(lambda x: are_dependent(elem,x),rest_instructions))
+
+                    #Keccaks are consideredin the previous list
+                    if True not in variables:
                         storage_location.pop(i)
                         discount_op+=1
                         finished = True
@@ -4698,10 +4762,11 @@ def generate_dependences(storage_location, location):
                 store = predecessor[j]
                 if store[0][-1].find(instruction)!=-1:
                     var_rest = store[0][0]
-                    dep = are_dependent(var,var_rest,elem[0][-1],store[0][-1])
+                    dep = are_dependent(elem,store)
                     if dep:
                         if elem[0][1] != store[0][1]: #if the value is the same they are not dependent
                             storage_dependences.append((j,i))
+                            raise Exception
                             already = True
                         else:
                             if str(var) == str(var_rest) and location == "memory":
@@ -4709,6 +4774,23 @@ def generate_dependences(storage_location, location):
                                 already = True
                                 
                 j-=1
+
+        elif elem[0][-1].find("keccak")!=-1:
+            predecessor = storage_location[:i]
+
+            j = len(predecessor)-1
+            already = False
+            while(j>=0):
+                store = predecessor[j]
+                if store[0][-1].find(instruction)!=-1:
+                    var_rest = store[0][0]
+                    dep = are_dependent(store,elem)
+                    if dep:
+                        raise Exception
+                        storage_dependences.append((j,i))                                
+                j-=1
+
+            
         else: #loads
             predecessor = storage_location[:i]
             successor = storage_location[i+1:]
@@ -4720,7 +4802,7 @@ def generate_dependences(storage_location, location):
                 store = predecessor[j]
                 if store[0][-1].find(instruction)!=-1:
                     var_rest = store[0][0]
-                    dep = are_dependent(var,var_rest,elem[0][-1],store[0][-1])
+                    dep = are_dependent(elem,store)
                     if dep:
                         if elem[0][1] != store[0][1]: #if the value is the same they are not dependent
                             storage_dependences.append((j,i))
@@ -4737,7 +4819,7 @@ def generate_dependences(storage_location, location):
                 store = successor[j]
                 if store[0][-1].find(instruction)!=-1:
                     var_rest = store[0][0]
-                    dep = are_dependent(var,var_rest,elem[0][-1],store[0][-1])
+                    dep = are_dependent(elem,store)
                     if dep:
                         if elem[0][1] != store[0][1]: #if the value is the same they are not dependent
                             storage_dependences.append((i,i+j+1))
@@ -4764,6 +4846,7 @@ def simplify_dependencies(dep):
                     new_dep.pop(pos)
 
     return new_dep
+
 def update_variables_loads(elem1, elem2, storage_location):
     global variable_content
     global u_dict
@@ -4800,8 +4883,53 @@ def update_variables_loads(elem1, elem2, storage_location):
             storage_location[i] = (tuple(list_tuple),elem[1])
 
 
+def update_variables_keccaks(elem1, elem2, storage_location, storage_order):
+    global variable_content
+    global u_dict
+
+
+    for v in u_dict:
+        elem = u_dict[v]
+        if elem == elem1:
+            var2keep = v
+        if elem == elem2:
+            var2replace = v
+            
+    #We remove the second sload
+    u_dict.pop(var2replace)
+
+    for v in u_dict:
+        elem = u_dict[v]
+        list_tuple = list(elem[0])
+        if var2replace in list_tuple:
+            pos = elem[0].index(var2replace)
+            list_tuple[pos] = var2keep
+            u_dict[v] = (tuple(list_tuple),elem[1])
     
-#It checks in which cases the loads are 
+    for var in variable_content:
+        if variable_content[var] == var2replace:
+            variable_content[var] = var2keep
+
+    for i in range(0,len(storage_location)):
+        elem = storage_location[i]
+        list_tuple = list(elem[0])
+        if var2replace in list_tuple:
+            pos = list_tuple.index(var2replace)
+            list_tuple[pos] = var2keep
+            storage_location[i] = (tuple(list_tuple),elem[1])
+
+
+    #It may affect also to storage instructions
+    for i in range(0,len(storage_order)):
+        elem = storage_order[i]
+        list_tuple = list(elem[0])
+        if var2replace in list_tuple:
+            pos = list_tuple.index(var2replace)
+            list_tuple[pos] = var2keep
+            storage_order[i] = (tuple(list_tuple),elem[1])
+            
+    
+#It checks in which cases the loads are the same
 def unify_loads_instructions(storage_location, location):
     global variable_content
 
@@ -4823,7 +4951,7 @@ def unify_loads_instructions(storage_location, location):
                 pos_aux = storage_location[i+1::].index(load_ins)
                 rest_list = storage_location[i+1:i+pos_aux+1]
                 st_list = list(filter(lambda x: x[0][-1].find(store_ins)!=-1, rest_list))
-                dep = list(map(lambda x: are_dependent(elem[0][0],x[0][0],elem[0][-1],x[0][-1]),st_list))
+                dep = list(map(lambda x: are_dependent(elem,x),st_list))
                 if True not in dep:
                     old = storage_location.pop(pos_aux+i+1)
                     update_variables_loads(elem,load_ins,storage_location)
@@ -4834,6 +4962,38 @@ def unify_loads_instructions(storage_location, location):
             
         i+=1
 
+
+#It checks in which cases the loads are the same
+#It is checked only respect to memory as it is the storage location that may affect keccaks
+def unify_keccak_instructions(storage_location,storage_order):
+    global variable_content
+
+    instruction = "keccak"
+    store_ins = "mstore"
+
+    i = 0
+    finished = False
+    while(i<len(storage_location) and not finished):
+        elem = storage_location[i]
+        if elem[0][-1].find(instruction)!=-1:
+            keccaks = list(filter(lambda x: x[0][0] == elem[0][0] and x[0][1] == elem[0][1] and x[0][-1].find(instruction)!=-1,storage_location[i+1::]))
+            if len(keccaks)>0:
+                k_ins = keccaks[0]
+                pos_aux = storage_location[i+1::].index(k_ins)
+                rest_list = storage_location[i+1:i+pos_aux+1]
+                st_list = list(filter(lambda x: x[0][-1].find(store_ins)!=-1, rest_list))
+                dep = list(map(lambda x: are_dependent(elem,x),st_list))
+                if True not in dep:
+                    old = storage_location.pop(pos_aux+i+1)
+                    update_variables_keccaks(elem,k_ins,storage_location,storage_order)
+                    unify_keccak_instructions(storage_location,storage_order)
+                    # storage_location.insert(pos_aux+i+1,old)
+                    finished = True
+                
+            
+        i+=1
+
+        
 def compute_identifiers_storage_instructions(storage_location, location, new_user_defins):
 
     if location == "storage":
@@ -4851,14 +5011,16 @@ def compute_identifiers_storage_instructions(storage_location, location, new_use
     
     store_count = 0
     store8_count = 0
+    keccak_count = 0
     
     storage_identifiers = []
 
     key_list = list(u_dict.keys())
     values_list = list(u_dict.values())
-
+    
     for i in range(0,len(storage_location)):
         ins = storage_location[i]
+        
         if ins[0][-1].find(store)!=-1:
             if location !="storage" and ins[0][-1].find(store8)!=-1:
                 storage_identifiers.append(store8_up+"_"+str(store8_count))
@@ -4868,7 +5030,24 @@ def compute_identifiers_storage_instructions(storage_location, location, new_use
             else:
                 storage_identifiers.append(store_up+"_"+str(store_count))
                 store_count+=1
+
+        elif ins[0][-1].find("keccak")!=-1:
+            keccak_ins = list(filter(lambda x: x[0][-1] == ins[0][-1],values_list))
+            if len(keccak_ins)!=1: #if it does not exist means that it does not appear in the target stack and we have to create the identifier
+                storage_identifiers.append("KECCAK256_"+str(keccak_count))
+                keccak_count+=1
+            else:
+                pos = values_list.index(keccak_ins[0])
+                var = key_list[pos]
+                k_ins = list(filter(lambda x: x["disasm"] == "KECCAK256" and x["outpt_sk"] == [var],new_user_defins))
+                if len(k_ins)!= 1:
+                    raise Exception("Error in looking for keccak instruction")
+                else:
+                    storage_identifiers.append(k_ins[0]["id"])
+
+            
         else: # loads instructions
+
             load_ins = list(filter(lambda x: x[0][-1] == ins[0][-1],values_list))
             if len(load_ins)!=1:
                 raise Exception("Error in looking load instruction")
@@ -4889,7 +5068,7 @@ def translate_dependences_sfs(new_user_defins):
     
     storage = compute_identifiers_storage_instructions(storage_order,"storage",new_user_defins)
     memory = compute_identifiers_storage_instructions(memory_order,"memory",new_user_defins)
-
+    
     for e in storage_dep:
         first, second = e    
         new_storage_dep.append((storage[first],storage[second]))
@@ -4900,11 +5079,43 @@ def translate_dependences_sfs(new_user_defins):
 
     return new_storage_dep, new_memory_dep
 
-def are_dependent(var1,var2,ins1,ins2):
+
+#it receives two tuples of the form ((ar1,arg2, opcode),arity) and
+#checks if t1 has to be executed before t2.
+def are_dependent(t1, t2):
     dep = False
-    if str(var1) == str(var2):
+   
+    var1 = t1[0][0]
+    ins1 = t1[0][-1]
+    var2 = t2[0][0]
+    ins2 = t2[0][-1]
+    
+    if (ins1.find("keccak")!=-1 and (ins2.find("sload")!=-1 or ins2.find("sstore")!=-1)) or ((ins2.find("keccak")!=-1 and (ins1.find("sload")!=-1 or ins1.find("sstore")!=-1))):
+        dep = False
+
+    elif str(var1) == str(var2):
         dep = True
 
+    #The dependences with keccaks have to be computed only for mstore instructions.    
+    elif ins1.find("mstore")!=-1 and ins2.find("keccak256")!=-1:
+        if str(var1).startswith("s") or str(var2).startswith("s"):
+            dep = True
+        else:
+            
+            if int(var1)>= int(var2) and int(var1)< int(var2)+int(t2[0][1]):
+                dep = True
+            else:
+                dep = False
+
+    elif ins1.find("keccak256")!=-1 and ins2.find("mstore")!=-1:
+        if str(var1).startswith("s") or str(var2).startswith("s"):
+            dep = True
+        else:
+            if int(var2)>= int(var1) and int(var2)< int(var1)+int(t1[0][1]):
+                dep = True
+            else:
+                dep = False
+        
     else:
         var1_str = str(var1)
         var2_str = str(var2)
@@ -4929,14 +5140,16 @@ def are_dependent(var1,var2,ins1,ins2):
                 dep = True
 
         else: #two int values
-            var1_int, var2_int = int(var1), int(var2)
-            # Two mstore8 are dependant if they affect the same memory position
-            if ins1.find("mstore8") != -1 and ins2.find("mstore8") != -1:
-                dep = var1_int == var2_int
-            # ins1 is mstore8 and ins2 is mstore
-            elif ins1.find("mstore8")!=-1 and var1_int>=var2_int and var1_int<var2_int+32:
+            if ins1.find("mstore8")!=-1 and var1>=var2 and var1<var2+32:
+            # var1_int, var2_int = int(var1), int(var2)
+            # # Two mstore8 are dependant if they affect the same memory position
+            # if ins1.find("mstore8") != -1 and ins2.find("mstore8") != -1:
+            #     dep = var1_int == var2_int
+            # # ins1 is mstore8 and ins2 is mstore
+            # elif ins1.find("mstore8")!=-1 and var1_int>=var2_int and var1_int<var2_int+32:
                 dep = True
-            elif ins2.find("mstore8")!=-1 and var2_int>=var1_int and var2_int<var1_int+32:
+            elif ins2.find("mstore8")!=-1 and var2>=var1 and var2<var1+32:
+            #elif ins2.find("mstore8")!=-1 and var2_int>=var1_int and var2_int<var1_int+32:
                 dep = True
             else:
                 dep = False
