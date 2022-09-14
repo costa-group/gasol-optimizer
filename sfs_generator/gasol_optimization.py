@@ -555,6 +555,7 @@ def update_unary_func(func,var,val,evaluate):
     global s_dict
     global u_dict
     global gas_saved_op    
+    global rule_applied
     
     if func != "":
 
@@ -572,6 +573,7 @@ def update_unary_func(func,var,val,evaluate):
                     if bytes_sol <= bytes_v0+1:
                         s_dict[var] = val_end
                         gas_saved_op+=3
+                        rule_applied = True
                     else:
                         u_var = create_new_svar()
 
@@ -591,12 +593,14 @@ def update_unary_func(func,var,val,evaluate):
                 else:
                     gas_saved_op+=3
                     s_dict[var] = val_end
+                    rule_applied = True
 
             elif func == "iszero":
                 aux = int(val)
                 val_end = 1 if aux == 0 else 0
                 gas_saved_op+=3
                 s_dict[var] = val_end
+                rule_applied = True
 
                 
         else:
@@ -1350,6 +1354,7 @@ def compute_binary(expression,level):
     global saved_push
     global gas_saved_op
     global already_considered    
+    global rule_applied
     
     v0 = expression[0]
     v1 = expression[1]
@@ -1376,19 +1381,20 @@ def compute_binary(expression,level):
                 gas_saved_op+=5
             else:
                 gas_saved_op+=3
-
+                
             saved_push+=2
             
             if (funct in ["+","*","and","or","xor","eq","shl","shr","sar"]) and (exp_str not in already_considered):
                 discount_op+=2
                 msg = "[RULE]: Evaluate expression "+str(expression)
                 check_and_print_debug_info(debug, msg)
-
+                rule_applied = True
+                
             elif funct not in ["+","*","and","or","xor","eq","shl","shr","sar"]:
                 discount_op+=2
                 msg = "[RULE]: Evaluate expression "+str(expression)
                 check_and_print_debug_info(debug, msg)
-
+                rule_applied = True
 
         already_considered.append(exp_str)
         
@@ -1401,6 +1407,7 @@ def compute_ternary(expression):
     global discount_op
     global saved_push
     global gas_saved_op
+    global rule_applied
     
     v0 = expression[0]
     v1 = expression[1]
@@ -1413,6 +1420,8 @@ def compute_ternary(expression):
         msg = "[RULE]: Evaluate expression "+str(expression)
         check_and_print_debug_info(debug, msg)
 
+        rule_applied = True
+        
         gas_saved_op+=8
         saved_push+=3
         
@@ -1819,6 +1828,7 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     global max_instr_size
     global num_pops
     global blocks_json_dict
+    global rule_applied
     
     split_by = False
     
@@ -1943,6 +1953,8 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     json_dict["storage_dependences"] = sto_dep
     json_dict["memory_dependences"]= mem_dep
     json_dict["is_revert"]= True if revert_flag else False
+    json_dict["rules_applied"] = rule_applied
+
     
     new_original_ins = []
     for e in original_ins:
@@ -1975,6 +1987,8 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     with open(paths.json_path+"/"+ block_nm + "_input.json","w") as json_file:
         json.dump(json_dict,json_file)
 
+    rule_applied = False
+        
     return split_by,""
 
 def get_not_used_stack_variables(new_ss,new_ts,total_inpt_vars):
@@ -3527,12 +3541,16 @@ def apply_transform(instr):
 
 
 def apply_all_simp_rules(user_def,list_vars,tstack):
+    global rule_applied
+
     modified = True
     user_def_instrs = user_def
     target_stack = tstack
     while(modified):
 
         modified, user_def_instrs,target_stack = apply_transform_rules(user_def_instrs,list_vars,target_stack)
+        if modified:
+           rule_applied = True 
     return user_def_instrs,target_stack
 
 def apply_transform_rules(user_def_instrs,list_vars,tstack):
@@ -4385,12 +4403,15 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
 
     
 def apply_all_comparison(user_def_instrs,tstack):
+    global rule_applied
+
     modified = True
     while(modified):
         msg = "********************IT*********************"
         check_and_print_debug_info(debug, msg)
         modified = apply_comparation_rules(user_def_instrs,tstack)
-
+        if modified:
+            rule_applied = True
         
 def apply_comparation_rules(user_def_instrs,tstack):
     modified = False
@@ -4485,6 +4506,7 @@ def replace_loads_by_sstores(storage_location, location):
     global gas_store_op
     global gas_memory_op
     global discount_op
+    global rule_applied
     
     if location == "storage":
         store_ins = "sstore"
@@ -4522,6 +4544,9 @@ def replace_loads_by_sstores(storage_location, location):
                     discount_op+=1
                     finish = True
 
+                    rule_applied = True
+
+                    
                     for v in u_dict:
                         elem = u_dict[v]
                         if elem == load:
@@ -4557,6 +4582,8 @@ def remove_store_recursive_dif(storage_location, location):
     global gas_store_op
     global gas_memory_op
     global discount_op
+    global rule_applied
+    
     if location == "storage":
         instruction = "sstore"
     else:
@@ -4598,6 +4625,8 @@ def remove_store_recursive_dif(storage_location, location):
 
                         gas_memory_op+=3
 
+                    rule_applied = True
+                    
                     remove_store_recursive_dif(storage_location,location)
                     finish = True
 
@@ -4618,9 +4647,12 @@ def remove_store_recursive_dif(storage_location, location):
                         msg = "[OPT]: Removed mstore mstore with KECCAK"
                         check_and_print_debug_info(debug, msg)
                         gas_memory_op+=3
+
+                        rule_applied = True
+
                         remove_store_recursive_dif(storage_location,location)
                         finish = True
-
+                        
                     
         i+=1
 
@@ -4630,7 +4662,8 @@ def remove_store_loads(storage_location, location):
     global gas_store_op
     global gas_memory_op
     global discount_op
-
+    global rule_applied
+    
     if storage_location == "storage":
         store_ins = "sstore"
         load_ins = "sload"
@@ -4657,6 +4690,7 @@ def remove_store_loads(storage_location, location):
                         storage_location.pop(i)
                         discount_op+=1
                         finished = True
+
                         if storage_location == "storage":
                             msg = "[OPT]: OPTIMIZATION sstore OF sload"
                             check_and_print_debug_info(debug, msg)
@@ -4667,6 +4701,9 @@ def remove_store_loads(storage_location, location):
                             check_and_print_debug_info(debug, msg)
 
                             gas_memory_op+=3
+
+                        rule_applied = True
+                        
                         remove_store_loads(storage_location,location)
         i+=1
 
