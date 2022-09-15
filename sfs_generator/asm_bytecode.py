@@ -5,6 +5,9 @@ from sfs_generator.utils import get_ins_size, get_push_number_hex
 # Assuming the value of asm is hexadecimal base. This way, we ensure the same format is respected
 ASM_Value_T = Optional[str]
 
+# Type the jumpType field can contain. Expected to be the same as ASM_Value_T
+ASM_Jump_T = Optional[str]
+
 # Type for the json representation of the assembly item
 ASM_Json_T = Dict[str, Union[int, str, ASM_Value_T]]
 
@@ -13,12 +16,13 @@ class AsmBytecode:
     Class that represents the assembly format of the bytecode, following the same convention as the Solidity compiler
     """
 
-    def __init__(self, begin: int, end: int, source : int, disasm: str, value: ASM_Value_T):
+    def __init__(self, begin: int, end: int, source: int, disasm: str, value: ASM_Value_T, jump_type: ASM_Jump_T = None):
         self.begin = begin
         self.end = end
         self.source = source
         self.disasm = disasm
         self.value = value
+        self.jump_type = jump_type
 
     def to_json(self)-> ASM_Json_T :
         """
@@ -31,20 +35,25 @@ class AsmBytecode:
         if self.value is not None:
             json_bytecode["value"] = self.value
 
+        if self.jump_type is not None:
+            json_bytecode["jumpType"] = self.jump_type
+
         return json_bytecode
 
     def to_plain(self) -> str:
         """
         Assembly item conversion to human-readable format. This format consists of the opcode name followed
-        by the corresponding value in hexadecimal if any
+        by the corresponding value or jump Type in hexadecimal if any
         :return: a string containing the representation
         """
-        return self.disasm if self.value is None else ' '.join([self.disasm, str(self.value)])
+        return f"{self.disasm} {str(self.value)}" if self.value is not None else f"{self.disasm} {self.jump_type}" \
+            if self.jump_type is not None else self.disasm
 
     def to_plain_with_byte_number(self) -> str:
         op_name = ''.join([self.disasm, str(get_push_number_hex(self.value))]) if self.disasm == "PUSH" else self.disasm
         op_value = ''.join(['0x', self.value]) if self.disasm == "PUSH" else str(self.value) if self.value is not None else ''
-        return ' '.join([op_name, op_value]) if self.value is not None else op_name
+        return f"{op_name} {op_value}" if self.value is not None else f"{self.disasm} {self.jump_type}" \
+            if self.jump_type is not None else self.disasm
 
     @property
     def bytes_required(self) -> int:
@@ -60,15 +69,13 @@ class AsmBytecode:
 
 
     def __str__(self):
-        content = "{begin:"+str(self.begin)+", end:"+str(self.end)+", source:"+str(self.source)+", name:"+str(self.disasm)+", value:"+str(self.value)+"}"
-        return content
+        return f"{{begin:{str(self.begin)}, end:{str(self.end)}, source:{str(self.source)}, name:{self.disasm}, value:{str(self.value)}, jumpType:{self.jump_type}}}"
 
 
     def __repr__(self):
-        content = "{begin:"+str(self.begin)+", end:"+str(self.end)+", source:"+str(self.source)+", name:"+str(self.disasm)+", value:"+str(self.value)+"}"
-        return content
+        return f"{{begin:{str(self.begin)}, end:{str(self.end)}, source:{str(self.source)}, name:{self.disasm}, value:{str(self.value)}, jumpType:{str(self.jump_type)}}}"
 
 
     def __eq__(self, other):
         return self.begin == other.begin and self.end == other.end and self.source == other.source and \
-               self.disasm == other.disasm and self.value == other.value
+               self.disasm == other.disasm and self.value == other.value and self.jump_type == other.jump_type

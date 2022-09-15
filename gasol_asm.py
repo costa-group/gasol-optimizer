@@ -1,6 +1,5 @@
 #!/usr/bin/python3
 import argparse
-import collections
 import json
 import os
 import shutil
@@ -15,16 +14,10 @@ import pandas as pd
 import global_params.constants as constants
 import global_params.paths as paths
 import sfs_generator.ir_block as ir_block
-import sfs_generator.opcodes as op
-from properties.properties_from_asm_json import (
-    bytes_required_asm, compute_number_of_instructions_in_asm_json_per_file,
-    preprocess_instructions)
-from properties.properties_from_solver_output import analyze_file
 from sfs_generator.gasol_optimization import get_sfs_dict
 from sfs_generator.parser_asm import (parse_asm,
                                       parse_asm_representation_from_blocks,
                                       parse_blocks_from_plain_instructions)
-from sfs_generator.rebuild_asm import rebuild_asm
 from sfs_generator.utils import (compute_stack_size, get_ins_size_seq,
                                  is_constant_instruction, isYulInstruction,
                                  isYulKeyword)
@@ -32,14 +25,11 @@ from smt_encoding.gasol_encoder import (execute_syrup_backend,
                                         execute_syrup_backend_combined,
                                         generate_theta_dict_from_sequence)
 from solution_generation.disasm_generation import (
-    generate_disasm_sol_from_output, generate_info_from_solution,
-    generate_sub_block_asm_representation_from_log,
-    generate_sub_block_asm_representation_from_output,
-    obtain_log_representation_from_solution, read_initial_dicts_from_files)
+    generate_sub_block_asm_representation_from_log)
 from solution_generation.solver_output_generation import obtain_solver_output
 from verification.sfs_verify import verify_block_from_list_of_sfs
 from verification.solver_solution_verify import (
-    check_solver_output_is_correct, generate_solution_dict)
+    check_solver_output_is_correct)
 from solution_generation.optimize_from_sub_blocks import rebuild_optimized_asm_block
 from sfs_generator.asm_block import AsmBlock
 from smt_encoding.block_optimizer import BlockOptimizer, OptimizeOutcome
@@ -323,7 +313,7 @@ def optimize_asm_from_log(file_name, json_log, output_file, parsed_args: Namespa
             new_asm.contracts = contracts
 
             with open(output_file, 'w') as f:
-                f.write(json.dumps(rebuild_asm(new_asm)))
+                f.write(json.dumps(new_asm.to_json()))
 
             print("")
             print("Optimized code stored at " + output_file)
@@ -606,7 +596,7 @@ def optimize_asm_in_asm_format(file_name, output_file, csv_file, log_file, parse
     if parsed_args.backend:
 
         with open(output_file, 'w') as f:
-            f.write(json.dumps(rebuild_asm(new_asm)))
+            f.write(json.dumps(new_asm.to_json()))
 
         df = pd.DataFrame(statistics_rows)
         df.to_csv(csv_file)
