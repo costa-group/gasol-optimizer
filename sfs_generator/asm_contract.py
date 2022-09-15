@@ -13,6 +13,7 @@ class AsmContract:
         self.data = {}
         self.data_addresses = {}
         self.has_asm_field = contains_asm_field
+        self._source_list = None
 
     @property
     def init_code(self) -> List[AsmBlock]:
@@ -22,6 +23,17 @@ class AsmContract:
     def init_code(self, new_value : List[AsmBlock]):
         self._code = new_value
 
+    @property
+    def source_list(self) -> Optional[List[str]]:
+        """
+        Returns the associated sourceList field for a data id. Included in solc 0.8.14
+        """
+        return self._source_list
+
+    @source_list.setter
+    def source_list(self, source_list: List[str]) -> None:
+
+        self._source_list = source_list
 
     def set_auxdata(self, data_id : str, aux : str) -> None:
         """
@@ -156,6 +168,10 @@ class AsmContract:
             return {self.contract_name : {}}
 
         json_contract = {".code": [instruction.to_json() for block in self.init_code for instruction in block.instructions]}
+
+        source_list = self.source_list
+        if source_list is not None:
+            json_contract["sourceList"] = source_list
 
         data_ids = self.get_data_ids_with_code()
 

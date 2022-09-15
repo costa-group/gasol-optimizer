@@ -17,8 +17,9 @@ def build_asm_bytecode(instruction : ASM_Json_T) -> AsmBytecode:
     name = instruction.get("name", -1)
     source = instruction.get("source", -1)
     value = instruction.get("value", None)
+    jump_type = instruction.get("jumpType", None)
 
-    asm_bytecode = AsmBytecode(begin,end,source,name,value)
+    asm_bytecode = AsmBytecode(begin, end, source, name, value, jump_type)
     return asm_bytecode
 
 
@@ -64,7 +65,7 @@ def build_blocks_from_asm_representation(cname : str, block_name_prefix : str, i
 
     return bytecodes
 
-        
+
 def build_asm_contract(cname : str, cinfo : Dict[str, Any]) -> AsmContract:
     asm_c = AsmContract(cname)
 
@@ -74,12 +75,15 @@ def build_asm_contract(cname : str, cinfo : Dict[str, Any]) -> AsmContract:
     simplified_cname = (cname.split("/")[-1]).split(":")[-1]
 
     init_bytecode = build_blocks_from_asm_representation(simplified_cname, '_'.join([simplified_cname, "initial"]), initCode, True)
-    
+
     asm_c.init_code = init_bytecode
-        
+
+    # Only available from solc v 0.8.14
+    source_list = cinfo.get("sourceList", None)
+    asm_c.source_list = source_list
+
     data = cinfo[".data"]
 
-    
     for elem in data:
 
         if not isinstance(data[elem],str):
