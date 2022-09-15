@@ -4619,7 +4619,6 @@ def remove_store_recursive_dif(storage_location, location):
 
                         gas_store_op+=5000
                     else:
-                        raise Exception
                         msg = "[OPT]: Removed mstore mstore "
                         check_and_print_debug_info(debug, msg)
 
@@ -4825,7 +4824,6 @@ def generate_dependences(storage_location, location):
                     var_rest = store[0][0]
                     dep = are_dependent(store,elem)
                     if dep:
-                        raise Exception
                         storage_dependences.append((j,i))                                
                 j-=1
 
