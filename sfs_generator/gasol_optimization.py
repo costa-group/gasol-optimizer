@@ -4806,7 +4806,6 @@ def generate_dependences(storage_location, location):
                     if dep:
                         if elem[0][1] != store[0][1]: #if the value is the same they are not dependent
                             storage_dependences.append((j,i))
-                            raise Exception
                             already = True
                         else:
                             if str(var) == str(var_rest) and location == "memory":
