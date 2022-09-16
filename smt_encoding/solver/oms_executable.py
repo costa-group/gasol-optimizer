@@ -31,7 +31,9 @@ class OMSExecutable(SolverFromExecutable):
     def optimization_outcome(self) -> OptimizeOutcome:
         if self._model is None:
             raise ValueError("Check-sat has not been called")
-        if "error" in self._model:
+        if "unsat" in self._model:
+            return OptimizeOutcome.unsat
+        elif "not enabled" in self._model:
             return OptimizeOutcome.no_model
         elif "partial" in self._model:
             return OptimizeOutcome.non_optimal

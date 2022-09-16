@@ -67,7 +67,7 @@ class BlockOptimizer:
         optimization_outcome = self._solver.check_sat()
         time = self._solver.time_statistics()
 
-        if optimization_outcome == OptimizeOutcome.no_model:
+        if optimization_outcome == OptimizeOutcome.no_model or optimization_outcome == OptimizeOutcome.unsat:
             return optimization_outcome, time, []
         return optimization_outcome, time, self._rebuild_block_from_solver()
 

@@ -448,8 +448,12 @@ def optimize_asm_block_asm_format(block: AsmBlock, timeout: int, parsed_args: Na
 
     for sub_block_name, optimization_outcome, solver_time, new_sub_block, original_instr, initial_program_l, tout in optimize_block(sfs_dict, timeout, parsed_args):
 
+        if optimization_outcome == OptimizeOutcome.unsat:
+            with open("unsat.txt", 'a') as f:
+                f.write(f'{sub_block_name}\n')
+
         # We weren't able to find a solution using the solver, so we just update
-        if optimization_outcome == OptimizeOutcome.no_model:
+        elif optimization_outcome == OptimizeOutcome.no_model:
             optimized_blocks[sub_block_name] = None
             statistics_row = {"block_id": sub_block_name, "model_found": False, "shown_optimal": False,
                               "previous_solution": original_instr, "solver_time_in_sec": round(solver_time, 3),
@@ -457,36 +461,36 @@ def optimize_asm_block_asm_format(block: AsmBlock, timeout: int, parsed_args: Na
 
             statistics_rows.append(statistics_row)
             total_time += solver_time
-            continue
 
-        # To obtain easily the size and gas, we parse the original instructions. Only one block should be obtained
-        origina_blocks_split = parse_blocks_from_plain_instructions(original_instr)
-        assert(len(origina_blocks_split) == 1)
-        original_block_split = origina_blocks_split[0]
-
-        initial_length = original_block_split.bytes_required
-        initial_gas = original_block_split.gas_spent
-
-        shown_optimal = optimization_outcome == OptimizeOutcome.optimal
-        optimized_length = sum([instr.bytes_required for instr in new_sub_block])
-        optimized_gas = sum([instr.gas_spent for instr in new_sub_block])
-
-        statistics_row = {"block_id": sub_block_name, "solver_time_in_sec": round(solver_time, 3),
-                          "saved_size": initial_length - optimized_length, "saved_gas": initial_gas - optimized_gas,
-                          "model_found": True, "shown_optimal": shown_optimal, "previous_solution": original_instr,
-                          "solution_found": ' '.join([instr.to_plain() for instr in new_sub_block]),
-                          "initial_n_instrs": initial_program_l, "optimized_n_instrs": len(new_sub_block),
-                          "timeout": tout}
-
-        statistics_rows.append(statistics_row)
-        total_time += solver_time
-
-        if (not parsed_args.size and initial_gas > optimized_gas) or \
-                (parsed_args.size and initial_length > optimized_length):
-            optimized_blocks[sub_block_name] = new_sub_block
-            # log_dicts[sub_block_name] = generate_solution_dict(solver_output)
         else:
-            optimized_blocks[sub_block_name] = None
+            # To obtain easily the size and gas, we parse the original instructions. Only one block should be obtained
+            original_blocks_split = parse_blocks_from_plain_instructions(original_instr)
+            assert(len(original_blocks_split) == 1)
+            original_block_split = original_blocks_split[0]
+
+            initial_length = original_block_split.bytes_required
+            initial_gas = original_block_split.gas_spent
+
+            shown_optimal = optimization_outcome == OptimizeOutcome.optimal
+            optimized_length = sum([instr.bytes_required for instr in new_sub_block])
+            optimized_gas = sum([instr.gas_spent for instr in new_sub_block])
+
+            statistics_row = {"block_id": sub_block_name, "solver_time_in_sec": round(solver_time, 3),
+                              "saved_size": initial_length - optimized_length, "saved_gas": initial_gas - optimized_gas,
+                              "model_found": True, "shown_optimal": shown_optimal, "previous_solution": original_instr,
+                              "solution_found": ' '.join([instr.to_plain() for instr in new_sub_block]),
+                              "initial_n_instrs": initial_program_l, "optimized_n_instrs": len(new_sub_block),
+                              "timeout": tout}
+
+            statistics_rows.append(statistics_row)
+            total_time += solver_time
+
+            if (not parsed_args.size and initial_gas > optimized_gas) or \
+                    (parsed_args.size and initial_length > optimized_length):
+                optimized_blocks[sub_block_name] = new_sub_block
+                # log_dicts[sub_block_name] = generate_solution_dict(solver_output)
+            else:
+                optimized_blocks[sub_block_name] = None
 
     new_block = rebuild_optimized_asm_block(block, sub_block_list, optimized_blocks)
 

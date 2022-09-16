@@ -29,7 +29,9 @@ class Z3Executable(SolverFromExecutable):
     def optimization_outcome(self) -> OptimizeOutcome:
         if self._model is None:
             raise ValueError("Check-sat has not been called")
-        if "error" in self._model:
+        if "unsat" in self._model:
+            return OptimizeOutcome.unsat
+        elif "model is not available" in self._model:
             return OptimizeOutcome.no_model
         elif "interval" in self._model:
             return OptimizeOutcome.non_optimal
