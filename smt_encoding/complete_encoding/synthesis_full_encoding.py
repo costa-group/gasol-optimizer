@@ -19,7 +19,8 @@ from smt_encoding.complete_encoding.synthesis_stack_constraints import push_basi
     pop_uninterpreted_encoding, push_basic_encoding_empty, pop_uninterpreted_encoding_empty, nop_encoding_empty, \
     swapk_encoding_empty, dupk_encoding_empty, non_comm_function_encoding_empty, comm_function_encoding_empty, \
     store_stack_function_encoding_empty, pop_encoding_empty
-from smt_encoding.instructions.instruction_dependencies import generate_dependency_graph_minimum
+from smt_encoding.instructions.instruction_dependencies import (generate_dependency_graph_minimum,
+                                                                generate_dependency_graph_only_memory)
 from smt_encoding.complete_encoding.synthesis_pre_order import l_conflicting_constraints, direct_conflict_constraints
 from smt_encoding.instructions.encoding_instruction import EncodingInstruction
 from smt_encoding.complete_encoding.synthesis_soft_constraints import soft_constraints_direct, \
@@ -64,8 +65,8 @@ class FullEncoding:
             self._dependency_graph = generate_dependency_graph_minimum(self._uninterpreted_instructions, self.mem_order,
                                                                        stack_element_to_id_dict)
         else:
-            self._dependency_graph = generate_dependency_graph_minimum([], self.mem_order,
-                                                                       stack_element_to_id_dict)
+            self._dependency_graph = generate_dependency_graph_only_memory(self._uninterpreted_instructions,
+                                                                           self.mem_order)
 
         self._bounds = self._initialize_bounds()
 
