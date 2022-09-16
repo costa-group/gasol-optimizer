@@ -1898,7 +1898,7 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     vars_list = recompute_vars_set(new_ss,new_ts,new_user_defins,[])
     # else:
     #     vars_list = recompute_vars_set(new_ss,new_ts,new_user_defins,opcodes_seq["non_inter"])
-        
+    
     total_inpt_vars = []
     
     for user_ins in new_user_defins:
@@ -5444,7 +5444,8 @@ def transform_push_uninterpreted_functions(target_stack,uninterpreted_functions)
                 new_uninterpreted.append(new_obj)
                 
             target_stack[i] = s_var
-            new_variables.append(s_var)
+            if s_var not in new_variables:
+                new_variables.append(s_var)
         i+=1
 
     i = 0
@@ -5466,7 +5467,11 @@ def transform_push_uninterpreted_functions(target_stack,uninterpreted_functions)
                     new_uninterpreted.append(new_obj)
 
                 input_sk[j] = s_var
-                new_variables.append(s_var)
+
+                if s_var not in new_variables:
+                    new_variables.append(s_var)
+
+                
             j+=1
         
         i+=1
