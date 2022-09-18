@@ -5,7 +5,7 @@ from smt_encoding.constraints.function import ExpressionReference, Function, Sor
 from smt_encoding.constraints.connector import Formula_T
 import re
 from typing import List, Dict, Tuple, Union
-from sfs_generator.opcodes import encoding_functor_name
+from sfs_generator.opcodes import encoding_functor_name, ac_opcodes
 
 # TODO: instead of returning Dict[str, Formula_T], return Dict[str, List[Formula_T]] to allow stack vars being obtained
 #  from different operations e.g. LT(a, b) and GE(b, a)
@@ -103,7 +103,9 @@ class UninterpretedOpcodeTermCreation:
         op_name = instruction.opcode_name
         new_op_name = encoding_functor_name.get(op_name, op_name)
 
-        if not arguments:
+        # Only represent terms as no constants for opcode names which are ac (as the encoding could need an additional
+        # flag to consider)
+        if not arguments or op_name not in ac_opcodes:
             functor_name = re.sub(re.escape(op_name), new_op_name, instruction.id).upper()
         else:
             functor_name = re.sub(re.escape(op_name), new_op_name, instruction.opcode_name).upper()
@@ -121,7 +123,7 @@ class UninterpretedOpcodeTermCreation:
     def opcode_rep_with_uf(self) -> Tuple[Dict[str, Formula_T], List[Function]]:
         stack_var_to_term: Dict[str, ExpressionReference] = dict()
         functors: Dict[str, Function] = dict()
-        
+
         for i, stack_var in enumerate(self._ground_stack_elements):
             function = Function(f"s_{i}", self._sort_type)
             stack_var_to_term[stack_var] = function()

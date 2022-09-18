@@ -183,6 +183,8 @@ Wext = ("EXTCODESIZE")
 
 Wextcodehash = ("EXTCODEHASH")
 
+ac_opcodes = {"ADD", "MUL", "AND", "OR", "XOR"}
+
 def get_opcode(opcode):
     if opcode in opcodes:
         return opcodes[opcode]
