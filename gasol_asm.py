@@ -2,6 +2,7 @@
 import argparse
 import json
 import os
+import pathlib
 import shutil
 import sys
 from typing import Tuple
@@ -55,6 +56,7 @@ def init():
 
 def clean_dir():
     ext = ["rbr", "csv", "sol", "bl", "disasm", "json"]
+    pathlib.Path("unsat.txt").unlink(missing_ok=True)
     if paths.gasol_folder in os.listdir(paths.tmp_path):
         for elem in os.listdir(paths.gasol_path):
             last = elem.split(".")[-1]
@@ -724,8 +726,13 @@ def parse_encoding_args() -> Namespace:
     additional.add_argument('-order-conflicts', action='store_true', dest='order_conflicts',
                             help='Consider the order among the uninterpreted opcodes in the encoding')
 
-    return ap.parse_args()
+    parsed_args = ap.parse_args()
 
+    # Additional check: if ufs are used, push instructions must be represented as uninterpreted too
+    if parsed_args.encode_terms == "uninterpreted_uf":
+        parsed_args.push_basic = False
+
+    return parsed_args
 
 if __name__ == '__main__':
     global previous_gas
