@@ -4598,7 +4598,7 @@ def remove_store_recursive_dif(storage_location, location):
         
         if elem[0][-1].find(instruction)!=-1:
             var = elem[0][0]
-            rest = list(filter(lambda x: x[0][0] == var and x[0][-1].find(instruction)!=-1 and x[0][-1].find("mstore8")==-1, storage_location[i+1::]))
+            rest = list(filter(lambda x: x[0][0] == var and x[0][-1].find(instruction)!=-1 and x[0][-1] == elem[0][-1], storage_location[i+1::]))
             # # If instruction is mstore and the next one is mstore8, then i cannot remove any of them. Otherwise, it is
             # # possible if both instructions are dependent
             # rest = list(filter(lambda x: x[0][-1].find(instruction)!=-1 and (elem[0][-1] != "mstore" or x[0][-1] != "mstore8") and
@@ -4609,7 +4609,7 @@ def remove_store_recursive_dif(storage_location, location):
                 sublist = storage_location[i+1:pos+i+1]
 
                 dep = list(map(lambda x: are_dependent(elem, x),sublist)) #It checks for loads and and keccaks betweeen the stores
-                
+
                 #Keccaks are considered in dep list
                 if True not in dep:
                     storage_location.pop(i)
@@ -4640,7 +4640,7 @@ def remove_store_recursive_dif(storage_location, location):
                             if ins[0][-1].find("keccak256")==-1:
                                 all_keccaks = False
                         j+=1
-
+                        
                     if all_keccaks:
                         storage_location.pop(i+pos+1)
                         discount_op+=1
@@ -4652,7 +4652,35 @@ def remove_store_recursive_dif(storage_location, location):
 
                         remove_store_recursive_dif(storage_location,location)
                         finish = True
+
+                else: #True in list. If we have dependences, we an delete them if all are stores. mstore(x,y) mstore(z,w) mstore(x,k)
+                        j = 0
+                        all_mstores = True
+                        while(j<len(sublist) and all_mstores):
+                            ins = sublist[j]
+                            if dep[j]:
+                                if ins[0][-1].find(elem[0][-1])==-1:
+                                    all_mstores = False
+                            j+=1
+
+                        if all_mstores:
+                            storage_location.pop(i)
+                            discount_op+=1
+                            if location == "storage":
+                                msg = "[OPT]: Removed sstore sstore "
+                                check_and_print_debug_info(debug, msg)
+
+                                gas_store_op+=5000
+                            else:
+                                msg = "[OPT]: Removed mstore mstore "
+                                check_and_print_debug_info(debug, msg)
+
+                                gas_memory_op+=3
+                               
+                            rule_applied = True
                         
+                            remove_store_recursive_dif(storage_location,location)
+                            finish = True
                     
         i+=1
 
@@ -5151,7 +5179,6 @@ def are_dependent(t1, t2):
         if str(var1).startswith("s") or str(var2).startswith("s"):
             dep = True
         else:
-            
             if int(var1)>= int(var2) and int(var1)< int(var2)+int(t2[0][1]):
                 dep = True
             else:
@@ -5190,16 +5217,17 @@ def are_dependent(t1, t2):
                 dep = True
 
         else: #two int values
-            if ins1.find("mstore8")!=-1 and var1>=var2 and var1<var2+32:
-            # var1_int, var2_int = int(var1), int(var2)
-            # # Two mstore8 are dependant if they affect the same memory position
-            # if ins1.find("mstore8") != -1 and ins2.find("mstore8") != -1:
-            #     dep = var1_int == var2_int
-            # # ins1 is mstore8 and ins2 is mstore
-            # elif ins1.find("mstore8")!=-1 and var1_int>=var2_int and var1_int<var2_int+32:
+            var1_int, var2_int = int(var1), int(var2)
+            # if ins1.find("mstore8")!=-1 and var1>=var2 and var1<int(var2)+32:
+
+            # Two mstore8 are dependant if they affect the same memory position
+            if ins1.find("mstore8") != -1 and ins2.find("mstore8") != -1:
+                dep = var1_int == var2_int
+            # ins1 is mstore8 and ins2 is mstore
+            elif ins1.find("mstore8")!=-1 and var1_int>=var2_int and var1_int<var2_int+32:
                 dep = True
-            elif ins2.find("mstore8")!=-1 and var2>=var1 and var2<var1+32:
-            #elif ins2.find("mstore8")!=-1 and var2_int>=var1_int and var2_int<var1_int+32:
+            # elif ins2.find("mstore8")!=-1 and var2>=var1 and var2<var1+32:
+            elif ins2.find("mstore8")!=-1 and var2_int>=var1_int and var2_int<var1_int+32:
                 dep = True
             else:
                 dep = False
