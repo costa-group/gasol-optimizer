@@ -159,6 +159,9 @@ def init_globals():
 
     global rule_applied
     rule_applied = False
+
+    global modified_userdef_vals
+    modified_userdef_vals = {}
     
 def filter_opcodes(rule):
     instructions = rule.get_instructions()
@@ -435,7 +438,6 @@ def search_for_value_aux(var, instructions,source_stack,level,evaluate = True):
         r = exp_join[0]
         exp = (exp_join[1],exp_join[2])
 
-        
         if r:
             s_dict[var] = exp[0]
 
@@ -462,11 +464,13 @@ def generate_sstore_mstore(store_ins,instructions,source_stack,pos,simp):
 
     for v in new_vars:
         search_for_value_aux(v,instructions,source_stack,pos,simp)
-    
+        
         values[v] = s_dict[v]
+
 
     exp_join = rebuild_expression(new_vars,funct,values,level,simp)
 
+    
     return exp_join[1],exp_join[2]
 
 
@@ -1619,7 +1623,7 @@ def generate_storage_info(instructions,source_stack,simplification=True):
     unify_loads_instructions(storage_order, "storage")
     stdep = generate_dependences(storage_order,"storage")
     stdep = simplify_dependencies(stdep)
-
+    
     if simplification:
         simp = True
         while(simp):
@@ -1823,6 +1827,24 @@ def generate_mstore_info(mstore_elem):
     return obj
 
 
+def modified_variables_userdefins(storage_ins):
+    global modified_userdef_vals
+    
+    for s in modified_userdef_vals.keys():
+        ins_lis = filter(lambda x: str(x[0][0]).find(s)!=-1,storage_ins)
+        for x in ins_lis:
+            pos = storage_ins.index(x)
+            ins = storage_ins[pos]
+            new_ins =((modified_userdef_vals[s],ins[0][1],ins[0][-1]),ins[1])
+            storage_ins[pos] = new_ins
+
+        ins_lis = filter(lambda x: str(x[0][1]).find(s)!=-1,storage_ins)
+        for x in ins_lis:
+            pos = storage_ins.index(x)
+            ins = storage_ins[pos]
+            new_ins =((ins[0][0],modified_userdef_vals[s],ins[0][-1]),ins[1])
+            storage_ins[pos] = new_ins
+    
 
 
 def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,simplification = True):
@@ -1839,7 +1861,7 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
 
     new_ss = []
     new_ts = []
-
+    
     ts_aux = compute_target_stack(ts)
     
     for v in ss:
@@ -1856,13 +1878,19 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
             
     sto_objs = []
 
-    sstore_ins = filter(lambda x: x[0][-1].find("sstore")!=-1,storage_order)
+    sstore_ins = list(filter(lambda x: x[0][-1].find("sstore")!=-1,storage_order))
+
+    modified_variables_userdefins(sstore_ins)
+
     for sto in sstore_ins:
         x = generate_sstore_info(sto)
         sto_objs.append(x)
 
     mem_objs = []
-    mstore_ins = filter(lambda x: x[0][-1].find("mstore")!=-1,memory_order)
+    mstore_ins = list(filter(lambda x: x[0][-1].find("mstore")!=-1,memory_order))
+
+    modified_variables_userdefins(mstore_ins)
+
     for mem in mstore_ins:
         x = generate_mstore_info(mem)
         mem_objs.append(x)
@@ -1885,13 +1913,12 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     vars_list = compute_vars_set(new_ss,new_ts)
 
     #Adding sstore seq
-
+    
     if simplification:
         new_user_defins,new_ts = apply_all_simp_rules(all_user_defins,vars_list,new_ts)
         apply_all_comparison(new_user_defins,new_ts)
     else:
         new_user_defins = all_user_defins
-
 
     new_user_defins = update_user_defins(new_ts,new_user_defins)
         
@@ -1942,7 +1969,7 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     else:
         new_var_list = []
         new_push_ins = []
-                
+        
     json_dict["init_progr_len"] = max_instr_size-discount_op
     json_dict["max_progr_len"] = max_instr_size
     json_dict["max_sk_sz"] = max_sk_sz_idx-len(remove_vars)
@@ -1988,6 +2015,7 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     with open(paths.json_path+"/"+ block_nm + "_input.json","w") as json_file:
         json.dump(json_dict,json_file)
 
+    print(paths.json_path+"/"+ block_nm + "_input.json")
     rule_applied = False
         
     return split_by,""
@@ -2079,10 +2107,13 @@ def build_initblock_userdef(u_var,args_exp,arity_exp):
 def build_userdef_instructions():
     global user_defins
     global already_defined_userdef
+    global modified_userdef_vals
+
     
     already_defined_userdef = []
     
     u_dict_sort = sorted(u_dict.keys())
+    
     for u_var in u_dict_sort:
         exp = u_dict[u_var]
         arity_exp = exp[1]
@@ -2100,7 +2131,7 @@ def build_userdef_instructions():
                     user_defins.append(obj)
                 else:
                     modified_svariable(u_var, obj["outpt_sk"][0])
-
+                    modified_userdef_vals[u_var] = obj["outpt_sk"][0]
             else:
                 user_defins.append(obj)
             
@@ -2109,9 +2140,10 @@ def build_userdef_instructions():
             args = [args_exp[0],args_exp[1]]
             is_new, obj = generate_userdefname(u_var,funct,args,arity_exp)
 
+            
             if not is_new:
                 modified_svariable(u_var, obj["outpt_sk"][0])
-
+                modified_userdef_vals[u_var] = obj["outpt_sk"][0]
             else:
                 user_defins.append(obj)
 
@@ -2126,7 +2158,8 @@ def build_userdef_instructions():
 
                 if not is_new:
                     modified_svariable(new_uvar, obj["outpt_sk"][0])
-
+                    modified_userdef_vals[new_uvar] = obj["outpt_sk"][0]
+                    
                 else:
                     user_defins.append(obj)
 
@@ -2142,7 +2175,7 @@ def build_userdef_instructions():
 
                 if not is_new:
                     modified_svariable(new_uvar, obj["outpt_sk"][0])
-
+                    modified_userdef_vals[new_uvar] = obj["outpt_sk"][0]
                 else:
                     user_defins.append(obj)
 
@@ -2153,7 +2186,7 @@ def build_userdef_instructions():
 
                 if not is_new:
                     modified_svariable(u_var, obj["outpt_sk"][0])
-
+                    modified_userdef_vals[u_var] = obj["outpt_sk"][0]
                 else:
                     user_defins.append(obj)
         else:
@@ -2166,10 +2199,9 @@ def build_userdef_instructions():
 
             if not is_new:
                 modified_svariable(u_var, obj["outpt_sk"][0])
-
+                modified_userdef_vals[u_var] = obj["outpt_sk"][0]
             else:
                 user_defins.append(obj)
-
             
 def generate_userdefname(u_var,funct,args,arity,init=False):
     global user_def_counter
@@ -2438,7 +2470,7 @@ def process_opcode(result):
 def modified_svariable(old_uvar, new_uvar):
     global s_dict
     global u_dict
-
+    global variable_content
 
     for s_var in s_dict.keys():
         if str(s_dict[s_var]).find(old_uvar)!=-1:
@@ -2452,7 +2484,12 @@ def modified_svariable(old_uvar, new_uvar):
             elems[pos_var] = new_uvar
             new_val = (tuple(elems),u_dict[u_var][1])
             u_dict[u_var] = new_val
-    
+
+    for v_var in variable_content.keys():
+        if str(variable_content[v_var]).find(old_uvar)!=-1:
+            variable_content[v_var] = new_uvar
+
+            
 def check_inputs(instr_name,args_aux):
     
     args = []
@@ -3566,7 +3603,6 @@ def apply_transform_rules(user_def_instrs,list_vars,tstack):
             if r!=-1:
                 msg = "[RULE]: Simplification rule type 1: "+str(instr)
                 check_and_print_debug_info(debug, msg)
-                
                 replace_var_userdef(instr["outpt_sk"][0],r,user_def_instrs)
                 target_stack = replace_var(instr["outpt_sk"][0],r,target_stack)
                 delete_from_listvars(instr["outpt_sk"][0],list_vars)
