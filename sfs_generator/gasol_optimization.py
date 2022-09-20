@@ -5213,10 +5213,14 @@ def are_dependent(t1, t2):
     #The dependences with keccaks have to be computed only for mstore instructions.    
     elif ins1.find("mstore")!=-1 and ins2.find("keccak256")!=-1:
         if str(var1).startswith("s") or str(var2).startswith("s"):
+        
             dep = True
         else:
-            if int(var1)>= int(var2) and int(var1)< int(var2)+int(t2[0][1]):
-                dep = True
+            if int(var1)>= int(var2):
+                if str(t2[0][1]).startswith("s") or int(var1)< int(var2)+int(t2[0][1]):
+                    dep = True
+                else:
+                    dep = False
             else:
                 dep = False
 
@@ -5224,8 +5228,11 @@ def are_dependent(t1, t2):
         if str(var1).startswith("s") or str(var2).startswith("s"):
             dep = True
         else:
-            if int(var2)>= int(var1) and int(var2)< int(var1)+int(t1[0][1]):
-                dep = True
+            if int(var2)>= int(var1):
+                if str(t1[0][1]).startswith("s") or int(var2)< int(var1)+int(t1[0][1]):
+                    dep = True
+                else:
+                    dep = False
             else:
                 dep = False
         
