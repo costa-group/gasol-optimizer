@@ -83,6 +83,10 @@ revert_flag = False
 global assignImm_values
 assignImm_values = {}
 
+global debug
+debug = False
+
+
 def init_globals():
     
     global u_counter
@@ -154,14 +158,17 @@ def init_globals():
     global sto_delete_pos
     sto_delete_pos = []
 
-    global debug
-    debug = False
-
     global rule_applied
     rule_applied = False
 
     global modified_userdef_vals
     modified_userdef_vals = {}
+
+    global rules_applied
+    rules_applied = []
+
+    global rule
+    rule = ""
     
 def filter_opcodes(rule):
     instructions = rule.get_instructions()
@@ -379,6 +386,8 @@ def search_for_value_aux(var, instructions,source_stack,level,evaluate = True):
     global s_dict
     global u_counter
     global u_dict
+    global rules_applied
+    global rule
     
     i = 0
     found = False
@@ -439,6 +448,8 @@ def search_for_value_aux(var, instructions,source_stack,level,evaluate = True):
         exp = (exp_join[1],exp_join[2])
 
         if r:
+            rules_applied.append(rule)
+            rule = ""
             s_dict[var] = exp[0]
 
         else:
@@ -560,6 +571,7 @@ def update_unary_func(func,var,val,evaluate):
     global u_dict
     global gas_saved_op    
     global rule_applied
+    global rule
     
     if func != "":
 
@@ -578,6 +590,7 @@ def update_unary_func(func,var,val,evaluate):
                         s_dict[var] = val_end
                         gas_saved_op+=3
                         rule_applied = True
+                        rule = "NOT(X)"
                     else:
                         u_var = create_new_svar()
 
@@ -597,12 +610,14 @@ def update_unary_func(func,var,val,evaluate):
                 else:
                     gas_saved_op+=3
                     s_dict[var] = val_end
+                    rule = "NOT(X)"
                     rule_applied = True
 
             elif func == "iszero":
                 aux = int(val)
                 val_end = 1 if aux == 0 else 0
                 gas_saved_op+=3
+                rule = "EVAL(ISZERO("+str(val_end)+"))"
                 s_dict[var] = val_end
                 rule_applied = True
 
@@ -1359,6 +1374,7 @@ def compute_binary(expression,level):
     global gas_saved_op
     global already_considered    
     global rule_applied
+    global rule
     
     v0 = expression[0]
     v1 = expression[1]
@@ -1390,12 +1406,14 @@ def compute_binary(expression,level):
             
             if (funct in ["+","*","and","or","xor","eq","shl","shr","sar"]) and (exp_str not in already_considered):
                 discount_op+=2
+                rule = "EVAL "+str(expression)
                 msg = "[RULE]: Evaluate expression "+str(expression)
                 check_and_print_debug_info(debug, msg)
                 rule_applied = True
                 
             elif funct not in ["+","*","and","or","xor","eq","shl","shr","sar"]:
                 discount_op+=2
+                rule = "EVAL "+str(expression)
                 msg = "[RULE]: Evaluate expression "+str(expression)
                 check_and_print_debug_info(debug, msg)
                 rule_applied = True
@@ -1412,6 +1430,7 @@ def compute_ternary(expression):
     global saved_push
     global gas_saved_op
     global rule_applied
+    global rule
     
     v0 = expression[0]
     v1 = expression[1]
@@ -1421,6 +1440,9 @@ def compute_ternary(expression):
     r, vals = all_integers([v0,v1,v2])
     if r and funct in ["+","*"]:
         val = evaluate_expression_ter(funct,vals[0],vals[1],vals[2])
+
+        rule = "EVAL "+str(expression)
+
         msg = "[RULE]: Evaluate expression "+str(expression)
         check_and_print_debug_info(debug, msg)
 
@@ -1852,7 +1874,7 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     global num_pops
     global blocks_json_dict
     global rule_applied
-    
+    global rules_applied
     split_by = False
     
     max_ss_idx = compute_max_idx(max_ss_idx1,ss)
@@ -1982,6 +2004,7 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     json_dict["memory_dependences"]= mem_dep
     json_dict["is_revert"]= True if revert_flag else False
     json_dict["rules_applied"] = rule_applied
+    json_dict["rules"] = rules_applied
 
     
     new_original_ins = []
@@ -1995,7 +2018,7 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     
     json_dict["original_instrs"] = " ".join(original_ins)
 
-    
+
     # if not simplification:
     #     op = opcodes_seq["non_inter"]
     #     opcodes_seq["non_inter"] = op+sto_objs+mem_objs
@@ -2007,6 +2030,12 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     else:
         block_nm = block_name + "_0"
 
+        
+    if rule_applied:
+        msg = "SFS with rule: "+block_nm + "_input.json"
+        check_and_print_debug_info(debug, msg)
+
+        
     blocks_json_dict[block_nm] = json_dict
 
     if "jsons" not in os.listdir(paths.gasol_path):
@@ -2015,7 +2044,7 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     with open(paths.json_path+"/"+ block_nm + "_input.json","w") as json_file:
         json.dump(json_dict,json_file)
 
-    print(paths.json_path+"/"+ block_nm + "_input.json")
+    #print(paths.json_path+"/"+ block_nm + "_input.json")
     rule_applied = False
         
     return split_by,""
@@ -3302,6 +3331,8 @@ def apply_transform(instr):
     global discount_op
     global saved_push
     global gas_saved_op
+    global rule
+
     
     opcode = instr["disasm"]
     if opcode == "AND":
@@ -3311,12 +3342,14 @@ def apply_transform(instr):
             gas_saved_op+=3
             
             discount_op+=1
+            rule = "AND(X,0)"
             return 0
         elif inp_vars[0] == inp_vars[1]:
             saved_push+=1
             gas_saved_op+=3
 
             discount_op+=1
+            rule = "AND(X,X)"
             return inp_vars[0]
     
         elif inp_vars[0] in int_not0 or inp_vars[1] in int_not0:
@@ -3324,6 +3357,7 @@ def apply_transform(instr):
             gas_saved_op+=3
 
             discount_op+=1
+            rule = "AND(X,2^256-1)"
             return inp_vars[1] if (inp_vars[0] in int_not0) else inp_vars[0]
         else:
             return -1
@@ -3335,12 +3369,14 @@ def apply_transform(instr):
             gas_saved_op+=3
 
             discount_op+=1
+            rule = "OR(X,0)"
             return inp_vars[1] if inp_vars[0] == 0 else inp_vars[0]
         elif inp_vars[0] == inp_vars[1]:
             saved_push+=1
             gas_saved_op+=3
 
             discount_op+=1
+            rule = "OR(X,X)"
             return inp_vars[0]
         else:
             return -1
@@ -3353,12 +3389,14 @@ def apply_transform(instr):
             gas_saved_op+=3
 
             discount_op+=1
+            rule = "XOR(X,X)"
             return 0
         elif 0 in inp_vars:
             saved_push+=2
             gas_saved_op+=3
 
             discount_op+=1
+            rule = "XOR(X,0)"
             return inp_vars[1] if inp_vars[0] == 0 else inp_vars[0]
         else:
             return -1
@@ -3371,18 +3409,21 @@ def apply_transform(instr):
             gas_saved_op+=60
 
             discount_op+=1
+            rule = "EXP(X,0)"
             return 1
         elif inp_vars[1] == 1:
             saved_push+=1
             gas_saved_op+=60
             
             discount_op+=1
+            rule = "EXP(X,1)"
             return inp_vars[0]
         elif inp_vars[0] == 1:
             gas_saved_op+=60
             
             discount_op+=1
-            return inp_vars[1]
+            rule = "EXP(1,X)"
+            return 1
         else:
             return -1
 
@@ -3393,6 +3434,7 @@ def apply_transform(instr):
             gas_saved_op+=3
 
             discount_op+=1
+            rule = "ADD(X,0)"
             return inp_vars[1] if inp_vars[0] == 0 else inp_vars[0]
         else:
             return -1
@@ -3404,12 +3446,14 @@ def apply_transform(instr):
             gas_saved_op+=3
 
             discount_op+=1
+            rule = "SUB(X,0)"
             return inp_vars[0]
         elif inp_vars[0] == inp_vars[1]:
             saved_push+=1
             gas_saved_op+=3
 
             discount_op+=1
+            rule = "SUB(X,X)"
             return 0
         else:
             return -1
@@ -3421,12 +3465,14 @@ def apply_transform(instr):
             gas_saved_op+=5
 
             discount_op+=1
+            rule = "MUL(X,0)"
             return 0
         elif 1 in inp_vars:
             saved_push+=1
             gas_saved_op+=5
             
             discount_op+=1
+            rule = "MUL(X,1)"
             return inp_vars[1] if inp_vars[0] == 1 else inp_vars[0]
         else:
             return -1
@@ -3438,15 +3484,24 @@ def apply_transform(instr):
             gas_saved_op+=5
             
             discount_op+=1
+            rule = "DIV(X,1)"
             return inp_vars[0]
 
-        elif inp_vars == 0:
+        elif 0 in inp_vars:
             saved_push+=2
             gas_saved_op+=5
 
             discount_op+=1
+            rule = "DIV(X,0)"
             return 0
 
+        elif inp_vars[0] == inp_vars[1]:
+            saved_push+=2
+            gas_saved_op+=5
+
+            discount_op+=1
+            rule = "DIV(X,X)"
+            return 1
         else:
             return -1
 
@@ -3457,6 +3512,7 @@ def apply_transform(instr):
             gas_saved_op+=5
             
             discount_op+=1
+            rule = "MOD(X,1)"
             return 0
 
         elif inp_vars[0] == inp_vars[1]:
@@ -3464,6 +3520,7 @@ def apply_transform(instr):
             gas_saved_op+=5
 
             discount_op+=1
+            rule = "MOD(X,X)"
             return 0
 
         elif inp_vars[1] == 0:
@@ -3471,9 +3528,9 @@ def apply_transform(instr):
             gas_saved_op+=5
 
             discount_op+=1
+            rule = "MOD(X,0)"
             return 0
 
-            
         else:
             return -1
 
@@ -3483,6 +3540,8 @@ def apply_transform(instr):
             discount_op+=1
             saved_push+=2
             gas_saved_op+=3
+
+            rule = "EQ(X,X)"
             
             return 1
         else:
@@ -3495,12 +3554,16 @@ def apply_transform(instr):
             gas_saved_op+=3
 
             discount_op+=1
+
+            rule = "GT(0,X)"
+            
             return 0
         elif inp_vars[0] == inp_vars[1]:
             discount_op+=1
             saved_push+=2
             gas_saved_op+=3
-            
+
+            rule = "GT(X,X)"
             return 0
         else:
             return -1
@@ -3512,12 +3575,15 @@ def apply_transform(instr):
             gas_saved_op+=3
 
             discount_op+=1
+
+            rule = "LT(X,0)"
             return 0
         elif inp_vars[0] == inp_vars[1]:
             discount_op+=1
             saved_push+=2
             gas_saved_op+=3
-            
+
+            rule = "LT(X,X)"
             return 0
         else:
             return -1
@@ -3536,7 +3602,7 @@ def apply_transform(instr):
                 if bytes_sol <= bytes_v0+1:    
                     saved_push+=1
                     gas_saved_op+=3
-
+                    rule = "NOT(X)"
                     return val_end
                 else:
                     return -1
@@ -3544,6 +3610,7 @@ def apply_transform(instr):
             else:
                 saved_push+=1
                 gas_saved_op+=3
+                rule = "NOT(X)"
                 return val_end
             
         else:
@@ -3554,10 +3621,12 @@ def apply_transform(instr):
         if inp_vars[0] == 0:
             gas_saved_op+=3
             saved_push+=1
+            rule = "ISZ(0)"
             return 1
         elif inp_vars[0] == 1:
             gas_saved_op+=3
             saved_push+=1
+            rule = "ISZ(1)"
             return 0
         else:
             return -1
@@ -3568,11 +3637,15 @@ def apply_transform(instr):
             discount_op+=1
             saved_push+=2
             gas_saved_op+=3
+
+            rule = opcode+"(0,X)"
+            
             return inp_vars[1]
         elif inp_vars[1] == 0:
             discount_op+=1
             saved_push+=2
             gas_saved_op+=3
+            rule = opcode+"(X,0)"
             return inp_vars[0]
         else:
             return -1
@@ -3580,7 +3653,7 @@ def apply_transform(instr):
 
 def apply_all_simp_rules(user_def,list_vars,tstack):
     global rule_applied
-
+    
     modified = True
     user_def_instrs = user_def
     target_stack = tstack
@@ -3592,17 +3665,23 @@ def apply_all_simp_rules(user_def,list_vars,tstack):
     return user_def_instrs,target_stack
 
 def apply_transform_rules(user_def_instrs,list_vars,tstack):
+    global rules_applied
+    global rule
+
     to_delete = []
     target_stack = tstack
     modified = False
     for instr in user_def_instrs:
-
+        
         if instr["disasm"] in ["AND","OR","XOR","ADD","SUB","MUL","DIV","EXP","EQ","GT","LT","NOT","ISZERO"]:
             r = apply_transform(instr)
 
             if r!=-1:
+                rules_applied.append(rule)
+                rule = ""
                 msg = "[RULE]: Simplification rule type 1: "+str(instr)
                 check_and_print_debug_info(debug, msg)
+                
                 replace_var_userdef(instr["outpt_sk"][0],r,user_def_instrs)
                 target_stack = replace_var(instr["outpt_sk"][0],r,target_stack)
                 delete_from_listvars(instr["outpt_sk"][0],list_vars)
@@ -3658,7 +3737,7 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
     global saved_push
     global gas_saved_op
     global user_def_counter
-
+    global rule
     
     opcode = instr["disasm"]
     
@@ -3676,6 +3755,7 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                 discount_op+=2
 
                 msg = "ISZ(GT(X,0))"
+                rule = msg
                 check_and_print_debug_info(debug, msg)
                 return True, [instr]
             else:
@@ -3695,6 +3775,7 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
             user_def_counter["ISZERO"]=idx+1
             
             msg = "GT(1,X)"
+            rule = msg
             check_and_print_debug_info(debug, msg)
             return True, []
 
@@ -3716,6 +3797,7 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                     gas_saved_op+=6
 
                     msg = "ISZ(ISZ(GT(X,Y)))"
+                    rule = msg
                     check_and_print_debug_info(debug, msg)
 
                     update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
@@ -3751,6 +3833,7 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                 gas_saved_op+=6
 
                 msg = "ISZ(ISZ(ISZ(X)))"
+                rule = msg
                 check_and_print_debug_info(debug, msg)
 
                 update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
@@ -3773,6 +3856,7 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                 gas_saved_op+=3
 
                 msg = "EQ(1,ISZ(X))"
+                rule = msg
                 check_and_print_debug_info(debug, msg)
 
                 update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
@@ -3799,6 +3883,7 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                 gas_saved_op+=3
 
                 msg = "ISZ(LT(0,X))"
+                rule = msg
                 check_and_print_debug_info(debug, msg)
                 
                 return True, [instr]
@@ -3820,6 +3905,7 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
             user_def_counter["ISZERO"]=idx+1
             
             msg = "LT(X,1)"
+            rule = msg
             check_and_print_debug_info(debug, msg)
             return True, []
         
@@ -3840,6 +3926,7 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                     gas_saved_op+=6
 
                     msg = "ISZ(ISZ(LT(X,Y)))"
+                    rule = msg
                     check_and_print_debug_info(debug, msg)
 
                     update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
@@ -3868,6 +3955,7 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
             saved_push+=1
 
             msg = "EQ(0,X)"
+            rule = msg
             check_and_print_debug_info(debug, msg)
 
             user_def_counter["ISZERO"]=idx+1
@@ -3893,6 +3981,7 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
 
 
                     msg = "ISZ(ISZ(EQ(X,Y)))"
+                    rule = msg
                     check_and_print_debug_info(debug, msg)
 
                     update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
@@ -3924,6 +4013,7 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                 gas_saved_op+=3
 
                 msg = "AND(X,AND(X,Y))"
+                rule = msg
                 check_and_print_debug_info(debug, msg)
 
                 update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
@@ -3970,6 +4060,7 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
 
 
             msg = "OR(X,AND(X,Y))"
+            rule = msg
             check_and_print_debug_info(debug, msg)
             
             return True, [or_instr,instr]
@@ -3992,6 +4083,7 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                 gas_saved_op+=3
 
                 msg = "OR(OR(X,Y),Y)"
+                rule = msg
                 check_and_print_debug_info(debug, msg)
                 
                 return True, [or_instr]
@@ -4035,6 +4127,7 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
             gas_saved_op+=6
 
             msg = "AND(X,OR(X,Y))"
+            rule = msg
             check_and_print_debug_info(debug, msg)
             
             return True, [and_instr,instr]
@@ -4085,6 +4178,7 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
             gas_saved_op+=6
 
             msg = "XOR(X,XOR(X,Y))"
+            rule = msg
             check_and_print_debug_info(debug, msg)
             
             return True, [xor_instr,instr]
@@ -4103,6 +4197,7 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
             gas_saved_op+=3
 
             user_def_counter["EQ"]=idx+1
+            rule = msg
             msg = "ISZ(XOR(X,Y))"
             check_and_print_debug_info(debug, msg)
             
@@ -4137,6 +4232,7 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                 gas_saved_op+=6
 
                 msg = "NOT(NOT(X))"
+                rule = msg
                 check_and_print_debug_info(debug, msg)
                 
                 return True, [not_instr,instr]
@@ -4163,6 +4259,7 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                 gas_saved_op+=6
 
                 msg = "AND(X,NOT(X))"
+                rule = msg
                 check_and_print_debug_info(debug, msg)
                 
                 return True, [and_instr,instr]
@@ -4190,6 +4287,7 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                 gas_saved_op+=6
 
                 msg = "OR(X,NOT(X))"
+                rule = msg
                 check_and_print_debug_info(debug, msg)
                 
                 return True, [or_instr,instr]
@@ -4214,6 +4312,7 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                 gas_saved_op+=3
 
                 msg = "AND(ORIGIN,2^160-1)"
+                rule = msg
                 check_and_print_debug_info(debug, msg)
 
                 update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
@@ -4249,6 +4348,7 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
 
             user_def_counter["EQ"]=idx+1
             msg = "ISZ(SUB(X,Y))"
+            rule = msg
             check_and_print_debug_info(debug, msg)
 
             update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
@@ -4276,6 +4376,7 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                 saved_push+=1
 
                 msg = "MUL(X,SHL(Y,1)"
+                rule = msg
                 check_and_print_debug_info(debug, msg)
 
                 update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
@@ -4294,6 +4395,7 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                 saved_push+=1
 
                 msg = "MUL(SHL(X,1),Y)"
+                rule = msg
                 check_and_print_debug_info(debug, msg)
 
                 update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
@@ -4327,6 +4429,7 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
 
                 user_def_counter["SHR"]=idx+1
                 msg = "DIV(X,SHL(Y,1))"
+                rule = msg
                 check_and_print_debug_info(debug, msg)
 
                 update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
@@ -4363,6 +4466,7 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
 
             user_def_counter["SELFBALANCE"]=idx+1
             msg = "BALANCE(ADDRESS)"
+            rule = msg
             check_and_print_debug_info(debug, msg)
 
             update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
@@ -4383,6 +4487,7 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                 gas_saved_op+=3
 
                 msg = "AND(ADDRESS,2^160)"
+                rule = msg
                 check_and_print_debug_info(debug, msg)
 
                 update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
@@ -4409,6 +4514,7 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
 
             user_def_counter["ISZERO"]=idx+1
             msg = "EXP(0,X)"
+            rule = msg
             check_and_print_debug_info(debug, msg)
             
             return True, []
@@ -4427,6 +4533,7 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
 
             user_def_counter["SHL"]=idx+1
             msg = "EXP(2,X)"
+            rule = msg
             check_and_print_debug_info(debug, msg)
 
             return True, []
@@ -4451,6 +4558,9 @@ def apply_all_comparison(user_def_instrs,tstack):
             rule_applied = True
         
 def apply_comparation_rules(user_def_instrs,tstack):
+    global rules_applied
+    global rule
+    
     modified = False
 
     for instr in user_def_instrs:
@@ -4458,6 +4568,9 @@ def apply_comparation_rules(user_def_instrs,tstack):
         r, d_instr = apply_cond_transformation(instr,user_def_instrs,tstack)
 
         if r:
+            
+            rules_applied.append(rule)
+            rule = ""
             msg = "[RULE]: Simplification rule type 2: "+str(instr)
             msg = msg+"\n[RULE]: Delete rules: "+str(d_instr)
             check_and_print_debug_info(debug, msg)
