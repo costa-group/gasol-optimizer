@@ -697,7 +697,7 @@ def parse_encoding_args() -> Namespace:
     hard.add_argument('-term-encoding', action='store', dest='encode_terms',
                       choices=['int', 'stack_vars', 'uninterpreted_uf', 'uninterpreted_int'],
                       help='Decides how terms are encoded in the SMT encoding: directly as numbers, using stack'
-                           'variables or introducing uninterpreted functions')
+                           'variables or introducing uninterpreted functions',default = 'uninterpreted_uf')
     hard.add_argument('-terminal', action='store_true', dest='terminal',
                       help='(UNSUPPORTED) Encoding for terminal blocks that end with REVERT or RETURN. '
                            'Instead of considering the full stack order, just considers the two top elements')
