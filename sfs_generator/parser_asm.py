@@ -192,6 +192,13 @@ def parse_blocks_from_plain_instructions(raw_instructions_str):
     return blocks
 
 
+# Similar to the previous function, but assuming the raw_instructions correspond to a simple block
+def generate_block_from_plain_instructions(raw_instructions_str: str, block_name: str, is_init_block: bool = False) -> AsmBlock:
+    instr_list = plain_instructions_to_asm_representation(raw_instructions_str)
+    block = AsmBlock('optimized', -1, block_name, is_init_block)
+    block.instructions = [build_asm_bytecode(instr) for instr in instr_list]
+    return block
+
 # Conversion from an ASMBlock to a plain sequence of instructions
 def parse_asm_representation_from_block(asm_block : AsmBlock):
     return '\n'.join([asm_instruction.disasm + ' ' + asm_instruction.value
