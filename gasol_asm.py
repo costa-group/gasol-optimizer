@@ -5,7 +5,7 @@ import os
 import pathlib
 import shutil
 import sys
-from typing import Tuple, Optional, List
+from typing import Tuple, Optional, List, Dict
 from copy import deepcopy
 from timeit import default_timer as dtimer
 from argparse import ArgumentParser, Namespace
@@ -423,25 +423,24 @@ def filter_optimized_blocks_by_intra_block_optimization(asm_sub_blocks, optimize
 
 
 def generate_statistics_info(original_block: AsmBlock, outcome: Optional[OptimizeOutcome], solver_time: float,
-                             optimized_asm: List[AsmBytecode], initial_bound: Optional[int], tout: Optional[int]):
-    global statistics_row
+                             optimized_asm: List[AsmBytecode], initial_bound: int, tout: int) -> Dict:
 
     block_name = original_block.block_name
     original_instr = ' '.join(original_block.instructions_to_optimize_plain())
 
-    statistics_row = {"block_id": block_name, "previous_solution": original_instr}
+    statistics_row = {"block_id": block_name, "previous_solution": original_instr, "initial_n_instrs": initial_bound,
+                      "timeout": tout}
 
     # The outcome of the solver is unsat
     if outcome == OptimizeOutcome.unsat:
         statistics_row.update({"model_found": False, "shown_optimal": False, "solver_time_in_sec": round(solver_time, 3),
-                               "saved_size": 0, "saved_gas": 0, "initial_n_instrs": initial_bound, "timeout": tout,
-                               'outcome': 'unsat'})
+                               "saved_size": 0, "saved_gas": 0, 'outcome': 'unsat'})
 
     # The solver has returned no model
     elif outcome == OptimizeOutcome.no_model:
         statistics_row.update(
             {"model_found": False, "shown_optimal": False, "solver_time_in_sec": round(solver_time, 3),
-             "saved_size": 0, "saved_gas": 0, "initial_n_instrs": initial_bound, "timeout": tout, 'outcome': 'no_model'})
+             "saved_size": 0, "saved_gas": 0, 'outcome': 'no_model'})
 
     # The solver has returned a valid model
     else:
@@ -454,10 +453,9 @@ def generate_statistics_info(original_block: AsmBlock, outcome: Optional[Optimiz
         statistics_row.update({"solver_time_in_sec": round(solver_time, 3), "saved_size": initial_length - optimized_length,
                                "saved_gas": initial_gas - optimized_gas, "model_found": True, "shown_optimal": shown_optimal,
                                "solution_found": ' '.join([instr.to_plain() for instr in optimized_asm]),
-                               "initial_n_instrs": initial_bound, "optimized_n_instrs": len(optimized_asm),
-                               "timeout": tout, 'outcome': 'model'})
+                               "optimized_n_instrs": len(optimized_asm), 'outcome': 'model'})
 
-    statistics_rows.append(statistics_row)
+    return statistics_row
 
 
 def block_has_been_optimized(original_block: AsmBlock, optimized_asm: List[AsmBytecode], size_criterion: bool) -> bool:
@@ -470,6 +468,8 @@ def block_has_been_optimized(original_block: AsmBlock, optimized_asm: List[AsmBy
 
 # Given an asm_block and its contract name, returns the asm block after the optimization
 def optimize_asm_block_asm_format(block: AsmBlock, timeout: int, parsed_args: Namespace):
+    global statistics_rows
+
     new_block = deepcopy(block)
 
     # Optimized blocks. When a block is not optimized, None is pushed to the list.
@@ -493,7 +493,10 @@ def optimize_asm_block_asm_format(block: AsmBlock, timeout: int, parsed_args: Na
 
     for sub_block, optimization_outcome, solver_time, optimized_asm, tout, initial_solver_bound in optimize_block(sfs_dict, timeout, parsed_args):
 
-        generate_statistics_info(sub_block, optimization_outcome, solver_time, optimized_asm, initial_solver_bound, tout)
+        statistics_info = generate_statistics_info(sub_block, optimization_outcome, solver_time, optimized_asm,
+                                                   initial_solver_bound, tout)
+
+        statistics_rows.append(statistics_info)
 
         # Only check if the new block is considered if the solver has generated a new one
         if optimization_outcome == OptimizeOutcome.non_optimal or optimization_outcome == OptimizeOutcome.optimal:
