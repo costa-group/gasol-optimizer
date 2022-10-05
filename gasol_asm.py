@@ -48,13 +48,9 @@ def init():
     global new_size
     new_size = 0
 
-    global statistics_rows
-    statistics_rows = []
-
 
 def clean_dir():
     ext = ["rbr", "csv", "sol", "bl", "disasm", "json"]
-    pathlib.Path("unsat.txt").unlink(missing_ok=True)
     if paths.gasol_folder in os.listdir(paths.tmp_path):
         for elem in os.listdir(paths.gasol_path):
             last = elem.split(".")[-1]
@@ -324,7 +320,7 @@ def optimize_asm_from_log(file_name, json_log, output_file, parsed_args: Namespa
 
 
 def optimize_isolated_asm_block(block_name,output_file, csv_file, parsed_args: Namespace, timeout=10):
-    global statistics_rows
+    statistics_rows = []
 
     with open(block_name,"r") as f:        
         instructions = f.read()
@@ -333,8 +329,9 @@ def optimize_isolated_asm_block(block_name,output_file, csv_file, parsed_args: N
     asm_blocks = []
 
     for old_block in blocks:
-        asm_block, _ = optimize_asm_block_asm_format(old_block, timeout, parsed_args)
-        
+        asm_block, _, statistics_csv = optimize_asm_block_asm_format(old_block, timeout, parsed_args)
+        statistics_rows.extend(statistics_csv)
+
         if not compare_asm_block_asm_format(old_block, asm_block, parsed_args):
             print("Comparison failed, so initial block is kept")
             print(old_block.to_plain())
@@ -467,9 +464,8 @@ def block_has_been_optimized(original_block: AsmBlock, optimized_asm: List[AsmBy
 
 
 # Given an asm_block and its contract name, returns the asm block after the optimization
-def optimize_asm_block_asm_format(block: AsmBlock, timeout: int, parsed_args: Namespace):
-    global statistics_rows
-
+def optimize_asm_block_asm_format(block: AsmBlock, timeout: int, parsed_args: Namespace) -> Tuple[AsmBlock, Dict, List[Dict]]:
+    csv_statistics = []
     new_block = deepcopy(block)
 
     # Optimized blocks. When a block is not optimized, None is pushed to the list.
@@ -481,7 +477,7 @@ def optimize_asm_block_asm_format(block: AsmBlock, timeout: int, parsed_args: Na
 
     # No instructions to optimize
     if instructions == []:
-        return new_block, {}
+        return new_block, {}, []
 
     contracts_dict, sub_block_list = compute_original_sfs_with_simplifications(block, parsed_args)
 
@@ -489,14 +485,14 @@ def optimize_asm_block_asm_format(block: AsmBlock, timeout: int, parsed_args: Na
 
     if not parsed_args.backend:
         optimize_block(sfs_dict, timeout, parsed_args)
-        return new_block, {}
+        return new_block, {}, []
 
     for sub_block, optimization_outcome, solver_time, optimized_asm, tout, initial_solver_bound in optimize_block(sfs_dict, timeout, parsed_args):
 
         statistics_info = generate_statistics_info(sub_block, optimization_outcome, solver_time, optimized_asm,
                                                    initial_solver_bound, tout)
 
-        statistics_rows.append(statistics_info)
+        csv_statistics.append(statistics_info)
 
         # Only check if the new block is considered if the solver has generated a new one
         if optimization_outcome == OptimizeOutcome.non_optimal or optimization_outcome == OptimizeOutcome.optimal:
@@ -509,7 +505,7 @@ def optimize_asm_block_asm_format(block: AsmBlock, timeout: int, parsed_args: Na
 
     new_block = rebuild_optimized_asm_block(block, sub_block_list, optimized_blocks)
 
-    return new_block, log_dicts
+    return new_block, log_dicts, csv_statistics
 
 
 def compare_asm_block_asm_format(old_block: AsmBlock, new_block: AsmBlock, parsed_args: Namespace) -> bool:
@@ -536,7 +532,7 @@ def compare_asm_block_asm_format(old_block: AsmBlock, new_block: AsmBlock, parse
 
 
 def optimize_asm_in_asm_format(file_name, output_file, csv_file, log_file, parsed_args: Namespace, timeout=10):
-    global statistics_rows
+    statistics_rows = []
 
     asm = parse_asm(file_name)
     log_dicts = {}
@@ -560,7 +556,8 @@ def optimize_asm_in_asm_format(file_name, output_file, csv_file, log_file, parse
         init_code_blocks = []
 
         for old_block in init_code:
-            optimized_block, log_element = optimize_asm_block_asm_format(old_block, timeout, parsed_args)
+            optimized_block, log_element, csv_statistics = optimize_asm_block_asm_format(old_block, timeout, parsed_args)
+            statistics_rows.extend(csv_statistics)
 
             if not compare_asm_block_asm_format(old_block, optimized_block, parsed_args):
                 print("Comparison failed, so initial block is kept")
@@ -585,8 +582,9 @@ def optimize_asm_in_asm_format(file_name, output_file, csv_file, log_file, parse
 
             run_code_blocks = []
             for old_block in blocks:
-                optimized_block, log_element = optimize_asm_block_asm_format(old_block, timeout, parsed_args)
-                
+                optimized_block, log_element, csv_statistics = optimize_asm_block_asm_format(old_block, timeout, parsed_args)
+                statistics_rows.extend(csv_statistics)
+
                 if not compare_asm_block_asm_format(old_block, optimized_block, parsed_args):
                     print("Comparison failed, so initial block is kept")
                     print(old_block.to_plain())
