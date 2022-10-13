@@ -139,17 +139,16 @@ def optimize_block(sfs_dict, timeout, parsed_args: Namespace) -> List[Tuple[AsmB
 
         # To match previous results, multiply timeout by number of storage instructions
         # TODO devise better heuristics to deal with timeouts
-        tout = parsed_args.tout * (1+len([True for instr in sfs_block['user_instrs'] if instr["storage"]]))
+        if parsed_args.direct_timeout:
+            tout = parsed_args.tout
+        else:
+            tout = parsed_args.tout * (1+len([True for instr in sfs_block['user_instrs'] if instr["storage"]]))
 
         optimizer = BlockOptimizer(block_name, sfs_block, parsed_args, tout)
         print(f"Optimizing {block_name}... Timeout:{str(tout)}")
 
         if parsed_args.backend:
-            if initial_solver_bound > 40:
-                optimization_outcome, optimized_asm = OptimizeOutcome.no_model, []
-                solver_time = 0
-            else:
-                optimization_outcome, solver_time, optimized_asm = optimizer.optimize_block()
+            optimization_outcome, solver_time, optimized_asm = optimizer.optimize_block()
             block_solutions.append((original_block, optimization_outcome, solver_time,
                                     optimized_asm, tout, initial_solver_bound))
         else:
@@ -688,6 +687,9 @@ def parse_encoding_args() -> Namespace:
                        default="z3")
     basic.add_argument("-tout", metavar='timeout', action='store', type=int,
                        help="Timeout in seconds. By default, set to 10s per block.", default=10)
+    basic.add_argument("-direct-tout", dest='direct_timeout', action='store_true',
+                       help="Sets the Max-SMT timeout to -tout directly, "
+                            "without considering the structure of the block")
 
     blocks = ap.add_argument_group('Split block options', 'Options for deciding how to split blocks when optimizing')
 
