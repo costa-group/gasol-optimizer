@@ -54,6 +54,8 @@ def build_blocks_from_asm_representation(cname : str, block_name_prefix : str, i
                 bytecodes.append(block)
                 block = AsmBlock(cname, block_id, _generate_block_name_from_id(block_name_prefix, block_id), is_init_code)
                 block_id += 1
+                
+            block.tag = instr_list[i]["value"]
             block.add_instruction(asm_bytecode)
         else:
             block.add_instruction(asm_bytecode)
@@ -62,7 +64,7 @@ def build_blocks_from_asm_representation(cname : str, block_name_prefix : str, i
     # If last block has any instructions left, it must be added to the bytecode
     if block.instructions:
         bytecodes.append(block)
-
+        
     return bytecodes
 
 
@@ -100,6 +102,9 @@ def build_asm_contract(cname : str, cinfo : Dict[str, Any]) -> AsmContract:
             
         else:
             asm_c.set_data_field_with_address(elem, data[elem])
+
+    asm_c.build_static_edges_init()
+    asm_c.build_static_edges_runtime()
     return asm_c
 
 
@@ -191,6 +196,13 @@ def parse_blocks_from_plain_instructions(raw_instructions_str):
     blocks = build_blocks_from_asm_representation("isolated", "isolated", instr_list, False)
     return blocks
 
+
+# Similar to the previous function, but assuming the raw_instructions correspond to a simple block
+def generate_block_from_plain_instructions(raw_instructions_str: str, block_name: str, is_init_block: bool = False) -> AsmBlock:
+    instr_list = plain_instructions_to_asm_representation(raw_instructions_str)
+    block = AsmBlock('optimized', -1, block_name, is_init_block)
+    block.instructions = [build_asm_bytecode(instr) for instr in instr_list]
+    return block
 
 # Conversion from an ASMBlock to a plain sequence of instructions
 def parse_asm_representation_from_block(asm_block : AsmBlock):
