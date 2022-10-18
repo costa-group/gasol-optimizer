@@ -1,7 +1,5 @@
 import math
-
 import sfs_generator.opcodes as opcodes
-
 
 def toInt(a):
     elem = a.split("_")
@@ -262,3 +260,24 @@ def get_ins_size_seq(instructions_disasm):
 def check_and_print_debug_info(debug,msg):
     if debug:
         print(msg)
+
+
+def process_blocks_split(subblocks):
+    split_opcodes = []
+    if len(subblocks) != 1:
+        for i in range(0,len(subblocks)-1):
+            block = subblocks[i].pop()
+            subblocks[i+1].pop(0)
+            split_opcodes.append(block)
+
+
+    print(subblocks)
+    return subblocks
+
+def get_block(blocks, tag):
+    for b in blocks:
+        if b.tag == tag:
+            return b
+
+    raise Exception("The tag does not correspond to any block. Tag: "+str(tag))
+
