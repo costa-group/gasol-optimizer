@@ -5,7 +5,7 @@ import os
 import pathlib
 import shutil
 import sys
-from typing import Tuple
+from typing import Tuple, Optional, List, Dict
 from copy import deepcopy
 from timeit import default_timer as dtimer
 from argparse import ArgumentParser, Namespace
@@ -17,7 +17,7 @@ import global_params.paths as paths
 import sfs_generator.ir_block as ir_block
 from sfs_generator.gasol_optimization import get_sfs_dict
 from sfs_generator.parser_asm import (parse_asm,
-                                      parse_asm_representation_from_blocks,
+                                      generate_block_from_plain_instructions,
                                       parse_blocks_from_plain_instructions)
 from sfs_generator.utils import (compute_stack_size, get_ins_size_seq,
                                  is_constant_instruction, isYulInstruction,
@@ -32,7 +32,7 @@ from verification.sfs_verify import verify_block_from_list_of_sfs
 from verification.solver_solution_verify import (
     check_solver_output_is_correct)
 from solution_generation.optimize_from_sub_blocks import rebuild_optimized_asm_block
-from sfs_generator.asm_block import AsmBlock
+from sfs_generator.asm_block import AsmBlock, AsmBytecode
 from smt_encoding.block_optimizer import BlockOptimizer, OptimizeOutcome
 
 def init():
@@ -48,15 +48,9 @@ def init():
     global new_size
     new_size = 0
 
-    global statistics_rows
-    statistics_rows = []
-
-    global total_time
-    total_time = 0
 
 def clean_dir():
     ext = ["rbr", "csv", "sol", "bl", "disasm", "json"]
-    pathlib.Path("unsat.txt").unlink(missing_ok=True)
     if paths.gasol_folder in os.listdir(paths.tmp_path):
         for elem in os.listdir(paths.gasol_path):
             last = elem.split(".")[-1]
@@ -132,30 +126,31 @@ def compute_original_sfs_with_simplifications(block: AsmBlock, parsed_args: Name
 # Given the sequence of bytecodes, the initial stack size, the contract name and the
 # block id, returns the output given by the solver, the name given to that block and current gas associated
 # to that sequence.
-def optimize_block(sfs_dict, timeout, parsed_args: Namespace):
+def optimize_block(sfs_dict, timeout, parsed_args: Namespace) -> List[Tuple[AsmBlock, OptimizeOutcome, float,
+                                                                            List[AsmBytecode], int, int]]:
 
     block_solutions = []
     # SFS dict of syrup contract contains all sub-blocks derived from a block after splitting
     for block_name in sfs_dict:
         sfs_block = sfs_dict[block_name]
-        initial_program_length = sfs_block['init_progr_len']
+        initial_solver_bound = sfs_block['init_progr_len']
         original_instr = sfs_block['original_instrs']
+        original_block = generate_block_from_plain_instructions(original_instr, block_name)
 
         # To match previous results, multiply timeout by number of storage instructions
         # TODO devise better heuristics to deal with timeouts
-        tout = parsed_args.tout * (1+len([True for instr in sfs_block['user_instrs'] if instr["storage"]]))
+        if parsed_args.direct_timeout:
+            tout = parsed_args.tout
+        else:
+            tout = parsed_args.tout * (1+len([True for instr in sfs_block['user_instrs'] if instr["storage"]]))
 
         optimizer = BlockOptimizer(block_name, sfs_block, parsed_args, tout)
         print(f"Optimizing {block_name}... Timeout:{str(tout)}")
 
         if parsed_args.backend:
-            if initial_program_length > 40:
-                optimization_outcome, optimized_asm = OptimizeOutcome.no_model, []
-                time = 0
-            else:
-                optimization_outcome, time, optimized_asm = optimizer.optimize_block()
-            block_solutions.append((block_name, optimization_outcome, time, optimized_asm, original_instr,
-                                    initial_program_length, tout))
+            optimization_outcome, solver_time, optimized_asm = optimizer.optimize_block()
+            block_solutions.append((original_block, optimization_outcome, solver_time,
+                                    optimized_asm, tout, initial_solver_bound))
         else:
             optimizer.generate_intermediate_files()
 
@@ -324,7 +319,7 @@ def optimize_asm_from_log(file_name, json_log, output_file, parsed_args: Namespa
 
 
 def optimize_isolated_asm_block(block_name,output_file, csv_file, parsed_args: Namespace, timeout=10):
-    global statistics_rows
+    statistics_rows = []
 
     with open(block_name,"r") as f:        
         instructions = f.read()
@@ -333,8 +328,9 @@ def optimize_isolated_asm_block(block_name,output_file, csv_file, parsed_args: N
     asm_blocks = []
 
     for old_block in blocks:
-        asm_block, _ = optimize_asm_block_asm_format(old_block, timeout, parsed_args)
-        
+        asm_block, _, statistics_csv = optimize_asm_block_asm_format(old_block, timeout, parsed_args)
+        statistics_rows.extend(statistics_csv)
+
         if not compare_asm_block_asm_format(old_block, asm_block, parsed_args):
             print("Comparison failed, so initial block is kept")
             print(old_block.to_plain())
@@ -422,11 +418,57 @@ def filter_optimized_blocks_by_intra_block_optimization(asm_sub_blocks, optimize
     return list(reversed(final_sub_blocks))
 
 
-# Given an asm_block and its contract name, returns the asm block after the optimization
-def optimize_asm_block_asm_format(block: AsmBlock, timeout: int, parsed_args: Namespace):
-    global statistics_rows
-    global total_time
+def generate_statistics_info(original_block: AsmBlock, outcome: Optional[OptimizeOutcome], solver_time: float,
+                             optimized_asm: List[AsmBytecode], initial_bound: int, tout: int) -> Dict:
 
+    block_name = original_block.block_name
+    original_instr = ' '.join(original_block.instructions_to_optimize_plain())
+
+    statistics_row = {"block_id": block_name, "previous_solution": original_instr, "timeout": tout,
+                      "initial_n_instrs": initial_bound, 'initial_estimated_size': original_block.bytes_required,
+                      'initial_estimated_gas': original_block.gas_spent}
+
+    # The outcome of the solver is unsat
+    if outcome == OptimizeOutcome.unsat:
+        statistics_row.update({"model_found": False, "shown_optimal": False, "solver_time_in_sec": round(solver_time, 3),
+                               "saved_size": 0, "saved_gas": 0, 'outcome': 'unsat'})
+
+    # The solver has returned no model
+    elif outcome == OptimizeOutcome.no_model:
+        statistics_row.update(
+            {"model_found": False, "shown_optimal": False, "solver_time_in_sec": round(solver_time, 3),
+             "saved_size": 0, "saved_gas": 0, 'outcome': 'no_model'})
+
+    # The solver has returned a valid model
+    else:
+        shown_optimal = outcome == OptimizeOutcome.optimal
+        optimized_length = sum([instr.bytes_required for instr in optimized_asm])
+        optimized_gas = sum([instr.gas_spent for instr in optimized_asm])
+        initial_length = original_block.bytes_required
+        initial_gas = original_block.gas_spent
+
+        statistics_row.update({"solver_time_in_sec": round(solver_time, 3), "saved_size": initial_length - optimized_length,
+                               "saved_gas": initial_gas - optimized_gas, "model_found": True, "shown_optimal": shown_optimal,
+                               "solution_found": ' '.join([instr.to_plain() for instr in optimized_asm]),
+                               "optimized_n_instrs": len(optimized_asm),
+                               'optimized_estimated_size': sum([instr.bytes_required for instr in optimized_asm]),
+                               'optimized_estimated_gas': sum([instr.gas_spent for instr in optimized_asm]),
+                               'outcome': 'model'})
+
+    return statistics_row
+
+
+def block_has_been_optimized(original_block: AsmBlock, optimized_asm: List[AsmBytecode], size_criterion: bool) -> bool:
+    saved_size = original_block.bytes_required - sum([instr.bytes_required for instr in optimized_asm])
+    saved_gas = original_block.gas_spent - sum([instr.gas_spent for instr in optimized_asm])
+
+    return (not size_criterion and (saved_gas > 0 or (saved_gas == 0 and saved_size > 0))) or \
+           (size_criterion and (saved_size > 0 or (saved_size == 0 and saved_gas > 0)))
+
+
+# Given an asm_block and its contract name, returns the asm block after the optimization
+def optimize_asm_block_asm_format(block: AsmBlock, timeout: int, parsed_args: Namespace) -> Tuple[AsmBlock, Dict, List[Dict]]:
+    csv_statistics = []
     new_block = deepcopy(block)
 
     # Optimized blocks. When a block is not optimized, None is pushed to the list.
@@ -438,7 +480,7 @@ def optimize_asm_block_asm_format(block: AsmBlock, timeout: int, parsed_args: Na
 
     # No instructions to optimize
     if instructions == []:
-        return new_block, {}
+        return new_block, {}, []
 
     contracts_dict, sub_block_list = compute_original_sfs_with_simplifications(block, parsed_args)
 
@@ -446,57 +488,27 @@ def optimize_asm_block_asm_format(block: AsmBlock, timeout: int, parsed_args: Na
 
     if not parsed_args.backend:
         optimize_block(sfs_dict, timeout, parsed_args)
-        return new_block, {}
+        return new_block, {}, []
 
-    for sub_block_name, optimization_outcome, solver_time, new_sub_block, original_instr, initial_program_l, tout in optimize_block(sfs_dict, timeout, parsed_args):
+    for sub_block, optimization_outcome, solver_time, optimized_asm, tout, initial_solver_bound in optimize_block(sfs_dict, timeout, parsed_args):
 
-        if optimization_outcome == OptimizeOutcome.unsat:
-            with open("unsat.txt", 'a') as f:
-                f.write(f'{sub_block_name}\n')
+        statistics_info = generate_statistics_info(sub_block, optimization_outcome, solver_time, optimized_asm,
+                                                   initial_solver_bound, tout)
 
-        # We weren't able to find a solution using the solver, so we just update
-        elif optimization_outcome == OptimizeOutcome.no_model:
-            optimized_blocks[sub_block_name] = None
-            statistics_row = {"block_id": sub_block_name, "model_found": False, "shown_optimal": False,
-                              "previous_solution": original_instr, "solver_time_in_sec": round(solver_time, 3),
-                              "saved_size": 0, "saved_gas": 0, "initial_n_instrs": initial_program_l, "timeout": tout}
+        csv_statistics.append(statistics_info)
 
-            statistics_rows.append(statistics_row)
-            total_time += solver_time
-
-        else:
-            # To obtain easily the size and gas, we parse the original instructions. Only one block should be obtained
-            original_blocks_split = parse_blocks_from_plain_instructions(original_instr)
-            assert(len(original_blocks_split) == 1)
-            original_block_split = original_blocks_split[0]
-
-            initial_length = original_block_split.bytes_required
-            initial_gas = original_block_split.gas_spent
-
-            shown_optimal = optimization_outcome == OptimizeOutcome.optimal
-            optimized_length = sum([instr.bytes_required for instr in new_sub_block])
-            optimized_gas = sum([instr.gas_spent for instr in new_sub_block])
-
-            statistics_row = {"block_id": sub_block_name, "solver_time_in_sec": round(solver_time, 3),
-                              "saved_size": initial_length - optimized_length, "saved_gas": initial_gas - optimized_gas,
-                              "model_found": True, "shown_optimal": shown_optimal, "previous_solution": original_instr,
-                              "solution_found": ' '.join([instr.to_plain() for instr in new_sub_block]),
-                              "initial_n_instrs": initial_program_l, "optimized_n_instrs": len(new_sub_block),
-                              "timeout": tout}
-
-            statistics_rows.append(statistics_row)
-            total_time += solver_time
-
-            if (not parsed_args.size and initial_gas > optimized_gas) or \
-                    (parsed_args.size and initial_length > optimized_length):
-                optimized_blocks[sub_block_name] = new_sub_block
+        # Only check if the new block is considered if the solver has generated a new one
+        if optimization_outcome == OptimizeOutcome.non_optimal or optimization_outcome == OptimizeOutcome.optimal:
+            sub_block_name = sub_block.block_name
+            if block_has_been_optimized(sub_block, optimized_asm, parsed_args.size):
+                optimized_blocks[sub_block_name] = optimized_asm
                 # log_dicts[sub_block_name] = generate_solution_dict(solver_output)
             else:
                 optimized_blocks[sub_block_name] = None
 
     new_block = rebuild_optimized_asm_block(block, sub_block_list, optimized_blocks)
 
-    return new_block, log_dicts
+    return new_block, log_dicts, csv_statistics
 
 
 def compare_asm_block_asm_format(old_block: AsmBlock, new_block: AsmBlock, parsed_args: Namespace) -> bool:
@@ -523,7 +535,7 @@ def compare_asm_block_asm_format(old_block: AsmBlock, new_block: AsmBlock, parse
 
 
 def optimize_asm_in_asm_format(file_name, output_file, csv_file, log_file, parsed_args: Namespace, timeout=10):
-    global statistics_rows
+    statistics_rows = []
 
     asm = parse_asm(file_name)
     log_dicts = {}
@@ -547,7 +559,8 @@ def optimize_asm_in_asm_format(file_name, output_file, csv_file, log_file, parse
         init_code_blocks = []
 
         for old_block in init_code:
-            optimized_block, log_element = optimize_asm_block_asm_format(old_block, timeout, parsed_args)
+            optimized_block, log_element, csv_statistics = optimize_asm_block_asm_format(old_block, timeout, parsed_args)
+            statistics_rows.extend(csv_statistics)
 
             if not compare_asm_block_asm_format(old_block, optimized_block, parsed_args):
                 print("Comparison failed, so initial block is kept")
@@ -572,8 +585,9 @@ def optimize_asm_in_asm_format(file_name, output_file, csv_file, log_file, parse
 
             run_code_blocks = []
             for old_block in blocks:
-                optimized_block, log_element = optimize_asm_block_asm_format(old_block, timeout, parsed_args)
-                
+                optimized_block, log_element, csv_statistics = optimize_asm_block_asm_format(old_block, timeout, parsed_args)
+                statistics_rows.extend(csv_statistics)
+
                 if not compare_asm_block_asm_format(old_block, optimized_block, parsed_args):
                     print("Comparison failed, so initial block is kept")
                     print(old_block.to_plain())
@@ -673,6 +687,9 @@ def parse_encoding_args() -> Namespace:
                        default="z3")
     basic.add_argument("-tout", metavar='timeout', action='store', type=int,
                        help="Timeout in seconds. By default, set to 10s per block.", default=10)
+    basic.add_argument("-direct-tout", dest='direct_timeout', action='store_true',
+                       help="Sets the Max-SMT timeout to -tout directly, "
+                            "without considering the structure of the block")
 
     blocks = ap.add_argument_group('Split block options', 'Options for deciding how to split blocks when optimizing')
 
@@ -739,7 +756,6 @@ if __name__ == '__main__':
     global new_gas
     global previous_size
     global new_size
-    global total_time
 
     init()
     clean_dir()

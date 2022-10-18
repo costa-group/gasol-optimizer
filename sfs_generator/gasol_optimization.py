@@ -2277,11 +2277,11 @@ def generate_userdefname(u_var,funct,args,arity,init=False):
     elif funct.find("not") !=-1:
         instr_name = "NOT"
 
-    elif funct.find("gt") !=-1:
-        instr_name = "GT"
-
     elif funct.find("sgt") !=-1:
         instr_name = "SGT"
+
+    elif funct.find("gt") !=-1:
+        instr_name = "GT"
 
     elif funct.find("shr") !=-1:
         instr_name = "SHR"
