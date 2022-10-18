@@ -1,7 +1,7 @@
 GASOL
 =====
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://github.com/costa-group/gasol-optimizer/blob/main/LICENSE)
-![version](https://img.shields.io/badge/version-0.1.3-green)
+![version](https://img.shields.io/badge/version-0.2.0-green)
 
 GASOL is a generic framework that optimizes smart contracts by applying the technique called *super-optimization* that consists in optimizing basic blocks (sequences of EVM instructions). For each basic block, GASOL tries to find a sequence of EVM instructions that produces the same state as the original block, but consumes a smaller amount of gas or decreases the amount of bytes. 
 
