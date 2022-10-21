@@ -1942,8 +1942,15 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     else:
         new_user_defins = all_user_defins
 
-    new_user_defins = update_user_defins(new_ts,new_user_defins)
+    
+
         
+    new_user_defins = update_user_defins(new_ts,new_user_defins)
+
+    new_user_defins, new_ts = unify_all_user_defins(new_ts,new_user_defins,vars_list)
+
+    new_user_defins = update_user_defins(new_ts,new_user_defins)
+    
     # if simplification:
     vars_list = recompute_vars_set(new_ss,new_ts,new_user_defins,[])
     # else:
@@ -3695,7 +3702,7 @@ def apply_transform_rules(user_def_instrs,list_vars,tstack):
             new_user_def.append(instr)
 
 
-    return modified, new_user_def, target_stack, 
+    return modified, new_user_def, target_stack
 
 def replace_var_userdef(out_var,value,user_def):
     modified_instrs = []
@@ -5674,3 +5681,44 @@ def transform_push_uninterpreted_functions(target_stack,uninterpreted_functions)
         i+=1
 
     return new_variables, new_uninterpreted
+
+
+def unify_all_user_defins(ts,user_def_instructions,list_vars):
+
+    modified = True
+    target_stack = ts
+    user_defins = user_def_instructions
+    while(modified):
+        modified, user_defins, target_stack = unify_user_defins(target_stack,user_defins,list_vars)
+
+    return user_defins,target_stack
+
+def unify_user_defins(ts,user_def_instructions,list_vars):
+
+    to_delete = []
+    target_stack = ts
+    user_defins = user_def_instructions
+    modified = False
+    
+    for ins in user_defins:
+        if ins["disasm"] not in ["SHA3","SLOAD","MLOAD","KECCAK256","SSTORE","MSTORE","GAS","TIMESTAMP"] and ins not in to_delete:
+            duplicated = list(filter(lambda x: x["inpt_sk"] == ins["inpt_sk"] and x["disasm"] == ins["disasm"] and x.get("value",-1) == -1, user_defins))
+            if len(duplicated) > 1:
+                tokeep = duplicated[0]
+                # print(duplicated)
+                for rest in duplicated[1:]:
+                    replace_var_userdef(rest["outpt_sk"][0],tokeep["outpt_sk"][0],user_defins)
+                    target_stack = replace_var(rest["outpt_sk"][0],tokeep["outpt_sk"][0],target_stack)
+                    # print(list_vars)
+                    delete_from_listvars(rest["outpt_sk"][0],list_vars)
+                    to_delete.append(rest)
+                modified = True
+    i = 0
+    new_user_def = []
+    while len(user_defins)>0:
+        instr = user_defins.pop()
+        if instr not in to_delete:
+            new_user_def.append(instr)
+
+    return modified, new_user_def, target_stack
+
