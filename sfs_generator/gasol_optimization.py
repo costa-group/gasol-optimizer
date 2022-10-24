@@ -4416,32 +4416,53 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
             div_instr = div_op[0]
 
             if div_instr["inpt_sk"][1] == out_pt:
-                old_var = instr["outpt_sk"]
-                new_var = div_instr["outpt_sk"]
-                instr["outpt_sk"] = new_var
-                # instr["outpt_sk"] = div_instr["outpt_sk"]
-                instr["inpt_sk"][1] = div_instr["inpt_sk"][0]
+                new_input = [instr["inpt_sk"][0], div_instr["inpt_sk"][0]]
+                new_exist = list(filter(lambda x: x["inpt_sk"] == new_input and x["disasm"] == "SHR", user_def_instrs))
 
-                idx = user_def_counter.get("SHR",0)
+                if len(new_exist) > 0:
+                    old_var = div_instr["outpt_sk"]
+                    new_var = new_exist[0]["outpt_sk"]
+                    update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
+                    delete = [div_instr]
+                else:
+
+                    div_instr["inpt_sk"] = new_input
+                    
+                    idx = user_def_counter.get("SHR",0)
+                    div_instr["id"] = "SHR_"+str(idx)
+                    div_instr["opcode"] = "1c"
+                    div_instr["disasm"] = "SHR"
+                    div_instr["commutative"] = False            
+                    user_def_counter["SHR"]=idx+1
+                    delete = []
+                    
+                # old_var = instr["outpt_sk"]
+                # new_var = div_instr["outpt_sk"]
+                # instr["outpt_sk"] = new_var
+                # # instr["outpt_sk"] = div_instr["outpt_sk"]
+                # instr["inpt_sk"][1] = div_instr["inpt_sk"][0]
+
+                # idx = user_def_counter.get("SHR",0)
             
-                instr["id"] = "SHR_"+str(idx)
-                instr["opcode"] = "1c"
-                instr["disasm"] = "SHR"
-                instr["commutative"] = False            
+                # instr["id"] = "SHR_"+str(idx)
+                # instr["opcode"] = "1c"
+                # instr["disasm"] = "SHR"
+                # instr["commutative"] = False            
                 
                 
                 discount_op+=1
                 gas_saved_op+=5
                 saved_push+=1
 
-                user_def_counter["SHR"]=idx+1
+                # user_def_counter["SHR"]=idx+1
                 msg = "DIV(X,SHL(Y,1))"
                 rule = msg
                 check_and_print_debug_info(debug, msg)
 
-                update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
+                # update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
                 
-                return True, [div_instr]
+                return True, delete
+            
             
         else:
             return False, []
