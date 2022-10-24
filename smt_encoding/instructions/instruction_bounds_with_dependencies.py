@@ -1,6 +1,7 @@
+from collections import defaultdict
 from smt_encoding.instructions.encoding_instruction import ThetaValue, InstructionSubset, Id_T
 from smt_encoding.instructions.uninterpreted_instruction import UninterpretedInstruction
-from typing import Tuple, Dict, List
+from typing import Tuple, Dict, List, Set
 from smt_encoding.instructions.instruction_dependencies import generate_dependency_graph_minimum
 from smt_encoding.instructions.instruction_bounds import InstructionBounds
 
@@ -52,6 +53,75 @@ def generate_lower_bound_from_instr(instr : Id_T, number_of_instructions_to_exec
     return number_of_instructions_needed, instructions_dependency
 
 
+def traverse_tree_until_repeated(instr : Id_T, dependency_graph : Dict[Id_T, List[Id_T]],
+                                 repeated_instructions: Set[Id_T],
+                                 number_of_instructions_to_execute : Dict[Id_T, int],
+                                 instructions_dependent_prev_dict : Dict[Id_T, set]) -> int:
+    if instr in repeated_instructions:
+        # A store instruction is only counted once, so if repeated, just ignore it
+        if 'STORE' in instr:
+            return 0
+        else:
+            return 1
+
+    # No matter the situation in which we find ourselves, current instruction will be considered
+    repeated_instructions.update({instr})
+
+    if len(dependency_graph[instr]) == 0:
+        return 1
+
+    previous_instructions = instructions_dependent_prev_dict[instr]
+
+    # If the previous instructions contain no repetitions, there is no need to dup
+    if len(repeated_instructions.intersection(instructions_dependent_prev_dict[instr])) == 0:
+        repeated_instructions.update(previous_instructions)
+        return number_of_instructions_to_execute[instr] + 1
+
+    # Otherwise, we need to add the number of instructions from all children
+    return sum(traverse_tree_until_repeated(prev_instr, dependency_graph, repeated_instructions,
+                                            number_of_instructions_to_execute, instructions_dependent_prev_dict)
+               for prev_instr in dependency_graph[instr]) + 1
+
+
+def generate_prev_instr_from_instr(instr : Id_T, number_of_instructions_to_execute : Dict[Id_T, int],
+                                   instructions_dependent_prev_dict : Dict[Id_T, set],
+                                   dependency_graph : Dict[Id_T, List[Id_T]]) -> None:
+
+    # Base case: it has been already analyzed, so we return the values associated.
+    if instr in number_of_instructions_to_execute:
+        return
+
+    instructions_dependent_current = set()
+    current_number_of_instructions = 0
+
+    # Recursive case: we obtain the output for each previous instruction and update the values
+    for previous_instr in dependency_graph[instr]:
+
+        # Ensure the results have been generated for the previous instruction
+        generate_prev_instr_from_instr(previous_instr, number_of_instructions_to_execute,
+                                       instructions_dependent_prev_dict, dependency_graph)
+
+        # The instructions that depend on the previous ones correspond to the keys of previous values
+        instructions_dependent_prev = instructions_dependent_prev_dict[previous_instr] | {previous_instr}
+
+        # See detailed explanation for more information to understand this step
+        repeated_instructions = set(instructions_dependent_current).intersection(instructions_dependent_prev)
+
+        # 0 elements means just add the previous number needed
+        if len(repeated_instructions) == 0 or all((len(dependency_graph[rep]) == 0 for rep in repeated_instructions)):
+            current_number_of_instructions += number_of_instructions_to_execute[previous_instr] + 1
+        else:
+            current_number_of_instructions += traverse_tree_until_repeated(previous_instr, dependency_graph,
+                                                                           repeated_instructions,
+                                                                           number_of_instructions_to_execute,
+                                                                           instructions_dependent_prev_dict)
+        # We update instructions_dependency
+        instructions_dependent_current = instructions_dependent_current.union(instructions_dependent_prev)
+
+    number_of_instructions_to_execute[instr] = current_number_of_instructions
+    instructions_dependent_prev_dict[instr] = instructions_dependent_current
+
+
 # Given the dict containing the dependency among different instructions, we generate
 # another dict that links each instruction to the number of instructions that must be
 # executed previously to be able to execute that instruction.
@@ -60,6 +130,15 @@ def generate_lower_bound_dict(dependency_graph : Dict[Id_T, List[Id_T]]) -> Dict
     number_of_instructions_to_execute = {}
     for instr in dependency_graph:
         generate_lower_bound_from_instr(instr, number_of_instructions_to_execute, previous_values, dependency_graph)
+
+    return number_of_instructions_to_execute
+
+
+def generate_lower_bound_from_instr_alternative(dependency_graph : Dict[Id_T, List[Id_T]]) -> Dict[Id_T, int]:
+    previous_values = {}
+    number_of_instructions_to_execute = {}
+    for instr in dependency_graph:
+        generate_prev_instr_from_instr(instr, number_of_instructions_to_execute, previous_values, dependency_graph)
 
     return number_of_instructions_to_execute
 
@@ -165,7 +244,8 @@ class InstructionBoundsWithDependencies(InstructionBounds):
 
         self._b0 = b0
         self._initial_idx = initial_idx
-        lower_bound_by_id = generate_lower_bound_dict(dependency_graph)
+        lower_bound_by_id = generate_lower_bound_from_instr_alternative(dependency_graph)
+
         self._lower_bound_by_theta_value = {instr_by_id_dict[instr_id].theta_value: lb
                                             for instr_id, lb in lower_bound_by_id.items() if instr_id != 'PUSH'}
         first_position_not_instr_by_id = generate_first_position_instr_cannot_appear(b0, stack_element_to_id_dict, final_stack,
