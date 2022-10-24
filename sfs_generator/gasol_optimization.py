@@ -3764,7 +3764,7 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                 msg = "ISZ(GT(X,0))"
                 rule = msg
                 check_and_print_debug_info(debug, msg)
-                return True, [instr]
+                return True, []
             else:
                 return False, []
 
@@ -3893,28 +3893,38 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                 rule = msg
                 check_and_print_debug_info(debug, msg)
                 
-                return True, [instr]
+                return True, []
             else:
                 return False, []
 
          elif 1 == instr["inpt_sk"][1]:
             var = instr["inpt_sk"][0]
-            idx = user_def_counter.get("ISZERO",0)
-            instr["id"] = "ISZERO_"+str(idx)
-            instr["opcode"] = "15"
-            instr["disasm"] = "ISZERO"
-            instr["inpt_sk"] = [var]
-            instr["commutative"] = False
+
+            new_exist = list(filter(lambda x: x["inpt_sk"] == [var] and x["disasm"] == "ISZERO", user_def_instrs))
+                        
+            if len(new_exist) >0:
+                old_var = instr["outpt_sk"]
+                new_var = new_exist[0]["outpt_sk"]
+                update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
+                delete = [instr]
+            else:
+                idx = user_def_counter.get("ISZERO",0)
+                instr["id"] = "ISZERO_"+str(idx)
+                instr["opcode"] = "15"
+                instr["disasm"] = "ISZERO"
+                instr["inpt_sk"] = [var]
+                instr["commutative"] = False
+                user_def_counter["ISZERO"]=idx+1
+                delete = []
+                
             discount_op+=1
 
             saved_push+=1
 
-            user_def_counter["ISZERO"]=idx+1
-            
             msg = "LT(X,1)"
             rule = msg
             check_and_print_debug_info(debug, msg)
-            return True, []
+            return True, delete
         
          else:
             out_var = instr["outpt_sk"][0]
@@ -3951,12 +3961,26 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
             var1 = instr["inpt_sk"][1]
 
             nonz = var1 if var0 == 0 else var0
-            idx = user_def_counter.get("ISZERO",0)
-            instr["id"] = "ISZERO_"+str(idx)
-            instr["opcode"] = "15"
-            instr["disasm"] = "ISZERO"
-            instr["inpt_sk"] = [nonz]
-            instr["commutative"] = False
+
+            new_exist = list(filter(lambda x: x["inpt_sk"] == [nonz] and x["disasm"] == "ISZERO", user_def_instrs))
+
+            if len(new_exist) >0:
+                old_var = instr["outpt_sk"]
+                new_var = new_exist[0]["outpt_sk"]
+                update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
+                delete = [instr]
+
+            else:
+                idx = user_def_counter.get("ISZERO",0)
+                instr["id"] = "ISZERO_"+str(idx)
+                instr["opcode"] = "15"
+                instr["disasm"] = "ISZERO"
+                instr["inpt_sk"] = [nonz]
+                instr["commutative"] = False
+                user_def_counter["ISZERO"]=idx+1
+                delete = []
+
+            
 
             discount_op+=1
             saved_push+=1
@@ -3965,9 +3989,9 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
             rule = msg
             check_and_print_debug_info(debug, msg)
 
-            user_def_counter["ISZERO"]=idx+1
+            # user_def_counter["ISZERO"]=idx+1
             
-            return True, []
+            return True, delete
 
         else:
 
@@ -4070,7 +4094,7 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
             rule = msg
             check_and_print_debug_info(debug, msg)
             
-            return True, [or_instr,instr]
+            return True, [or_instr]
             
 
         else:
@@ -4137,7 +4161,7 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
             rule = msg
             check_and_print_debug_info(debug, msg)
             
-            return True, [and_instr,instr]
+            return True, [and_instr]
             
         else:
             return False,[]
@@ -4188,27 +4212,47 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
             rule = msg
             check_and_print_debug_info(debug, msg)
             
-            return True, [xor_instr,instr]
+            return True, [xor_instr]
 
         elif len(isz_op) == 1: #ISZ(XOR(X,Y)) = EQ(X,Y)
             isz_instr = isz_op[0]
-            idx = user_def_counter.get("EQ",0)
-            
-            instr["outpt_sk"] = isz_instr["outpt_sk"]
-            instr["id"] = "EQ_"+str(idx)
-            instr["opcode"] = "14"
-            instr["disasm"] = "EQ"
-            instr["commutative"] = True            
+
+
+            comm_inpt = [instr["inpt_sk"][1], instr["inpt_sk"][0]]
+            new_exist = list(filter(lambda x: (x["inpt_sk"] == instr["inpt_sk"] or x["inpt_sk"] == comm_inpt) and x["disasm"] == "EQ", user_def_instrs))
+
+            if len(new_exist) >0:
+                old_var = isz_instr["outpt_sk"]
+                new_var = new_exist[0]["outpt_sk"]
+                update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
+                delete = [isz_instr]
+
+            else:
+                idx = user_def_counter.get("EQ",0)
+                isz_instr["inpt_sk"] = instr["inpt_sk"]
+                isz_instr["id"] = "EQ_"+str(idx)
+                isz_instr["opcode"] = "14"
+                isz_instr["disasm"] = "EQ"
+                isz_instr["commutative"] = True
+                user_def_counter["EQ"]=idx+1
+                delete = []
+
+            # idx = user_def_counter.get("EQ",0)            
+            # instr["outpt_sk"] = isz_instr["outpt_sk"]
+            # instr["id"] = "EQ_"+str(idx)
+            # instr["opcode"] = "14"
+            # instr["disasm"] = "EQ"
+            # instr["commutative"] = True            
 
             discount_op+=1
             gas_saved_op+=3
 
-            user_def_counter["EQ"]=idx+1
+            # user_def_counter["EQ"]=idx+1
             rule = msg
             msg = "ISZ(XOR(X,Y))"
             check_and_print_debug_info(debug, msg)
             
-            return True, [isz_instr]
+            return True, delete
                 
         else:
             return False,[]
@@ -4242,7 +4286,7 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                 rule = msg
                 check_and_print_debug_info(debug, msg)
                 
-                return True, [not_instr,instr]
+                return True, [not_instr]
             else:
                 return False, []
 
@@ -4269,7 +4313,7 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                 rule = msg
                 check_and_print_debug_info(debug, msg)
                 
-                return True, [and_instr,instr]
+                return True, [and_instr]
 
             else:
                 return False, []
@@ -4297,7 +4341,7 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                 rule = msg
                 check_and_print_debug_info(debug, msg)
                 
-                return True, [or_instr,instr]
+                return True, [or_instr]
 
         else:
             return False,[]
@@ -4338,29 +4382,48 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
 
         if len(isz_op) == 1: #ISZ(SUB(X,Y)) = EQ(X,Y)
             isz_instr = isz_op[0]
-            idx = user_def_counter.get("EQ",0)
+
+            comm_inpt = [instr["inpt_sk"][1],instr["inpt_sk"][0]]
             
-            old_var = instr["outpt_sk"]
-            new_var = isz_instr["outpt_sk"]
-            instr["outpt_sk"] = new_var
+            new_exist = list(filter(lambda x: (x["inpt_sk"] == instr["inpt_sk"] or x["inpt_sk"] == comm_inpt) and x["disasm"] == "EQ", user_def_instrs))
+
+            if len(new_exist) >0:
+                old_var = isz_instr["outpt_sk"]
+                new_var = new_exist[0]["outpt_sk"]
+                update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
+                delete = [isz_instr]
+
+            else:
+                idx = user_def_counter.get("EQ",0)
+                isz_instr["inpt_sk"] = instr["inpt_sk"]
+                isz_instr["id"] = "EQ_"+str(idx)
+                isz_instr["opcode"] = "14"
+                isz_instr["disasm"] = "EQ"
+                isz_instr["commutative"] = True
+                user_def_counter["EQ"]=idx+1
+                delete = []
+                
+            # old_var = instr["outpt_sk"]
+            # new_var = isz_instr["outpt_sk"]
+            # instr["outpt_sk"] = new_var
             
-            # instr["outpt_sk"] = isz_instr["outpt_sk"]
-            instr["id"] = "EQ_"+str(idx)
-            instr["opcode"] = "14"
-            instr["disasm"] = "EQ"
-            instr["commutative"] = True            
+            # # instr["outpt_sk"] = isz_instr["outpt_sk"]
+            # instr["id"] = "EQ_"+str(idx)
+            # instr["opcode"] = "14"
+            # instr["disasm"] = "EQ"
+            # instr["commutative"] = True            
 
             discount_op+=1
             gas_saved_op+=3
 
-            user_def_counter["EQ"]=idx+1
+
             msg = "ISZ(SUB(X,Y))"
             rule = msg
             check_and_print_debug_info(debug, msg)
 
-            update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
+            # update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
             
-            return True, [isz_instr]
+            return True, delete
                 
         else:
             return False,[]
@@ -4373,10 +4436,30 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
             mul_instr = mul_op[0]
 
             if mul_instr["inpt_sk"][1] == out_pt:
-                old_var = instr["outpt_sk"]
-                new_var = mul_instr["outpt_sk"]
-                instr["outpt_sk"] = new_var
-                instr["inpt_sk"][1] = mul_instr["inpt_sk"][0]
+                new_input = [instr["inpt_sk"][0],mul_instr["inpt_sk"][0]]
+                new_exist = list(filter(lambda x: x["inpt_sk"] == new_input and x["disasm"] == "SHL", user_def_instrs))
+
+                if len(new_exist) > 0:
+                    old_var = mul_instr["outpt_sk"]
+                    new_var = new_exist[0]["outpr_sk"]
+                    update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
+                    delete = [mul_instr]
+
+                else:
+                    mul_instr["inpt_sk"] = new_input
+                                        
+                    idx = user_def_counter.get("SHL",0)
+                    mul_instr["id"] = "SHL_"+str(idx)
+                    mul_instr["opcode"] = "1b"
+                    mul_instr["disasm"] = "SHL"
+                    mul_instr["commutative"] = False            
+                    user_def_counter["SHL"]=idx+1
+                    delete = []
+                    
+                # old_var = instr["outpt_sk"]
+                # new_var = mul_instr["outpt_sk"]
+                # instr["outpt_sk"] = new_var
+                # instr["inpt_sk"][1] = mul_instr["inpt_sk"][0]
 
                 discount_op+=1
                 gas_saved_op+=5
@@ -4386,16 +4469,36 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                 rule = msg
                 check_and_print_debug_info(debug, msg)
 
-                update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
+                # update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
                 
-                return True, [mul_instr]
+                return True, delete
 
             elif mul_instr["inpt_sk"][0] == out_pt:
+                new_input = [instr["inpt_sk"][0],mul_instr["inpt_sk"][1]]
+                new_exist = list(filter(lambda x: x["inpt_sk"] == new_input and x["disasm"] == "SHL", user_def_instrs))
+
+                if len(new_exist) > 0:
+                    old_var = mul_instr["outpt_sk"]
+                    new_var = new_exist[0]["outpr_sk"]
+                    update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
+                    delete = [mul_instr]
+
+                else:
+                    mul_instr["inpt_sk"] = new_input
+                                        
+                    idx = user_def_counter.get("SHL",0)
+                    mul_instr["id"] = "SHL_"+str(idx)
+                    mul_instr["opcode"] = "1b"
+                    mul_instr["disasm"] = "SHL"
+                    mul_instr["commutative"] = False            
+                    user_def_counter["SHL"]=idx+1
+                    delete = []
+
                 # instr["outpt_sk"] = mul_instr["outpt_sk"]
-                old_var = instr["outpt_sk"]
-                new_var = mul_instr["outpt_sk"]
-                instr["outpt_sk"] = new_var
-                instr["inpt_sk"][1] = mul_instr["inpt_sk"][1]
+                # old_var = instr["outpt_sk"]
+                # new_var = mul_instr["outpt_sk"]
+                # instr["outpt_sk"] = new_var
+                # instr["inpt_sk"][1] = mul_instr["inpt_sk"][1]
 
                 discount_op+=1
                 gas_saved_op+=5
@@ -4405,9 +4508,9 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                 rule = msg
                 check_and_print_debug_info(debug, msg)
 
-                update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
+                # update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
                 
-                return True, [mul_instr]
+                return True, delete
 
             else:
                 return False, []
@@ -4425,7 +4528,6 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                     update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
                     delete = [div_instr]
                 else:
-
                     div_instr["inpt_sk"] = new_input
                     
                     idx = user_def_counter.get("SHR",0)
@@ -4476,30 +4578,49 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
         if len(bal_op) == 1:
             bal_instr = bal_op[0]
 
-            old_var = instr["outpt_sk"]
-            new_var = bal_instr["outpt_sk"]
-            instr["outpt_sk"] = new_var
+            new_exist = list(filter(lambda x: x["disasm"] == "SELFBALANCE", user_def_instrs))
+
+            if len(new_exist) > 0:
+                    old_var = bal_instr["outpt_sk"]
+                    new_var = new_exist[0]["outpt_sk"]
+                    update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
+                    delete = [bal_instr]
+            else:
+                bal_instr["inpt_sk"] = []
+                    
+                idx = user_def_counter.get("SELFBALANCE",0)
+                bal_instr["id"] = "SELFBALANCE_"+str(idx)
+                div_instr["opcode"] = "47"
+                div_instr["disasm"] = "SELFBALANCE"
+                div_instr["commutative"] = False            
+                user_def_counter["SELFBALANCE"]=idx+1
+                delete = []
+
+            
+            # old_var = instr["outpt_sk"]
+            # new_var = bal_instr["outpt_sk"]
+            # instr["outpt_sk"] = new_var
             
             # instr["outpt_sk"] = bal_instr["outpt_sk"]
 
-            idx = user_def_counter.get("SELFBALANCE",0)
+            # idx = user_def_counter.get("SELFBALANCE",0)
             
-            instr["id"] = "SELFBALANCE_"+str(idx)
-            instr["opcode"] = "47"
-            instr["disasm"] = "SELFBALANCE"
-            instr["commutative"] = False            
+            # instr["id"] = "SELFBALANCE_"+str(idx)
+            # instr["opcode"] = "47"
+            # instr["disasm"] = "SELFBALANCE"
+            # instr["commutative"] = False            
                 
             discount_op+=1
             gas_saved_op+=397 #BALANCE 400 ADDRESS 2 SELFBALANCE 5
 
-            user_def_counter["SELFBALANCE"]=idx+1
+            # user_def_counter["SELFBALANCE"]=idx+1
             msg = "BALANCE(ADDRESS)"
             rule = msg
             check_and_print_debug_info(debug, msg)
 
-            update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
+            # update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
             
-            return True,[bal_instr]
+            return True, delete
         
         elif len(and_op) == 1:
             and_instr = and_op[0]
@@ -4530,41 +4651,72 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
         if instr["inpt_sk"][0] == 0:
             instr["inpt_sk"].pop(0)
 
-            idx = user_def_counter.get("ISZERO",0)
+            new_exist = list(filter(lambda x: x["inpt_sk"] == instr["inpt_sk"] and x["disasm"] == "ISZERO", user_def_instrs))
+
+            if len(new_exist) > 0:
+                old_var = instr["outpt_sk"]
+                new_var = new_exist[0]["outpt_sk"]
+                update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
+                delete = [instr]
+            else:
+                idx = user_def_counter.get("ISZERO",0)
             
-            instr["id"] = "ISZERO_"+str(idx)
-            instr["opcode"] = "15"
-            instr["disasm"] = "ISZERO"
-            instr["commutative"] = False            
+                instr["id"] = "ISZERO_"+str(idx)
+                instr["opcode"] = "15"
+                instr["disasm"] = "ISZERO"
+                instr["commutative"] = False            
+                user_def_counter["ISZERO"]=idx+1
+                delete = []
                 
             saved_push+=1
             gas_saved_op+=57
 
-            user_def_counter["ISZERO"]=idx+1
+
             msg = "EXP(0,X)"
             rule = msg
             check_and_print_debug_info(debug, msg)
             
-            return True, []
+            return True, delete
 
         elif instr["inpt_sk"][0] == 2:
             instr["inpt_sk"].pop(0)
-            instr["inpt_sk"].append(1)
-            idx = user_def_counter.get("SHL",0)
+
+            new_input = [instr["inpt_sk"][0],1]
+            new_exist = list(filter(lambda x: x["inpt_sk"] == new_input and x["disasm"] == "SHL", user_def_instrs))
+
+            if len(new_exist) > 0:
+                old_var = instr["outpt_sk"]
+                new_var = new_exist[0]["outpt_sk"]
+                update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
+                delete = [instr]
+            else:
+                idx = user_def_counter.get("SHL",0)
+                instr["inpt_sk"] = new_input
+                instr["id"] = "SHL_"+str(idx)
+                instr["opcode"] = "1b"
+                instr["disasm"] = "SHL"
+                instr["commutative"] = False            
+                user_def_counter["SHL"]=idx+1
+                delete = []
             
-            instr["id"] = "SHL_"+str(idx)
-            instr["opcode"] = "1b"
-            instr["disasm"] = "SHL"
-            instr["commutative"] = False            
+            
+            
+            # instr["inpt_sk"].append(1)
+            # idx = user_def_counter.get("SHL",0)
+            
+            # instr["id"] = "SHL_"+str(idx)
+            # instr["opcode"] = "1b"
+            # instr["disasm"] = "SHL"
+            # instr["commutative"] = False            
                 
             gas_saved_op+=57 #EXP-SHL
 
-            user_def_counter["SHL"]=idx+1
+            # user_def_counter["SHL"]=idx+1
             msg = "EXP(2,X)"
             rule = msg
             check_and_print_debug_info(debug, msg)
 
-            return True, []
+            return True, delete
 
         else:
             return False, []
