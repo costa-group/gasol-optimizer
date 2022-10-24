@@ -1,4 +1,5 @@
 from sfs_generator.asm_block import AsmBlock
+from sfs_generator.utils import get_block
 from typing import List, Dict, Optional, Union, Any
 
 
@@ -161,6 +162,30 @@ class AsmContract:
         """
         return self.data[data_id].get("data", None)
 
+
+    def build_static_edges_init(self)->None:
+        self.build_static_edges(self.init_code)
+
+
+    def build_static_edges_runtime(self)->None:
+        for data_id in self.data:
+            self.build_static_edges(self.data[data_id]["code"])
+    def build_static_edges(self,blocks:[AsmBlock])-> None:
+        for block in blocks:
+            instructions = block.instructions
+            last_instruction = instructions[-1].get_disasm()
+            
+            if "JUMP" == last_instruction and "PUSH [tag]" == instructions[-2].get_disasm():
+                tag = instructions[-2].get_value()
+                block.jump_to = get_block(blocks, tag).get_block_id()
+
+            elif "JUMPI" == last_instruction and "PUSH [tag]" == instructions[-2].get_disasm():
+                tag = instructions[-2].get_value()
+                block.jump_to = get_block(blocks, tag).get_block_id()
+                block.falls_to = block.get_block_id()+1
+            elif block.jump_type == "falls_to":
+                block.falls_to = block.get_block_id()+1
+                
     def to_json(self) -> Dict[str, Any]:
 
         # If it has no asm field, we just return the contract name with an empty dict tied
@@ -228,3 +253,5 @@ class AsmContract:
         # content+=str(self.code)+"\n"
         content+=str(self.data)
         return content
+
+    

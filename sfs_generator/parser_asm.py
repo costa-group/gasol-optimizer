@@ -54,6 +54,8 @@ def build_blocks_from_asm_representation(cname : str, block_name_prefix : str, i
                 bytecodes.append(block)
                 block = AsmBlock(cname, block_id, _generate_block_name_from_id(block_name_prefix, block_id), is_init_code)
                 block_id += 1
+                
+            block.tag = instr_list[i]["value"]
             block.add_instruction(asm_bytecode)
         else:
             block.add_instruction(asm_bytecode)
@@ -62,7 +64,7 @@ def build_blocks_from_asm_representation(cname : str, block_name_prefix : str, i
     # If last block has any instructions left, it must be added to the bytecode
     if block.instructions:
         bytecodes.append(block)
-
+        
     return bytecodes
 
 
@@ -101,6 +103,9 @@ def build_asm_contract(cname : str, cinfo : Dict[str, Any]) -> AsmContract:
             
         else:
             asm_c.set_data_field_with_address(elem, data[elem])
+
+    asm_c.build_static_edges_init()
+    asm_c.build_static_edges_runtime()
     return asm_c
 
 

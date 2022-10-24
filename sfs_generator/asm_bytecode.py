@@ -68,6 +68,13 @@ class AsmBytecode:
         return opcodes.get_ins_cost(self.disasm, self.value)
 
 
+    def get_disasm(self) -> str:
+        return self.disasm
+    
+    def get_value(self) -> int:
+        return self.value
+    
+    
     def __str__(self):
         return f"{{begin:{str(self.begin)}, end:{str(self.end)}, source:{str(self.source)}, name:{self.disasm}, value:{str(self.value)}, jumpType:{self.jump_type}}}"
 
