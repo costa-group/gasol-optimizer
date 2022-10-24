@@ -87,8 +87,9 @@ def build_asm_contract(cname : str, cinfo : Dict[str, Any]) -> AsmContract:
     for elem in data:
 
         if not isinstance(data[elem],str):
-            aux_data = data[elem][".auxdata"]
-            asm_c.set_auxdata(elem, aux_data)
+            aux_data = data[elem].get(".auxdata", None)
+            if aux_data is not None:
+                asm_c.set_auxdata(elem, aux_data)
 
             code = data[elem][".code"]
             run_bytecode = build_blocks_from_asm_representation(simplified_cname, '_'.join([simplified_cname, "run_code_of", str(elem)]), code, False)

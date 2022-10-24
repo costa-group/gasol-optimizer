@@ -182,7 +182,8 @@ class AsmContract:
             json_data_fields = {}
 
             aux_data = self.get_auxdata(data_id)
-            json_data_fields[".auxdata"] = aux_data
+            if aux_data is not None:
+                json_data_fields[".auxdata"] = aux_data
 
             run_bytecode = [instruction.to_json() for block in self.get_run_code(data_id) for instruction in block.instructions]
             json_data_fields[".code"] = run_bytecode
