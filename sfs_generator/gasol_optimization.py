@@ -14,7 +14,7 @@ terminate_block = ["ASSERTFAIL","RETURN","REVERT","SUICIDE","STOP"]
 
 pre_defined_functions = ["PUSH","POP","SWAP","DUP"]
 
-zero_ary = ["origin","caller","callvalue","address","number","gasprice","difficulty","prevrandao","coinbase","timestamp","codesize","gaslimit","gas","calldatasize","returndatasize","msize","selfbalance","chainid","pushdeployaddress","pushsize"]
+zero_ary = ["origin","caller","callvalue","address","number","gasprice","difficulty","prevrandao","basefee","coinbase","timestamp","codesize","gaslimit","gas","calldatasize","returndatasize","msize","selfbalance","chainid","pushdeployaddress","pushsize"]
 
 commutative_bytecodes = ["ADD","MUL","EQ","AND","OR","XOR"]
 
@@ -1142,7 +1142,11 @@ def get_involved_vars(instr,var):
     elif instr.find("prevrandao")!=-1:
         var_list.append("prevrandao")
         funct =  "prevrandao"
-        
+
+    elif instr.find("basefee")!=-1:
+        var_list.append("basefee")
+        funct =  "basefee"
+
     elif instr.find("coinbase")!=-1:
         var_list.append("coinbase")
         funct =  "coinbase"
@@ -2357,6 +2361,10 @@ def generate_userdefname(u_var,funct,args,arity,init=False):
 
     elif funct.find("prevrandao")!=-1:
         instr_name = "PREVRANDAO"
+
+    elif funct.find("basefee")!=-1:
+        instr_name = "BASEFEE"
+
         
     elif funct.find("blockhash")!=-1:
         instr_name = "BLOCKHASH"

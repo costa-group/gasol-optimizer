@@ -52,6 +52,7 @@ opcodes = {
     "GASLIMIT": [0x45, 0, 1],
     "CHAINID": [0x46,0,1],
     "SELFBALANCE": [0x47,0,1],
+    "BASEFEE": [0x48,0,1],
     "POP": [0x50, 1, 0],
     "MLOAD": [0x51, 1, 1],
     "MSTORE": [0x52, 2, 0],
@@ -168,7 +169,8 @@ Wzero = ("STOP", "RETURN", "REVERT", "ASSERTFAIL")
 
 Wbase = ("ADDRESS", "ORIGIN", "CALLER", "CALLVALUE", "CALLDATASIZE",
          "CODESIZE", "GASPRICE", "COINBASE", "TIMESTAMP", "NUMBER",
-         "DIFFICULTY","PREVRANDAO", "GASLIMIT", "POP", "PC", "MSIZE", "GAS", "RETURNDATASIZE","CHAINID")
+         "DIFFICULTY","PREVRANDAO","BASEFEE", "GASLIMIT", "POP", "PC",
+         "MSIZE", "GAS", "RETURNDATASIZE","CHAINID")
 
 Wverylow = ("ADD", "SUB", "NOT", "LT", "GT", "SLT", "SGT", "EQ",
             "ISZERO", "AND", "OR", "XOR", "BYTE", "CALLDATALOAD",
