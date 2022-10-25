@@ -150,7 +150,7 @@ class AsmContract:
         :param data_id: data id that identifies current assembly structure
         :return: a string containing the auxdata information
         """
-        return self.data[data_id]["auxdata"]
+        return self.data[data_id].get("auxdata", None)
     
     def get_data_field(self, data_id : str) -> Optional[Dict[str, str]]:
         """
