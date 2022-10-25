@@ -2450,7 +2450,7 @@ def generate_userdefname(u_var,funct,args,arity,init=False):
     if defined == -1:
         obj = {}
 
-        if instr_name.find("GAS") !=-1 or instr_name.find("TIMESTAMP")!=-1:
+        if (instr_name.find("GAS")!=-1 and instr_name.find("GASPRICE")==-1) or instr_name.find("TIMESTAMP")!=-1:
             instr_name = instr_name[:-1]
         
         if funct == args: #0-ary functions
