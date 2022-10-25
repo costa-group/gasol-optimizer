@@ -3234,7 +3234,7 @@ def smt_translate_block(rule,file_name,block_name,immutable_dict,simplification=
     global revert_flag
     global assignImm_values
     global debug
-
+    
     init_globals()
     
     if storage:
@@ -3753,17 +3753,22 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
             out_var = instr["outpt_sk"][0]
             is_zero = list(filter(lambda x: out_var in x["inpt_sk"] and x["disasm"] == "ISZERO",user_def_instrs))
             if len(is_zero) == 1:
+                # print(tstack)
+                # raise Exception
                 index = user_def_instrs.index(is_zero[0])
                 zero_instr = user_def_instrs[index]
                 zero_instr["inpt_sk"] = [instr["inpt_sk"][0]]
                 saved_push+=2
                 gas_saved_op+=3
 
-                discount_op+=2
+                
+                if out_var not in tstack:
+                    discount_op+=2
 
                 msg = "ISZ(GT(X,0))"
                 rule = msg
                 check_and_print_debug_info(debug, msg)
+                
                 return True, []
             else:
                 return False, []
@@ -3884,7 +3889,9 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                 index = user_def_instrs.index(is_zero[0])
                 zero_instr = user_def_instrs[index]
                 zero_instr["inpt_sk"] = [instr["inpt_sk"][1]]
-                discount_op+=1
+
+                if out not in tstack:
+                    discount_op+=2
 
                 saved_push+=1
                 gas_saved_op+=3
@@ -4080,7 +4087,8 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
             while (i<len(tstack)):
                 if tstack[i] == (out_pt2):
                     tstack[i] = x
-
+                i+=1
+                
             for elems in user_def_instrs:
                 if out_pt2 in elems["inpt_sk"]:
                     pos = elems["inpt_sk"].index(out_pt2)
@@ -4148,7 +4156,8 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
             while (i<len(tstack)):
                 if tstack[i] == (out_pt2):
                     tstack[i] = x
-
+                i+=1
+                    
             for elems in user_def_instrs:
                 if out_pt2 in elems["inpt_sk"]:
                     pos = elems["inpt_sk"].index(out_pt2)
@@ -4199,7 +4208,9 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
             while (i<len(tstack)):
                 if tstack[i] == (out_pt2):
                     tstack[i] = y
+                i+=1
 
+                    
             for elems in user_def_instrs:
                 if out_pt2 in elems["inpt_sk"]:
                     pos = elems["inpt_sk"].index(out_pt2)
@@ -4227,7 +4238,11 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                 update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
                 delete = [isz_instr]
 
-            else:
+                # discount_op+=1
+                # gas_saved_op+=3
+
+                
+            elif outpt not in tstack and len(list(filter(lambda x: outpt in x["inpt_sk"] and x!= isz_instr, user_def_instrs))) == 0:
                 idx = user_def_counter.get("EQ",0)
                 isz_instr["inpt_sk"] = instr["inpt_sk"]
                 isz_instr["id"] = "EQ_"+str(idx)
@@ -4236,7 +4251,12 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                 isz_instr["commutative"] = True
                 user_def_counter["EQ"]=idx+1
                 delete = []
-
+                
+                discount_op+=1
+                gas_saved_op+=3
+                
+            else:
+                return False, []
             # idx = user_def_counter.get("EQ",0)            
             # instr["outpt_sk"] = isz_instr["outpt_sk"]
             # instr["id"] = "EQ_"+str(idx)
@@ -4244,8 +4264,6 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
             # instr["disasm"] = "EQ"
             # instr["commutative"] = True            
 
-            discount_op+=1
-            gas_saved_op+=3
 
             # user_def_counter["EQ"]=idx+1
             rule = msg
@@ -4300,7 +4318,8 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                 while (i<len(tstack)):
                     if tstack[i] == (out_pt2):
                         tstack[i] = real_var
-
+                    i+=1
+                    
                 for elems in user_def_instrs:
                     if out_pt2 in elems["inpt_sk"]:
                         pos = elems["inpt_sk"].index(out_pt2)
@@ -4328,7 +4347,8 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                 while (i<len(tstack)):
                     if tstack[i] == (out_pt2):
                         tstack[i] = real_var
-
+                    i+=1
+                    
                 for elems in user_def_instrs:
                     if out_pt2 in elems["inpt_sk"]:
                         pos = elems["inpt_sk"].index(out_pt2)
@@ -4393,7 +4413,7 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                 update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
                 delete = [isz_instr]
 
-            else:
+            elif out_pt not in tstack and len(list(filter(lambda x: out_pt in x["inpt_sk"] and x!=isz_instr, user_def_instrs))) == 0:
                 idx = user_def_counter.get("EQ",0)
                 isz_instr["inpt_sk"] = instr["inpt_sk"]
                 isz_instr["id"] = "EQ_"+str(idx)
@@ -4402,7 +4422,12 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                 isz_instr["commutative"] = True
                 user_def_counter["EQ"]=idx+1
                 delete = []
-                
+
+                discount_op+=1
+                gas_saved_op+=3
+
+            else:
+                return False, []
             # old_var = instr["outpt_sk"]
             # new_var = isz_instr["outpt_sk"]
             # instr["outpt_sk"] = new_var
@@ -4413,8 +4438,6 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
             # instr["disasm"] = "EQ"
             # instr["commutative"] = True            
 
-            discount_op+=1
-            gas_saved_op+=3
 
 
             msg = "ISZ(SUB(X,Y))"
