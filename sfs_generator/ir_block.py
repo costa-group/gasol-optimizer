@@ -541,6 +541,10 @@ def translateOpcodes40(opcode, index_variables):
         v1, updated_variables = get_new_variable(index_variables)
         instr = v1+" = difficulty"
 
+    elif opcode == "PREVRANDAO":
+        v1, updated_variables = get_new_variable(index_variables)
+        instr = v1+" = prevrandao"
+        
     elif opcode == "GASLIMIT":
         v1, updated_variables = get_new_variable(index_variables)
         instr = v1+" = gaslimit"
