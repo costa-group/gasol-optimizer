@@ -45,8 +45,7 @@ def generate_dependency_graph_only_memory(uninterpreted_instr: List[Uninterprete
     for id1, id2 in order_tuples:
         # Stronger check: if id1 happens before id2 at some point, then we don't consider it in the graph.
         # See test_lb_tight_dependencies in tests/test_instruction_bounds_with_dependencies
-        if not happens_before(id2, id1, dependency_graph):
-            dependency_graph[id2].append(id1)
+        dependency_graph[id2].append(id1)
     return dependency_graph
 
 
