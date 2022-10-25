@@ -170,19 +170,22 @@ class AsmContract:
     def build_static_edges_runtime(self)->None:
         for data_id in self.data:
             self.build_static_edges(self.data[data_id]["code"])
+            
     def build_static_edges(self,blocks:[AsmBlock])-> None:
         for block in blocks:
             instructions = block.instructions
             last_instruction = instructions[-1].get_disasm()
-            
-            if "JUMP" == last_instruction and "PUSH [tag]" == instructions[-2].get_disasm():
-                tag = instructions[-2].get_value()
-                block.jump_to = get_block(blocks, tag).get_block_id()
 
-            elif "JUMPI" == last_instruction and "PUSH [tag]" == instructions[-2].get_disasm():
-                tag = instructions[-2].get_value()
-                block.jump_to = get_block(blocks, tag).get_block_id()
-                block.falls_to = block.get_block_id()+1
+            if "JUMP" == last_instruction and len(instructions)>1:
+                if "PUSH [tag]" == instructions[-2].get_disasm():
+                    tag = instructions[-2].get_value()
+                    block.jump_to = get_block(blocks, tag).get_block_id()
+
+            elif "JUMPI" == last_instruction and len(instructions)>1:
+                if "PUSH [tag]" == instructions[-2].get_disasm():
+                    tag = instructions[-2].get_value()
+                    block.jump_to = get_block(blocks, tag).get_block_id()
+                    block.falls_to = block.get_block_id()+1
             elif block.jump_type == "falls_to":
                 block.falls_to = block.get_block_id()+1
                 
