@@ -146,7 +146,7 @@ def plain_instructions_to_asm_representation(raw_instruction_str : str) -> [ASM_
 
     while i < len(ops):
         op = ops[i]
-        if op.startswith("ASSIGNIMMUTABLE") or op.startswith("tag"):
+        if op.startswith("ASSIGNIMMUTABLE") or op.startswith("tag") or op.startswith('PUSHLIB'):
             opcodes.append({"name": op, "value": ops[i+1]})
             i += 1
         elif not op.startswith("PUSH"):
