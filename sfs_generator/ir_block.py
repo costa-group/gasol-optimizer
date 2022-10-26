@@ -247,13 +247,13 @@ def translateOpcodes0(opcode,index_variables):
         v2, updated_variables = get_consume_variable(updated_variables)
         v3, updated_variables = get_consume_variable(updated_variables)
         v4, updated_variables = get_new_variable(updated_variables)
-        instr = v4+" = (" + v1 + "+" + v2 + ") % " + v3
+        instr = v4+" = addmod(" + v1 + "," + v2 + ", " + v3+")"
     elif opcode == "MULMOD":
         v1, updated_variables = get_consume_variable(index_variables)
         v2, updated_variables = get_consume_variable(updated_variables)
         v3, updated_variables = get_consume_variable(updated_variables)
         v4, updated_variables = get_new_variable(updated_variables)
-        instr = v4+" = (" + v1 + "*" + v2 + ") % " + v3
+        instr = v4+" = mulmod(" + v1 + "," + v2 + ","  + v3+")"
     elif opcode == "EXP":
         v1, updated_variables = get_consume_variable(index_variables)
         v2, updated_variables = get_consume_variable(updated_variables)

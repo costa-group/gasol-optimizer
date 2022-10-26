@@ -646,7 +646,7 @@ def update_unary_func(func,var,val,evaluate):
 def get_involved_vars(instr,var):
     var_list = []
     funct = ""
-
+    
     if instr.find("mload")!=-1:
         instr_new = instr.strip("\n")
         pos = instr_new.find("(")
@@ -922,60 +922,60 @@ def get_involved_vars(instr,var):
 
         funct = "byte"
 
-    elif instr.find("*")!=-1:
-        if instr.find("%")!=-1: #MULMOD
-            instr_new = instr.strip("\n")
-            args012 = instr_new.split("%")
-            args01 = args012[0].strip()
-            var2 = args012[1].strip()
+    elif instr.find("mulmod(")!=-1:
+        
+        instr_new = instr.strip("\n")
+        pos = instr_new.find("mulmod(")
+        args012 = instr_new[pos+7:-1]
+        var012 = args012.split(",")
 
-            vars01 = args01.split("*")
-            var0 = vars01[0][1:].strip()
-            var1 = vars01[1][:-1].strip()
+        var0 = var012[0].strip()
+        var1 = var012[1].strip()
+        var2 = var012[2].strip()
+        
+        var_list.append(var0)
+        var_list.append(var1)
+        var_list.append(var2)
 
-            var_list.append(var0)
-            var_list.append(var1)
-            var_list.append(var2)
-
-            funct = "*"
+        funct = "mulmod"
             
-        else: #MUL
+    elif instr.find("*")!=-1: #MUL
 
-            instr_new = instr.strip("\n")
-            var01 = instr_new.split("*")
-            var0 = var01[0].strip()
-            var1 = var01[1].strip()
-            var_list.append(var0)
-            var_list.append(var1)
+        instr_new = instr.strip("\n")
+        var01 = instr_new.split("*")
+        var0 = var01[0].strip()
+        var1 = var01[1].strip()
+        var_list.append(var0)
+        var_list.append(var1)
 
-            funct = "*"
+        funct = "*"
             
-    elif instr.find("+")!=-1:
-        if instr.find("%")!=-1: #ADDMOD
-            instr_new = instr.strip("\n")
-            args012 = instr_new.split("%")
-            args01 = args012[0].strip()
-            var2 = args012[1].strip()
+    elif instr.find("addmod(")!=-1:
 
-            vars01 = args01.split("+")
-            var0 = vars01[0][1:].strip()
-            var1 = vars01[1][:-1].strip()
+        instr_new = instr.strip("\n")
+        pos = instr_new.find("addmod(")
+        args012 = instr_new[pos+7:-1]
+        var012 = args012.split(",")
 
-            var_list.append(var0)
-            var_list.append(var1)
-            var_list.append(var2)
+        var0 = var012[0].strip()
+        var1 = var012[1].strip()
+        var2 = var012[2].strip()
+        
+        var_list.append(var0)
+        var_list.append(var1)
+        var_list.append(var2)
 
-            funct = "+"
+        funct = "addmod"
             
-        else: #ADD
-            instr_new = instr.strip("\n")
-            var01 = instr_new.split("+")
-            var0 = var01[0].strip()
-            var1 = var01[1].strip()
-            var_list.append(var0)
-            var_list.append(var1)
+    elif instr.find("+")!=-1: #ADD
+        instr_new = instr.strip("\n")
+        var01 = instr_new.split("+")
+        var0 = var01[0].strip()
+        var1 = var01[1].strip()
+        var_list.append(var0)
+        var_list.append(var1)
 
-            funct = "+"
+        funct = "+"
 
     elif instr.find("-")!=-1:
         instr_new = instr.strip("\n")
@@ -1446,7 +1446,7 @@ def compute_ternary(expression):
     funct = expression[3]
 
     r, vals = all_integers([v0,v1,v2])
-    if r and funct in ["+","*"]:
+    if r and funct in ["addmod","mulmod"]:
         val = evaluate_expression_ter(funct,vals[0],vals[1],vals[2])
 
         rule = "EVAL "+str(expression)
@@ -1498,7 +1498,7 @@ def rebuild_expression(vars_input,funct,values,level,evaluate = True):
         v0 = values[vars_input[0]]
         v1 = values[vars_input[1]]
         v2 = values[vars_input[2]]
-        expression = (v0,v1,v2,funct)
+        expression_without_simp = (v0,v1,v2,funct)
         if evaluate:
             r, expression = compute_ternary(expression_without_simp)
         else:
@@ -2256,6 +2256,12 @@ def generate_userdefname(u_var,funct,args,arity,init=False):
     if funct.find("+") != -1:
         instr_name = "ADD"
 
+    elif funct.find("mulmod") !=-1:
+        instr_name = "MULMOD"
+
+    elif funct.find("addmod") !=-1:
+        instr_name = "ADDMOD"
+
     elif funct.find("-") != -1:
         instr_name = "SUB"
 
@@ -2283,7 +2289,6 @@ def generate_userdefname(u_var,funct,args,arity,init=False):
     elif funct.find("pushsize")!=-1:
         instr_name = "PUSHSIZE"
 
-        
     elif funct.find("xor") !=-1:
         instr_name = "XOR"
         
