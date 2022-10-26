@@ -1031,6 +1031,16 @@ def get_involved_vars(instr,var):
 
         funct = "shr"
 
+    # pushlib must come before shl to avoid overlapping
+    elif instr.startswith("pushlib("):
+        instr_new = instr.strip("\n")
+        pos = instr_new.find("pushlib(")
+        arg0 = instr[pos+8:-1]
+        var0 = arg0.strip()
+        var_list.append(var0)
+
+        funct = "pushlib"
+
     elif instr.startswith("shl("):
         instr_new = instr.strip("\n")
         pos = instr_new.find("shl(")
@@ -1270,16 +1280,6 @@ def get_involved_vars(instr,var):
         var_list.append(var0)
 
         funct = "pushtag"
-
-    elif instr.startswith("pushlib("):
-        instr_new = instr.strip("\n")
-        pos = instr_new.find("pushlib(")
-        arg0 = instr[pos+8:-1]
-        var0 = arg0.strip()
-        var_list.append(var0)
-
-        funct = "pushlib"
-
 
     elif instr.startswith("push#[$]("):
         instr_new = instr.strip("\n")
@@ -2307,6 +2307,10 @@ def generate_userdefname(u_var,funct,args,arity,init=False):
     elif funct.find("shr") !=-1:
         instr_name = "SHR"
 
+    # pushlib must come before shl to avoid overlapping
+    elif funct.find("pushlib")!=-1:
+        instr_name = "PUSHLIB"
+
     elif funct.find("shl") !=-1:
         instr_name = "SHL"
 
@@ -2452,9 +2456,6 @@ def generate_userdefname(u_var,funct,args,arity,init=False):
     elif funct.find("pushimmutable")!=-1:
         instr_name = "PUSHIMMUTABLE"
 
-    elif funct.find("pushlib")!=-1:
-        instr_name = "PUSHLIB"
-
     #TODO: Add more opcodes
     
     if instr_name in already_defined_userdef:
@@ -2471,7 +2472,8 @@ def generate_userdefname(u_var,funct,args,arity,init=False):
     if defined == -1:
         obj = {}
 
-        if (instr_name.find("GAS")!=-1 and instr_name.find("GASPRICE")==-1) or instr_name.find("TIMESTAMP")!=-1:
+        if (instr_name.find("GAS")!=-1 and instr_name.find("GASPRICE")==-1 and instr_name.find("GASLIMIT")==-1) \
+                or instr_name.find("TIMESTAMP")!=-1:
             instr_name = instr_name[:-1]
         
         if funct == args: #0-ary functions

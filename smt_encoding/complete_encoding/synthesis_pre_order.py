@@ -1,10 +1,10 @@
 from smt_encoding.complete_encoding.synthesis_functions import SynthesisFunctions
-from smt_encoding.constraints.connector_factory import add_eq, add_lt, add_or, add_and, add_implies
+from smt_encoding.constraints.connector_factory import add_eq, add_lt, add_or, add_implies, add_distinct, add_and
 from smt_encoding.constraints.assertions import AssertHard
-from typing import List, Dict, Set
-from smt_encoding.instructions.encoding_instruction import ThetaValue, Id_T
+from typing import List, Dict, Set, Tuple
+from smt_encoding.instructions.encoding_instruction import ThetaValue, Id_T, EncodingInstruction
 from smt_encoding.instructions.instruction_bounds import InstructionBounds
-from smt_encoding.instructions.encoding_instruction import EncodingInstruction
+from smt_encoding.instructions.uninterpreted_instruction import UninterpretedInstruction
 from smt_encoding.complete_encoding.synthesis_utils import select_instructions_position
 
 # Methods for generating the constraints for both memory and storage (Ls)
@@ -84,6 +84,93 @@ def happens_before_direct(j: int, sf: SynthesisFunctions, bounds: InstructionBou
     return AssertHard(add_implies(left_term, right_term))
 
 
+# St - Ld dependencies : Ld instruction cannot appear before store
+def sto_ld_dependency(j: int, sf: SynthesisFunctions, bounds: InstructionBounds,
+                      theta_sto: ThetaValue, theta_ld: ThetaValue) -> AssertHard:
+    left_term = add_eq(sf.t(j), sf.theta_value(theta_sto))
+    positions_restricted = [add_distinct(sf.t(i), sf.theta_value(theta_ld))
+                            for i in range(bounds.lower_bound_theta_value(theta_ld), j)]
+
+    if positions_restricted == []:
+        raise ValueError("Empty conflict order direct")
+
+    right_term = add_and(*positions_restricted)
+    return AssertHard(add_implies(left_term, right_term))
+
+
+# Ld - St dependencies : Ld instruction cannot appear after store
+def ld_sto_dependency(j: int, sf: SynthesisFunctions, bounds: InstructionBounds,
+                      theta_ld: ThetaValue, theta_sto: ThetaValue) -> AssertHard:
+    left_term = add_eq(sf.t(j), sf.theta_value(theta_sto))
+    positions_restricted = [add_distinct(sf.t(i), sf.theta_value(theta_ld))
+                            for i in range(j + 1, bounds.upper_bound_theta_value(theta_ld) + 1)]
+
+    if positions_restricted == []:
+        raise ValueError("Empty conflict order direct")
+
+    right_term = add_and(*positions_restricted)
+    return AssertHard(add_implies(left_term, right_term))
+
+
+def dependent_pre_order(uninterpreted_instr : List[UninterpretedInstruction], order_tuples: List[Tuple[Id_T, Id_T]],
+                        b0: int, stack_elem_to_id : Dict[str, Id_T], instr_dep: bool,
+                        theta_value_by_id_dict: Dict[Id_T, ThetaValue],
+                        bounds: InstructionBounds, sf: SynthesisFunctions) -> List[AssertHard]:
+    hard_constraints = []
+    if instr_dep:
+        for instr in uninterpreted_instr:
+            instr_theta = theta_value_by_id_dict[instr.id]
+
+            for stack_elem in instr.input_stack:
+
+                # We search for another instruction that generates the
+                # stack elem as an output and add it to the set
+                if type(stack_elem) == str:
+
+                    prev_instr_id = stack_elem_to_id.get(stack_elem, None)
+                    # This means the stack element corresponds to another uninterpreted instruction
+                    if prev_instr_id is not None:
+                        prev_instr_theta = theta_value_by_id_dict[prev_instr_id]
+
+                        # Depencies among instructions are represented as happens before
+                        hard_constraints.extend(
+                            [happens_before_direct(j, sf, bounds, prev_instr_theta, instr_theta)
+                             for j in range(max(1, bounds.lower_bound_theta_value(instr_theta),
+                                                bounds.lower_bound_theta_value(prev_instr_theta)),
+                                            bounds.upper_bound_theta_value(instr_theta) + 1)])
+
+    # We need to consider also the order given by the tuples
+    for id1, id2 in order_tuples:
+
+        bef_instr_theta, aft_instr_theta = theta_value_by_id_dict[id1], theta_value_by_id_dict[id2]
+        if 'STORE' in id1 and 'STORE' in id2:
+            # As store instructions can only appear once, this can be represented directly using a happens
+            # before relation
+            hard_constraints.extend(
+                [happens_before_direct(j, sf, bounds, bef_instr_theta, aft_instr_theta)
+                 for j in range(max(1, bounds.lower_bound_theta_value(aft_instr_theta),
+                                    bounds.lower_bound_theta_value(bef_instr_theta)),
+                                    bounds.upper_bound_theta_value(aft_instr_theta) + 1)])
+
+        # St - Ld dependencies : Ld instruction cannot appear before store
+        elif 'STORE' in id1:
+            hard_constraints.extend(
+                [sto_ld_dependency(j, sf, bounds, bef_instr_theta, aft_instr_theta)
+                 for j in range(max(1, bounds.lower_bound_theta_value(aft_instr_theta) + 1,
+                                    bounds.lower_bound_theta_value(bef_instr_theta)),
+                                bounds.upper_bound_theta_value(bef_instr_theta) + 1)])
+
+        # Ld - St dependencies : Ld instruction cannot appear after store
+        else:
+            hard_constraints.extend(
+                [ld_sto_dependency(j, sf, bounds, bef_instr_theta, aft_instr_theta)
+                 for j in range(bounds.lower_bound_theta_value(aft_instr_theta),
+                                min(b0 - 1, bounds.upper_bound_theta_value(bef_instr_theta),
+                                    bounds.upper_bound_theta_value(aft_instr_theta) + 1))])
+
+    return hard_constraints
+
+
 def happens_before_from_dependency_graph(dependency_graph_set_theta: Dict[ThetaValue, Set[ThetaValue]],
                                          bounds: InstructionBounds, sf: SynthesisFunctions) -> List[AssertHard]:
     # We consider max(1, lb(theta_confl1), lb(theta_confl2)) to start either by the first position in which
@@ -99,11 +186,11 @@ def happens_before_from_dependency_graph(dependency_graph_set_theta: Dict[ThetaV
     return constraints
 
 
-def direct_conflict_constraints(instructions: List[EncodingInstruction], bounds: InstructionBounds,
-                                dependency_graph: Dict[Id_T, List[Id_T]], sf: SynthesisFunctions) -> List[AssertHard]:
+def direct_conflict_constraints(instructions: List[UninterpretedInstruction], order_tuples: List[Tuple[Id_T, Id_T]],
+                                b0: int, bounds: InstructionBounds, sf: SynthesisFunctions, instr_dep: bool) -> List[AssertHard]:
     theta_value_by_id_dict: Dict[Id_T, ThetaValue] = {instruction.id: instruction.theta_value
                                                       for instruction in instructions}
-    dependency_graph_set_theta = {theta_value_by_id_dict[instr_id]:
-                                      {theta_value_by_id_dict[dependent_id] for dependent_id in dependency_ids}
-                                  for instr_id, dependency_ids in dependency_graph.items()}
-    return happens_before_from_dependency_graph(dependency_graph_set_theta, bounds, sf)
+    stack_elem_to_id: Dict[str, Id_T] = {instruction.output_stack: instruction.id
+                                         for instruction in instructions if instruction.output_stack is not None}
+
+    return dependent_pre_order(instructions, order_tuples, b0, stack_elem_to_id, instr_dep, theta_value_by_id_dict, bounds, sf)

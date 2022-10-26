@@ -143,7 +143,7 @@ Function that identifies the PUSH opcodes used in the yul translation that are n
 (PUSH tag, PUSHDEPLOYADDRESS, PUSH data...)
 '''
 def isYulInstruction(opcode):
-    if opcode.find("tag") ==-1 and opcode.find("#") ==-1 and opcode.find("$") ==-1 \
+    if opcode.find("tag") ==-1 and opcode.find("#") ==-1 and opcode.find("$") ==-1 and opcode.find("LIB") ==-1 \
             and opcode.find("data") ==-1 and opcode.find("DEPLOY") ==-1 and opcode.find("SIZE")==-1 and opcode.find("IMMUTABLE")==-1:
         return False
     else:
