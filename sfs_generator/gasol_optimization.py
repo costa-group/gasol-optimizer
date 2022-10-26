@@ -3767,7 +3767,7 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
         if 0 == instr["inpt_sk"][1]:
             out_var = instr["outpt_sk"][0]
             is_zero = list(filter(lambda x: out_var in x["inpt_sk"] and x["disasm"] == "ISZERO",user_def_instrs))
-            if len(is_zero) == 1:
+            if len(is_zero) == 1 and out_var not in tstack:
                 # print(tstack)
                 # raise Exception
                 index = user_def_instrs.index(is_zero[0])
@@ -3900,7 +3900,7 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
          if 0 == instr["inpt_sk"][0]:
             out_var = instr["outpt_sk"][0]
             is_zero = list(filter(lambda x: out_var in x["inpt_sk"] and x["disasm"] == "ISZERO",user_def_instrs))
-            if len(is_zero) == 1:
+            if len(is_zero) == 1 and out_var not in tstack:
                 index = user_def_instrs.index(is_zero[0])
                 zero_instr = user_def_instrs[index]
                 zero_instr["inpt_sk"] = [instr["inpt_sk"][1]]
