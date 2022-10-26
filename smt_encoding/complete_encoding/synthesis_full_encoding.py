@@ -223,10 +223,14 @@ class FullEncoding:
                              self._encoding_stack.encode_instruction(instruction, self._bounds,
                                                                      self._term_factory, self.bs)]
 
-        pre_order_encoding_function = l_conflicting_constraints if self._flags.memory_encoding == "l_vars" else direct_conflict_constraints
-
-        pre_order_constraints = pre_order_encoding_function(self._instructions, self._bounds, self._dependency_graph,
-                                                            self._term_factory)
+        pre_order_encoding_function = l_conflicting_constraints
+        if self._flags.memory_encoding == "l_vars":
+            pre_order_constraints = pre_order_encoding_function(self._instructions, self._bounds,
+                                                                self._dependency_graph, self._term_factory)
+        else:
+            pre_order_constraints = direct_conflict_constraints(self._uninterpreted_instructions, self.mem_order,
+                                                                self.b0, self._bounds, self._term_factory,
+                                                                self._flags.order_conflicts)
 
         stack_encoding_f = stack_encoding_for_position_empty if self._flags.empty else stack_encoding_for_position
 
