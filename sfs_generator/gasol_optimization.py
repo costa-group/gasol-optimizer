@@ -1924,7 +1924,6 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     for mem in mstore_ins:
         x = generate_mstore_info(mem)
         mem_objs.append(x)
-        
 
     all_user_defins = user_defins+sto_objs+mem_objs
         
@@ -1951,12 +1950,14 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
         new_user_defins = all_user_defins
 
     
+    new_user_defins1 = update_user_defins(new_ts,new_user_defins)
 
-        
-    new_user_defins = update_user_defins(new_ts,new_user_defins)
+    removed_instructions = list(filter(lambda x: x not in new_user_defins1,new_user_defins))
 
-    new_user_defins, new_ts = unify_all_user_defins(new_ts,new_user_defins,vars_list)
-
+    update_storage_sequences(removed_instructions)
+    
+    new_user_defins, new_ts = unify_all_user_defins(new_ts,new_user_defins1,vars_list)
+    
     new_user_defins = update_user_defins(new_ts,new_user_defins)
     
     # if simplification:
@@ -1992,7 +1993,7 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     if num !=-1:
         max_instr_size = num
         num_pops = num
-        
+
     if not split_sto:
         sto_dep, mem_dep = translate_dependences_sfs(new_user_defins)
 
@@ -5462,6 +5463,7 @@ def compute_identifiers_storage_instructions(storage_location, location, new_use
 
     key_list = list(u_dict.keys())
     values_list = list(u_dict.values())
+
     
     for i in range(0,len(storage_location)):
         ins = storage_location[i]
@@ -5492,7 +5494,6 @@ def compute_identifiers_storage_instructions(storage_location, location, new_use
 
             
         else: # loads instructions
-
             load_ins = list(filter(lambda x: x[0][-1] == ins[0][-1],values_list))
             if len(load_ins)!=1:
                 raise Exception("Error in looking load instruction")
@@ -5507,6 +5508,71 @@ def compute_identifiers_storage_instructions(storage_location, location, new_use
 
     return storage_identifiers
 
+
+
+def update_storage_sequences(removed_instructions):
+    global storage_order
+    global memory_order
+    global storage_dep
+    global memory_dep
+    
+    new_storage_order = []
+    new_memory_order = []
+    
+    for ins in storage_order:
+        instructions_name = ins[0][-1]
+        inpt_var = ins[0][0]
+        if instructions_name.find("sload")!=-1:
+            unused = list(filter(lambda x: x["disasm"] == "SLOAD" and inpt_var in x["inpt_sk"],removed_instructions))
+            if len(unused)==0:
+                new_storage_order.append(ins)
+        elif instructions_name.find("sstore")!=-1:
+            unused = list(filter(lambda x: x["disasm"] == "SSTORE" and inpt_var == x["inpt_sk"][0],removed_instructions))
+            if len(unused)==0:
+                new_storage_order.append(ins)
+        else:
+            new_storage_order.append(ins)
+
+
+    if storage_order != new_storage_order:
+        stdep = generate_dependences(new_storage_order,"storage")
+        stdep = simplify_dependencies(stdep)
+        
+        storage_dep = stdep
+        storage_order = new_storage_order
+        
+    for ins in memory_order:
+        instructions_name = ins[0][-1]
+        inpt_var = ins[0][0]
+        if instructions_name.find("mload")!=-1:
+            unused = list(filter(lambda x: x["disasm"] == "MLOAD" and inpt_var in x["inpt_sk"],removed_instructions))
+            if len(unused)==0:
+                new_memory_order.append(ins)
+
+        elif instructions_name.find("mstore8")!=-1:
+            unused = list(filter(lambda x: x["disasm"] == "MSTORE8" and inpt_var == x["inpt_sk"][0],removed_instructions))
+            if len(unused)==0:
+                new_memory_order.append(ins)
+
+        elif instructions_name.find("mstore")!=-1:
+            unused = list(filter(lambda x: x["disasm"] == "MSTORE" and inpt_var == x["inpt_sk"][0],removed_instructions))
+            if len(unused)==0:
+                new_memory_order.append(ins)
+
+        elif instructions_name.find("keccak")!=-1:
+            unused = list(filter(lambda x: x["disasm"] == "KECCAK256" and inpt_var == x["inpt_sk"][0],removed_instructions))
+            if len(unused)==0:
+                new_memory_order.append(ins)
+        else:
+            new_storage_order.append(ins)
+            
+    if memory_order != new_memory_order:
+        memdep = generate_dependences(new_memory_order,"storage")
+        memdep = simplify_dependencies(memdep)
+
+        memory_dep = memdep
+        memory_order = new_memory_order
+        
 def translate_dependences_sfs(new_user_defins):    
     new_storage_dep = []
     new_memory_dep = []
