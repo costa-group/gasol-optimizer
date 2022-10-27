@@ -1343,7 +1343,7 @@ def evaluate_expression(funct,val0,val1):
     elif funct == "*":
         return val0*val1
     elif funct == "/":
-        return val0/val1
+        return math.floor(val0/val1)
     elif funct == "^":
         return val0**val1
     elif funct == "and":
