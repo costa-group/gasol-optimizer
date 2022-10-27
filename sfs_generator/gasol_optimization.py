@@ -4905,6 +4905,14 @@ def replace_loads_by_sstores(storage_location, complementary_location, location)
                 pos = storage_location[i+1::].index(load)
                 rest_list = storage_location[i+1:i+pos+1]
                 dep = list(map(lambda x: are_dependent(elem,x),rest_list))
+
+                if True in dep and elem[0][-1].find("mstore8") == -1:
+                    j = 0
+                    while(j<len(dep)):
+                        if dep[j] and rest_list[j][0][-1].find("keccak")!=-1:
+                            dep[j] = False
+                        j+=1
+                        
                 if True not in dep and elem[0][-1].find("mstore8") == -1: #it does not work for mstore8
                     if location == "storage":
                         msg = "[OPT]: Replaced sload by its value"
