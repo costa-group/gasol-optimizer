@@ -1647,7 +1647,7 @@ def generate_storage_info(instructions,source_stack,simplification=True):
     if simplification:
         simp = True
         while(simp):
-            simp = simplify_memory(storage_order,"storage")
+            simp = simplify_memory(storage_order, memory_order, "storage")
 
     storage_order = list(filter(lambda x: type(x) == tuple, storage_order))
     unify_loads_instructions(storage_order, "storage")
@@ -1657,7 +1657,7 @@ def generate_storage_info(instructions,source_stack,simplification=True):
     if simplification:
         simp = True
         while(simp):
-            simp = simplify_memory(memory_order,"memory")
+            simp = simplify_memory(memory_order, storage_order, "memory")
 
     memory_order = list(filter(lambda x: type(x) == tuple, memory_order))    
     unify_loads_instructions(memory_order, "memory")
@@ -4876,7 +4876,7 @@ def remove_loads_instructions():
 
 #Here it means that we have sloads between the sstores that are equals.
 #Otherwise it would have been removed with remove_store_recursive_dif
-def replace_loads_by_sstores(storage_location, location):
+def replace_loads_by_sstores(storage_location, complementary_location, location):
     global u_dict
     global variable_content
     global gas_store_op
@@ -4948,9 +4948,17 @@ def replace_loads_by_sstores(storage_location, location):
                             list_tuple[pos] = value
                             storage_location[i] = (tuple(list_tuple),elem[1])
 
+                    for i in range(0,len(complementary_location)):
+                        elem = complementary_location[i]
+                        list_tuple = list(elem[0])
+                        if var2replace in list_tuple:
+                            pos = list_tuple.index(var2replace)
+                            list_tuple[pos] = value
+                            complementary_location[i] = (tuple(list_tuple),elem[1])
+
                     del u_dict[var2replace]
 
-                    replace_loads_by_sstores(storage_location,location)
+                    replace_loads_by_sstores(storage_location, complementary_location,location)
         i+=1
 
     
@@ -5113,7 +5121,7 @@ def remove_store_loads(storage_location, location):
 
 
 
-def simplify_memory(storage_location,location):
+def simplify_memory(storage_location, complementary_location, location):
     global memory_opt
     global storage_opt
     global mem_delete_pos
@@ -5122,7 +5130,7 @@ def simplify_memory(storage_location,location):
     del_pos = []
     old_storage_location = list(storage_location)
     
-    replace_loads_by_sstores(storage_location,location)
+    replace_loads_by_sstores(storage_location, complementary_location, location)
     
     if old_storage_location != storage_location:
         old_storage_location = list(filter(lambda x: type(x)==tuple, old_storage_location))
