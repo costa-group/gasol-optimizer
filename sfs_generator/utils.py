@@ -187,6 +187,11 @@ def isYulInstructionUpper(opcode):
 # https://github.com/ethereum/solidity/blob/develop/libsolutil/Numeric.h
 def number_encoding_size(number):
     i = 0
+    
+    if number < 0 :
+        number = (2**256)+number
+
+    
     while number != 0:
         i += 1
         number = number >> 8
