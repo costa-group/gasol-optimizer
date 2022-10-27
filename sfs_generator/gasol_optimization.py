@@ -4636,9 +4636,9 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                     
                 idx = user_def_counter.get("SELFBALANCE",0)
                 bal_instr["id"] = "SELFBALANCE_"+str(idx)
-                div_instr["opcode"] = "47"
-                div_instr["disasm"] = "SELFBALANCE"
-                div_instr["commutative"] = False            
+                bal_instr["opcode"] = "47"
+                bal_instr["disasm"] = "SELFBALANCE"
+                bal_instr["commutative"] = False            
                 user_def_counter["SELFBALANCE"]=idx+1
                 delete = []
 
