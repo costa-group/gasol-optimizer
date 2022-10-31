@@ -684,7 +684,7 @@ def parse_encoding_args() -> Namespace:
                                   'Basic options for solving the corresponding Max-SMT problem')
 
     basic.add_argument("-solver", "--solver", help="Choose the solver", choices=["z3", "barcelogic", "oms"],
-                       default="z3")
+                       default="oms")
     basic.add_argument("-tout", metavar='timeout', action='store', type=int,
                        help="Timeout in seconds. By default, set to 10s per block.", default=10)
     basic.add_argument("-direct-tout", dest='direct_timeout', action='store_true',
@@ -699,15 +699,15 @@ def parse_encoding_args() -> Namespace:
     hard = ap.add_argument_group('Hard constraints', 'Options for modifying the hard constraint generation')
 
     hard.add_argument("-memory-encoding", help="Choose the memory encoding model", choices=["l_vars", "direct"],
-                      default="l_vars", dest='memory_encoding')
+                      default="direct", dest='memory_encoding')
     hard.add_argument('-no-simplification',"--no-simplification", action='store_true', dest='no_simp',
                       help='Disables the application of simplification rules')
-    hard.add_argument('-push-uninterpreted', action='store_false', dest='push_basic',
-                      help='Encodes push instruction as uninterpreted functions')
+    hard.add_argument('-push-uninterpreted', action='store_true', dest='push_basic',
+                      help='Disables push instruction as uninterpreted functions')
     hard.add_argument('-pop-uninterpreted', action='store_false', dest='pop_basic',
                       help='Encodes pop instruction as uninterpreted functions')
-    hard.add_argument('-order-bounds', action='store_true', dest='order_bounds',
-                      help='Consider bounds on the position instructions can appear in the encoding')
+    hard.add_argument('-order-bounds', action='store_false', dest='order_bounds',
+                      help='Disables bounds on the position instructions can appear in the encoding')
     hard.add_argument('-empty', action='store_true', dest='empty',
                       help='Consider "empty" value as part of the encoding to reflect some stack position is empty,'
                            'instead of using a boolean term')
@@ -737,11 +737,11 @@ def parse_encoding_args() -> Namespace:
                             help='add a constraint for each uninterpreted function so that they are used at most once')
     additional.add_argument('-pushed-once', action='store_true', dest='pushed_once',
                             help='add a constraint to indicate that each pushed value is pushed at least once')
-    additional.add_argument("-no-output-before-pop", action='store_true', dest='no_output_before_pop',
-                            help='Add a constraint representing the fact that the previous instruction'
+    additional.add_argument("-no-output-before-pop", action='store_false', dest='no_output_before_pop',
+                            help='Remove the constraint representing the fact that the previous instruction'
                                  'of a pop can only be a instruction that does not produce an element')
-    additional.add_argument('-order-conflicts', action='store_true', dest='order_conflicts',
-                            help='Consider the order among the uninterpreted opcodes in the encoding')
+    additional.add_argument('-order-conflicts', action='store_false', dest='order_conflicts',
+                            help='Disable the order among the uninterpreted opcodes in the encoding')
 
     parsed_args = ap.parse_args()
 
