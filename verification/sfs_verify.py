@@ -125,11 +125,11 @@ def compare_dependences(dep_origin,dep_opt,src_origin,src_opt,user_def_origin,us
     return verified
 
 def compare_storage_userdef_ins(src_origin,src_opt,user_def_origin,user_def_opt):
-    storage_ins_origin = list(filter(lambda x: x["opcode"].find("SSTORE")!=-1 or x["opcode"].find("SLOAD")!=-1,user_def_origin))
-    storage_ins_opt = list(filter(lambda x: x["opcode"].find("SSTORE")!=-1 or x["opcode"].find("SLOAD")!=-1,user_def_opt))
+    storage_ins_origin = list(filter(lambda x: x["disasm"].find("SSTORE")!=-1 or x["disasm"].find("SLOAD")!=-1,user_def_origin))
+    storage_ins_opt = list(filter(lambda x: x["disasm"].find("SSTORE")!=-1 or x["disasm"].find("SLOAD")!=-1,user_def_opt))
 
-    memory_ins_origin = list(filter(lambda x: x["opcode"].find("MSTORE")!=-1 or x["opcode"].find("MLOAD")!=-1,user_def_origin))
-    memory_ins_opt = list(filter(lambda x: x["opcode"].find("MSTORE")!=-1 or x["opcode"].find("MLOAD")!=-1,user_def_opt))
+    memory_ins_origin = list(filter(lambda x: x["disasm"].find("MSTORE")!=-1 or x["disasm"].find("MLOAD")!=-1,user_def_origin))
+    memory_ins_opt = list(filter(lambda x: x["disasm"].find("MSTORE")!=-1 or x["disasm"].find("MLOAD")!=-1,user_def_opt))
 
     if len(storage_ins_origin) != len(storage_ins_opt):
         return False, "Different lengths between storage operations"
