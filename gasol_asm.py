@@ -331,8 +331,11 @@ def optimize_isolated_asm_block(block_name,output_file, csv_file, parsed_args: N
         asm_block, _, statistics_csv = optimize_asm_block_asm_format(old_block, timeout, parsed_args)
         statistics_rows.extend(statistics_csv)
 
-        if not compare_asm_block_asm_format(old_block, asm_block, parsed_args):
+        eq, reason = compare_asm_block_asm_format(old_block, asm_block, parsed_args)
+         
+        if not eq:
             print("Comparison failed, so initial block is kept")
+            print("\t[REASON]: "+reason)
             print(old_block.to_plain())
             print(asm_block.to_plain())
             print("")
@@ -521,7 +524,7 @@ def compare_asm_block_asm_format(old_block: AsmBlock, new_block: AsmBlock, parse
 
     old_sfs_dict = old_sfs_information["syrup_contract"]
 
-    final_comparison = verify_block_from_list_of_sfs(old_sfs_dict, new_sfs_dict)
+    final_comparison, reason= verify_block_from_list_of_sfs(old_sfs_dict, new_sfs_dict)
 
     # We also must check intermediate instructions match i.e those that are not sub blocks
     initial_instructions_old = old_block.instructions_initial_bytecode()
@@ -531,7 +534,7 @@ def compare_asm_block_asm_format(old_block: AsmBlock, new_block: AsmBlock, parse
     final_instructions_new = new_block.instructions_final_bytecode()
 
     return final_comparison and (initial_instructions_new == initial_instructions_old) and \
-           final_instructions_new == final_instructions_old
+           final_instructions_new == final_instructions_old, reason
 
 
 def optimize_asm_in_asm_format(file_name, output_file, csv_file, log_file, parsed_args: Namespace, timeout=10):
@@ -562,8 +565,11 @@ def optimize_asm_in_asm_format(file_name, output_file, csv_file, log_file, parse
             optimized_block, log_element, csv_statistics = optimize_asm_block_asm_format(old_block, timeout, parsed_args)
             statistics_rows.extend(csv_statistics)
 
-            if not compare_asm_block_asm_format(old_block, optimized_block, parsed_args):
+            eq, reason = compare_asm_block_asm_format(old_block, optimized_block, parsed_args)
+            
+            if not eq:
                 print("Comparison failed, so initial block is kept")
+                print("\t[REASON]: "+reason)
                 print(old_block.to_plain())
                 print(optimized_block.to_plain())
                 print("")
@@ -588,8 +594,12 @@ def optimize_asm_in_asm_format(file_name, output_file, csv_file, log_file, parse
                 optimized_block, log_element, csv_statistics = optimize_asm_block_asm_format(old_block, timeout, parsed_args)
                 statistics_rows.extend(csv_statistics)
 
-                if not compare_asm_block_asm_format(old_block, optimized_block, parsed_args):
+                eq, reason = compare_asm_block_asm_format(old_block, optimized_block, parsed_args)
+
+                if not eq:
+
                     print("Comparison failed, so initial block is kept")
+                    print("\t[REASON]: "+reason)
                     print(old_block.to_plain())
                     print(optimized_block.to_plain())
                     print("")
