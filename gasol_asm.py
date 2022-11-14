@@ -514,7 +514,7 @@ def optimize_asm_block_asm_format(block: AsmBlock, timeout: int, parsed_args: Na
     return new_block, log_dicts, csv_statistics
 
 
-def compare_asm_block_asm_format(old_block: AsmBlock, new_block: AsmBlock, parsed_args: Namespace) -> bool:
+def compare_asm_block_asm_format(old_block: AsmBlock, new_block: AsmBlock, parsed_args: Namespace) -> Tuple[bool, str]:
 
     new_sfs_information, _ = compute_original_sfs_with_simplifications(new_block, parsed_args)
 
