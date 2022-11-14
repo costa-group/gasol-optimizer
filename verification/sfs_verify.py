@@ -84,14 +84,15 @@ def compare_dependences(dep_origin,dep_opt,src_origin,src_opt,user_def_origin,us
     verified = True
 
     if location == "storage":
-        ins_origin = list(filter(lambda x: x["opcode"].find("SSTORE")!=-1 or x["opcode"].find("SLOAD")!=-1,user_def_origin))
-        ins_opt = list(filter(lambda x: x["opcode"].find("SSTORE")!=-1 or x["opcode"].find("SLOAD")!=-1,user_def_opt))
+        ins_origin = list(filter(lambda x: x["disasm"].find("SSTORE")!=-1 or x["disasm"].find("SLOAD")!=-1,user_def_origin))
+        ins_opt = list(filter(lambda x: x["disasm"].find("SSTORE")!=-1 or x["disasm"].find("SLOAD")!=-1,user_def_opt))
     else:
-        ins_origin = list(filter(lambda x: x["opcode"].find("MSTORE")!=-1 or x["opcode"].find("MLOAD")!=-1,user_def_origin))
-        ins_opt = list(filter(lambda x: x["opcode"].find("MSTORE")!=-1 or x["opcode"].find("MLOAD")!=-1,user_def_opt))
+        ins_origin = list(filter(lambda x: x["disasm"].find("MSTORE")!=-1 or x["disasm"].find("MLOAD")!=-1,user_def_origin))
+        ins_opt = list(filter(lambda x: x["disasm"].find("MSTORE")!=-1 or x["disasm"].find("MLOAD")!=-1,user_def_opt))
     
     if len(dep_origin) != len(dep_opt):
         return False
+
     
     while(i< len(dep_origin) and verified):
         dep = dep_origin[i]
@@ -102,10 +103,23 @@ def compare_dependences(dep_origin,dep_opt,src_origin,src_opt,user_def_origin,us
             first = dep[0]
             second = dep[1]
 
-            r,first_opt_id = search_val_in_userdef(first,ins_opt,src_origin,src_opt,user_def_origin,user_def_opt)
-            r1,second_opt_id = search_val_in_userdef(second,ins_opt,src_origin,src_opt,user_def_origin,user_def_opt)
+            first_instr_list = list(filter(lambda x: x["id"] == first, ins_origin))
+            if len(first_instr_list) != 1:
+                raise "Error"
+
+            first_instr = first_instr_list[0]
+
+            second_instr_list = list(filter(lambda x: x["id"] == second, ins_origin))
+            if len(second_instr_list) != 1:
+                raise "Error"
+
+            second_instr = second_instr_list[0]
+
             
-            if (first_opt_id,second_opt_id) not in dep_opt:
+            r,first_opt_id = search_val_in_userdef(first_instr,ins_opt,src_origin,src_opt,user_def_origin,user_def_opt)
+            r1,second_opt_id = search_val_in_userdef(second_instr,ins_opt,src_origin,src_opt,user_def_origin,user_def_opt)
+            
+            if [first_opt_id,second_opt_id] not in dep_opt:
                 verified = False
         i+=1
     return verified
@@ -163,29 +177,32 @@ def search_val_in_userdef(instruction, storage_ins,src_origin,src_opt,user_def_o
     i = 0
 
     idx = -1
-    
+
     while(i<len(storage_ins) and not found):
         opt_ins = storage_ins[i]
 
-        if instruction["opcode"] == opt_ins["opcode"]:
+        if instruction["disasm"] == opt_ins["disasm"]:
             inpt_origin = instruction["inpt_sk"]
             inpt_opt = opt_ins["inpt_sk"]
-
+            
             j = 0
 
             result = True
 
+            
+            
             while j < len(inpt_origin):
-                r = compare_variables(inpt_origin[j], inpt_opt[j],src_origin, src_opt, user_def_origin, user_def_opt)
+                r,_ = compare_variables(inpt_origin[j], inpt_opt[j],src_origin, src_opt, user_def_origin, user_def_opt)
                 result = result and r
                 j+=1
 
             if result:
                 idx = opt_ins["id"]
-            found = result
-            
+                found = result
+
         i+=1
-    
+
+
     return found,idx
     
 
@@ -216,6 +233,12 @@ def compare_variables(var_origin, var_opt, src_origin, src_opt, user_def_origin,
         if elem_origin != elem_opt:
             if elem_origin["disasm"] != elem_opt["disasm"]:
                 return False, "Different opcode between "+str(var_origin)+ "and "+ str(var_opt)+". Original: "+str(elem_origin["disasm"])+" --- Optimized: "+str(elem_opt["disasm"])
+
+            if elem_origin["disasm"] == "PUSH":
+                if elem_origin["value"] == elem_opt["value"]:
+                    return True, ""
+                else:
+                    return False, "PUSH values are different"
             
             j = 0
 
@@ -244,6 +267,7 @@ def compare_variables(var_origin, var_opt, src_origin, src_opt, user_def_origin,
                     if not r:
                         return False, reason
                     j+=1
+    
     return True, ""
 
 
