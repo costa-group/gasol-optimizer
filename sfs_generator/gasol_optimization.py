@@ -5316,8 +5316,10 @@ def simplify_dependencies(dep):
 
     return new_dep
 
-def update_variables_loads(elem1, elem2, storage_location):
+def update_variables_loads(elem1, elem2, storage_location, location):
     global variable_content
+    global storage_order
+    global memory_order
     global u_dict
 
 
@@ -5351,6 +5353,24 @@ def update_variables_loads(elem1, elem2, storage_location):
             list_tuple[pos] = var2keep
             storage_location[i] = (tuple(list_tuple),elem[1])
 
+
+    if location == "storage":
+        complement_order = memory_order
+    else:
+        complement_order = storage_order
+
+    for i in range(0,len(complement_order)):
+        elem = complement_order[i]
+        list_tuple = list(elem[0])
+        if var2replace in list_tuple:
+            pos = list_tuple.index(var2replace)
+            list_tuple[pos] = var2keep
+            complement_order[i] = (tuple(list_tuple),elem[1])
+
+        
+
+            
+            
 
 def update_variables_keccaks(elem1, elem2, storage_location, storage_order):
     global variable_content
@@ -5411,6 +5431,7 @@ def unify_loads_instructions(storage_location, location):
 
     i = 0
     finished = False
+    
     while(i<len(storage_location) and not finished):
         elem = storage_location[i]
         if elem[0][-1].find(instruction)!=-1:
@@ -5422,8 +5443,13 @@ def unify_loads_instructions(storage_location, location):
                 st_list = list(filter(lambda x: x[0][-1].find(store_ins)!=-1, rest_list))
                 dep = list(map(lambda x: are_dependent(elem,x),st_list))
                 if True not in dep:
+                    print(storage_location)
+                    print(memory_order)
+                    print(u_dict)
+                    print(elem, load_ins)
+
                     old = storage_location.pop(pos_aux+i+1)
-                    update_variables_loads(elem,load_ins,storage_location)
+                    update_variables_loads(elem,load_ins,storage_location, location)
                     unify_loads_instructions(storage_location,location)
                     # storage_location.insert(pos_aux+i+1,old)
                     finished = True
