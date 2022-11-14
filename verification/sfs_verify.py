@@ -87,8 +87,8 @@ def compare_dependences(dep_origin,dep_opt,src_origin,src_opt,user_def_origin,us
         ins_origin = list(filter(lambda x: x["disasm"].find("SSTORE")!=-1 or x["disasm"].find("SLOAD")!=-1,user_def_origin))
         ins_opt = list(filter(lambda x: x["disasm"].find("SSTORE")!=-1 or x["disasm"].find("SLOAD")!=-1,user_def_opt))
     else:
-        ins_origin = list(filter(lambda x: x["disasm"].find("MSTORE")!=-1 or x["disasm"].find("MLOAD")!=-1,user_def_origin))
-        ins_opt = list(filter(lambda x: x["disasm"].find("MSTORE")!=-1 or x["disasm"].find("MLOAD")!=-1,user_def_opt))
+        ins_origin = list(filter(lambda x: x["disasm"].find("MSTORE")!=-1 or x["disasm"].find("MLOAD")!=-1 or x["disasm"].find("KECCAK")!=-1,user_def_origin))
+        ins_opt = list(filter(lambda x: x["disasm"].find("MSTORE")!=-1 or x["disasm"].find("MLOAD")!=-1 or x["disasm"].find("KECCAK")!=-1,user_def_opt))
 
     if len(dep_origin) != len(dep_opt):
         return False
@@ -120,7 +120,12 @@ def compare_dependences(dep_origin,dep_opt,src_origin,src_opt,user_def_origin,us
             r1,second_opt_id = search_val_in_userdef(second_instr,ins_opt,src_origin,src_opt,user_def_origin,user_def_opt)
 
             if all(first_opt_id != dependency[0] or second_opt_id != dependency[1] for dependency in dep_opt):
-                verified = False
+                if first.find("KECCAK")!= -1 or second.find("KECCAK")!=-1:
+                    verified = first_opt_id != -1 and second_opt_id!=-1
+
+                else:
+                    verified = False
+
         i+=1
     return verified
 
