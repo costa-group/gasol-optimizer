@@ -14,7 +14,7 @@ def are_equals(json_orig, json_opt):
 
     if not src_st:
         return False, "Different source stack"
-    
+
     tgt_st, reason = compare_target_stack(json_orig, json_opt)
 
     if not tgt_st:
@@ -24,25 +24,25 @@ def are_equals(json_orig, json_opt):
     dep_opt = json_opt["storage_dependences"]
     userdef_orig = json_orig["user_instrs"]
     userdef_opt = json_opt["user_instrs"]
-    
+
     same_dep_sto = compare_dependences(dep_orig,dep_opt,src_orig,src_opt,userdef_orig,userdef_opt,"storage")
 
     if not same_dep_sto:
         return False, "Storage dependences are different"
-    
+
     dep_orig = json_orig["memory_dependences"]
     dep_opt = json_opt["memory_dependences"]
-    
+
     same_dep_mem = compare_dependences(dep_orig,dep_opt,src_orig,src_opt,userdef_orig,userdef_opt,"memory")
 
     if not same_dep_mem:
         return False, "Memory dependences generated are different"
-    
+
     same_userdef, reason = compare_storage_userdef_ins(src_orig, src_opt,userdef_orig,userdef_opt)
 
     if not same_userdef:
         return False, reason
-    
+
     if src_st and tgt_st and same_dep_mem and same_userdef:
         return True, ""
     else:
@@ -61,13 +61,13 @@ def compare_target_stack(json_origin, json_opt):
         return False, "Different lenghts between target stacks"
 
     i = 0
-    
+
     while i < len(tgt_origin):
         #If an element is in the source stack it has to be stored in
         #the same location and it has to be the same in both target
         #stack representations
 
-        
+
         r, reason_element = compare_variables(tgt_origin[i], tgt_opt[i], src_origin, src_opt, json_origin["user_instrs"], json_opt["user_instrs"])
 
         if not r:
@@ -89,11 +89,11 @@ def compare_dependences(dep_origin,dep_opt,src_origin,src_opt,user_def_origin,us
     else:
         ins_origin = list(filter(lambda x: x["disasm"].find("MSTORE")!=-1 or x["disasm"].find("MLOAD")!=-1,user_def_origin))
         ins_opt = list(filter(lambda x: x["disasm"].find("MSTORE")!=-1 or x["disasm"].find("MLOAD")!=-1,user_def_opt))
-    
+
     if len(dep_origin) != len(dep_opt):
         return False
 
-    
+
     while(i< len(dep_origin) and verified):
         dep = dep_origin[i]
 
@@ -105,21 +105,21 @@ def compare_dependences(dep_origin,dep_opt,src_origin,src_opt,user_def_origin,us
 
             first_instr_list = list(filter(lambda x: x["id"] == first, ins_origin))
             if len(first_instr_list) != 1:
-                raise "Error"
+                raise ValueError
 
             first_instr = first_instr_list[0]
 
             second_instr_list = list(filter(lambda x: x["id"] == second, ins_origin))
             if len(second_instr_list) != 1:
-                raise "Error"
+                raise ValueError
 
             second_instr = second_instr_list[0]
 
-            
+
             r,first_opt_id = search_val_in_userdef(first_instr,ins_opt,src_origin,src_opt,user_def_origin,user_def_opt)
             r1,second_opt_id = search_val_in_userdef(second_instr,ins_opt,src_origin,src_opt,user_def_origin,user_def_opt)
-            
-            if [first_opt_id,second_opt_id] not in dep_opt:
+
+            if all(first_opt_id != dependency[0] or second_opt_id != dependency[1] for dependency in dep_opt):
                 verified = False
         i+=1
     return verified
@@ -167,7 +167,7 @@ def compare_storage_userdef_ins(src_origin,src_opt,user_def_origin,user_def_opt)
 
     if not verified:
         return False, "Element "+str(ins)+" in original sfs does not appear in the optimized one"
-        
+
     return verified, ""
 
 
@@ -184,13 +184,13 @@ def search_val_in_userdef(instruction, storage_ins,src_origin,src_opt,user_def_o
         if instruction["disasm"] == opt_ins["disasm"]:
             inpt_origin = instruction["inpt_sk"]
             inpt_opt = opt_ins["inpt_sk"]
-            
+
             j = 0
 
             result = True
 
-            
-            
+
+
             while j < len(inpt_origin):
                 r,_ = compare_variables(inpt_origin[j], inpt_opt[j],src_origin, src_opt, user_def_origin, user_def_opt)
                 result = result and r
@@ -204,7 +204,7 @@ def search_val_in_userdef(instruction, storage_ins,src_origin,src_opt,user_def_o
 
 
     return found,idx
-    
+
 
 def compare_variables(var_origin, var_opt, src_origin, src_opt, user_def_origin, user_def_opt):
 
@@ -239,14 +239,14 @@ def compare_variables(var_origin, var_opt, src_origin, src_opt, user_def_origin,
                     return True, ""
                 else:
                     return False, "PUSH values are different"
-            
+
             j = 0
 
             result = True
-            
+
             inpt_origin = elem_origin["inpt_sk"]
             inpt_opt = elem_opt["inpt_sk"]
-            
+
             while j < len(inpt_origin):
                 r, reason_aux = compare_variables(inpt_origin[j], inpt_opt[j],src_origin, src_opt, user_def_origin, user_def_opt)
 
@@ -267,7 +267,7 @@ def compare_variables(var_origin, var_opt, src_origin, src_opt, user_def_origin,
                     if not r:
                         return False, reason
                     j+=1
-    
+
     return True, ""
 
 
@@ -286,7 +286,7 @@ def verify_block_from_list_of_sfs(old_sfs_dict, new_sfs_dict):
         new_sfs = new_sfs_dict[key]
 
         eq, reason = are_equals(old_sfs, new_sfs)
-        
+
         if not eq:
             return False, reason
     return True, ""
