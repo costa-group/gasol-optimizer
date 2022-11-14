@@ -120,8 +120,35 @@ def compare_dependences(dep_origin,dep_opt,src_origin,src_opt,user_def_origin,us
             r1,second_opt_id = search_val_in_userdef(second_instr,ins_opt,src_origin,src_opt,user_def_origin,user_def_opt)
 
             if all(first_opt_id != dependency[0] or second_opt_id != dependency[1] for dependency in dep_opt):
-                if first.find("KECCAK")!= -1 or second.find("KECCAK")!=-1:
-                    verified = first_opt_id != -1 and second_opt_id!=-1
+                if first.find("KECCAK")!= -1:
+                    dep_opt_elemlist = list(filter(lambda x: x[0].find("KECCAK")!=-1 and x[1] == second_opt_id, dep_opt))
+                    if len(dep_opt_elemlist) == 0:
+                        raise ValueError
+
+                    dep_opt_elem = dep_opt_elemlist[0]
+                    keccak_elem = list(filter(lambda x: x["id"] == dep_opt_elem[0], ins_opt))[0]
+                    r, _ = compare_variables(first_instr["outpt_sk"][0], keccak_elem["outpt_sk"][0], src_origin, src_opt, user_def_origin, user_def_opt)
+                    verified = second_opt_id!=-1 and r
+                    
+                    
+                elif second.find("KECCAK")!=-1:
+
+                    # print(dep_opt)
+                    
+                    dep_opt_elemlist = list(filter(lambda x: x[1].find("KECCAK")!=-1 and x[0] == first_opt_id, dep_opt))
+                    if len(dep_opt_elemlist) == 0:
+                        raise ValueError
+
+                    dep_opt_elem = dep_opt_elemlist[0]
+                    keccak_elem = list(filter(lambda x: x["id"] == dep_opt_elem[1], ins_opt))[0]
+
+                    # print(second_instr["outpt_sk"])
+                    # print(keccak_elem["outpt_sk"])
+                    
+                    r, _ = compare_variables(second_instr["outpt_sk"][0], keccak_elem["outpt_sk"][0], src_origin, src_opt, user_def_origin, user_def_opt)
+                    verified = second_opt_id!=-1 and r
+
+                    # verified = first_opt_id != -1 and second_opt_id!=-1
 
                 else:
                     verified = False
