@@ -24,9 +24,9 @@ def are_equals(json_orig, json_opt):
         return False, reason
 
     dep_orig = json_orig["storage_dependences"]
-    dep_opt = json_orig["storage_dependences"]
+    dep_opt = json_opt["storage_dependences"]
     userdef_orig = json_orig["user_instrs"]
-    userdef_opt = json_orig["user_instrs"]
+    userdef_opt = json_opt["user_instrs"]
     
     same_dep_sto = compare_dependences(dep_orig,dep_opt,src_orig,src_opt,userdef_orig,userdef_opt,"storage")
 
@@ -34,7 +34,7 @@ def are_equals(json_orig, json_opt):
         return False, "Storage dependences are different"
     
     dep_orig = json_orig["memory_dependences"]
-    dep_opt = json_orig["memory_dependences"]
+    dep_opt = json_opt["memory_dependences"]
     
     same_dep_mem = compare_dependences(dep_orig,dep_opt,src_orig,src_opt,userdef_orig,userdef_opt,"memory")
 
@@ -108,6 +108,9 @@ def compare_dependences(dep_origin,dep_opt,src_origin,src_opt,user_def_origin,us
             r,first_opt_id = search_val_in_userdef(first,ins_opt,src_origin,src_opt,user_def_origin,user_def_opt)
             r1,second_opt_id = search_val_in_userdef(second,ins_opt,src_origin,src_opt,user_def_origin,user_def_opt)
 
+            print(first_opt_id)
+            print(second_opt_id)
+            
             if (first_opt_id,second_opt_id) not in dep_opt:
                 verified = False
         i+=1
