@@ -104,9 +104,6 @@ def compare_dependences(dep_origin,dep_opt,src_origin,src_opt,user_def_origin,us
 
             r,first_opt_id = search_val_in_userdef(first,ins_opt,src_origin,src_opt,user_def_origin,user_def_opt)
             r1,second_opt_id = search_val_in_userdef(second,ins_opt,src_origin,src_opt,user_def_origin,user_def_opt)
-
-            print(first_opt_id)
-            print(second_opt_id)
             
             if (first_opt_id,second_opt_id) not in dep_opt:
                 verified = False
