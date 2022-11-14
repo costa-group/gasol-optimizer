@@ -11,9 +11,17 @@ def are_equals(json_orig, json_opt):
     src_opt = json_opt["src_ws"]
 
     src_st = src_orig == src_opt
-    
-    tgt_st = compare_target_stack(json_orig, json_opt)
 
+    if not src_st:
+        return False, "Different source stack"
+    
+    tgt_st, reason = compare_target_stack(json_orig, json_opt)
+
+    print(src_st)
+    print(tgt_st)
+    
+    if not tgt_st:
+        return False, reason
 
     dep_orig = json_orig["storage_dependences"]
     dep_opt = json_orig["storage_dependences"]
@@ -22,18 +30,26 @@ def are_equals(json_orig, json_opt):
     
     same_dep_sto = compare_dependences(dep_orig,dep_opt,src_orig,src_opt,userdef_orig,userdef_opt,"storage")
 
+    if not same_dep_sto:
+        return False, "Storage dependences are different"
+    
     dep_orig = json_orig["memory_dependences"]
     dep_opt = json_orig["memory_dependences"]
     
     same_dep_mem = compare_dependences(dep_orig,dep_opt,src_orig,src_opt,userdef_orig,userdef_opt,"memory")
 
+    if not same_dep_mem:
+        return False, "Memory dependences generated are different"
+    
+    same_userdef, reason = compare_storage_userdef_ins(src_orig, src_opt,userdef_orig,userdef_opt)
 
-    same_userdef = compare_storage_userdef_ins(src_orig, src_opt,userdef_orig,userdef_opt)
+    if not same_userdef:
+        return False, reason
     
     if src_st and tgt_st and same_dep_mem and same_userdef:
-        return True
+        return True, ""
     else:
-        return False
+        return False, "ERROR"
 
 
 def compare_target_stack(json_origin, json_opt):
@@ -45,7 +61,7 @@ def compare_target_stack(json_origin, json_opt):
 
 
     if len(tgt_origin) != len(tgt_opt):
-        return False
+        return False, "Different lenghts between target stacks"
 
     i = 0
     
@@ -55,14 +71,15 @@ def compare_target_stack(json_origin, json_opt):
         #stack representations
 
         
-        r = compare_variables(tgt_origin[i], tgt_opt[i], src_origin, src_opt, json_origin["user_instrs"], json_opt["user_instrs"])
+        r, reason_element = compare_variables(tgt_origin[i], tgt_opt[i], src_origin, src_opt, json_origin["user_instrs"], json_opt["user_instrs"])
 
         if not r:
-            return False
+            reason = "Elements "+str(tgt_origin[i])+"(original sfs) and "+ str(tgt_opt[i])+"(optimized sfs) in target stack are different\n"+reason_element
+            return False, reason
 
         i+=1
 
-    return True
+    return True, ""
 
 
 def compare_dependences(dep_origin,dep_opt,src_origin,src_opt,user_def_origin,user_def_opt,location):
@@ -104,10 +121,10 @@ def compare_storage_userdef_ins(src_origin,src_opt,user_def_origin,user_def_opt)
     memory_ins_opt = list(filter(lambda x: x["opcode"].find("MSTORE")!=-1 or x["opcode"].find("MLOAD")!=-1,user_def_opt))
 
     if len(storage_ins_origin) != len(storage_ins_opt):
-        return False
+        return False, "Different lengths between storage operations"
 
     if len(memory_ins_origin) != len(memory_ins_opt):
-        return False
+        return False, "Different lengths between memory operations"
 
     i = 0
     verified = True
@@ -123,7 +140,7 @@ def compare_storage_userdef_ins(src_origin,src_opt,user_def_origin,user_def_opt)
 
 
     if not verified:
-        return False
+        return False, "Element "+str(ins)+" in original sfs does not appear in the optimized one"
 
     i = 0
     verified = True
@@ -136,8 +153,11 @@ def compare_storage_userdef_ins(src_origin,src_opt,user_def_origin,user_def_opt)
             if new_id == -1:
                 verified = False
         i+=1
+
+    if not verified:
+        return False, "Element "+str(ins)+" in original sfs does not appear in the optimized one"
         
-    return verified
+    return verified, ""
 
 
 def search_val_in_userdef(instruction, storage_ins,src_origin,src_opt,user_def_origin,user_def_opt):
@@ -177,10 +197,10 @@ def compare_variables(var_origin, var_opt, src_origin, src_opt, user_def_origin,
     #If var is in the source stack, it has to be the same variable in
     #both representations
     if var_origin in src_origin and var_origin != var_opt:
-        return False
+        return False, "The variables do not refer to the same source stack element"
 
     if is_integer(var_origin) and var_origin !=var_opt:
-        return False
+        return False, "Variables does not represent the same integer"
 
     #It corresponds to a uninterpreted function. The name of the stack
     #variable may differ but it has to be the same function with the
@@ -190,7 +210,7 @@ def compare_variables(var_origin, var_opt, src_origin, src_opt, user_def_origin,
         elem_opt_l = list(filter(lambda x: var_opt in x["outpt_sk"], user_def_opt))
 
         if len(elem_origin_l) != len (elem_opt_l):
-            return False
+            return False, "Definition of "+str(var_origin)+ "and "+ str(var_opt) + "differs"
 
         elem_origin = elem_origin_l[0]
         elem_opt = elem_opt_l[0]
@@ -198,7 +218,7 @@ def compare_variables(var_origin, var_opt, src_origin, src_opt, user_def_origin,
         #They may be different or not
         if elem_origin != elem_opt:
             if elem_origin["disasm"] != elem_opt["disasm"]:
-                return False
+                return False, "Different opcode between "+str(var_origin)+ "and "+ str(var_opt)+". Original: "+str(elem_origin["disasm"])+" --- Optimized: "+str(elem_opt["disasm"])
             
             j = 0
 
@@ -208,22 +228,26 @@ def compare_variables(var_origin, var_opt, src_origin, src_opt, user_def_origin,
             inpt_opt = elem_opt["inpt_sk"]
             
             while j < len(inpt_origin):
-                r = compare_variables(inpt_origin[j], inpt_opt[j],src_origin, src_opt, user_def_origin, user_def_opt)
+                r, reason_aux = compare_variables(inpt_origin[j], inpt_opt[j],src_origin, src_opt, user_def_origin, user_def_opt)
+
+                if not r and result:
+                    reason = reason_aux
+
                 result = result and r
                 j+=1
 
             if not result and not elem_origin["commutative"]:
-                return False
+                return False, reason
 
             if not result and elem_origin["commutative"]:
                 result = True
                 j = 0
                 while j < len(inpt_origin):
-                    r = compare_variables(inpt_origin[j], inpt_opt[len(inpt_opt)-j-1],src_origin, src_opt, user_def_origin, user_def_opt)
+                    r, reason = compare_variables(inpt_origin[j], inpt_opt[len(inpt_opt)-j-1],src_origin, src_opt, user_def_origin, user_def_opt)
                     if not r:
-                        return False
+                        return False, reason
                     j+=1
-    return True
+    return True, ""
 
 
 # Given two lists of sfs_dict (possibly, corresponding to the sub blocks from the same block)
@@ -234,12 +258,14 @@ def verify_block_from_list_of_sfs(old_sfs_dict, new_sfs_dict):
 
     # Both sfs dicts must contain the same sub blocks
     if set(old_block_ids) != set(new_block_ids):
-        return False
+        return False, "Different number of subblocks"
 
     for key in old_block_ids:
         old_sfs = old_sfs_dict[key]
         new_sfs = new_sfs_dict[key]
 
-        if not are_equals(old_sfs, new_sfs):
-            return False
-    return True
+        eq, reason = are_equals(old_sfs, new_sfs)
+        
+        if not eq:
+            return False, reason
+    return True, ""
