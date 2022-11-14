@@ -17,9 +17,6 @@ def are_equals(json_orig, json_opt):
     
     tgt_st, reason = compare_target_stack(json_orig, json_opt)
 
-    print(src_st)
-    print(tgt_st)
-    
     if not tgt_st:
         return False, reason
 
