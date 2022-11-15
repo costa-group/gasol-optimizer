@@ -1663,9 +1663,9 @@ def generate_storage_info(instructions,source_stack,simplification=True):
     unify_loads_instructions(memory_order, "memory")
 
     unify_keccak_instructions(memory_order,storage_order)
-
-    
+        
     memdep = generate_dependences(memory_order,"memory")
+
     memdep = simplify_dependencies(memdep)
 
     s1= compute_clousure(stdep)
@@ -5267,7 +5267,7 @@ def generate_dependences(storage_location, location):
             #pre
             j = len(predecessor)-1
             already = False
-            while((j>=0) and not already):
+            while((j>=0)):
                 store = predecessor[j]
                 if store[0][-1].find(instruction)!=-1:
                     var_rest = store[0][0]
@@ -5284,7 +5284,7 @@ def generate_dependences(storage_location, location):
 
             j = 0
             already = False
-            while(j<len(successor) and not already):
+            while(j<len(successor)):
                 store = successor[j]
                 if store[0][-1].find(instruction)!=-1:
                     var_rest = store[0][0]

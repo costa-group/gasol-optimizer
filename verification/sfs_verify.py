@@ -61,7 +61,7 @@ def compare_target_stack(json_origin, json_opt):
         return False, "Different lenghts between target stacks"
 
     i = 0
-
+    
     while i < len(tgt_origin):
         #If an element is in the source stack it has to be stored in
         #the same location and it has to be the same in both target
@@ -132,8 +132,6 @@ def compare_dependences(dep_origin,dep_opt,src_origin,src_opt,user_def_origin,us
                     
                     
                 elif second.find("KECCAK")!=-1:
-
-                    # print(dep_opt)
                     
                     dep_opt_elemlist = list(filter(lambda x: x[1].find("KECCAK")!=-1 and x[0] == first_opt_id, dep_opt))
                     if len(dep_opt_elemlist) == 0:
@@ -141,14 +139,9 @@ def compare_dependences(dep_origin,dep_opt,src_origin,src_opt,user_def_origin,us
 
                     dep_opt_elem = dep_opt_elemlist[0]
                     keccak_elem = list(filter(lambda x: x["id"] == dep_opt_elem[1], ins_opt))[0]
-
-                    # print(second_instr["outpt_sk"])
-                    # print(keccak_elem["outpt_sk"])
                     
                     r, _ = compare_variables(second_instr["outpt_sk"][0], keccak_elem["outpt_sk"][0], src_origin, src_opt, user_def_origin, user_def_opt)
                     verified = second_opt_id!=-1 and r
-
-                    # verified = first_opt_id != -1 and second_opt_id!=-1
 
                 else:
                     verified = False
@@ -218,10 +211,7 @@ def search_val_in_userdef(instruction, storage_ins,src_origin,src_opt,user_def_o
             inpt_opt = opt_ins["inpt_sk"]
 
             j = 0
-
             result = True
-
-
 
             while j < len(inpt_origin):
                 r,_ = compare_variables(inpt_origin[j], inpt_opt[j],src_origin, src_opt, user_def_origin, user_def_opt)
@@ -301,7 +291,6 @@ def compare_variables(var_origin, var_opt, src_origin, src_opt, user_def_origin,
                     j+=1
 
     return True, ""
-
 
 # Given two lists of sfs_dict (possibly, corresponding to the sub blocks from the same block)
 # compares the equivalence between them.
