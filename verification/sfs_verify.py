@@ -103,6 +103,11 @@ def compare_dependences(dep_origin,dep_opt,src_origin,src_opt,user_def_origin,us
             first = dep[0]
             second = dep[1]
 
+
+            # print("BUSCO EQUIVALENCIA ENTRE")
+            # print(first)
+            # print(second)
+            
             first_instr_list = list(filter(lambda x: x["id"] == first, ins_origin))
             if len(first_instr_list) != 1:
                 raise ValueError
@@ -116,35 +121,51 @@ def compare_dependences(dep_origin,dep_opt,src_origin,src_opt,user_def_origin,us
             second_instr = second_instr_list[0]
 
 
-            r,first_opt_id = search_val_in_userdef(first_instr,ins_opt,src_origin,src_opt,user_def_origin,user_def_opt)
-            r1,second_opt_id = search_val_in_userdef(second_instr,ins_opt,src_origin,src_opt,user_def_origin,user_def_opt)
+            r,first_opt_id = search_all_vals_in_userdef(first_instr,ins_opt,src_origin,src_opt,user_def_origin,user_def_opt)
+            r1,second_opt_id = search_all_vals_in_userdef(second_instr,ins_opt,src_origin,src_opt,user_def_origin,user_def_opt)
 
-            if all(first_opt_id != dependency[0] or second_opt_id != dependency[1] for dependency in dep_opt):
-                if first.find("KECCAK")!= -1:
-                    dep_opt_elemlist = list(filter(lambda x: x[0].find("KECCAK")!=-1 and x[1] == second_opt_id, dep_opt))
-                    if len(dep_opt_elemlist) == 0:
-                        raise ValueError
+            potential_dep = []
+            for f in first_opt_id:
+                for s in second_opt_id:
+                    potential_dep.append((f,s))
+            
+            # print("ENCONTRADO")
+            # print(first_opt_id)
+            # print(second_opt_id)
+            # print(potential_dep)
+            
+            all_deps = all(map(lambda x: all((x[0] != dependency[0] or x[1] != dependency[1] for dependency in dep_opt)), potential_dep))
 
-                    dep_opt_elem = dep_opt_elemlist[0]
-                    keccak_elem = list(filter(lambda x: x["id"] == dep_opt_elem[0], ins_opt))[0]
-                    r, _ = compare_variables(first_instr["outpt_sk"][0], keccak_elem["outpt_sk"][0], src_origin, src_opt, user_def_origin, user_def_opt)
-                    verified = second_opt_id!=-1 and r
+            if all_deps:
+
+                for first_opt_id, second_opt_id in potential_dep:
+            
+                    if all(first_opt_id != dependency[0] or second_opt_id != dependency[1] for dependency in dep_opt):
+                        if first.find("KECCAK")!= -1:
+                            dep_opt_elemlist = list(filter(lambda x: x[0].find("KECCAK")!=-1 and x[1] == second_opt_id, dep_opt))
+                            if len(dep_opt_elemlist) == 0:
+                                raise ValueError
+
+                            dep_opt_elem = dep_opt_elemlist[0]
+                            keccak_elem = list(filter(lambda x: x["id"] == dep_opt_elem[0], ins_opt))[0]
+                            r, _ = compare_variables(first_instr["outpt_sk"][0], keccak_elem["outpt_sk"][0], src_origin, src_opt, user_def_origin, user_def_opt)
+                            verified = second_opt_id!=-1 and r
                     
                     
-                elif second.find("KECCAK")!=-1:
+                        elif second.find("KECCAK")!=-1:
                     
-                    dep_opt_elemlist = list(filter(lambda x: x[1].find("KECCAK")!=-1 and x[0] == first_opt_id, dep_opt))
-                    if len(dep_opt_elemlist) == 0:
-                        raise ValueError
+                            dep_opt_elemlist = list(filter(lambda x: x[1].find("KECCAK")!=-1 and x[0] == first_opt_id, dep_opt))
+                            if len(dep_opt_elemlist) == 0:
+                                raise ValueError
 
-                    dep_opt_elem = dep_opt_elemlist[0]
-                    keccak_elem = list(filter(lambda x: x["id"] == dep_opt_elem[1], ins_opt))[0]
+                            dep_opt_elem = dep_opt_elemlist[0]
+                            keccak_elem = list(filter(lambda x: x["id"] == dep_opt_elem[1], ins_opt))[0]
                     
-                    r, _ = compare_variables(second_instr["outpt_sk"][0], keccak_elem["outpt_sk"][0], src_origin, src_opt, user_def_origin, user_def_opt)
-                    verified = second_opt_id!=-1 and r
+                            r, _ = compare_variables(second_instr["outpt_sk"][0], keccak_elem["outpt_sk"][0], src_origin, src_opt, user_def_origin, user_def_opt)
+                            verified = second_opt_id!=-1 and r
 
-                else:
-                    verified = False
+                        else:
+                            verified = False
 
         i+=1
     return verified
@@ -226,6 +247,41 @@ def search_val_in_userdef(instruction, storage_ins,src_origin,src_opt,user_def_o
 
 
     return found,idx
+
+def search_all_vals_in_userdef(instruction, storage_ins,src_origin,src_opt,user_def_origin,user_def_opt):
+
+    found = False
+    i = 0
+
+    idx = -1
+
+    sol = []
+    
+    while(i<len(storage_ins)):
+        opt_ins = storage_ins[i]
+
+        if instruction["disasm"] == opt_ins["disasm"]:
+            inpt_origin = instruction["inpt_sk"]
+            inpt_opt = opt_ins["inpt_sk"]
+
+            j = 0
+            result = True
+
+            while j < len(inpt_origin):
+                r,_ = compare_variables(inpt_origin[j], inpt_opt[j],src_origin, src_opt, user_def_origin, user_def_opt)
+                result = result and r
+                j+=1
+
+            if result:
+                idx = opt_ins["id"]
+                sol.append(idx)
+                found = result
+
+        i+=1
+
+
+    return found,sol
+
 
 
 def compare_variables(var_origin, var_opt, src_origin, src_opt, user_def_origin, user_def_opt):
