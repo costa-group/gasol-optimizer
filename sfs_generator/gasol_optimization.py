@@ -1663,9 +1663,9 @@ def generate_storage_info(instructions,source_stack,simplification=True):
     unify_loads_instructions(memory_order, "memory")
 
     unify_keccak_instructions(memory_order,storage_order)
-        
-    memdep = generate_dependences(memory_order,"memory")
 
+    memdep = generate_dependences(memory_order,"memory")
+    
     memdep = simplify_dependencies(memdep)
 
     s1= compute_clousure(stdep)
@@ -2000,7 +2000,7 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     else:
         sto_dep, mem_dep = [],[]
 
-
+        
     if push_flag:
         new_var_list, new_push_ins = transform_push_uninterpreted_functions(new_ts,new_user_defins)
         
@@ -5196,7 +5196,30 @@ def simplify_memory(storage_location, complementary_location, location):
         return True
     else:
         return False
-        
+
+
+
+def are_dependent_variables(v1,v2):
+    # print("AREDEPENDENTVARIABLES")
+    # print(v1)
+    # print(v2)
+    # print(u_dict[v1][0])
+    # print(u_dict[v2][0])
+    
+    
+    if v2 in u_dict[v1][0]:
+        return True
+    if v1 in u_dict[v2][0]:
+        return True
+
+    for v in u_dict[v1][0]:
+        if v in u_dict[v2][0]:
+            return True
+    
+    return False
+
+    
+    
 #storage location may be storage_order or memory_order
 def generate_dependences(storage_location, location):
     storage_dependences = []
@@ -5211,25 +5234,38 @@ def generate_dependences(storage_location, location):
     for i in range(len(storage_location)-1,-1,-1):
         elem = storage_location[i]
         var = elem[0][0]
+
+        # print("****************")
         
         if elem[0][-1].find(instruction)!=-1:
             predecessor = storage_location[:i]
-
+            # print(predecessor)
             j = len(predecessor)-1
             already = False
             while((j>=0) and not already):
                 store = predecessor[j]
                 if store[0][-1].find(instruction)!=-1:
                     var_rest = store[0][0]
+                    # print("ARE DEPENDENT")
+                    # print(elem)
+                    # print(store)
                     dep = are_dependent(elem,store)
                     if dep:
                         if elem[0][1] != store[0][1]: #if the value is the same they are not dependent
                             storage_dependences.append((j,i))
                             already = True
                         else:
+                            # print(are_dependent_variables(elem[0][0],store[0][0]))
+                            if are_dependent_variables(elem[0][0],store[0][0]): #if they stored the same value but on index depends on the other
+                            # store[0][0] in u_dict[elem[0][0]][0]:
+
+                                storage_dependences.append((j,i))
+                                already = True
+                                
                             if str(var) == str(var_rest) and location == "memory":
                                 storage_dependences.append((j,i))
                                 already = True
+
                                 
                 j-=1
 
@@ -5659,7 +5695,6 @@ def are_dependent(t1, t2):
     #The dependences with keccaks have to be computed only for mstore instructions.    
     elif ins1.find("mstore")!=-1 and ins2.find("keccak256")!=-1:
         if str(var1).startswith("s") or str(var2).startswith("s"):
-        
             dep = True
         else:
             if int(var1)>= int(var2):
