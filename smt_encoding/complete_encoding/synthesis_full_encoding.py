@@ -289,6 +289,9 @@ class FullEncoding:
         if self._flags.size:
             weight_dict = {instruction.theta_value: min(instruction.size_cost, 5)
                            for instruction in self._instructions if soft_instruction_filter(instruction)}
+        elif self._flags.length:
+            weight_dict = {instruction.theta_value: 1 if instruction.id != 'NOP' else 0
+                           for instruction in self._instructions if soft_instruction_filter(instruction)}
         else:
             weight_dict = {instruction.theta_value: instruction.gas_cost
                            for instruction in self._instructions if soft_instruction_filter(instruction)}

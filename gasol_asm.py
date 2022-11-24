@@ -733,9 +733,13 @@ def parse_encoding_args() -> Namespace:
                            'Can only be combined with Z3')
 
     soft = ap.add_argument_group('Soft constraints', 'Options for modifying the soft constraint generation')
-    soft.add_argument("-size", "--size", action="store_true",
+    group = soft.add_mutually_exclusive_group()
+    group.add_argument("-size", "--size", action="store_true",
                       help="It enables size cost model for optimization and disables rules that increase the size"
                            "The simplification rules are applied only if they reduce the size")
+
+    group.add_argument("-length", "--length", action="store_true",
+                      help="It enables the #instructions cost model. Every possible simplification rule is applied")
 
     soft.add_argument("-direct-inequalities", dest='direct', action='store_true',
                       help="Soft constraints with inequalities instead of equalities and without grouping")

@@ -4,13 +4,13 @@ from collections import OrderedDict
 from smt_encoding.constraints.assertions import AssertSoft
 from smt_encoding.instructions.instruction_bounds import InstructionBounds
 from smt_encoding.complete_encoding.synthesis_functions import SynthesisFunctions
-from smt_encoding.constraints.connector_factory import add_eq, add_or
+from smt_encoding.constraints.connector_factory import add_eq, add_or, add_distinct
 from smt_encoding.complete_encoding.synthesis_utils import select_instructions_position
 
 
 def soft_constraints_direct(sf: SynthesisFunctions, weight_dict: Dict[ThetaValue, int],
                             bounds: InstructionBounds, label_name: str) -> List[AssertSoft]:
-    soft_constraints = [AssertSoft(add_eq(sf.t(j), sf.theta_value(theta_value)), weight, label_name)
+    soft_constraints = [AssertSoft(add_distinct(sf.t(j), sf.theta_value(theta_value)), weight, label_name)
                         for theta_value, weight in weight_dict.items()
                         for j in range(bounds.lower_bound_theta_value(theta_value),
                                        bounds.upper_bound_theta_value(theta_value) + 1)
