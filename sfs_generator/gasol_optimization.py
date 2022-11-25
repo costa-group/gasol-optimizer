@@ -1660,8 +1660,9 @@ def generate_storage_info(instructions,source_stack,simplification=True):
             simp = simplify_memory(memory_order, storage_order, "memory")
 
     memory_order = list(filter(lambda x: type(x) == tuple, memory_order))    
-    unify_loads_instructions(memory_order, "memory")
 
+    unify_loads_instructions(memory_order, "memory")
+    
     unify_keccak_instructions(memory_order,storage_order)
 
     memdep = generate_dependences(memory_order,"memory")
@@ -2530,7 +2531,8 @@ def modified_svariable(old_uvar, new_uvar):
     global s_dict
     global u_dict
     global variable_content
-
+    global user_defins
+    
     for s_var in s_dict.keys():
         if str(s_dict[s_var]).find(old_uvar)!=-1:
             s_dict[s_var] = new_uvar
@@ -2543,12 +2545,16 @@ def modified_svariable(old_uvar, new_uvar):
             elems[pos_var] = new_uvar
             new_val = (tuple(elems),u_dict[u_var][1])
             u_dict[u_var] = new_val
-
+            
     for v_var in variable_content.keys():
         if str(variable_content[v_var]).find(old_uvar)!=-1:
             variable_content[v_var] = new_uvar
 
-            
+    for uf in user_defins:
+        if old_uvar in uf["inpt_sk"]:
+            pos = uf["inpt_sk"].index(old_uvar)
+            uf["inpt_sk"][pos] = new_uvar
+        
 def check_inputs(instr_name,args_aux):
     
     args = []
@@ -5479,10 +5485,10 @@ def unify_loads_instructions(storage_location, location):
                 st_list = list(filter(lambda x: x[0][-1].find(store_ins)!=-1, rest_list))
                 dep = list(map(lambda x: are_dependent(elem,x),st_list))
                 if True not in dep:
-                    print(storage_location)
-                    print(memory_order)
-                    print(u_dict)
-                    print(elem, load_ins)
+                    # print(storage_location)
+                    # print(memory_order)
+                    # print(u_dict)
+                    # print(elem, load_ins)
 
                     old = storage_location.pop(pos_aux+i+1)
                     update_variables_loads(elem,load_ins,storage_location, location)
