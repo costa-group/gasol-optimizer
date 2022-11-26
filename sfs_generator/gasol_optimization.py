@@ -1610,7 +1610,6 @@ def generate_storage_info(instructions,source_stack,simplification=True):
     sstores = list(sstore_seq)
     last_mload = ""
     mstores = list(mstore_seq)
-
     
     storage_order = []
     memory_order = []
@@ -1633,6 +1632,8 @@ def generate_storage_info(instructions,source_stack,simplification=True):
             memory_order.append(r)
             
         elif instructions[x].find("mstore")!=-1: #and last_mload != "" and mload_relative_pos.get(last_mload,[])==[]:
+            # print(instructions[x])
+            # print("*/*/*/*/*/*/*/*/*/")
             mload_relative_pos[last_mload]=mstores.pop(0)
             memory_order.append(mload_relative_pos[last_mload])
 
@@ -1643,12 +1644,14 @@ def generate_storage_info(instructions,source_stack,simplification=True):
             storage_order.append(keccak)
             
     remove_loads_instructions()
-
+    
     if simplification:
         simp = True
         while(simp):
             simp = simplify_memory(storage_order, memory_order, "storage")
 
+    # print(memory_order)
+            
     storage_order = list(filter(lambda x: type(x) == tuple, storage_order))
     unify_loads_instructions(storage_order, "storage")
     stdep = generate_dependences(storage_order,"storage")
@@ -1664,11 +1667,11 @@ def generate_storage_info(instructions,source_stack,simplification=True):
     unify_loads_instructions(memory_order, "memory")
     
     unify_keccak_instructions(memory_order,storage_order)
-
+    
     memdep = generate_dependences(memory_order,"memory")
     
     memdep = simplify_dependencies(memdep)
-
+    
     s1= compute_clousure(stdep)
     m1 = compute_clousure(memdep)
 
@@ -1954,7 +1957,7 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     new_user_defins1 = update_user_defins(new_ts,new_user_defins)
 
     removed_instructions = list(filter(lambda x: x not in new_user_defins1,new_user_defins))
-
+    
     update_storage_sequences(removed_instructions)
     
     new_user_defins, new_ts = unify_all_user_defins(new_ts,new_user_defins1,vars_list)
@@ -1994,7 +1997,7 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     if num !=-1:
         max_instr_size = num
         num_pops = num
-
+        
     if not split_sto:
         sto_dep, mem_dep = translate_dependences_sfs(new_user_defins)
 
@@ -5110,7 +5113,7 @@ def remove_store_loads(storage_location, location):
                     rest_instructions = storage_location[i+1:pos]
                     variables = list(map(lambda x: are_dependent(elem,x),rest_instructions))
 
-                    #Keccaks are consideredin the previous list
+                    #Keccaks are considered in the previous list
                     if True not in variables:
                         storage_location.pop(i)
                         discount_op+=1
@@ -5658,9 +5661,9 @@ def update_storage_sequences(removed_instructions):
             new_storage_order.append(ins)
             
     if memory_order != new_memory_order:
-        memdep = generate_dependences(new_memory_order,"storage")
+        memdep = generate_dependences(new_memory_order,"memory")
         memdep = simplify_dependencies(memdep)
-
+        
         memory_dep = memdep
         memory_order = new_memory_order
         
