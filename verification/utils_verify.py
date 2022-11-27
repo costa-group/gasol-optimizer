@@ -37,3 +37,25 @@ def get_block_cost(opcodes_list):
             gas = opcodes.get_ins_cost(op.strip())
         val+=gas
     return val
+
+def compute_clousure(deps):
+    clousure = {}
+    for e in deps:
+        f = e[0]
+        visited = compute_clousure_dir(f,deps,[])
+        clousure[f] = visited
+
+    sol = []
+    for f in clousure:
+        pairs = list(map(lambda x: (f,x), clousure[f]))
+        sol+=pairs
+        
+    return sol
+
+def compute_clousure_dir(v,deps,visited):
+    candidates = list(filter(lambda x: x[0] == v, deps))
+    for c in candidates:
+        if c[1] not in visited:
+            visited.append(c[1])
+            compute_clousure_dir(c[1],deps,visited)
+    return visited

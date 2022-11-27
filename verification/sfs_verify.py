@@ -1,4 +1,4 @@
-from verification.utils_verify import is_integer
+from verification.utils_verify import is_integer, compute_clousure
 
 '''
 The jsons are going to be different. What needs to be the same are the
@@ -32,7 +32,7 @@ def are_equals(json_orig, json_opt):
 
     dep_orig = json_orig["memory_dependences"]
     dep_opt = json_opt["memory_dependences"]
-
+    
     same_dep_mem = compare_dependences(dep_orig,dep_opt,src_orig,src_opt,userdef_orig,userdef_opt,"memory")
 
     if not same_dep_mem:
@@ -91,7 +91,15 @@ def compare_dependences(dep_origin,dep_opt,src_origin,src_opt,user_def_origin,us
         ins_opt = list(filter(lambda x: x["disasm"].find("MSTORE")!=-1 or x["disasm"].find("MLOAD")!=-1 or x["disasm"].find("KECCAK")!=-1,user_def_opt))
 
     if len(dep_origin) != len(dep_opt):
-        return False
+        m_clousure_orig = compute_clousure(dep_origin)
+        m_clousure_opt = compute_clousure(dep_opt)
+
+        if len(m_clousure_orig) != len(m_clousure_opt):
+            return False
+        
+        dep_origin = m_clousure_orig
+        dep_opt = m_clousure_opt
+
 
 
     while(i< len(dep_origin) and verified):
