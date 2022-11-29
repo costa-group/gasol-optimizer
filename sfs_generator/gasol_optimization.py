@@ -9,6 +9,7 @@ import global_params.paths as paths
 import sfs_generator.opcodes as opcodes
 from sfs_generator.utils import (all_integers, find_sublist, get_num_bytes_int,
                                  is_integer, isYulInstructionUpper, get_ins_size,check_and_print_debug_info)
+from typing import Optional
 
 terminate_block = ["ASSERTFAIL","RETURN","REVERT","SUICIDE","STOP"]
 
@@ -2259,216 +2260,220 @@ def build_userdef_instructions():
                 modified_userdef_vals[u_var] = obj["outpt_sk"][0]
             else:
                 user_defins.append(obj)
-            
-def generate_userdefname(u_var,funct,args,arity,init=False):
-    global user_def_counter
-    global already_defined_userdef
 
-    
+
+def funct_to_opcode(funct: str) -> Optional[str]:
+    instr_name = None
+
     if funct.find("+") != -1:
         instr_name = "ADD"
 
-    elif funct.find("mulmod") !=-1:
+    elif funct.find("mulmod") != -1:
         instr_name = "MULMOD"
 
-    elif funct.find("addmod") !=-1:
+    elif funct.find("addmod") != -1:
         instr_name = "ADDMOD"
 
     elif funct.find("-") != -1:
         instr_name = "SUB"
 
-    elif funct.find("*") !=-1:
+    elif funct.find("*") != -1:
         instr_name = "MUL"
 
-    elif funct.find("/") !=-1:
+    elif funct.find("/") != -1:
         instr_name = "DIV"
-        
-    elif funct.find("^") !=-1:
+
+    elif funct.find("^") != -1:
         instr_name = "EXP"
 
-    elif funct.find("%") !=-1:
+    elif funct.find("%") != -1:
         instr_name = "MOD"
 
-    elif funct.find("and") !=-1:
+    elif funct.find("and") != -1:
         instr_name = "AND"
 
-    elif funct.find("origin")!=-1:
+    elif funct.find("origin") != -1:
         instr_name = "ORIGIN"
 
-    elif funct.find("pushdeployaddress")!=-1:
+    elif funct.find("pushdeployaddress") != -1:
         instr_name = "PUSHDEPLOYADDRESS"
 
-    elif funct.find("pushsize")!=-1:
+    elif funct.find("pushsize") != -1:
         instr_name = "PUSHSIZE"
 
-    elif funct.find("xor") !=-1:
+    elif funct.find("xor") != -1:
         instr_name = "XOR"
-        
-    elif funct.find("or") !=-1:
+
+    elif funct.find("or") != -1:
         instr_name = "OR"
 
-    elif funct.find("not") !=-1:
+    elif funct.find("not") != -1:
         instr_name = "NOT"
 
-    elif funct.find("sgt") !=-1:
+    elif funct.find("sgt") != -1:
         instr_name = "SGT"
 
-    elif funct.find("gt") !=-1:
+    elif funct.find("gt") != -1:
         instr_name = "GT"
 
-    elif funct.find("shr") !=-1:
+    elif funct.find("shr") != -1:
         instr_name = "SHR"
 
     # pushlib must come before shl to avoid overlapping
-    elif funct.find("pushlib")!=-1:
+    elif funct.find("pushlib") != -1:
         instr_name = "PUSHLIB"
 
-    elif funct.find("shl") !=-1:
+    elif funct.find("shl") != -1:
         instr_name = "SHL"
 
-    elif funct.find("sar") !=-1:
+    elif funct.find("sar") != -1:
         instr_name = "SAR"
-        
+
     elif funct.startswith("lt"):
         instr_name = "LT"
 
-    elif funct.find("slt") !=-1:
+    elif funct.find("slt") != -1:
         instr_name = "SLT"
 
-    elif funct.find("selfbalance") !=-1:
+    elif funct.find("selfbalance") != -1:
         instr_name = "SELFBALANCE"
 
-    elif funct.find("extcodehash") !=-1:
+    elif funct.find("extcodehash") != -1:
         instr_name = "EXTCODEHASH"
 
-    elif funct.find("chainid") !=-1:
+    elif funct.find("chainid") != -1:
         instr_name = "CHAINID"
 
-    elif funct.find("create2") !=-1:
+    elif funct.find("create2") != -1:
         instr_name = "CREATE2"
 
-    elif funct.find("byte") !=-1:
+    elif funct.find("byte") != -1:
         instr_name = "BYTE"
 
-    elif funct.find("eq") !=-1:
+    elif funct.find("eq") != -1:
         instr_name = "EQ"
 
-    elif funct.find("iszero") !=-1:
+    elif funct.find("iszero") != -1:
         instr_name = "ISZERO"
-        
 
-    elif funct.find("caller")!=-1:
+    elif funct.find("caller") != -1:
         instr_name = "CALLER"
 
-    elif funct.find("callvalue")!=-1:
+    elif funct.find("callvalue") != -1:
         instr_name = "CALLVALUE"
-        
-    elif funct.find("calldataload")!=-1:
+
+    elif funct.find("calldataload") != -1:
         instr_name = "CALLDATALOAD"
-    
-    elif funct.find("address")!=-1:
+
+    elif funct.find("address") != -1:
         instr_name = "ADDRESS"
 
-    elif funct.find("calldatasize")!=-1:
+    elif funct.find("calldatasize") != -1:
         instr_name = "CALLDATASIZE"
-        
-    elif funct.find("number")!=-1:
+
+    elif funct.find("number") != -1:
         instr_name = "NUMBER"
 
-    elif funct.find("gasprice")!=-1:
+    elif funct.find("gasprice") != -1:
         instr_name = "GASPRICE"
 
-    elif funct.find("difficulty")!=-1:
+    elif funct.find("difficulty") != -1:
         instr_name = "DIFFICULTY"
 
-    elif funct.find("prevrandao")!=-1:
+    elif funct.find("prevrandao") != -1:
         instr_name = "PREVRANDAO"
 
-    elif funct.find("basefee")!=-1:
+    elif funct.find("basefee") != -1:
         instr_name = "BASEFEE"
 
-        
-    elif funct.find("blockhash")!=-1:
+    elif funct.find("blockhash") != -1:
         instr_name = "BLOCKHASH"
 
-    elif funct.find("balance")!=-1:
+    elif funct.find("balance") != -1:
         instr_name = "BALANCE"
 
-    elif funct.find("coinbase")!=-1:
+    elif funct.find("coinbase") != -1:
         instr_name = "COINBASE"
 
-    elif funct.find("mload")!=-1:
+    elif funct.find("mload") != -1:
         instr_name = "MLOAD"
 
-    elif funct.find("sload")!=-1:
+    elif funct.find("sload") != -1:
         instr_name = "SLOAD"
 
-    elif funct.find("timestamp")!=-1:
+    elif funct.find("timestamp") != -1:
         instr_name = funct.upper()
 
-    elif funct.find("msize")!=-1:
+    elif funct.find("msize") != -1:
         instr_name = "MSIZE"
-        
-    elif funct.find("signextend")!=-1:
+
+    elif funct.find("signextend") != -1:
         instr_name = "SIGNEXTEND"
 
-    elif funct.find("extcodesize")!=-1:
+    elif funct.find("extcodesize") != -1:
         instr_name = "EXTCODESIZE"
 
-    elif funct.find("create")!=-1:
+    elif funct.find("create") != -1:
         instr_name = "CREATE"
 
-    elif funct.find("gaslimit")!=-1:
+    elif funct.find("gaslimit") != -1:
         instr_name = "GASLIMIT"
-    
-    elif funct.find("codesize")!=-1:
+
+    elif funct.find("codesize") != -1:
         instr_name = "CODESIZE"
-        
-    elif funct.find("sha3")!=-1:
+
+    elif funct.find("sha3") != -1:
         instr_name = "SHA3"
 
-    elif funct.find("keccak256")!=-1:
+    elif funct.find("keccak256") != -1:
         instr_name = "KECCAK256"
 
-    elif funct.find("gas")!=-1:
+    elif funct.find("gas") != -1:
         instr_name = funct.upper()
 
-    elif funct.find("returndatasize")!=-1:
+    elif funct.find("returndatasize") != -1:
         instr_name = "RETURNDATASIZE"
 
-    elif funct.find("callcode")!=-1:
+    elif funct.find("callcode") != -1:
         instr_name = "CALLCODE"
 
-    elif funct.find("delegatecall")!=-1:
+    elif funct.find("delegatecall") != -1:
         instr_name = "DELEGATECALL"
 
-    elif funct.find("staticcall")!=-1:
+    elif funct.find("staticcall") != -1:
         instr_name = "STATICCALL"
 
-    elif funct.find("callstatic")!=-1:
+    elif funct.find("callstatic") != -1:
         instr_name = "CALLSTATIC"
 
-    elif funct.find("call")!=-1:
+    elif funct.find("call") != -1:
         instr_name = "CALL"
 
-    #Yul opcodes
-    
-    elif funct.find("pushtag")!=-1:
+    # Yul opcodes
+
+    elif funct.find("pushtag") != -1:
         instr_name = "PUSH [tag]"
 
-    elif funct.find("push#[$]")!=-1:
+    elif funct.find("push#[$]") != -1:
         instr_name = "PUSH #[$]"
 
-    elif funct.find("push[$]")!=-1:
+    elif funct.find("push[$]") != -1:
         instr_name = "PUSH [$]"
 
-    elif funct.find("pushdata")!=-1:
+    elif funct.find("pushdata") != -1:
         instr_name = "PUSH data"
 
-    elif funct.find("pushimmutable")!=-1:
+    elif funct.find("pushimmutable") != -1:
         instr_name = "PUSHIMMUTABLE"
 
+    return instr_name
+
+def generate_userdefname(u_var,funct,args,arity,init=False):
+    global user_def_counter
+    global already_defined_userdef
+
     #TODO: Add more opcodes
+    instr_name = funct_to_opcode(funct)
     
     if instr_name in already_defined_userdef:
         if not split_sto and not init and instr_name in ["SLOAD","MLOAD","KECCAK256","SHA3"]:
