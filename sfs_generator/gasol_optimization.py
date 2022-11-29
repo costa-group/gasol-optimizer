@@ -1667,14 +1667,22 @@ def generate_storage_info(instructions,source_stack,simplification=True):
     unify_loads_instructions(memory_order, "memory")
     
     unify_keccak_instructions(memory_order,storage_order)
+
+    print(memory_order)
     
     memdep = generate_dependences(memory_order,"memory")
+
+    print(memdep)
     
     memdep = simplify_dependencies(memdep)
+
+    print(memdep)
     
     s1= compute_clousure(stdep)
     m1 = compute_clousure(memdep)
 
+    print(m1)
+    
     get_best_storage(s1, len(storage_order))
     
     storage_dep = stdep
@@ -4892,6 +4900,7 @@ def replace_loads_by_sstores(storage_location, complementary_location, location)
     global gas_memory_op
     global discount_op
     global rule_applied
+    global rules_applied
     
     if location == "storage":
         store_ins = "sstore"
@@ -4934,11 +4943,11 @@ def replace_loads_by_sstores(storage_location, complementary_location, location)
 
                         gas_memory_op+=3
                     storage_location.pop(i+pos+1)
-                    discount_op+=1
+                    # discount_op+=1  @It may be replace by a DUP+SWAP
                     finish = True
 
                     rule_applied = True
-
+                    rules_applied.append(load+"= "+elem[0])
                     
                     for v in u_dict:
                         elem = u_dict[v]
@@ -4984,6 +4993,7 @@ def remove_store_recursive_dif(storage_location, location):
     global gas_memory_op
     global discount_op
     global rule_applied
+    global rules_applied
     
     if location == "storage":
         instruction = "sstore"
@@ -5026,6 +5036,7 @@ def remove_store_recursive_dif(storage_location, location):
                         gas_memory_op+=3
 
                     rule_applied = True
+                    rules_applied.append(str(elem[0])+" useless")
                     
                     remove_store_recursive_dif(storage_location,location)
                     finish = True
@@ -5042,6 +5053,8 @@ def remove_store_recursive_dif(storage_location, location):
                         j+=1
                         
                     if all_keccaks:
+                        rules_applied.append(str(storage_location[i+pos+1])+" useless")
+
                         storage_location.pop(i+pos+1)
                         discount_op+=1
                         msg = "[OPT]: Removed mstore mstore with KECCAK"
@@ -5050,6 +5063,7 @@ def remove_store_recursive_dif(storage_location, location):
 
                         rule_applied = True
 
+                        
                         remove_store_recursive_dif(storage_location,location)
                         finish = True
 
@@ -5078,7 +5092,8 @@ def remove_store_recursive_dif(storage_location, location):
                                 gas_memory_op+=3
                                
                             rule_applied = True
-                        
+                            rules_applied.append(str(elem[0])+" useless")
+                            
                             remove_store_recursive_dif(storage_location,location)
                             finish = True
                     
@@ -5091,6 +5106,7 @@ def remove_store_loads(storage_location, location):
     global gas_memory_op
     global discount_op
     global rule_applied
+    global rules_applied
     
     if storage_location == "storage":
         store_ins = "sstore"
@@ -5131,6 +5147,8 @@ def remove_store_loads(storage_location, location):
                             gas_memory_op+=3
 
                         rule_applied = True
+                        rules_applied.append(str(elem[0])+" of mload")
+
                         
                         remove_store_loads(storage_location,location)
         i+=1
