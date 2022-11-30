@@ -48,6 +48,12 @@ def init():
     global new_size
     new_size = 0
 
+    global new_n_instrs
+    new_n_instrs = 0
+
+    global prev_n_instrs
+    prev_n_instrs = 0
+
 
 def clean_dir():
     ext = ["rbr", "csv", "sol", "bl", "disasm", "json"]
@@ -342,6 +348,7 @@ def optimize_isolated_asm_block(block_name,output_file, csv_file, parsed_args: N
             asm_block = old_block
 
         update_gas_count(old_block, asm_block)
+        update_length_count(old_block, asm_block)
         update_size_count(old_block, asm_block)
         asm_blocks.append(asm_block)
 
@@ -375,6 +382,14 @@ def update_size_count(old_block : AsmBlock, new_block : AsmBlock):
 
     previous_size += old_block.bytes_required
     new_size += new_block.bytes_required
+
+
+def update_length_count(old_block : AsmBlock, new_block : AsmBlock):
+    global prev_n_instrs
+    global new_n_instrs
+
+    prev_n_instrs += len(old_block.instructions)
+    new_n_instrs += len(new_block.instructions)
 
 
 # Due to intra block optimization, we need to be wary of those cases in which the optimized outcome is determined
@@ -581,6 +596,7 @@ def optimize_asm_in_asm_format(file_name, output_file, csv_file, log_file, parse
 
             # Deployment size is not considered when measuring it
             update_gas_count(old_block, optimized_block)
+            update_length_count(old_block, optimized_block)
 
         new_contract.init_code = init_code_blocks
 
@@ -610,6 +626,7 @@ def optimize_asm_in_asm_format(file_name, output_file, csv_file, log_file, parse
                 run_code_blocks.append(optimized_block)
 
                 update_gas_count(old_block, optimized_block)
+                update_length_count(old_block, optimized_block)
                 update_size_count(old_block, optimized_block)
 
             new_contract.set_run_code(identifier, run_code_blocks)
@@ -770,6 +787,8 @@ if __name__ == '__main__':
     global new_gas
     global previous_size
     global new_size
+    global prev_n_instrs
+    global new_n_instrs
 
     init()
     clean_dir()
@@ -819,9 +838,14 @@ if __name__ == '__main__':
         print("")
         print("Estimated initial size in bytes: " + str(previous_size))
         print("Estimated size optimized in bytes: " + str(new_size))
+        print("")
+        print("Initial number of instructions: " + str(prev_n_instrs))
+        print("Final number of instructions: " + str(new_n_instrs))
 
     else:
         print("")
         print("Estimated initial gas: "+str(previous_gas))
         print("")
         print("Estimated initial size in bytes: " + str(previous_size))
+        print("")
+        print("Initial number of instructions: " + str(new_n_instrs))
