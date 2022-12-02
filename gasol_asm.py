@@ -28,7 +28,7 @@ from smt_encoding.gasol_encoder import (execute_syrup_backend,
 from solution_generation.disasm_generation import (
     generate_sub_block_asm_representation_from_log)
 from solution_generation.solver_output_generation import obtain_solver_output
-from verification.sfs_verify import verify_block_from_list_of_sfs
+from verification.sfs_verify import verify_block_from_list_of_sfs, are_equals
 from verification.solver_solution_verify import (
     check_solver_output_is_correct)
 from solution_generation.optimize_from_sub_blocks import rebuild_optimized_asm_block
@@ -649,12 +649,66 @@ def optimize_asm_in_asm_format(file_name, output_file, csv_file, log_file, parse
         df.to_csv(csv_file)
 
 
+def optimize_from_sfs(json_file: str, output_file: str, csv_file: str, parsed_args: Namespace):
+    block_name = 'isolated_block_sfs'
+
+    with open(json_file, 'r') as f:
+        sfs_block = json.load(f)
+
+    sfs_dict = {block_name: sfs_block}
+
+    csv_statistics = []
+    for original_block, optimization_outcome, solver_time, optimized_asm, tout, initial_solver_bound \
+            in optimize_block(sfs_dict, parsed_args.tout, parsed_args):
+
+        statistics_info = generate_statistics_info(original_block, optimization_outcome, solver_time, optimized_asm,
+                                                   initial_solver_bound, tout)
+
+        csv_statistics.append(statistics_info)
+
+        new_sfs_information, _ = compute_original_sfs_with_simplifications(original_block, parsed_args)
+        new_sfs_block = new_sfs_information["syrup_contract"][block_name + '_0']
+
+        eq, reason = are_equals(sfs_block, new_sfs_block)
+
+        final_block = original_block
+
+        if not eq:
+            print("Comparison failed, so initial block is kept")
+            print("\t[REASON]: " + reason)
+            print("")
+
+        elif block_has_been_optimized(original_block, optimized_asm, parsed_args.size):
+            final_block = deepcopy(original_block)
+            final_block.instructions = optimized_asm
+
+        update_gas_count(original_block, final_block)
+        update_length_count(original_block, final_block)
+        update_size_count(original_block, final_block)
+
+    if parsed_args.backend:
+        df = pd.DataFrame(csv_statistics)
+        df.to_csv(csv_file)
+        print("")
+        print("Initial sequence (basic block per line):")
+        print(original_block.to_plain_with_byte_number())
+        print("")
+        print("Optimized sequence (basic block per line):")
+        print(final_block.to_plain_with_byte_number())
+        with open(output_file, 'w') as f:
+            f.write(json.dumps(new_sfs_block))
+
+        df = pd.DataFrame(csv_statistics)
+        df.to_csv(csv_file)
+
 def final_file_names(parsed_args: argparse.Namespace) -> Tuple[str, str, str]:
     input_file_name = parsed_args.input_path.split("/")[-1].split(".")[0]
 
     if parsed_args.output_path is None:
         if parsed_args.block:
             output_file = input_file_name + "_optimized.txt"
+        elif parsed_args.sfs:
+            output_file = input_file_name + "_optimized.json"
         elif parsed_args.log_path is not None:
             output_file = input_file_name + "_optimized_from_log.json_solc"
         else:
@@ -684,9 +738,12 @@ def parse_encoding_args() -> Namespace:
 
     input = ap.add_argument_group('Input options')
 
-    input.add_argument('input_path', help='Path to input file that contains the code to optimize. Can be either asm or'
-                                          'plain instructions, with the bl flag enabled')
-    input.add_argument("-bl", "--block", help="Enable analysis of a single asm block", action = "store_true")
+    input.add_argument('input_path', help='Path to input file that contains the code to optimize. Can be either asm, '
+                                          'plain instructions or a json containing the SFS. The corresponding flag'
+                                          'must be enabled')
+    group_input = input.add_mutually_exclusive_group()
+    group_input.add_argument("-bl", "--block", help="Enable analysis of a single asm block", action = "store_true")
+    group_input.add_argument("-sfs", "--sfs", dest='sfs', help="Enable analysis of a single SFS", action="store_true")
 
     output = ap.add_argument_group('Output options')
 
@@ -809,11 +866,12 @@ if __name__ == '__main__':
                 shutil.rmtree(paths.gasol_path, ignore_errors=True)
             exit(0)
 
-    if not parsed_args.block:
-        optimize_asm_in_asm_format(parsed_args.input_path, output_file, csv_file, log_file, parsed_args, parsed_args.tout)
-
-    else:
+    if parsed_args.block:
         optimize_isolated_asm_block(parsed_args.input_path, output_file, csv_file, parsed_args, parsed_args.tout)
+    elif parsed_args.sfs:
+        optimize_from_sfs(parsed_args.input_path, output_file, csv_file, parsed_args)
+    else:
+        optimize_asm_in_asm_format(parsed_args.input_path, output_file, csv_file, log_file, parsed_args, parsed_args.tout)
 
 
     y = dtimer()
