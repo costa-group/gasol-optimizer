@@ -5274,7 +5274,8 @@ def generate_dependences(storage_location, location):
             # print(predecessor)
             j = len(predecessor)-1
             already = False
-            while((j>=0) and not already):
+            # while((j>=0) and not already):
+            while(j>=0):
                 store = predecessor[j]
                 if store[0][-1].find(instruction)!=-1:
                     var_rest = store[0][0]
