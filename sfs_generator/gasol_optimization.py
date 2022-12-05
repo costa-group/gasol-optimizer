@@ -4952,7 +4952,7 @@ def replace_loads_by_sstores(storage_location, complementary_location, location)
                     finish = True
 
                     rule_applied = True
-                    rules_applied.append(load+"= "+elem[0])
+                    rules_applied.append(str(load)+"= "+str(elem[0]))
                     
                     for v in u_dict:
                         elem = u_dict[v]
