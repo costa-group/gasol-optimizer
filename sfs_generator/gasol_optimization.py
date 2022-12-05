@@ -1655,8 +1655,20 @@ def generate_storage_info(instructions,source_stack,simplification=True):
             
     storage_order = list(filter(lambda x: type(x) == tuple, storage_order))
     unify_loads_instructions(storage_order, "storage")
+
+
+    msg = "Storage order: "+str(storage_order)
+    check_and_print_debug_info(debug, msg)
+
     stdep = generate_dependences(storage_order,"storage")
+
+    msg = "Storage dep: "+str(stdep)
+    check_and_print_debug_info(debug, msg)
+
     stdep = simplify_dependencies(stdep)
+
+    msg = "Storage dep simplified: "+str(stdep)
+    check_and_print_debug_info(debug, msg)
     
     if simplification:
         simp = True
@@ -1669,20 +1681,21 @@ def generate_storage_info(instructions,source_stack,simplification=True):
     
     unify_keccak_instructions(memory_order,storage_order)
 
-    print(memory_order)
-    
+    msg = "Memory order: "+str(memory_order)
+    check_and_print_debug_info(debug, msg)
+        
     memdep = generate_dependences(memory_order,"memory")
 
-    print(memdep)
+    msg = "Memory dep: "+str(memdep)
+    check_and_print_debug_info(debug, msg)
     
     memdep = simplify_dependencies(memdep)
 
-    print(memdep)
+    msg = "Memory dep simplified: "+str(memdep)
+    check_and_print_debug_info(debug, msg)
     
     s1= compute_clousure(stdep)
     m1 = compute_clousure(memdep)
-
-    print(m1)
     
     get_best_storage(s1, len(storage_order))
     
