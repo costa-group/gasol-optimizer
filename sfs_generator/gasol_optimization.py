@@ -2046,7 +2046,7 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     json_dict["memory_dependences"]= mem_dep
     json_dict["is_revert"]= True if revert_flag else False
     json_dict["rules_applied"] = rule_applied
-    json_dict["rules"] = rules_applied
+    json_dict["rules"] = list(filter(lambda x: x != "", rules_applied))
 
     
     new_original_ins = []
