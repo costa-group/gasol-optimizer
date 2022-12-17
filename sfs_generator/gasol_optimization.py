@@ -5253,6 +5253,12 @@ def are_dependent_variables(v1,v2):
 
     if v1 == v2:
         return False
+
+    if is_integer(v1)!=-1 and is_integer(v2)!=-1:
+        return False
+
+    if is_integer(v1)!=-1 or is_integer(v2)!=-1:
+        return True
     
     if v2 in u_dict[v1][0]:
         return True
@@ -5303,6 +5309,8 @@ def generate_dependences(storage_location, location):
                             storage_dependences.append((j,i))
                             already = True
                         else:
+                            # print(elem)
+                            # print(store)
                             # print(are_dependent_variables(elem[0][0],store[0][0]))
                             if are_dependent_variables(elem[0][0],store[0][0]): #if they stored the same value but on index depends on the other
                             # store[0][0] in u_dict[elem[0][0]][0]:
