@@ -5304,9 +5304,6 @@ def generate_dependences(storage_location, location):
                             already = True
                         else:
                             # print(are_dependent_variables(elem[0][0],store[0][0]))
-                            print(storage_location)
-                            print(elem)
-                            print(store)
                             if are_dependent_variables(elem[0][0],store[0][0]): #if they stored the same value but on index depends on the other
                             # store[0][0] in u_dict[elem[0][0]][0]:
 
