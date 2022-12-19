@@ -133,7 +133,7 @@ def compute_original_sfs_with_simplifications(block: AsmBlock, parsed_args: Name
 # block id, returns the output given by the solver, the name given to that block and current gas associated
 # to that sequence.
 def optimize_block(sfs_dict, timeout, parsed_args: Namespace) -> List[Tuple[AsmBlock, OptimizeOutcome, float,
-                                                                            List[AsmBytecode], int, int]]:
+                                                                            List[AsmBytecode], int, int, List[str]]]:
 
     block_solutions = []
     # SFS dict of syrup contract contains all sub-blocks derived from a block after splitting
@@ -156,7 +156,7 @@ def optimize_block(sfs_dict, timeout, parsed_args: Namespace) -> List[Tuple[AsmB
         if parsed_args.backend:
             optimization_outcome, solver_time, optimized_asm = optimizer.optimize_block()
             block_solutions.append((original_block, optimization_outcome, solver_time,
-                                    optimized_asm, tout, initial_solver_bound))
+                                    optimized_asm, tout, initial_solver_bound, sfs_block['rules']))
         else:
             optimizer.generate_intermediate_files()
 
@@ -437,14 +437,14 @@ def filter_optimized_blocks_by_intra_block_optimization(asm_sub_blocks, optimize
 
 
 def generate_statistics_info(original_block: AsmBlock, outcome: Optional[OptimizeOutcome], solver_time: float,
-                             optimized_asm: List[AsmBytecode], initial_bound: int, tout: int) -> Dict:
+                             optimized_asm: List[AsmBytecode], initial_bound: int, tout: int, rules: List[str]) -> Dict:
 
     block_name = original_block.block_name
     original_instr = ' '.join(original_block.instructions_to_optimize_plain())
 
     statistics_row = {"block_id": block_name, "previous_solution": original_instr, "timeout": tout,
                       "initial_n_instrs": initial_bound, 'initial_estimated_size': original_block.bytes_required,
-                      'initial_estimated_gas': original_block.gas_spent}
+                      'initial_estimated_gas': original_block.gas_spent, 'rules': ','.join(rules)}
 
     # The outcome of the solver is unsat
     if outcome == OptimizeOutcome.unsat:
@@ -508,10 +508,10 @@ def optimize_asm_block_asm_format(block: AsmBlock, timeout: int, parsed_args: Na
         optimize_block(sfs_dict, timeout, parsed_args)
         return new_block, {}, []
 
-    for sub_block, optimization_outcome, solver_time, optimized_asm, tout, initial_solver_bound in optimize_block(sfs_dict, timeout, parsed_args):
+    for sub_block, optimization_outcome, solver_time, optimized_asm, tout, initial_solver_bound, rules in optimize_block(sfs_dict, timeout, parsed_args):
 
         statistics_info = generate_statistics_info(sub_block, optimization_outcome, solver_time, optimized_asm,
-                                                   initial_solver_bound, tout)
+                                                   initial_solver_bound, tout, rules)
 
         csv_statistics.append(statistics_info)
 
@@ -658,11 +658,11 @@ def optimize_from_sfs(json_file: str, output_file: str, csv_file: str, parsed_ar
     sfs_dict = {block_name: sfs_block}
 
     csv_statistics = []
-    for original_block, optimization_outcome, solver_time, optimized_asm, tout, initial_solver_bound \
+    for original_block, optimization_outcome, solver_time, optimized_asm, tout, initial_solver_bound, rules \
             in optimize_block(sfs_dict, parsed_args.tout, parsed_args):
 
         statistics_info = generate_statistics_info(original_block, optimization_outcome, solver_time, optimized_asm,
-                                                   initial_solver_bound, tout)
+                                                   initial_solver_bound, tout, rules)
 
         csv_statistics.append(statistics_info)
 
