@@ -444,7 +444,9 @@ def generate_statistics_info(original_block: AsmBlock, outcome: Optional[Optimiz
 
     statistics_row = {"block_id": block_name, "previous_solution": original_instr, "timeout": tout,
                       "initial_n_instrs": initial_bound, 'initial_estimated_size': original_block.bytes_required,
-                      'initial_estimated_gas': original_block.gas_spent, 'rules': ','.join(rules)}
+                      'initial_estimated_gas': original_block.gas_spent, 'rules': ','.join(rules), 
+                      'initial_length': len(original_block.instructions_to_optimize_plain()),
+                      'saved_length': 0}
 
     # The outcome of the solver is unsat
     if outcome == OptimizeOutcome.unsat:
@@ -460,18 +462,19 @@ def generate_statistics_info(original_block: AsmBlock, outcome: Optional[Optimiz
     # The solver has returned a valid model
     else:
         shown_optimal = outcome == OptimizeOutcome.optimal
-        optimized_length = sum([instr.bytes_required for instr in optimized_asm])
+        optimized_size = sum([instr.bytes_required for instr in optimized_asm])
         optimized_gas = sum([instr.gas_spent for instr in optimized_asm])
-        initial_length = original_block.bytes_required
+        optimized_length = len(optimized_asm)
+        initial_size = original_block.bytes_required
         initial_gas = original_block.gas_spent
+        initial_length = len(original_block.instructions_to_optimize_plain())
 
-        statistics_row.update({"solver_time_in_sec": round(solver_time, 3), "saved_size": initial_length - optimized_length,
+        statistics_row.update({"solver_time_in_sec": round(solver_time, 3), "saved_size": initial_size - optimized_size,
                                "saved_gas": initial_gas - optimized_gas, "model_found": True, "shown_optimal": shown_optimal,
                                "solution_found": ' '.join([instr.to_plain() for instr in optimized_asm]),
-                               "optimized_n_instrs": len(optimized_asm),
-                               'optimized_estimated_size': sum([instr.bytes_required for instr in optimized_asm]),
-                               'optimized_estimated_gas': sum([instr.gas_spent for instr in optimized_asm]),
-                               'outcome': 'model'})
+                               "optimized_n_instrs": len(optimized_asm), 'optimized_length': optimized_length,
+                               'optimized_estimated_size': optimized_size, 'optimized_estimated_gas': optimized_gas,
+                               'outcome': 'model', 'saved_length': initial_length - optimized_length})
 
     return statistics_row
 
