@@ -112,7 +112,7 @@ def ld_sto_dependency(j: int, sf: SynthesisFunctions, bounds: InstructionBounds,
     return AssertHard(add_implies(left_term, right_term))
 
 
-def dependent_pre_order(uninterpreted_instr : List[UninterpretedInstruction], order_tuples: List[Tuple[Id_T, Id_T]],
+def dependent_pre_order(uninterpreted_instr : List[UninterpretedInstruction], order_tuples: List[List[Id_T]],
                         b0: int, stack_elem_to_id : Dict[str, Id_T], instr_dep: bool,
                         theta_value_by_id_dict: Dict[Id_T, ThetaValue],
                         bounds: InstructionBounds, sf: SynthesisFunctions) -> List[AssertHard]:
@@ -186,7 +186,7 @@ def happens_before_from_dependency_graph(dependency_graph_set_theta: Dict[ThetaV
     return constraints
 
 
-def direct_conflict_constraints(instructions: List[UninterpretedInstruction], order_tuples: List[Tuple[Id_T, Id_T]],
+def direct_conflict_constraints(instructions: List[UninterpretedInstruction], order_tuples: List[List[Id_T]],
                                 b0: int, bounds: InstructionBounds, sf: SynthesisFunctions, instr_dep: bool) -> List[AssertHard]:
     theta_value_by_id_dict: Dict[Id_T, ThetaValue] = {instruction.id: instruction.theta_value
                                                       for instruction in instructions}

@@ -2042,8 +2042,8 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     json_dict["tgt_ws"] = new_ts
     json_dict["user_instrs"] = new_user_defins+pop_instructions+new_push_ins
     json_dict["current_cost"] = gas
-    json_dict["storage_dependences"] = sto_dep
-    json_dict["memory_dependences"]= mem_dep
+    json_dict["storage_dependences"] = [list(dep) for dep in sto_dep]
+    json_dict["memory_dependences"]= [list(dep) for dep in mem_dep]
     json_dict["is_revert"]= True if revert_flag else False
     json_dict["rules_applied"] = rule_applied
     json_dict["rules"] = list(filter(lambda x: x != "", rules_applied))

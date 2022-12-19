@@ -230,7 +230,7 @@ def generate_first_position_instr_cannot_appear(b0 : int, stack_elem_to_id : Dic
 
 class InstructionBoundsWithDependencies(InstructionBounds):
 
-    def __init__(self, instructions : List[UninterpretedInstruction], order_tuples : List[Tuple[Id_T, Id_T]],
+    def __init__(self, instructions : List[UninterpretedInstruction], order_tuples : List[List[Id_T]],
                  final_stack : List[str], b0 : int, initial_idx: int = 0):
 
         stack_element_to_id_dict : Dict[str, Id_T] = {instruction.output_stack : instruction.id
