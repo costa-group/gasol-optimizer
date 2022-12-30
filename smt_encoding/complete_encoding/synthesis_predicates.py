@@ -3,16 +3,11 @@ from smt_encoding.complete_encoding.synthesis_functions import SynthesisFunction
 
 
 def move(sf: SynthesisFunctions, j: int, alpha: int, beta: int, delta: int) -> Formula_T:
-    and_variables = []
-
     # Move can be empty
     if alpha > beta:
         return True
-    for i in range(alpha, beta+1):
-        first_and = add_eq(sf.u(i+delta, j+1), sf.u(i, j))
-        second_and = add_eq(sf.x(i+delta, j+1), sf.x(i, j))
-        and_variables.append(add_and(first_and, second_and))
-    return add_and(*and_variables)
+    return add_and(*(eq for i in range(alpha, beta+1) for eq in [add_eq(sf.u(i+delta, j+1), sf.u(i, j)),
+                                                                 add_eq(sf.x(i+delta, j+1), sf.x(i, j))]))
 
 
 def move_only_x_j_i(sf: SynthesisFunctions, j: int, alpha: int, beta: int, delta: int) -> Formula_T:

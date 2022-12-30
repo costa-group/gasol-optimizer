@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, Generator
 from smt_encoding.instructions.encoding_instruction import ThetaValue
 from collections import OrderedDict
 from smt_encoding.constraints.assertions import AssertSoft
@@ -9,14 +9,11 @@ from smt_encoding.complete_encoding.synthesis_utils import select_instructions_p
 
 
 def soft_constraints_direct(sf: SynthesisFunctions, weight_dict: Dict[ThetaValue, int],
-                            bounds: InstructionBounds, label_name: str) -> List[AssertSoft]:
-    soft_constraints = [AssertSoft(add_distinct(sf.t(j), sf.theta_value(theta_value)), weight, label_name)
-                        for theta_value, weight in weight_dict.items()
-                        for j in range(bounds.lower_bound_theta_value(theta_value),
-                                       bounds.upper_bound_theta_value(theta_value) + 1)
-                        if weight > 0]
-
-    return soft_constraints
+                            bounds: InstructionBounds, label_name: str) -> Generator:
+    yield from (AssertSoft(add_distinct(sf.t(j), sf.theta_value(theta_value)), weight, label_name)
+                for theta_value, weight in weight_dict.items()
+                for j in range(bounds.lower_bound_theta_value(theta_value),
+                               bounds.upper_bound_theta_value(theta_value) + 1) if weight > 0)
 
 
 # Generates an ordered dict that contains all instructions
@@ -43,12 +40,11 @@ def _generate_disjoint_sets_from_cost(ordered_costs: OrderedDict) -> OrderedDict
 # Generates the soft constraints given the set of instructions and its corresponding weights, considering an or
 # clause of multiple instructions with the same weight
 def soft_constraints_grouped_by_weight(sf: SynthesisFunctions, b0: int, weight_dict: Dict[ThetaValue, int],
-                                       bounds: InstructionBounds, label_name: str) -> List[AssertSoft]:
+                                       bounds: InstructionBounds, label_name: str) -> Generator:
     instr_costs = _generate_costs_ordered_dict(weight_dict)
     disjoint_sets = _generate_disjoint_sets_from_cost(instr_costs)
     previous_cost = 0
     theta_or_variables = []
-    soft_constraints = []
 
     for cost in disjoint_sets:
         # We skip the first set of instructions, as they have
@@ -69,14 +65,11 @@ def soft_constraints_grouped_by_weight(sf: SynthesisFunctions, b0: int, weight_d
 
             # Only add a constraint if any instruction satisfies the condition
             if theta_in_range:
-                soft_constraints.append(AssertSoft(add_or(*(add_eq(sf.t(j), sf.theta_value(theta_val))
-                                                            for theta_val in theta_in_range)),
-                                                   wi, label_name))
+                yield AssertSoft(add_or(*(add_eq(sf.t(j), sf.theta_value(theta_val))
+                                          for theta_val in theta_in_range)), wi, label_name)
 
         for instr in disjoint_sets[cost]:
             theta_or_variables.append(instr)
 
         # We update previous_cost
         previous_cost = cost
-
-    return soft_constraints

@@ -1,11 +1,11 @@
 from smt_encoding.complete_encoding.synthesis_functions import SynthesisFunctions
 from smt_encoding.constraints.connector_factory import add_eq, add_lt, add_or, add_implies, add_distinct, add_and
 from smt_encoding.constraints.assertions import AssertHard
-from typing import List, Dict, Set, Tuple
+from typing import List, Dict, Set, Generator
 from smt_encoding.instructions.encoding_instruction import ThetaValue, Id_T, EncodingInstruction
 from smt_encoding.instructions.instruction_bounds import InstructionBounds
 from smt_encoding.instructions.uninterpreted_instruction import UninterpretedInstruction
-from smt_encoding.complete_encoding.synthesis_utils import select_instructions_position
+
 
 # Methods for generating the constraints for both memory and storage (Ls)
 
@@ -30,20 +30,18 @@ def l_variable_order_constraint(theta_uninterpreted_1: ThetaValue, theta_uninter
 
 def l_conflicting_constraints_from_theta_values(l_theta_values: List[ThetaValue], bounds: InstructionBounds,
                                                 dependency_graph_set_theta: Dict[ThetaValue, Set[ThetaValue]],
-                                                sf: SynthesisFunctions) -> List[AssertHard]:
-    constraints = []
+                                                sf: SynthesisFunctions) -> Generator:
     for theta_value in l_theta_values:
 
-        constraints.append(restrict_l_domain(sf, bounds, theta_value))
+        yield restrict_l_domain(sf, bounds, theta_value)
 
         for pos in range(bounds.lower_bound_theta_value(theta_value), bounds.upper_bound_theta_value(theta_value) + 1):
-            constraints.append(mem_variable_equivalence_constraint(pos, theta_value, sf))
+            yield mem_variable_equivalence_constraint(pos, theta_value, sf)
 
         # Only consider the order among instructions with instructions also in l_theta_values
-        constraints.extend([l_variable_order_constraint(conflicting_theta_value, theta_value, sf)
-                            for conflicting_theta_value in dependency_graph_set_theta.get(theta_value, [])
-                            if conflicting_theta_value in l_theta_values])
-    return constraints
+        yield from (l_variable_order_constraint(conflicting_theta_value, theta_value, sf)
+                    for conflicting_theta_value in dependency_graph_set_theta.get(theta_value, [])
+                    if conflicting_theta_value in l_theta_values)
 
 
 def l_conflicting_theta_values(instructions: List[EncodingInstruction]) -> List[ThetaValue]:
@@ -58,14 +56,14 @@ def l_conflicting_theta_values(instructions: List[EncodingInstruction]) -> List[
 
 
 def l_conflicting_constraints(instructions: List[EncodingInstruction], bounds: InstructionBounds,
-                              dependency_graph: Dict[Id_T, List[Id_T]], sf: SynthesisFunctions) -> List[AssertHard]:
+                              dependency_graph: Dict[Id_T, List[Id_T]], sf: SynthesisFunctions) -> Generator:
     l_theta_values = l_conflicting_theta_values(instructions)
     theta_value_by_id_dict: Dict[Id_T, ThetaValue] = {instruction.id: instruction.theta_value
                                                       for instruction in instructions}
     dependency_graph_set_theta = {theta_value_by_id_dict[instr_id]:
                                       {theta_value_by_id_dict[dependent_id] for dependent_id in dependency_ids}
                                   for instr_id, dependency_ids in dependency_graph.items()}
-    return l_conflicting_constraints_from_theta_values(l_theta_values, bounds, dependency_graph_set_theta, sf)
+    yield from l_conflicting_constraints_from_theta_values(l_theta_values, bounds, dependency_graph_set_theta, sf)
 
 
 # Alternative encoding using direct constraints instead of l variables
@@ -112,11 +110,10 @@ def ld_sto_dependency(j: int, sf: SynthesisFunctions, bounds: InstructionBounds,
     return AssertHard(add_implies(left_term, right_term))
 
 
-def dependent_pre_order(uninterpreted_instr : List[UninterpretedInstruction], order_tuples: List[List[Id_T]],
-                        b0: int, stack_elem_to_id : Dict[str, Id_T], instr_dep: bool,
+def dependent_pre_order(uninterpreted_instr: List[UninterpretedInstruction], order_tuples: List[List[Id_T]],
+                        b0: int, stack_elem_to_id: Dict[str, Id_T], instr_dep: bool,
                         theta_value_by_id_dict: Dict[Id_T, ThetaValue],
-                        bounds: InstructionBounds, sf: SynthesisFunctions) -> List[AssertHard]:
-    hard_constraints = []
+                        bounds: InstructionBounds, sf: SynthesisFunctions) -> Generator:
     if instr_dep:
         for instr in uninterpreted_instr:
             instr_theta = theta_value_by_id_dict[instr.id]
@@ -132,12 +129,10 @@ def dependent_pre_order(uninterpreted_instr : List[UninterpretedInstruction], or
                     if prev_instr_id is not None:
                         prev_instr_theta = theta_value_by_id_dict[prev_instr_id]
 
-                        # Depencies among instructions are represented as happens before
-                        hard_constraints.extend(
-                            [happens_before_direct(j, sf, bounds, prev_instr_theta, instr_theta)
-                             for j in range(max(1, bounds.lower_bound_theta_value(instr_theta),
-                                                bounds.lower_bound_theta_value(prev_instr_theta)),
-                                            bounds.upper_bound_theta_value(instr_theta) + 1)])
+                        for j in range(max(1, bounds.lower_bound_theta_value(instr_theta),
+                                           bounds.lower_bound_theta_value(prev_instr_theta)),
+                                       bounds.upper_bound_theta_value(instr_theta) + 1):
+                            yield happens_before_direct(j, sf, bounds, prev_instr_theta, instr_theta)
 
     # We need to consider also the order given by the tuples
     for id1, id2 in order_tuples:
@@ -146,51 +141,46 @@ def dependent_pre_order(uninterpreted_instr : List[UninterpretedInstruction], or
         if 'STORE' in id1 and 'STORE' in id2:
             # As store instructions can only appear once, this can be represented directly using a happens
             # before relation
-            hard_constraints.extend(
-                [happens_before_direct(j, sf, bounds, bef_instr_theta, aft_instr_theta)
-                 for j in range(max(1, bounds.lower_bound_theta_value(aft_instr_theta),
-                                    bounds.lower_bound_theta_value(bef_instr_theta)),
-                                    bounds.upper_bound_theta_value(aft_instr_theta) + 1)])
+            yield from (happens_before_direct(j, sf, bounds, bef_instr_theta, aft_instr_theta)
+                        for j in range(max(1, bounds.lower_bound_theta_value(aft_instr_theta),
+                                           bounds.lower_bound_theta_value(bef_instr_theta)),
+                                       bounds.upper_bound_theta_value(aft_instr_theta) + 1))
 
         # St - Ld dependencies : Ld instruction cannot appear before store
         elif 'STORE' in id1:
-            hard_constraints.extend(
-                [sto_ld_dependency(j, sf, bounds, bef_instr_theta, aft_instr_theta)
-                 for j in range(max(1, bounds.lower_bound_theta_value(aft_instr_theta) + 1,
-                                    bounds.lower_bound_theta_value(bef_instr_theta)),
-                                bounds.upper_bound_theta_value(bef_instr_theta) + 1)])
+            yield from (sto_ld_dependency(j, sf, bounds, bef_instr_theta, aft_instr_theta)
+                        for j in range(max(1, bounds.lower_bound_theta_value(aft_instr_theta) + 1,
+                                           bounds.lower_bound_theta_value(bef_instr_theta)),
+                                       bounds.upper_bound_theta_value(bef_instr_theta) + 1))
 
         # Ld - St dependencies : Ld instruction cannot appear after store
         else:
-            hard_constraints.extend(
-                [ld_sto_dependency(j, sf, bounds, bef_instr_theta, aft_instr_theta)
-                 for j in range(bounds.lower_bound_theta_value(aft_instr_theta),
-                                min(b0 - 1, bounds.upper_bound_theta_value(bef_instr_theta),
-                                    bounds.upper_bound_theta_value(aft_instr_theta) + 1))])
-
-    return hard_constraints
+            yield from (ld_sto_dependency(j, sf, bounds, bef_instr_theta, aft_instr_theta)
+                        for j in range(bounds.lower_bound_theta_value(aft_instr_theta),
+                                       min(b0 - 1, bounds.upper_bound_theta_value(bef_instr_theta),
+                                           bounds.upper_bound_theta_value(aft_instr_theta) + 1)))
 
 
 def happens_before_from_dependency_graph(dependency_graph_set_theta: Dict[ThetaValue, Set[ThetaValue]],
-                                         bounds: InstructionBounds, sf: SynthesisFunctions) -> List[AssertHard]:
+                                         bounds: InstructionBounds, sf: SynthesisFunctions) -> Generator:
     # We consider max(1, lb(theta_confl1), lb(theta_confl2)) to start either by the first position in which
     # theta_confl2 can appear and has a previous theta_confl1. In general, you could assume
     # lb(theta_confl2) > lb(theta_confl1), but in the case of no bounds, both are equal.
-    constraints = [happens_before_direct(j, sf, bounds, theta_confl1, theta_confl2)
-                   for theta_confl2 in dependency_graph_set_theta
-                   for theta_confl1 in dependency_graph_set_theta[theta_confl2]
-                   for j in range(max(1, bounds.lower_bound_theta_value(theta_confl2),
-                                      bounds.lower_bound_theta_value(theta_confl1)),
-                                  bounds.upper_bound_theta_value(theta_confl2))]
-
-    return constraints
+    yield from (happens_before_direct(j, sf, bounds, theta_confl1, theta_confl2)
+                for theta_confl2 in dependency_graph_set_theta
+                for theta_confl1 in dependency_graph_set_theta[theta_confl2]
+                for j in range(max(1, bounds.lower_bound_theta_value(theta_confl2),
+                                   bounds.lower_bound_theta_value(theta_confl1)),
+                               bounds.upper_bound_theta_value(theta_confl2)))
 
 
 def direct_conflict_constraints(instructions: List[UninterpretedInstruction], order_tuples: List[List[Id_T]],
-                                b0: int, bounds: InstructionBounds, sf: SynthesisFunctions, instr_dep: bool) -> List[AssertHard]:
+                                b0: int, bounds: InstructionBounds, sf: SynthesisFunctions,
+                                instr_dep: bool) -> Generator:
     theta_value_by_id_dict: Dict[Id_T, ThetaValue] = {instruction.id: instruction.theta_value
                                                       for instruction in instructions}
     stack_elem_to_id: Dict[str, Id_T] = {instruction.output_stack: instruction.id
                                          for instruction in instructions if instruction.output_stack is not None}
 
-    return dependent_pre_order(instructions, order_tuples, b0, stack_elem_to_id, instr_dep, theta_value_by_id_dict, bounds, sf)
+    yield from dependent_pre_order(instructions, order_tuples, b0, stack_elem_to_id, instr_dep, theta_value_by_id_dict,
+                                   bounds, sf)

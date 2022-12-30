@@ -1,5 +1,5 @@
 from smt_encoding.instructions.instruction_factory import InstructionFactory
-from typing import Dict, Any, Tuple, List, Callable
+from typing import Dict, Any, Tuple, List, Generator
 from argparse import Namespace
 from smt_encoding.complete_encoding.synthesis_encoding_instructions_stack import AssertHard, EncodingForStack
 from smt_encoding.complete_encoding.synthesis_functions import SynthesisFunctions
@@ -21,7 +21,8 @@ from smt_encoding.complete_encoding.synthesis_stack_constraints import push_basi
     store_stack_function_encoding_empty, pop_encoding_empty
 from smt_encoding.instructions.instruction_dependencies import (generate_dependency_graph_minimum,
                                                                 generate_dependency_graph_only_memory)
-from smt_encoding.complete_encoding.synthesis_pre_order import l_conflicting_constraints, direct_conflict_constraints
+from smt_encoding.complete_encoding.synthesis_pre_order import l_conflicting_constraints, direct_conflict_constraints, \
+    l_conflicting_theta_values
 from smt_encoding.instructions.encoding_instruction import EncodingInstruction
 from smt_encoding.complete_encoding.synthesis_soft_constraints import soft_constraints_direct, \
     soft_constraints_grouped_by_weight
@@ -187,7 +188,7 @@ class FullEncoding:
             # Otherwise, they start from 0 onwards
             return uop_creation.opcode_rep_with_int()[0]
 
-    def _select_additional_constraints_from_flags(self) -> List[AssertHard]:
+    def _select_additional_constraints_from_flags(self) -> Generator:
         # From nop encoding and each uninterpreted function is used at least once are always included by default
 
         theta_nop = \
@@ -200,78 +201,59 @@ class FullEncoding:
                      if instruction.instruction_subset == InstructionSubset.store]
         theta_uninterpreted = [instruction.theta_value for instruction in self._uninterpreted_instructions]
 
-        additional_constraints = [*fromnop_encoding(self._term_factory, self._bounds, theta_nop),
-                                  *each_instruction_is_used_at_least_once(self._term_factory,
-                                                                          self._bounds, theta_uninterpreted),
-                                  *no_output_before_pop(self._term_factory, self._bounds, theta_swaps, theta_mem,
-                                                        theta_pops)]
+        yield from fromnop_encoding(self._term_factory, self._bounds, theta_nop)
+        yield from each_instruction_is_used_at_least_once(self._term_factory, self._bounds, theta_uninterpreted)
+        yield from no_output_before_pop(self._term_factory, self._bounds, theta_swaps, theta_mem, theta_pops)
 
         if self._flags.memory_encoding == "direct":
-            additional_constraints.extend([constraint for instruction in self._uninterpreted_instructions
-                                           if instruction.instruction_subset == InstructionSubset.store
-                                           for constraint in
-                                           each_function_is_used_at_most_once(self._term_factory, self._bounds,
-                                                                              instruction.theta_value)])
+            yield from (constraint for instruction in self._uninterpreted_instructions
+                        if instruction.instruction_subset == InstructionSubset.store
+                        for constraint in each_function_is_used_at_most_once(self._term_factory, self._bounds,
+                                                                             instruction.theta_value))
 
-        return additional_constraints
+    def generate_hard_constraints(self) -> Generator:
+        yield from restrict_t_domain(self._term_factory, self._bounds,
+                                     [instruction.theta_value for instruction in self._instructions])
 
-    def generate_hard_constraints(self) -> List[AssertHard]:
-        initialization_constraints = restrict_t_domain(self._term_factory, self._bounds,
-                                                       [instruction.theta_value for instruction in self._instructions])
+        yield from (constraint for instruction in self._instructions for constraint in
+                    self._encoding_stack.encode_instruction(instruction, self._bounds,self._term_factory, self.bs))
 
-        stack_constraints = [constraint for instruction in self._instructions for constraint in
-                             self._encoding_stack.encode_instruction(instruction, self._bounds,
-                                                                     self._term_factory, self.bs)]
-
-        pre_order_encoding_function = l_conflicting_constraints
         if self._flags.memory_encoding == "l_vars":
-            pre_order_constraints = pre_order_encoding_function(self._instructions, self._bounds,
-                                                                self._dependency_graph, self._term_factory)
+            yield from l_conflicting_constraints(self._instructions, self._bounds,
+                                                 self._dependency_graph, self._term_factory)
         else:
-            pre_order_constraints = direct_conflict_constraints(self._uninterpreted_instructions, self.mem_order,
-                                                                self.b0, self._bounds, self._term_factory,
-                                                                self._flags.order_conflicts)
+            yield from direct_conflict_constraints(self._uninterpreted_instructions, self.mem_order,
+                                                   self.b0, self._bounds, self._term_factory,
+                                                   self._flags.order_conflicts)
 
         stack_encoding_f = stack_encoding_for_position_empty if self._flags.empty else stack_encoding_for_position
 
-        initial_stack_constraints = stack_encoding_f(self._initial_idx, self._term_factory,
-                                                     self.initial_stack, self.bs)
+        yield from stack_encoding_f(self._initial_idx, self._term_factory, self.initial_stack, self.bs)
+
         if self._terminal:
             # If block is terminal with REVERT, only two top elements in the stack must be checked
-            final_stack_constraints = stack_encoding_for_terminal(self._initial_idx + self.b0, self._term_factory,
-                                                                  self.final_stack)
+            yield from stack_encoding_for_terminal(self._initial_idx + self.b0, self._term_factory, self.final_stack)
         else:
-            final_stack_constraints = stack_encoding_f(self._initial_idx + self.b0, self._term_factory,
-                                                       self.final_stack, self.bs)
-        distinct_constraints = []
+            yield from stack_encoding_f(self._initial_idx + self.b0, self._term_factory, self.final_stack, self.bs)
 
         # Only works for UF encoding
         if self._flags.encode_terms.startswith("uninterpreted"):
-            distinct_constraints = []
             theta_values = self._term_factory.created_theta_values()
             created_vars = self._term_factory.created_stack_vars()
 
-            if len(created_vars) > 1:
-                # Only include a distinct constraint if there are at least two expressions in the encoding
-                distinct_constraints.extend(expressions_are_distinct(*created_vars))
+            yield from expressions_are_distinct(*created_vars)
 
-            if len(theta_values) > 1:
-                # It can be empty, if uninterpreted_int is activated and theta values are considered as numbers
-                distinct_constraints.extend(expressions_are_distinct(*theta_values))
+            yield from expressions_are_distinct(*theta_values)
 
         elif self._flags.encode_terms == "stack_vars":
             if self._flags.push_basic:
-                distinct_constraints.extend(initialize_stack_variables(self._term_factory, constants.int_limit))
+                yield from initialize_stack_variables(self._term_factory, constants.int_limit)
             else:
-                distinct_constraints.extend(initialize_stack_variables(self._term_factory, 0))
+                yield from initialize_stack_variables(self._term_factory, 0)
 
-        additional_constraints = self._select_additional_constraints_from_flags()
+        yield from self._select_additional_constraints_from_flags()
 
-        return list(
-            chain(initialization_constraints, stack_constraints, pre_order_constraints, initial_stack_constraints,
-                  final_stack_constraints, distinct_constraints, additional_constraints))
-
-    def generate_soft_constraints(self) -> List[AssertSoft]:
+    def generate_soft_constraints(self) -> Generator:
 
         # Direct encoding considers all non-store operations susceptible of appearing multiple times
         def direct_encoding_filter(instruction: EncodingInstruction) -> bool:
@@ -297,15 +279,41 @@ class FullEncoding:
                            for instruction in self._instructions if soft_instruction_filter(instruction)}
 
         if self._flags.direct:
-            return soft_constraints_direct(self._term_factory, weight_dict, self._bounds, "cost")
+            yield from soft_constraints_direct(self._term_factory, weight_dict, self._bounds, "cost")
         else:
-            return soft_constraints_grouped_by_weight(self._term_factory, self.b0, weight_dict, self._bounds, "cost")
+            yield from soft_constraints_grouped_by_weight(self._term_factory, self.b0, weight_dict, self._bounds, "cost")
 
-    def generate_full_encoding(self) -> Tuple[List[Function], List[AssertHard], List[AssertSoft]]:
+    # Initialize all variables
+    def functions_declared(self) -> List[Function]:
+        if self._flags.empty:
+            self._term_factory.empty()
+
+        for i in range(self.b0):
+            self._term_factory.t(i)
+
+            if self._flags.push_basic:
+                self._term_factory.a(i)
+
+            for j in range(self.bs):
+                self._term_factory.x(j, i)
+                self._term_factory.u(j, i)
+
+        for j in range(self.bs):
+            self._term_factory.x(j, self.b0)
+            self._term_factory.u(j, self.b0)
+
+        if self._flags.memory_encoding != "direct":
+            for instr_theta in l_conflicting_theta_values(self._instructions):
+                self._term_factory.l(instr_theta)
+
+        # Theta values in term factory can be called no matter the configuration
+        for j in range(self._instruction_factory.next_theta_value):
+            self._term_factory.theta_value(j)
+
+        return self._term_factory.created_functions()
+
+    def generate_full_encoding(self) -> Tuple[Generator, Generator]:
         hard_constraints = self.generate_hard_constraints()
         soft_constraints = self.generate_soft_constraints()
 
-        # Obtaining functions declared only makes sense AFTER having declared all the constraints
-        functions_declared = self._term_factory.created_functions()
-
-        return functions_declared, hard_constraints, soft_constraints
+        return hard_constraints, soft_constraints

@@ -29,6 +29,7 @@ class SynthesisFunctions:
                                                      if type(term_to_formula[stack_var]) == ExpressionReference}
         self._expression_instances: Dict[str, Formula_T] = copy.deepcopy(term_to_formula)
         self._theta_expressions = {}
+        self._other_expressions = {}
         self._evm_repr_sort = evm_repr_sort
         self._theta_repr_sort = theta_repr_sort
 
@@ -50,25 +51,37 @@ class SynthesisFunctions:
         func = self._create_func(func_name, var_type)
         return func(*arguments)
 
+    def _create_and_store_term(self, func_name: str, var_type: Tuple[Sort],
+                               arguments: Tuple[ExpressionReference], func_id: str) -> ExpressionReference:
+        # Func id serves as a primary key for representing terms. For those terms that are constant, the func_id should
+        # match the func_name. For stack variables, it corresponds to the name assigned to the output in the instruction
+        if func_id in self._other_expressions:
+            return self._other_expressions[func_id]
+
+        func = self._create_func(func_name, var_type)
+        term = func(*arguments)
+        self._other_expressions[func_id] = term
+        return term
+
     def u(self, i: int, j: int) -> ExpressionReference:
         str_rep = _sub_idx_rep("u", i, j)
-        return self._create_term(str_rep, (Sort.boolean,), tuple(), str_rep)
+        return self._create_and_store_term(str_rep, (Sort.boolean,), tuple(), str_rep)
 
     def x(self, i: int, j: int) -> ExpressionReference:
         str_rep = _sub_idx_rep("x", i, j)
-        return self._create_term(str_rep, (self._evm_repr_sort,), tuple(), str_rep)
+        return self._create_and_store_term(str_rep, (self._evm_repr_sort,), tuple(), str_rep)
 
     def t(self, i: int) -> ExpressionReference:
         str_rep = _sub_idx_rep("t", i)
-        return self._create_term(str_rep, (self._theta_repr_sort,), tuple(), str_rep)
+        return self._create_and_store_term(str_rep, (self._theta_repr_sort,), tuple(), str_rep)
 
     def a(self, i: int) -> ExpressionReference:
         str_rep = _sub_idx_rep("a", i)
-        return self._create_term(str_rep, (self._evm_repr_sort,), tuple(), str_rep)
+        return self._create_and_store_term(str_rep, (self._evm_repr_sort,), tuple(), str_rep)
 
     def l(self, i: ThetaValue) -> ExpressionReference:
         str_rep = _sub_idx_rep("l", i)
-        return self._create_term(str_rep, (Sort.integer,), tuple(), str_rep)
+        return self._create_and_store_term(str_rep, (Sort.integer,), tuple(), str_rep)
 
     def empty(self) -> ExpressionReference:
         stack_var = "empty"
