@@ -1652,7 +1652,9 @@ def generate_storage_info(instructions,source_stack,simplification=True):
     storage_order = list(filter(lambda x: type(x) == tuple, storage_order))
     unify_loads_instructions(storage_order, "storage")
     stdep = generate_dependences(storage_order,"storage")
-    stdep = simplify_dependencies(stdep)
+
+    if len(stdep) < 300:
+        stdep = simplify_dependencies(stdep)
     
     if simplification:
         simp = True
@@ -1666,8 +1668,9 @@ def generate_storage_info(instructions,source_stack,simplification=True):
     unify_keccak_instructions(memory_order,storage_order)
 
     memdep = generate_dependences(memory_order,"memory")
-    
-    memdep = simplify_dependencies(memdep)
+
+    if len(memdep) < 300:
+        memdep = simplify_dependencies(memdep)
 
     s1= compute_clousure(stdep)
     m1 = compute_clousure(memdep)
