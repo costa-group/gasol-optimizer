@@ -1671,7 +1671,6 @@ def generate_storage_info(instructions,source_stack,simplification=True):
 
     msg = "Storage dep simplified: "+str(stdep)
     check_and_print_debug_info(debug, msg)
->>>>>>> 464916be924c27543ffa0290bdc6f952d647aab2
     
     if simplification:
         simp = True
@@ -1696,7 +1695,6 @@ def generate_storage_info(instructions,source_stack,simplification=True):
     check_and_print_debug_info(debug, msg)
     
     memdep = simplify_dependencies(memdep)
->>>>>>> 464916be924c27543ffa0290bdc6f952d647aab2
 
     msg = "Memory dep simplified: "+str(memdep)
     check_and_print_debug_info(debug, msg)
