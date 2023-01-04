@@ -9,6 +9,7 @@ import global_params.paths as paths
 import sfs_generator.opcodes as opcodes
 from sfs_generator.utils import (all_integers, find_sublist, get_num_bytes_int,
                                  is_integer, isYulInstructionUpper, get_ins_size,check_and_print_debug_info)
+from typing import Optional
 
 terminate_block = ["ASSERTFAIL","RETURN","REVERT","SUICIDE","STOP"]
 
@@ -1610,7 +1611,6 @@ def generate_storage_info(instructions,source_stack,simplification=True):
     sstores = list(sstore_seq)
     last_mload = ""
     mstores = list(mstore_seq)
-
     
     storage_order = []
     memory_order = []
@@ -1633,6 +1633,8 @@ def generate_storage_info(instructions,source_stack,simplification=True):
             memory_order.append(r)
             
         elif instructions[x].find("mstore")!=-1: #and last_mload != "" and mload_relative_pos.get(last_mload,[])==[]:
+            # print(instructions[x])
+            # print("*/*/*/*/*/*/*/*/*/")
             mload_relative_pos[last_mload]=mstores.pop(0)
             memory_order.append(mload_relative_pos[last_mload])
 
@@ -1643,18 +1645,33 @@ def generate_storage_info(instructions,source_stack,simplification=True):
             storage_order.append(keccak)
             
     remove_loads_instructions()
-
+    
     if simplification:
         simp = True
         while(simp):
             simp = simplify_memory(storage_order, memory_order, "storage")
 
+    # print(memory_order)
+            
     storage_order = list(filter(lambda x: type(x) == tuple, storage_order))
     unify_loads_instructions(storage_order, "storage")
+
+
+    msg = "Storage order: "+str(storage_order)
+    check_and_print_debug_info(debug, msg)
+
     stdep = generate_dependences(storage_order,"storage")
 
-    if len(stdep) < 300:
-        stdep = simplify_dependencies(stdep)
+    stdep = simplify_dependencies(stdep)
+
+    msg = "Storage dep: "+str(stdep)
+    check_and_print_debug_info(debug, msg)
+
+    stdep = simplify_dependencies(stdep)
+
+    msg = "Storage dep simplified: "+str(stdep)
+    check_and_print_debug_info(debug, msg)
+>>>>>>> 464916be924c27543ffa0290bdc6f952d647aab2
     
     if simplification:
         simp = True
@@ -1667,14 +1684,26 @@ def generate_storage_info(instructions,source_stack,simplification=True):
     
     unify_keccak_instructions(memory_order,storage_order)
 
+    msg = "Memory order: "+str(memory_order)
+    check_and_print_debug_info(debug, msg)
+        
     memdep = generate_dependences(memory_order,"memory")
 
-    if len(memdep) < 300:
-        memdep = simplify_dependencies(memdep)
 
+    memdep = simplify_dependencies(memdep)
+    
+    msg = "Memory dep: "+str(memdep)
+    check_and_print_debug_info(debug, msg)
+    
+    memdep = simplify_dependencies(memdep)
+>>>>>>> 464916be924c27543ffa0290bdc6f952d647aab2
+
+    msg = "Memory dep simplified: "+str(memdep)
+    check_and_print_debug_info(debug, msg)
+    
     s1= compute_clousure(stdep)
     m1 = compute_clousure(memdep)
-
+    
     get_best_storage(s1, len(storage_order))
     
     storage_dep = stdep
@@ -1957,7 +1986,7 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     new_user_defins1 = update_user_defins(new_ts,new_user_defins)
 
     removed_instructions = list(filter(lambda x: x not in new_user_defins1,new_user_defins))
-
+    
     update_storage_sequences(removed_instructions)
     
     new_user_defins, new_ts = unify_all_user_defins(new_ts,new_user_defins1,vars_list)
@@ -1997,7 +2026,7 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     if num !=-1:
         max_instr_size = num
         num_pops = num
-
+        
     if not split_sto:
         sto_dep, mem_dep = translate_dependences_sfs(new_user_defins)
 
@@ -2020,11 +2049,11 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     json_dict["tgt_ws"] = new_ts
     json_dict["user_instrs"] = new_user_defins+pop_instructions+new_push_ins
     json_dict["current_cost"] = gas
-    json_dict["storage_dependences"] = sto_dep
-    json_dict["memory_dependences"]= mem_dep
+    json_dict["storage_dependences"] = [list(dep) for dep in sto_dep]
+    json_dict["memory_dependences"]= [list(dep) for dep in mem_dep]
     json_dict["is_revert"]= True if revert_flag else False
     json_dict["rules_applied"] = rule_applied
-    json_dict["rules"] = rules_applied
+    json_dict["rules"] = list(filter(lambda x: x != "", rules_applied))
 
     
     new_original_ins = []
@@ -2251,216 +2280,220 @@ def build_userdef_instructions():
                 modified_userdef_vals[u_var] = obj["outpt_sk"][0]
             else:
                 user_defins.append(obj)
-            
-def generate_userdefname(u_var,funct,args,arity,init=False):
-    global user_def_counter
-    global already_defined_userdef
 
-    
+
+def funct_to_opcode(funct: str) -> Optional[str]:
+    instr_name = None
+
     if funct.find("+") != -1:
         instr_name = "ADD"
 
-    elif funct.find("mulmod") !=-1:
+    elif funct.find("mulmod") != -1:
         instr_name = "MULMOD"
 
-    elif funct.find("addmod") !=-1:
+    elif funct.find("addmod") != -1:
         instr_name = "ADDMOD"
 
     elif funct.find("-") != -1:
         instr_name = "SUB"
 
-    elif funct.find("*") !=-1:
+    elif funct.find("*") != -1:
         instr_name = "MUL"
 
-    elif funct.find("/") !=-1:
+    elif funct.find("/") != -1:
         instr_name = "DIV"
-        
-    elif funct.find("^") !=-1:
+
+    elif funct.find("^") != -1:
         instr_name = "EXP"
 
-    elif funct.find("%") !=-1:
+    elif funct.find("%") != -1:
         instr_name = "MOD"
 
-    elif funct.find("and") !=-1:
+    elif funct.find("and") != -1:
         instr_name = "AND"
 
-    elif funct.find("origin")!=-1:
+    elif funct.find("origin") != -1:
         instr_name = "ORIGIN"
 
-    elif funct.find("pushdeployaddress")!=-1:
+    elif funct.find("pushdeployaddress") != -1:
         instr_name = "PUSHDEPLOYADDRESS"
 
-    elif funct.find("pushsize")!=-1:
+    elif funct.find("pushsize") != -1:
         instr_name = "PUSHSIZE"
 
-    elif funct.find("xor") !=-1:
+    elif funct.find("xor") != -1:
         instr_name = "XOR"
-        
-    elif funct.find("or") !=-1:
+
+    elif funct.find("or") != -1:
         instr_name = "OR"
 
-    elif funct.find("not") !=-1:
+    elif funct.find("not") != -1:
         instr_name = "NOT"
 
-    elif funct.find("sgt") !=-1:
+    elif funct.find("sgt") != -1:
         instr_name = "SGT"
 
-    elif funct.find("gt") !=-1:
+    elif funct.find("gt") != -1:
         instr_name = "GT"
 
-    elif funct.find("shr") !=-1:
+    elif funct.find("shr") != -1:
         instr_name = "SHR"
 
     # pushlib must come before shl to avoid overlapping
-    elif funct.find("pushlib")!=-1:
+    elif funct.find("pushlib") != -1:
         instr_name = "PUSHLIB"
 
-    elif funct.find("shl") !=-1:
+    elif funct.find("shl") != -1:
         instr_name = "SHL"
 
-    elif funct.find("sar") !=-1:
+    elif funct.find("sar") != -1:
         instr_name = "SAR"
-        
+
     elif funct.startswith("lt"):
         instr_name = "LT"
 
-    elif funct.find("slt") !=-1:
+    elif funct.find("slt") != -1:
         instr_name = "SLT"
 
-    elif funct.find("selfbalance") !=-1:
+    elif funct.find("selfbalance") != -1:
         instr_name = "SELFBALANCE"
 
-    elif funct.find("extcodehash") !=-1:
+    elif funct.find("extcodehash") != -1:
         instr_name = "EXTCODEHASH"
 
-    elif funct.find("chainid") !=-1:
+    elif funct.find("chainid") != -1:
         instr_name = "CHAINID"
 
-    elif funct.find("create2") !=-1:
+    elif funct.find("create2") != -1:
         instr_name = "CREATE2"
 
-    elif funct.find("byte") !=-1:
+    elif funct.find("byte") != -1:
         instr_name = "BYTE"
 
-    elif funct.find("eq") !=-1:
+    elif funct.find("eq") != -1:
         instr_name = "EQ"
 
-    elif funct.find("iszero") !=-1:
+    elif funct.find("iszero") != -1:
         instr_name = "ISZERO"
-        
 
-    elif funct.find("caller")!=-1:
+    elif funct.find("caller") != -1:
         instr_name = "CALLER"
 
-    elif funct.find("callvalue")!=-1:
+    elif funct.find("callvalue") != -1:
         instr_name = "CALLVALUE"
-        
-    elif funct.find("calldataload")!=-1:
+
+    elif funct.find("calldataload") != -1:
         instr_name = "CALLDATALOAD"
-    
-    elif funct.find("address")!=-1:
+
+    elif funct.find("address") != -1:
         instr_name = "ADDRESS"
 
-    elif funct.find("calldatasize")!=-1:
+    elif funct.find("calldatasize") != -1:
         instr_name = "CALLDATASIZE"
-        
-    elif funct.find("number")!=-1:
+
+    elif funct.find("number") != -1:
         instr_name = "NUMBER"
 
-    elif funct.find("gasprice")!=-1:
+    elif funct.find("gasprice") != -1:
         instr_name = "GASPRICE"
 
-    elif funct.find("difficulty")!=-1:
+    elif funct.find("difficulty") != -1:
         instr_name = "DIFFICULTY"
 
-    elif funct.find("prevrandao")!=-1:
+    elif funct.find("prevrandao") != -1:
         instr_name = "PREVRANDAO"
 
-    elif funct.find("basefee")!=-1:
+    elif funct.find("basefee") != -1:
         instr_name = "BASEFEE"
 
-        
-    elif funct.find("blockhash")!=-1:
+    elif funct.find("blockhash") != -1:
         instr_name = "BLOCKHASH"
 
-    elif funct.find("balance")!=-1:
+    elif funct.find("balance") != -1:
         instr_name = "BALANCE"
 
-    elif funct.find("coinbase")!=-1:
+    elif funct.find("coinbase") != -1:
         instr_name = "COINBASE"
 
-    elif funct.find("mload")!=-1:
+    elif funct.find("mload") != -1:
         instr_name = "MLOAD"
 
-    elif funct.find("sload")!=-1:
+    elif funct.find("sload") != -1:
         instr_name = "SLOAD"
 
-    elif funct.find("timestamp")!=-1:
+    elif funct.find("timestamp") != -1:
         instr_name = funct.upper()
 
-    elif funct.find("msize")!=-1:
+    elif funct.find("msize") != -1:
         instr_name = "MSIZE"
-        
-    elif funct.find("signextend")!=-1:
+
+    elif funct.find("signextend") != -1:
         instr_name = "SIGNEXTEND"
 
-    elif funct.find("extcodesize")!=-1:
+    elif funct.find("extcodesize") != -1:
         instr_name = "EXTCODESIZE"
 
-    elif funct.find("create")!=-1:
+    elif funct.find("create") != -1:
         instr_name = "CREATE"
 
-    elif funct.find("gaslimit")!=-1:
+    elif funct.find("gaslimit") != -1:
         instr_name = "GASLIMIT"
-    
-    elif funct.find("codesize")!=-1:
+
+    elif funct.find("codesize") != -1:
         instr_name = "CODESIZE"
-        
-    elif funct.find("sha3")!=-1:
+
+    elif funct.find("sha3") != -1:
         instr_name = "SHA3"
 
-    elif funct.find("keccak256")!=-1:
+    elif funct.find("keccak256") != -1:
         instr_name = "KECCAK256"
 
-    elif funct.find("gas")!=-1:
+    elif funct.find("gas") != -1:
         instr_name = funct.upper()
 
-    elif funct.find("returndatasize")!=-1:
+    elif funct.find("returndatasize") != -1:
         instr_name = "RETURNDATASIZE"
 
-    elif funct.find("callcode")!=-1:
+    elif funct.find("callcode") != -1:
         instr_name = "CALLCODE"
 
-    elif funct.find("delegatecall")!=-1:
+    elif funct.find("delegatecall") != -1:
         instr_name = "DELEGATECALL"
 
-    elif funct.find("staticcall")!=-1:
+    elif funct.find("staticcall") != -1:
         instr_name = "STATICCALL"
 
-    elif funct.find("callstatic")!=-1:
+    elif funct.find("callstatic") != -1:
         instr_name = "CALLSTATIC"
 
-    elif funct.find("call")!=-1:
+    elif funct.find("call") != -1:
         instr_name = "CALL"
 
-    #Yul opcodes
-    
-    elif funct.find("pushtag")!=-1:
+    # Yul opcodes
+
+    elif funct.find("pushtag") != -1:
         instr_name = "PUSH [tag]"
 
-    elif funct.find("push#[$]")!=-1:
+    elif funct.find("push#[$]") != -1:
         instr_name = "PUSH #[$]"
 
-    elif funct.find("push[$]")!=-1:
+    elif funct.find("push[$]") != -1:
         instr_name = "PUSH [$]"
 
-    elif funct.find("pushdata")!=-1:
+    elif funct.find("pushdata") != -1:
         instr_name = "PUSH data"
 
-    elif funct.find("pushimmutable")!=-1:
+    elif funct.find("pushimmutable") != -1:
         instr_name = "PUSHIMMUTABLE"
 
+    return instr_name
+
+def generate_userdefname(u_var,funct,args,arity,init=False):
+    global user_def_counter
+    global already_defined_userdef
+
     #TODO: Add more opcodes
+    instr_name = funct_to_opcode(funct)
     
     if instr_name in already_defined_userdef:
         if not split_sto and not init and instr_name in ["SLOAD","MLOAD","KECCAK256","SHA3"]:
@@ -4892,6 +4925,7 @@ def replace_loads_by_sstores(storage_location, complementary_location, location)
     global gas_memory_op
     global discount_op
     global rule_applied
+    global rules_applied
     
     if location == "storage":
         store_ins = "sstore"
@@ -4934,11 +4968,11 @@ def replace_loads_by_sstores(storage_location, complementary_location, location)
 
                         gas_memory_op+=3
                     storage_location.pop(i+pos+1)
-                    discount_op+=1
+                    # discount_op+=1  @It may be replace by a DUP+SWAP
                     finish = True
 
                     rule_applied = True
-
+                    rules_applied.append(str(load)+"= "+str(elem[0]))
                     
                     for v in u_dict:
                         elem = u_dict[v]
@@ -4984,6 +5018,7 @@ def remove_store_recursive_dif(storage_location, location):
     global gas_memory_op
     global discount_op
     global rule_applied
+    global rules_applied
     
     if location == "storage":
         instruction = "sstore"
@@ -5026,6 +5061,7 @@ def remove_store_recursive_dif(storage_location, location):
                         gas_memory_op+=3
 
                     rule_applied = True
+                    rules_applied.append(str(elem[0])+" useless")
                     
                     remove_store_recursive_dif(storage_location,location)
                     finish = True
@@ -5042,6 +5078,8 @@ def remove_store_recursive_dif(storage_location, location):
                         j+=1
                         
                     if all_keccaks:
+                        rules_applied.append(str(storage_location[i+pos+1])+" useless")
+
                         storage_location.pop(i+pos+1)
                         discount_op+=1
                         msg = "[OPT]: Removed mstore mstore with KECCAK"
@@ -5050,6 +5088,7 @@ def remove_store_recursive_dif(storage_location, location):
 
                         rule_applied = True
 
+                        
                         remove_store_recursive_dif(storage_location,location)
                         finish = True
 
@@ -5078,7 +5117,8 @@ def remove_store_recursive_dif(storage_location, location):
                                 gas_memory_op+=3
                                
                             rule_applied = True
-                        
+                            rules_applied.append(str(elem[0])+" useless")
+                            
                             remove_store_recursive_dif(storage_location,location)
                             finish = True
                     
@@ -5091,6 +5131,7 @@ def remove_store_loads(storage_location, location):
     global gas_memory_op
     global discount_op
     global rule_applied
+    global rules_applied
     
     if storage_location == "storage":
         store_ins = "sstore"
@@ -5113,7 +5154,7 @@ def remove_store_loads(storage_location, location):
                     rest_instructions = storage_location[i+1:pos]
                     variables = list(map(lambda x: are_dependent(elem,x),rest_instructions))
 
-                    #Keccaks are consideredin the previous list
+                    #Keccaks are considered in the previous list
                     if True not in variables:
                         storage_location.pop(i)
                         discount_op+=1
@@ -5131,6 +5172,8 @@ def remove_store_loads(storage_location, location):
                             gas_memory_op+=3
 
                         rule_applied = True
+                        rules_applied.append(str(elem[0])+" of mload")
+
                         
                         remove_store_loads(storage_location,location)
         i+=1
@@ -5214,7 +5257,15 @@ def are_dependent_variables(v1,v2):
     # print(v2)
     # print(u_dict[v1][0])
     # print(u_dict[v2][0])
-    
+
+    if v1 == v2:
+        return False
+
+    if is_integer(v1)!=-1 and is_integer(v2)!=-1:
+        return False
+
+    if is_integer(v1)!=-1 or is_integer(v2)!=-1:
+        return True
     
     if v2 in u_dict[v1][0]:
         return True
@@ -5251,7 +5302,8 @@ def generate_dependences(storage_location, location):
             # print(predecessor)
             j = len(predecessor)-1
             already = False
-            while((j>=0) and not already):
+            # while((j>=0) and not already):
+            while(j>=0):
                 store = predecessor[j]
                 if store[0][-1].find(instruction)!=-1:
                     var_rest = store[0][0]
@@ -5264,6 +5316,8 @@ def generate_dependences(storage_location, location):
                             storage_dependences.append((j,i))
                             already = True
                         else:
+                            # print(elem)
+                            # print(store)
                             # print(are_dependent_variables(elem[0][0],store[0][0]))
                             if are_dependent_variables(elem[0][0],store[0][0]): #if they stored the same value but on index depends on the other
                             # store[0][0] in u_dict[elem[0][0]][0]:
@@ -5661,9 +5715,9 @@ def update_storage_sequences(removed_instructions):
             new_storage_order.append(ins)
             
     if memory_order != new_memory_order:
-        memdep = generate_dependences(new_memory_order,"storage")
+        memdep = generate_dependences(new_memory_order,"memory")
         memdep = simplify_dependencies(memdep)
-
+        
         memory_dep = memdep
         memory_order = new_memory_order
         

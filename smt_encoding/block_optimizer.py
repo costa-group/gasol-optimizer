@@ -36,7 +36,12 @@ class BlockOptimizer:
         full_encoding = FullEncoding(self._sms, self._flags, self._initial_idx)
         self._full_encoding = full_encoding
 
-        declared_functions, hard_constraints, soft_constraints = full_encoding.generate_full_encoding()
+        hard_constraints, soft_constraints = full_encoding.generate_full_encoding()
+
+        solver.assert_hard(hard_constraints)
+        solver.assert_soft(soft_constraints)
+
+        declared_functions = full_encoding.functions_declared()
 
         if self._flags.encode_terms.startswith("uninterpreted"):
             # Uninterpreted encoding needs to declare two sorts: one for evm elements (Sort.uninterpreted) and one
@@ -58,8 +63,6 @@ class BlockOptimizer:
             solver.set_logic("QF_IDL")
 
         solver.declare_function(*declared_functions)
-        solver.assert_hard(*hard_constraints)
-        solver.assert_soft(*soft_constraints)
         self._solver = solver
 
     def optimize_block(self) -> Tuple[OptimizeOutcome, float, List[AsmBytecode]]:
@@ -74,7 +77,8 @@ class BlockOptimizer:
     def generate_intermediate_files(self) -> None:
         pathlib.Path(paths.smt_encoding_path).mkdir(parents=True, exist_ok=True)
         with open(self._encoding_file, 'w') as f:
-            f.write(self._solver.to_smt2())
+            for sentence in self._solver.to_smt2():
+                print(sentence, file=f)
 
     def _rebuild_block_from_solver(self) -> List[AsmBytecode]:
         bounds = self._full_encoding._bounds

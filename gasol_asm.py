@@ -28,7 +28,7 @@ from smt_encoding.gasol_encoder import (execute_syrup_backend,
 from solution_generation.disasm_generation import (
     generate_sub_block_asm_representation_from_log)
 from solution_generation.solver_output_generation import obtain_solver_output
-from verification.sfs_verify import verify_block_from_list_of_sfs
+from verification.sfs_verify import verify_block_from_list_of_sfs, are_equals
 from verification.solver_solution_verify import (
     check_solver_output_is_correct)
 from solution_generation.optimize_from_sub_blocks import rebuild_optimized_asm_block
@@ -47,6 +47,12 @@ def init():
 
     global new_size
     new_size = 0
+
+    global new_n_instrs
+    new_n_instrs = 0
+
+    global prev_n_instrs
+    prev_n_instrs = 0
 
 
 def clean_dir():
@@ -127,7 +133,7 @@ def compute_original_sfs_with_simplifications(block: AsmBlock, parsed_args: Name
 # block id, returns the output given by the solver, the name given to that block and current gas associated
 # to that sequence.
 def optimize_block(sfs_dict, timeout, parsed_args: Namespace) -> List[Tuple[AsmBlock, OptimizeOutcome, float,
-                                                                            List[AsmBytecode], int, int]]:
+                                                                            List[AsmBytecode], int, int, List[str]]]:
 
     block_solutions = []
     # SFS dict of syrup contract contains all sub-blocks derived from a block after splitting
@@ -150,7 +156,7 @@ def optimize_block(sfs_dict, timeout, parsed_args: Namespace) -> List[Tuple[AsmB
         if parsed_args.backend:
             optimization_outcome, solver_time, optimized_asm = optimizer.optimize_block()
             block_solutions.append((original_block, optimization_outcome, solver_time,
-                                    optimized_asm, tout, initial_solver_bound))
+                                    optimized_asm, tout, initial_solver_bound, sfs_block['rules']))
         else:
             optimizer.generate_intermediate_files()
 
@@ -342,6 +348,7 @@ def optimize_isolated_asm_block(block_name,output_file, csv_file, parsed_args: N
             asm_block = old_block
 
         update_gas_count(old_block, asm_block)
+        update_length_count(old_block, asm_block)
         update_size_count(old_block, asm_block)
         asm_blocks.append(asm_block)
 
@@ -375,6 +382,14 @@ def update_size_count(old_block : AsmBlock, new_block : AsmBlock):
 
     previous_size += old_block.bytes_required
     new_size += new_block.bytes_required
+
+
+def update_length_count(old_block : AsmBlock, new_block : AsmBlock):
+    global prev_n_instrs
+    global new_n_instrs
+
+    prev_n_instrs += len(old_block.instructions)
+    new_n_instrs += len(new_block.instructions)
 
 
 # Due to intra block optimization, we need to be wary of those cases in which the optimized outcome is determined
@@ -422,14 +437,16 @@ def filter_optimized_blocks_by_intra_block_optimization(asm_sub_blocks, optimize
 
 
 def generate_statistics_info(original_block: AsmBlock, outcome: Optional[OptimizeOutcome], solver_time: float,
-                             optimized_asm: List[AsmBytecode], initial_bound: int, tout: int) -> Dict:
+                             optimized_asm: List[AsmBytecode], initial_bound: int, tout: int, rules: List[str]) -> Dict:
 
     block_name = original_block.block_name
     original_instr = ' '.join(original_block.instructions_to_optimize_plain())
 
     statistics_row = {"block_id": block_name, "previous_solution": original_instr, "timeout": tout,
                       "initial_n_instrs": initial_bound, 'initial_estimated_size': original_block.bytes_required,
-                      'initial_estimated_gas': original_block.gas_spent}
+                      'initial_estimated_gas': original_block.gas_spent, 'rules': ','.join(rules), 
+                      'initial_length': len(original_block.instructions_to_optimize_plain()),
+                      'saved_length': 0}
 
     # The outcome of the solver is unsat
     if outcome == OptimizeOutcome.unsat:
@@ -445,18 +462,19 @@ def generate_statistics_info(original_block: AsmBlock, outcome: Optional[Optimiz
     # The solver has returned a valid model
     else:
         shown_optimal = outcome == OptimizeOutcome.optimal
-        optimized_length = sum([instr.bytes_required for instr in optimized_asm])
+        optimized_size = sum([instr.bytes_required for instr in optimized_asm])
         optimized_gas = sum([instr.gas_spent for instr in optimized_asm])
-        initial_length = original_block.bytes_required
+        optimized_length = len(optimized_asm)
+        initial_size = original_block.bytes_required
         initial_gas = original_block.gas_spent
+        initial_length = len(original_block.instructions_to_optimize_plain())
 
-        statistics_row.update({"solver_time_in_sec": round(solver_time, 3), "saved_size": initial_length - optimized_length,
+        statistics_row.update({"solver_time_in_sec": round(solver_time, 3), "saved_size": initial_size - optimized_size,
                                "saved_gas": initial_gas - optimized_gas, "model_found": True, "shown_optimal": shown_optimal,
                                "solution_found": ' '.join([instr.to_plain() for instr in optimized_asm]),
-                               "optimized_n_instrs": len(optimized_asm),
-                               'optimized_estimated_size': sum([instr.bytes_required for instr in optimized_asm]),
-                               'optimized_estimated_gas': sum([instr.gas_spent for instr in optimized_asm]),
-                               'outcome': 'model'})
+                               "optimized_n_instrs": len(optimized_asm), 'optimized_length': optimized_length,
+                               'optimized_estimated_size': optimized_size, 'optimized_estimated_gas': optimized_gas,
+                               'outcome': 'model', 'saved_length': initial_length - optimized_length})
 
     return statistics_row
 
@@ -493,10 +511,10 @@ def optimize_asm_block_asm_format(block: AsmBlock, timeout: int, parsed_args: Na
         optimize_block(sfs_dict, timeout, parsed_args)
         return new_block, {}, []
 
-    for sub_block, optimization_outcome, solver_time, optimized_asm, tout, initial_solver_bound in optimize_block(sfs_dict, timeout, parsed_args):
+    for sub_block, optimization_outcome, solver_time, optimized_asm, tout, initial_solver_bound, rules in optimize_block(sfs_dict, timeout, parsed_args):
 
         statistics_info = generate_statistics_info(sub_block, optimization_outcome, solver_time, optimized_asm,
-                                                   initial_solver_bound, tout)
+                                                   initial_solver_bound, tout, rules)
 
         csv_statistics.append(statistics_info)
 
@@ -581,6 +599,7 @@ def optimize_asm_in_asm_format(file_name, output_file, csv_file, log_file, parse
 
             # Deployment size is not considered when measuring it
             update_gas_count(old_block, optimized_block)
+            update_length_count(old_block, optimized_block)
 
         new_contract.init_code = init_code_blocks
 
@@ -610,6 +629,7 @@ def optimize_asm_in_asm_format(file_name, output_file, csv_file, log_file, parse
                 run_code_blocks.append(optimized_block)
 
                 update_gas_count(old_block, optimized_block)
+                update_length_count(old_block, optimized_block)
                 update_size_count(old_block, optimized_block)
 
             new_contract.set_run_code(identifier, run_code_blocks)
@@ -632,12 +652,66 @@ def optimize_asm_in_asm_format(file_name, output_file, csv_file, log_file, parse
         df.to_csv(csv_file)
 
 
+def optimize_from_sfs(json_file: str, output_file: str, csv_file: str, parsed_args: Namespace):
+    block_name = 'isolated_block_sfs'
+
+    with open(json_file, 'r') as f:
+        sfs_block = json.load(f)
+
+    sfs_dict = {block_name: sfs_block}
+
+    csv_statistics = []
+    for original_block, optimization_outcome, solver_time, optimized_asm, tout, initial_solver_bound, rules \
+            in optimize_block(sfs_dict, parsed_args.tout, parsed_args):
+
+        statistics_info = generate_statistics_info(original_block, optimization_outcome, solver_time, optimized_asm,
+                                                   initial_solver_bound, tout, rules)
+
+        csv_statistics.append(statistics_info)
+
+        new_sfs_information, _ = compute_original_sfs_with_simplifications(original_block, parsed_args)
+        new_sfs_block = new_sfs_information["syrup_contract"][block_name + '_0']
+
+        eq, reason = are_equals(sfs_block, new_sfs_block)
+
+        final_block = original_block
+
+        if not eq:
+            print("Comparison failed, so initial block is kept")
+            print("\t[REASON]: " + reason)
+            print("")
+
+        elif block_has_been_optimized(original_block, optimized_asm, parsed_args.size):
+            final_block = deepcopy(original_block)
+            final_block.instructions = optimized_asm
+
+        update_gas_count(original_block, final_block)
+        update_length_count(original_block, final_block)
+        update_size_count(original_block, final_block)
+
+    if parsed_args.backend:
+        df = pd.DataFrame(csv_statistics)
+        df.to_csv(csv_file)
+        print("")
+        print("Initial sequence (basic block per line):")
+        print(original_block.to_plain_with_byte_number())
+        print("")
+        print("Optimized sequence (basic block per line):")
+        print(final_block.to_plain_with_byte_number())
+        with open(output_file, 'w') as f:
+            f.write(json.dumps(new_sfs_block))
+
+        df = pd.DataFrame(csv_statistics)
+        df.to_csv(csv_file)
+
 def final_file_names(parsed_args: argparse.Namespace) -> Tuple[str, str, str]:
     input_file_name = parsed_args.input_path.split("/")[-1].split(".")[0]
 
     if parsed_args.output_path is None:
         if parsed_args.block:
             output_file = input_file_name + "_optimized.txt"
+        elif parsed_args.sfs:
+            output_file = input_file_name + "_optimized.json"
         elif parsed_args.log_path is not None:
             output_file = input_file_name + "_optimized_from_log.json_solc"
         else:
@@ -667,9 +741,12 @@ def parse_encoding_args() -> Namespace:
 
     input = ap.add_argument_group('Input options')
 
-    input.add_argument('input_path', help='Path to input file that contains the code to optimize. Can be either asm or'
-                                          'plain instructions, with the bl flag enabled')
-    input.add_argument("-bl", "--block", help="Enable analysis of a single asm block", action = "store_true")
+    input.add_argument('input_path', help='Path to input file that contains the code to optimize. Can be either asm, '
+                                          'plain instructions or a json containing the SFS. The corresponding flag'
+                                          'must be enabled')
+    group_input = input.add_mutually_exclusive_group()
+    group_input.add_argument("-bl", "--block", help="Enable analysis of a single asm block", action = "store_true")
+    group_input.add_argument("-sfs", "--sfs", dest='sfs', help="Enable analysis of a single SFS", action="store_true")
 
     output = ap.add_argument_group('Output options')
 
@@ -770,6 +847,8 @@ if __name__ == '__main__':
     global new_gas
     global previous_size
     global new_size
+    global prev_n_instrs
+    global new_n_instrs
 
     init()
     clean_dir()
@@ -790,11 +869,12 @@ if __name__ == '__main__':
                 shutil.rmtree(paths.gasol_path, ignore_errors=True)
             exit(0)
 
-    if not parsed_args.block:
-        optimize_asm_in_asm_format(parsed_args.input_path, output_file, csv_file, log_file, parsed_args, parsed_args.tout)
-
-    else:
+    if parsed_args.block:
         optimize_isolated_asm_block(parsed_args.input_path, output_file, csv_file, parsed_args, parsed_args.tout)
+    elif parsed_args.sfs:
+        optimize_from_sfs(parsed_args.input_path, output_file, csv_file, parsed_args)
+    else:
+        optimize_asm_in_asm_format(parsed_args.input_path, output_file, csv_file, log_file, parsed_args, parsed_args.tout)
 
 
     y = dtimer()
@@ -819,9 +899,14 @@ if __name__ == '__main__':
         print("")
         print("Estimated initial size in bytes: " + str(previous_size))
         print("Estimated size optimized in bytes: " + str(new_size))
+        print("")
+        print("Initial number of instructions: " + str(prev_n_instrs))
+        print("Final number of instructions: " + str(new_n_instrs))
 
     else:
         print("")
         print("Estimated initial gas: "+str(previous_gas))
         print("")
         print("Estimated initial size in bytes: " + str(previous_size))
+        print("")
+        print("Initial number of instructions: " + str(new_n_instrs))

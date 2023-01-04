@@ -58,8 +58,9 @@ def traverse_tree_until_repeated(instr : Id_T, dependency_graph : Dict[Id_T, Lis
                                  number_of_instructions_to_execute : Dict[Id_T, int],
                                  instructions_dependent_prev_dict : Dict[Id_T, set]) -> int:
     if instr in repeated_instructions:
-        # A store instruction is only counted once, so if repeated, just ignore it
-        if 'STORE' in instr:
+        # TODO: instead of assigning 0 to memory instrs, we should study the paths and determine whether it is
+        # TODO: direct (no memory dependencies in between) o indirect
+        if 'STORE' in instr or 'KECCAK' in instr or 'LOAD' in instr:
             return 0
         else:
             return 1
@@ -230,7 +231,7 @@ def generate_first_position_instr_cannot_appear(b0 : int, stack_elem_to_id : Dic
 
 class InstructionBoundsWithDependencies(InstructionBounds):
 
-    def __init__(self, instructions : List[UninterpretedInstruction], order_tuples : List[Tuple[Id_T, Id_T]],
+    def __init__(self, instructions : List[UninterpretedInstruction], order_tuples : List[List[Id_T]],
                  final_stack : List[str], b0 : int, initial_idx: int = 0):
 
         stack_element_to_id_dict : Dict[str, Id_T] = {instruction.output_stack : instruction.id

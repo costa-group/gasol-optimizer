@@ -8,7 +8,7 @@ from abc import abstractmethod
 from smt_encoding.solver.solver import Solver, Function, OptimizeOutcome
 from smt_encoding.constraints.assertions import AssertHard, AssertSoft, Formula_T
 from smt_encoding.constraints.function import Sort, ExpressionReference
-from typing import List, Dict, Optional, Union
+from typing import List, Dict, Optional, Union, Iterable
 
 
 sort_to_str = {Sort.integer: 'Int', Sort.boolean: 'Bool', Sort.uninterpreted: 'S', Sort.uninterpreted_theta: 'T'}
@@ -56,8 +56,8 @@ class SolverFromExecutable(Solver):
         self._logic = None
         self._options = dict()
         self._sorts = []
-        self._soft: List[AssertSoft] = []
-        self._hard: List[AssertHard] = []
+        self._soft = None
+        self._hard = None
         self._functions: Dict[str, Function] = dict()
         self._model = None
         self._time = 0
@@ -71,11 +71,11 @@ class SolverFromExecutable(Solver):
     def declare_sort(self, sort_name: Sort) -> None:
         self._sorts.append(sort_name)
 
-    def assert_hard(self, *hard_constraints: AssertHard):
-        self._hard.extend(hard_constraints)
+    def assert_hard(self, hard_constraints: Iterable):
+        self._hard = hard_constraints
 
-    def assert_soft(self, *soft_constraint: AssertSoft):
-        self._soft.extend(soft_constraint)
+    def assert_soft(self, soft_constraint: Iterable):
+        self._soft = soft_constraint
 
     def declare_function(self, *functions: Function):
         for function in functions:
@@ -97,22 +97,21 @@ class SolverFromExecutable(Solver):
     def command_line(self) -> str:
         pass
 
-    def to_smt2(self) -> str:
-        sentences = [f"(set-logic {self._logic})"]
-        sentences.extend(f"(set-option :{option} {value})" for option, value in self._options.items())
-        sentences.extend(f"(declare-sort {sort_to_str[sort]} 0)" for sort in self._sorts)
-        sentences.extend(f"(declare-fun {function.name} ({' '.join((sort_to_str[sort] for sort in function.domain))}) "
-                         f"{sort_to_str[function.range]})" for function in self._functions.values())
-        sentences.extend(f"(assert {translate_assert_hard(hard_constraint)})" for hard_constraint in self._hard)
-        sentences.extend(self.write_soft(soft_constraint) for soft_constraint in self._soft)
+    def to_smt2(self) -> Iterable:
+        yield f"(set-logic {self._logic})"
+        yield from (f"(set-option :{option} {value})" for option, value in self._options.items())
+        yield from (f"(declare-sort {sort_to_str[sort]} 0)" for sort in self._sorts)
+        yield from (f"(declare-fun {function.name} ({' '.join((sort_to_str[sort] for sort in function.domain))}) "
+                    f"{sort_to_str[function.range]})" for function in self._functions.values())
+        yield from (f"(assert {translate_assert_hard(hard_constraint)})" for hard_constraint in self._hard)
+        yield from (self.write_soft(soft_constraint) for soft_constraint in self._soft)
         cost_sentence = self.cost_function()
 
         if cost_sentence is not None:
-            sentences.append(cost_sentence)
+            yield cost_sentence
 
-        sentences.append("(check-sat)")
-        sentences.extend(self.load_model())
-        return '\n'.join(sentences)
+        yield "(check-sat)"
+        yield from self.load_model()
 
     @abstractmethod
     def optimization_outcome(self) -> OptimizeOutcome:
@@ -127,7 +126,8 @@ class SolverFromExecutable(Solver):
 
         smt2_format = self.to_smt2()
         with open(self._file_path, 'w') as f:
-            f.write(smt2_format)
+            for sentence in smt2_format:
+                print(sentence, file=f)
 
         model, total_time = run_and_measure_command(self.command_line())
         self._model = model

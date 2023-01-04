@@ -20,7 +20,7 @@ def happens_before(current_id: Id_T, prev_id: Id_T, dependency_graph: Dict[Id_T,
 # We generate a dict that given the id of an instruction, returns
 # the id of instructions that must be executed to obtain its input and the corresponding
 # aj. Note that aj must be only assigned when push, in other cases we just set aj value to -1.
-def generate_dependency_graph_minimum(uninterpreted_instr : List[UninterpretedInstruction], order_tuples : List[Tuple[Id_T, Id_T]],
+def generate_dependency_graph_minimum(uninterpreted_instr : List[UninterpretedInstruction], order_tuples : List[List[Id_T]],
                                       stack_elem_to_id : Dict[str, Id_T]) -> Dict[Id_T, List[Id_T]]:
     dependency_graph = {}
     for instr in uninterpreted_instr:
@@ -54,7 +54,7 @@ def generate_dependency_graph_minimum(uninterpreted_instr : List[UninterpretedIn
 
 
 def generate_dependency_graph_only_memory(uninterpreted_instr: List[UninterpretedInstruction],
-                                          order_tuples: List[Tuple[Id_T, Id_T]]) -> Dict[Id_T, List[Id_T]]:
+                                          order_tuples: List[List[Id_T]]) -> Dict[Id_T, List[Id_T]]:
     dependency_graph = {instr.id: [] for instr in uninterpreted_instr}
     # We need to consider also the order given by the tuples
     for id1, id2 in order_tuples:
@@ -65,7 +65,7 @@ def generate_dependency_graph_only_memory(uninterpreted_instr: List[Uninterprete
     return dependency_graph
 
 
-def generate_dependency_graph_transitive_closure(uninterpreted_instr : List[UninterpretedInstruction], order_tuples : List[Tuple[Id_T, Id_T]],
+def generate_dependency_graph_transitive_closure(uninterpreted_instr : List[UninterpretedInstruction], order_tuples : List[List[Id_T]],
                                                  stack_elem_to_id : Dict[str, Id_T]) -> Dict[Id_T, List[Id_T]]:
     """
     Generates a dict that given an element f2, returns ALL the elements f1 such that f1 sqsubset f2

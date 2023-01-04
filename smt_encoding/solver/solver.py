@@ -1,5 +1,5 @@
 from abc import abstractmethod, ABC
-from typing import Any, Union
+from typing import Any, Union, Iterable
 from smt_encoding.constraints.function import Function
 from smt_encoding.constraints.assertions import AssertHard, AssertSoft
 from enum import Enum, unique
@@ -43,11 +43,11 @@ class Solver(ABC):
         pass
 
     @abstractmethod
-    def assert_hard(self, *hard_constraints: AssertHard):
+    def assert_hard(self, hard_constraints: Iterable):
         pass
 
     @abstractmethod
-    def assert_soft(self, *soft_constraint: AssertSoft):
+    def assert_soft(self, soft_constraint: Iterable):
         pass
 
     @abstractmethod

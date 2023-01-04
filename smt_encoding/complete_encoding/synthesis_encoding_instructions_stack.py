@@ -1,6 +1,6 @@
 from smt_encoding.complete_encoding.synthesis_functions import SynthesisFunctions
 from smt_encoding.constraints.assertions import AssertHard
-from typing import List, Callable
+from typing import List, Callable, Generator
 from smt_encoding.instructions.encoding_instruction import ThetaValue
 from smt_encoding.instructions.instruction_bounds import InstructionBounds
 from smt_encoding.instructions.encoding_instruction import EncodingInstruction
@@ -8,7 +8,7 @@ from smt_encoding.instructions.encoding_instruction import EncodingInstruction
 
 def stack_constraints_with_bounds(func: Callable[..., AssertHard], theta_val: ThetaValue,
                                   bounds: InstructionBounds, sf: SynthesisFunctions, bs: int,
-                                  *args, **kwargs) -> List[AssertHard]:
+                                  *args, **kwargs) -> Generator:
     """
     Given a function that generates a hard constraint for a position in the sequence and the corresponding bounds,
     generates a list of hard constraints for each position within the bounds.
@@ -23,9 +23,8 @@ def stack_constraints_with_bounds(func: Callable[..., AssertHard], theta_val: Th
     :param kwargs: kwargs params passed to func
     :return: a list with a hard constraint for each position within the bounds
     """
-    return [func(pos, theta_val, sf, bs, *args, **kwargs) for pos in range(bounds.lower_bound_theta_value(theta_val),
-                                                                           bounds.upper_bound_theta_value(
-                                                                               theta_val) + 1)]
+    yield from (func(pos, theta_val, sf, bs, *args, **kwargs) for pos in range(bounds.lower_bound_theta_value(theta_val),
+                                                                               bounds.upper_bound_theta_value(theta_val) + 1))
 
 
 class EncodingForStack:
@@ -45,10 +44,9 @@ class EncodingForStack:
         self._kwargs[instruction_id] = kwargs
 
     def encode_instruction(self, instruction: EncodingInstruction, bounds: InstructionBounds,
-                           sf: SynthesisFunctions, bs: int) -> List[AssertHard]:
+                           sf: SynthesisFunctions, bs: int) -> Generator:
         instruction_id = instruction.id
         if instruction_id not in self._instructions_registered:
             raise ValueError(instruction_id + " has no encoding function linked")
-        return stack_constraints_with_bounds(self._encoding_function[instruction_id],
-                                             instruction.theta_value, bounds, sf, bs, *self._args[instruction_id],
-                                             **self._kwargs[instruction_id])
+        yield from stack_constraints_with_bounds(self._encoding_function[instruction_id],instruction.theta_value,
+                                                 bounds, sf, bs, *self._args[instruction_id], **self._kwargs[instruction_id])

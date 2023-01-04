@@ -82,3 +82,7 @@ class InstructionFactory:
 
     def theta_value_to_instr(self) -> Dict[ThetaValue, EncodingInstruction]:
         return self._theta_to_instr
+
+    @property
+    def next_theta_value(self) -> int:
+        return self._next_theta_value

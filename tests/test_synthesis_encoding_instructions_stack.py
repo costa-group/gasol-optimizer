@@ -25,7 +25,7 @@ class TestSynthesisConstraints(unittest.TestCase):
         bounds = DumbInstructionBounds(5, 9)
         sf = SynthesisFunctions(dict())
         hard_constraints = encoding_factory.encode_instruction(push_basic, bounds, sf, 2)
-        self.assertEqual(len(hard_constraints), 5)
+        self.assertEqual(len(list(hard_constraints)), 5)
 
     def test_push_basic_encoding(self):
         push_basic = PushBasic(0)
@@ -50,7 +50,7 @@ class TestSynthesisConstraints(unittest.TestCase):
                                                                     add_not(other_sf.u(1, 2)), other_sf.u(0, 3),
                                                                     add_eq(other_sf.x(0, 3), other_sf.a(2)),
                                                                     move(other_sf, 2, 0, 0, 1))))]
-        self.assertListEqual(hard_constraints, expected_hard_constraints)
+        self.assertListEqual(list(hard_constraints), expected_hard_constraints)
         self.assertListEqual(sf.created_stack_vars(), other_sf.created_stack_vars())
         self.assertListEqual(sf.created_functions(), other_sf.created_functions())
 
@@ -74,7 +74,7 @@ class TestSynthesisConstraints(unittest.TestCase):
                                                                     move(other_sf, 5, 1, 1, 0),
                                                                     move(other_sf, 5, 3, 6, 0))))]
 
-        self.assertListEqual(hard_constraints, expected_hard_constraints)
+        self.assertListEqual(list(hard_constraints), expected_hard_constraints)
         self.assertListEqual(sf.created_stack_vars(), other_sf.created_stack_vars())
         self.assertListEqual(sf.created_functions(), other_sf.created_functions())
 
@@ -99,7 +99,7 @@ class TestSynthesisConstraints(unittest.TestCase):
                                                                                              other_sf.stack_var("s_1")),
                                                                     add_not(other_sf.u(4, 5)),
                                                                     move(other_sf, 4, 1, 4, -1))))]
-        self.assertListEqual(hard_constraints, expected_hard_constraints)
+        self.assertListEqual(list(hard_constraints), expected_hard_constraints)
         self.assertListEqual(sf.created_stack_vars(), other_sf.created_stack_vars())
         self.assertListEqual(sf.created_functions(), other_sf.created_functions())
 
@@ -126,7 +126,7 @@ class TestSynthesisConstraints(unittest.TestCase):
                                                                     add_eq(other_sf.x(0, 6), other_sf.stack_var('s_2')),
                                                                     move(other_sf, 5, 0, -1, 1))))]
 
-        self.assertListEqual(hard_constraints, expected_hard_constraints)
+        self.assertListEqual(list(hard_constraints), expected_hard_constraints)
         self.assertListEqual(sf.created_stack_vars(), other_sf.created_stack_vars())
         self.assertListEqual(sf.created_functions(), other_sf.created_functions())
 
