@@ -1662,15 +1662,14 @@ def generate_storage_info(instructions,source_stack,simplification=True):
 
     stdep = generate_dependences(storage_order,"storage")
 
-    stdep = simplify_dependencies(stdep)
-
     msg = "Storage dep: "+str(stdep)
     check_and_print_debug_info(debug, msg)
 
-    stdep = simplify_dependencies(stdep)
+    if len(stdep)< 300:
+        stdep = simplify_dependencies(stdep)
 
-    msg = "Storage dep simplified: "+str(stdep)
-    check_and_print_debug_info(debug, msg)
+        msg = "Storage dep simplified: "+str(stdep)
+        check_and_print_debug_info(debug, msg)
     
     if simplification:
         simp = True
@@ -1687,17 +1686,15 @@ def generate_storage_info(instructions,source_stack,simplification=True):
     check_and_print_debug_info(debug, msg)
         
     memdep = generate_dependences(memory_order,"memory")
-
-
-    memdep = simplify_dependencies(memdep)
     
     msg = "Memory dep: "+str(memdep)
     check_and_print_debug_info(debug, msg)
-    
-    memdep = simplify_dependencies(memdep)
 
-    msg = "Memory dep simplified: "+str(memdep)
-    check_and_print_debug_info(debug, msg)
+    if len(memdep) < 300:
+        memdep = simplify_dependencies(memdep)
+
+        msg = "Memory dep simplified: "+str(memdep)
+        check_and_print_debug_info(debug, msg)
     
     s1= compute_clousure(stdep)
     m1 = compute_clousure(memdep)
