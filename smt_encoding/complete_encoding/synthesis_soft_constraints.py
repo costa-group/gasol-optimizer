@@ -45,14 +45,17 @@ def soft_constraints_grouped_by_weight(sf: SynthesisFunctions, b0: int, weight_d
     disjoint_sets = _generate_disjoint_sets_from_cost(instr_costs)
     previous_cost = 0
     theta_or_variables = []
+    first_set = True
 
     for cost in disjoint_sets:
         # We skip the first set of instructions, as they have
         # no soft constraint associated. Nevertheless, we add
         # opcodes with cost 0 to the set of variables till p
-        if cost == 0:
+        if first_set:
             for instr in disjoint_sets[cost]:
                 theta_or_variables.append(instr)
+            previous_cost = cost
+            first_set = False
             continue
 
         wi = cost - previous_cost
