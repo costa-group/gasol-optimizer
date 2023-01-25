@@ -388,8 +388,8 @@ def update_length_count(old_block : AsmBlock, new_block : AsmBlock):
     global prev_n_instrs
     global new_n_instrs
 
-    prev_n_instrs += len(old_block.instructions)
-    new_n_instrs += len(new_block.instructions)
+    prev_n_instrs += len([True for instruction in old_block.instructions if instruction.disasm != 'tag'])
+    new_n_instrs += len([True for instruction in new_block.instructions if instruction.disasm != 'tag'])
 
 
 # Due to intra block optimization, we need to be wary of those cases in which the optimized outcome is determined
