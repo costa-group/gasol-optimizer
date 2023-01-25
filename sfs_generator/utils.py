@@ -231,7 +231,10 @@ def get_ins_size(op_name, val = None, address_length = 4):
         return 1 + 20
     elif op_name == "PUSHIMMUTABLE":
         return 1 + 32
-    elif not op_name.startswith("PUSH") or op_name == "tag":
+    # JUMPDEST are already included in the json_solc file, so tags do not count either in size or gas
+    elif op_name == "tag":
+        return 0
+    elif not op_name.startswith("PUSH"):
         return 1
     else:
         raise ValueError("Opcode not recognized", op_name)
