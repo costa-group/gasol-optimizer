@@ -387,6 +387,7 @@ def search_for_value_aux(var, instructions,source_stack,level,evaluate = True):
     global s_dict
     global u_counter
     global u_dict
+    global rule_applied
     global rules_applied
     global rule
     
@@ -421,7 +422,9 @@ def search_for_value_aux(var, instructions,source_stack,level,evaluate = True):
             else:
                 val = new_vars[0]
             update_unary_func(funct,var,new_vars[0],evaluate)
-            
+            if rule_applied:
+                rules_applied.append(rule)
+                rule = ""
         else:
 
             if new_vars[0] not in zero_ary and new_vars[0].find("gas")==-1 and new_vars[0].find("timestamp")==-1:
@@ -430,7 +433,9 @@ def search_for_value_aux(var, instructions,source_stack,level,evaluate = True):
             else:
                 val = new_vars[0]
             update_unary_func(funct,var,val,evaluate)
-            
+            if rule_applied:
+                rules_applied.append(rule)
+                rule = ""
     else:
     
         u_var = create_new_svar()
