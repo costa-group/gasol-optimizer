@@ -146,7 +146,6 @@ class AsmBlock:
     def instructions_final_plain(self) -> List[str]:
         return [instruction.to_plain() for instruction in self.instructions_final_bytecode()]
 
-
     @property
     def bytes_required(self) -> int:
         return sum([instruction.bytes_required for instruction in self.instructions])
@@ -154,6 +153,10 @@ class AsmBlock:
     @property
     def gas_spent(self) -> int:
         return sum([instruction.gas_spent for instruction in self.instructions])
+
+    @property
+    def length(self) -> int:
+        return len(self.instructions)
 
     def get_contract_name(self):
         return self.contract_name

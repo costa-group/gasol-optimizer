@@ -479,12 +479,30 @@ def generate_statistics_info(original_block: AsmBlock, outcome: Optional[Optimiz
     return statistics_row
 
 
-def block_has_been_optimized(original_block: AsmBlock, optimized_asm: List[AsmBytecode], size_criterion: bool) -> bool:
+def improves_criterion(saved_criterion: int, *saved_other):
+    if saved_criterion > 0:
+        return True
+    elif saved_criterion == 0:
+        any_improves = False
+        for crit in saved_other:
+            if crit > 0:
+                any_improves = True
+            elif crit < 0:
+                return False
+        return any_improves
+    else:
+        return False
+
+
+def block_has_been_optimized(original_block: AsmBlock, optimized_asm: List[AsmBytecode],
+                             size_criterion: bool, length_criterion: bool) -> bool:
     saved_size = original_block.bytes_required - sum([instr.bytes_required for instr in optimized_asm])
     saved_gas = original_block.gas_spent - sum([instr.gas_spent for instr in optimized_asm])
+    saved_length = original_block.length - len(optimized_asm)
 
-    return (not size_criterion and (saved_gas > 0 or (saved_gas == 0 and saved_size > 0))) or \
-           (size_criterion and (saved_size > 0 or (saved_size == 0 and saved_gas > 0)))
+    return (size_criterion and improves_criterion(saved_size, saved_gas)) or \
+           (length_criterion and improves_criterion(saved_length, saved_gas, saved_size)) or \
+           (not size_criterion and not length_criterion and improves_criterion(saved_gas, saved_size))
 
 
 # Given an asm_block and its contract name, returns the asm block after the optimization
@@ -521,7 +539,7 @@ def optimize_asm_block_asm_format(block: AsmBlock, timeout: int, parsed_args: Na
         # Only check if the new block is considered if the solver has generated a new one
         if optimization_outcome == OptimizeOutcome.non_optimal or optimization_outcome == OptimizeOutcome.optimal:
             sub_block_name = sub_block.block_name
-            if block_has_been_optimized(sub_block, optimized_asm, parsed_args.size):
+            if block_has_been_optimized(sub_block, optimized_asm, parsed_args.size, parsed_args.length):
                 optimized_blocks[sub_block_name] = optimized_asm
                 # log_dicts[sub_block_name] = generate_solution_dict(solver_output)
             else:
@@ -681,7 +699,8 @@ def optimize_from_sfs(json_file: str, output_file: str, csv_file: str, parsed_ar
             print("\t[REASON]: " + reason)
             print("")
 
-        elif block_has_been_optimized(original_block, optimized_asm, parsed_args.size):
+        elif (optimization_outcome == OptimizeOutcome.optimal or optimization_outcome == OptimizeOutcome.optimal) \
+                and block_has_been_optimized(original_block, optimized_asm, parsed_args.size, parsed_args.length):
             final_block = deepcopy(original_block)
             final_block.instructions = optimized_asm
 
