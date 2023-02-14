@@ -1,4 +1,3 @@
-from smt_encoding.encoding_stack_instructions import pop_encoding
 from smt_encoding.instructions.basic_instruction import BasicInstruction
 
 
