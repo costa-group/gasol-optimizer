@@ -421,6 +421,7 @@ def search_for_value_aux(var, instructions,source_stack,level,evaluate = True):
                 val = int(new_vars[0])
             else:
                 val = new_vars[0]
+
             update_unary_func(funct,var,new_vars[0],evaluate)
             if rule_applied:
                 rules_applied.append(rule)
@@ -717,6 +718,10 @@ def get_involved_vars(instr,var):
     elif instr.find("timestamp")!=-1:
         var_list.append(instr)
         funct =  instr
+
+    elif instr.find("prevrandao")!=-1:
+        var_list.append("prevrandao")
+        funct =  "prevrandao"
 
     elif instr.find("msize")!=-1:
         var_list.append("msize")
@@ -1154,10 +1159,6 @@ def get_involved_vars(instr,var):
     elif instr.find("difficulty")!=-1:
         var_list.append("difficulty")
         funct =  "difficulty"
-
-    elif instr.find("prevrandao")!=-1:
-        var_list.append("prevrandao")
-        funct =  "prevrandao"
 
     elif instr.find("basefee")!=-1:
         var_list.append("basefee")
@@ -2095,7 +2096,7 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
 
     #print(paths.json_path+"/"+ block_nm + "_input.json")
     rule_applied = False
-        
+    
     return split_by,""
 
 def get_not_used_stack_variables(new_ss,new_ts,total_inpt_vars):
@@ -2200,7 +2201,7 @@ def build_userdef_instructions():
         if arity_exp ==0 or arity_exp == 1:
             funct = args_exp[1]
             args = args_exp[0]
-            
+
             is_new, obj = generate_userdefname(u_var,funct,[args],arity_exp)
 
             
@@ -2309,6 +2310,9 @@ def funct_to_opcode(funct: str) -> Optional[str]:
     elif funct.find("%") != -1:
         instr_name = "MOD"
 
+    elif funct.find("prevrandao") != -1:
+        instr_name = "PREVRANDAO"
+        
     elif funct.find("and") != -1:
         instr_name = "AND"
 
@@ -2399,9 +2403,6 @@ def funct_to_opcode(funct: str) -> Optional[str]:
 
     elif funct.find("difficulty") != -1:
         instr_name = "DIFFICULTY"
-
-    elif funct.find("prevrandao") != -1:
-        instr_name = "PREVRANDAO"
 
     elif funct.find("basefee") != -1:
         instr_name = "BASEFEE"
