@@ -1681,7 +1681,7 @@ def generate_storage_info(instructions,source_stack,simplification=True):
         simp = True
         while(simp):
             simp = simplify_memory(memory_order, storage_order, "memory")
-
+            
     memory_order = list(filter(lambda x: type(x) == tuple, memory_order))    
 
     unify_loads_instructions(memory_order, "memory")
@@ -1690,7 +1690,10 @@ def generate_storage_info(instructions,source_stack,simplification=True):
 
     msg = "Memory order: "+str(memory_order)
     check_and_print_debug_info(debug, msg)
-        
+
+
+    print(memory_order)
+    
     memdep = generate_dependences(memory_order,"memory")
     
     msg = "Memory dep: "+str(memdep)
@@ -5253,11 +5256,15 @@ def simplify_memory(storage_location, complementary_location, location):
 
 
 def are_dependent_variables(v1,v2):
-    # print("AREDEPENDENTVARIABLES")
-    # print(v1)
-    # print(v2)
+    print("AREDEPENDENTVARIABLES")
+    print(v1)
+    print(v2)
+    print(u_dict)
     # print(u_dict[v1][0])
     # print(u_dict[v2][0])
+
+    exp_v1 = (v1) if v1 not in u_dict.keys() else u_dict[v1][0]
+    exp_v2 = (v2) if v2 not in u_dict.keys() else u_dict[v2][0]
 
     if v1 == v2:
         return False
@@ -5268,13 +5275,13 @@ def are_dependent_variables(v1,v2):
     if is_integer(v1)!=-1 or is_integer(v2)!=-1:
         return True
     
-    if v2 in u_dict[v1][0]:
+    if v2 in exp_v1:
         return True
-    if v1 in u_dict[v2][0]:
+    if v1 in exp_v2:
         return True
 
-    for v in u_dict[v1][0]:
-        if v in u_dict[v2][0]:
+    for v in exp_v1:
+        if v in exp_v2:
             return True
     
     return False
