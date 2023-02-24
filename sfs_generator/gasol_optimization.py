@@ -1690,9 +1690,6 @@ def generate_storage_info(instructions,source_stack,simplification=True):
 
     msg = "Memory order: "+str(memory_order)
     check_and_print_debug_info(debug, msg)
-
-
-    print(memory_order)
     
     memdep = generate_dependences(memory_order,"memory")
     
@@ -5256,10 +5253,10 @@ def simplify_memory(storage_location, complementary_location, location):
 
 
 def are_dependent_variables(v1,v2):
-    print("AREDEPENDENTVARIABLES")
-    print(v1)
-    print(v2)
-    print(u_dict)
+    # print("AREDEPENDENTVARIABLES")
+    # print(v1)
+    # print(v2)
+    # print(u_dict)
     # print(u_dict[v1][0])
     # print(u_dict[v2][0])
 
