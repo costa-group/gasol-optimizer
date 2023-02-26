@@ -1,10 +1,7 @@
-import copy
-
 from smt_encoding.complete_encoding.synthesis_full_encoding import FullEncoding, SMS_T, Namespace, Sort
 from smt_encoding.solver.solver import Solver, OptimizeOutcome
 from smt_encoding.solver.oms_executable import OMSExecutable
 from smt_encoding.solver.z3_executable import Z3Executable
-from sfs_generator.asm_bytecode import AsmBytecode
 from typing import List, Tuple
 import global_params.paths as paths
 import pathlib
