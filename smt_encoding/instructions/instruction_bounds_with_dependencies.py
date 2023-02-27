@@ -6,143 +6,137 @@ from typing import Tuple, Dict, List, Set
 from smt_encoding.instructions.instruction_dependencies import generate_dependency_graph_minimum
 from smt_encoding.instructions.instruction_bounds import InstructionBounds
 
-# Given an instruction, a dict that links each instruction to a lower bound to the number of instructions
-# # needed to obtain the output from that dict, and another dict
-# that links each instruction to the previous instructions needed to execute that instruction,
-# updates both dicts for that instruction and returns the corresponding values associated to the instruction.
-def generate_lower_bound_from_instr(instr : Id_T, number_of_instructions_to_execute : Dict[Id_T, int], previous_values : Dict[Id_T, set],
-                                dependency_graph : Dict[Id_T, List[Id_T]]) -> Tuple[int, set]:
+
+def iterative_topological_sort(dependency_graph : Dict[Id_T, List[Id_T]], start:Id_T):
+    seen = set()
+    stack = []    # path variable is gone, stack and order are new
+    order = []    # order will be in reverse order at first
+    q = [start]
+    while q:
+        v = q.pop()
+        if v not in seen:
+            seen.add(v)
+            q.extend(dependency_graph[v])
+
+            while stack and v not in dependency_graph[stack[-1]]:
+                order.append(stack.pop())
+            stack.append(v)
+
+    return stack + order[::-1]   # new return value!
+
+
+def toposort_instr_dependencies(dependency_graph : Dict[Id_T, List[Id_T]]) -> List[Id_T]:
+    maximal_elements = list(set(instr_id for instr_id in dependency_graph).difference(
+        set(instr_id for id_list in dependency_graph.values() for instr_id in id_list)))
+    extended_dependency_graph = copy.deepcopy(dependency_graph)
+
+    # We add a "dummy element" to function as the initial value
+    extended_dependency_graph['dummy'] = maximal_elements
+    topo_order = iterative_topological_sort(extended_dependency_graph, 'dummy')
+    topo_order.pop(0)
+    return topo_order
+
+
+def number_instr_needed(instr_id: Id_T, is_direct_dep: bool, number_of_instructions_to_execute: Dict[Id_T, int],
+                        repeated_instructions: Dict[Id_T, bool],
+                        instructions_dependent_prev_dict: Dict[Id_T, Dict[Id_T, bool]],
+                        stack_elem_to_id: Dict[str, Id_T], dependency_graph: Dict[Id_T, List[Id_T]],
+                        instr_by_id_dict: Dict[Id_T, UninterpretedInstruction]) -> int:
+
+    def needed_instrs_from_id(other_instr_id: Id_T, is_direct: bool) -> int:
+        # Empty intersection: hence, just add number of instructions to execute
+        if len(set(repeated_instructions.keys()).intersection(instructions_dependent_prev_dict[other_instr_id].keys())) == 0:
+            # Update dict with visited instructions
+            repeated_instructions.update(instructions_dependent_prev_dict[other_instr_id])
+            return number_of_instructions_to_execute[other_instr_id]
+        else:
+            return number_instr_needed(other_instr_id, is_direct, number_of_instructions_to_execute, repeated_instructions,
+                                       instructions_dependent_prev_dict, stack_elem_to_id, dependency_graph,
+                                       instr_by_id_dict)
 
     # Base case: it has been already analyzed, so we return the values associated.
-    if instr in previous_values:
-        return number_of_instructions_to_execute[instr], previous_values[instr]
+    if instr_id in repeated_instructions:
+        was_direct_dep = repeated_instructions[instr_id]
 
-    number_of_instructions_needed = 0
-    instructions_dependency = set()
+        # Update: if any it was already direct or now it has become direct, we store it
+        repeated_instructions[instr_id] = was_direct_dep or is_direct_dep
 
-    # Recursive case: we obtain the output for each previous instruction and update the values
-    for previous_instr in dependency_graph[instr]:
-
-        previous_number_of_instr_needed, previous_instructions_dependency = \
-            generate_lower_bound_from_instr(previous_instr, number_of_instructions_to_execute,
-                                        previous_values, dependency_graph)
-
-        # We need the number of instructions needed for previous instruction plus one (executing that instruction)
-        number_of_instructions_needed += previous_number_of_instr_needed + 1
-
-        # We need to add previous instruction to its associated values, as it wasn't added yet
-        previous_instructions = previous_instructions_dependency | {previous_instr}
-
-        # See detailed explanation for more information to understand this step
-        repeated_instructions = instructions_dependency.intersection(previous_instructions)
-
-        # Maximal elements are those that don't appear as a previous instruction for any of the repeated instructions
-        maximal_elements = repeated_instructions.difference(set().union(*[previous_values[repeated_instr]
-                                                                          for repeated_instr in repeated_instructions]))
-        for repeated_instr in maximal_elements:
-
-            # If it is the maximal representative, then the necessary number of previous instructions is 0
-            # (as it could have been duplicated)
-            number_of_instructions_needed -= number_of_instructions_to_execute[repeated_instr]
-
-        # We update instructions_dependency
-        instructions_dependency = instructions_dependency.union(previous_instructions)
-
-    number_of_instructions_to_execute[instr] = number_of_instructions_needed
-    previous_values[instr] = instructions_dependency
-
-    return number_of_instructions_needed, instructions_dependency
-
-
-def traverse_tree_until_repeated(instr : Id_T, dependency_graph : Dict[Id_T, List[Id_T]],
-                                 repeated_instructions: Set[Id_T],
-                                 number_of_instructions_to_execute : Dict[Id_T, int],
-                                 instructions_dependent_prev_dict : Dict[Id_T, set]) -> int:
-    if instr in repeated_instructions:
-        # TODO: instead of assigning 0 to memory instrs, we should study the paths and determine whether it is
-        # TODO: direct (no memory dependencies in between) o indirect
-        if 'STORE' in instr or 'KECCAK' in instr or 'LOAD' in instr:
-            return 0
-        else:
+        # We only add one if current occurrence of instr was already direct (i.e. occurred a subexpression)
+        # and current one is too
+        if was_direct_dep and is_direct_dep:
             return 1
-
-    # No matter the situation in which we find ourselves, current instruction will be considered
-    repeated_instructions.update({instr})
-
-    if len(dependency_graph[instr]) == 0:
-        return 1
-
-    previous_instructions = instructions_dependent_prev_dict[instr]
-
-    # If the previous instructions contain no repetitions, there is no need to dup
-    if len(repeated_instructions.intersection(instructions_dependent_prev_dict[instr])) == 0:
-        repeated_instructions.update(previous_instructions)
-        return number_of_instructions_to_execute[instr] + 1
-
-    # Otherwise, we need to add the number of instructions from all children
-    return sum(traverse_tree_until_repeated(prev_instr, dependency_graph, repeated_instructions,
-                                            number_of_instructions_to_execute, instructions_dependent_prev_dict)
-               for prev_instr in dependency_graph[instr]) + 1
-
-
-def generate_prev_instr_from_instr(instr : Id_T, number_of_instructions_to_execute : Dict[Id_T, int],
-                                   instructions_dependent_prev_dict : Dict[Id_T, set],
-                                   dependency_graph : Dict[Id_T, List[Id_T]]) -> None:
-
-    # Base case: it has been already analyzed, so we return the values associated.
-    if instr in number_of_instructions_to_execute:
-        return
-
-    instructions_dependent_current = set()
-    current_number_of_instructions = 0
-
-    # Recursive case: we obtain the output for each previous instruction and update the values
-    for previous_instr in dependency_graph[instr]:
-
-        # Ensure the results have been generated for the previous instruction
-        generate_prev_instr_from_instr(previous_instr, number_of_instructions_to_execute,
-                                       instructions_dependent_prev_dict, dependency_graph)
-
-        # The instructions that depend on the previous ones correspond to the keys of previous values
-        instructions_dependent_prev = instructions_dependent_prev_dict[previous_instr] | {previous_instr}
-
-        # See detailed explanation for more information to understand this step
-        repeated_instructions = set(instructions_dependent_current).intersection(instructions_dependent_prev)
-
-        # 0 elements means just add the previous number needed
-        if len(repeated_instructions) == 0 or all((len(dependency_graph[rep]) == 0 for rep in repeated_instructions)):
-            current_number_of_instructions += number_of_instructions_to_execute[previous_instr] + 1
+        # All the other cases correspond to 0
         else:
-            current_number_of_instructions += traverse_tree_until_repeated(previous_instr, dependency_graph,
-                                                                           repeated_instructions,
-                                                                           number_of_instructions_to_execute,
-                                                                           instructions_dependent_prev_dict)
-        # We update instructions_dependency
-        instructions_dependent_current = instructions_dependent_current.union(instructions_dependent_prev)
+            return 0
 
-    number_of_instructions_to_execute[instr] = current_number_of_instructions
-    instructions_dependent_prev_dict[instr] = instructions_dependent_current
+    repeated_instructions[instr_id] = is_direct_dep
+
+    dependent_instr_ids = dependency_graph[instr_id]
+    instr = instr_by_id_dict[instr_id]
+
+    # The instruction itself counts as 1
+    current_number_of_instructions = 1
+    analyzed_instr_ids = set()
+
+    # print(instr_id, repeated_instructions)
+    # Recursive case: we obtain the output for each previous instruction and update the values
+    for stack_elem in instr.input_stack:
+
+        if stack_elem in stack_elem_to_id:
+            previous_instr_id = stack_elem_to_id[stack_elem]
+            # print('id',previous_instr_id, current_number_of_instructions, repeated_instructions)
+            analyzed_instr_ids.add(previous_instr_id)
+            current_number_of_instructions += needed_instrs_from_id(previous_instr_id, True)
+        else:
+            # print('ini', stack_elem, current_number_of_instructions, repeated_instructions)
+
+            # If an initial stack element has already appeared (i.e. included to repeated instructions)
+            # we add one because we need to duplicate it
+            if stack_elem in repeated_instructions:
+                current_number_of_instructions += 1
+            # Even if this does not correspond to an instruction
+            repeated_instructions[stack_elem] = True
+
+    # Indirect dependencies are dealt similar, but being careful when repetitions occur
+    for prev_instr_id in set(dependent_instr_ids).difference(analyzed_instr_ids):
+        # print('mem', prev_instr_id, current_number_of_instructions, repeated_instructions)
+
+        current_number_of_instructions += needed_instrs_from_id(prev_instr_id, False)
+
+    # print('return', instr_id, current_number_of_instructions, repeated_instructions)
+    return current_number_of_instructions
 
 
 # Given the dict containing the dependency among different instructions, we generate
 # another dict that links each instruction to the number of instructions that must be
 # executed previously to be able to execute that instruction.
-def generate_lower_bound_dict(dependency_graph : Dict[Id_T, List[Id_T]]) -> Dict[Id_T, int]:
-    previous_values = {}
-    number_of_instructions_to_execute = {}
-    for instr in dependency_graph:
-        generate_lower_bound_from_instr(instr, number_of_instructions_to_execute, previous_values, dependency_graph)
+def generate_lower_bound_dict(dependency_graph: Dict[Id_T, List[Id_T]], stack_elem_to_id: Dict[str, Id_T],
+                              instr_by_id_dict: Dict[Id_T, UninterpretedInstruction]) -> Dict[Id_T, int]:
 
-    return number_of_instructions_to_execute
+    # If no instructions are considered, just return the empty dict
+    if dependency_graph == []:
+        return dict()
 
+    # As the dependency relation among instructions is represented as a happens-before, we need to reverse the
+    # toposort to start with the deepest elements
+    topo_order = list(reversed(toposort_instr_dependencies(dependency_graph)))
 
-def generate_lower_bound_from_instr_alternative(dependency_graph : Dict[Id_T, List[Id_T]]) -> Dict[Id_T, int]:
-    previous_values = {}
-    number_of_instructions_to_execute = {}
-    for instr in dependency_graph:
-        generate_prev_instr_from_instr(instr, number_of_instructions_to_execute, previous_values, dependency_graph)
+    # Initialize all auxiliary data structures
+    n_instrs_execute = dict()
+    instructions_dependent_prev_dict = dict()
 
-    return number_of_instructions_to_execute
+    # Traverse the topo order to generate the number of instructions needed
+    for instr_id in topo_order:
+        repeated_instrs = {}
+        n_instrs_execute[instr_id] = number_instr_needed(instr_id, True, n_instrs_execute, repeated_instrs,
+                                                         instructions_dependent_prev_dict, stack_elem_to_id,
+                                                         dependency_graph, instr_by_id_dict)
+        instructions_dependent_prev_dict[instr_id] = repeated_instrs
+
+    # Finally, to obtain the first position instructions can appear in a sequence, we just need to substract one
+    # to the number of instructions needed
+    first_position_instr = {k: (v-1) for k,v in n_instrs_execute.items()}
+    return first_position_instr
 
 
 def update_current_index(instr_id: Id_T, bounds_positions: Dict[Id_T, List[int]], new_idx: int) -> None:
@@ -192,6 +186,7 @@ def update_with_tree_level(stack_elem_to_id : Dict[str, Id_T], instr_by_id_dict 
             for possible_index in index_l:
                 update_current_index(prev_instr_id, bounds_positions, possible_index)
 
+
 def initialize_bound_positions_for_ub(b0: int, final_stack_ids: List[Id_T], maximal_mem_ids: List[Id_T],
                                       bounds_positions: Dict[Id_T, List[int]]):
     # If first instruction corresponds to top of the stack, we initialize the search with b0. Otherwise,
@@ -215,24 +210,6 @@ def initialize_bound_positions_for_ub(b0: int, final_stack_ids: List[Id_T], maxi
         update_current_index(mem_instr_id, bounds_positions, b0)
 
 
-def iterative_topological_sort(dependency_graph : Dict[Id_T, List[Id_T]], start:Id_T):
-    seen = set()
-    stack = []    # path variable is gone, stack and order are new
-    order = []    # order will be in reverse order at first
-    q = [start]
-    while q:
-        v = q.pop()
-        if v not in seen:
-            seen.add(v)
-            q.extend(dependency_graph[v])
-
-            while stack and v not in dependency_graph[stack[-1]]:
-                order.append(stack.pop())
-            stack.append(v)
-
-    return stack + order[::-1]   # new return value!
-
-
 # Generates a dict that given b0, returns the first position in which a instruction cannot appear
 # due to dependencies with other instructions.
 def generate_first_position_instr_cannot_appear(b0 : int, stack_elem_to_id : Dict[str, Id_T],
@@ -248,14 +225,7 @@ def generate_first_position_instr_cannot_appear(b0 : int, stack_elem_to_id : Dic
     final_stack_ids = [stack_elem_to_id[stack_var] if stack_var in stack_elem_to_id else None for stack_var in final_stack]
     initialize_bound_positions_for_ub(b0, final_stack_ids, maximal_mem_ids, bound_positions)
 
-    maximal_elements = list(set(instr_id for instr_id in dependency_graph).difference(
-        set(instr_id for id_list in dependency_graph.values() for instr_id in id_list)))
-    extended_dependency_graph = copy.deepcopy(dependency_graph)
-
-    # We add a "dummy element" to function as the initial value
-    extended_dependency_graph['dummy'] = maximal_elements
-    topo_order = iterative_topological_sort(extended_dependency_graph, 'dummy')
-    topo_order.pop(0)
+    topo_order = toposort_instr_dependencies(dependency_graph)
 
     update_with_tree_level(stack_elem_to_id, instr_by_id_dict, dependency_graph, topo_order, bound_positions)
 
@@ -283,7 +253,7 @@ class InstructionBoundsWithDependencies(InstructionBounds):
 
         self._b0 = b0
         self._initial_idx = initial_idx
-        lower_bound_by_id = generate_lower_bound_from_instr_alternative(dependency_graph)
+        lower_bound_by_id = generate_lower_bound_dict(dependency_graph, stack_element_to_id_dict, instr_by_id_dict)
 
         self._lower_bound_by_theta_value = {instr_by_id_dict[instr_id].theta_value: lb
                                             for instr_id, lb in lower_bound_by_id.items() if instr_id != 'PUSH'}
