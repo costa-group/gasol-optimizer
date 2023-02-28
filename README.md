@@ -93,6 +93,9 @@ Estimated gas optimized: 6
 
 Estimated initial size in bytes: 5
 Estimated size optimized in bytes: 2
+
+Initial number of instructions: 5
+Final number of instructions: 2
 ```
 
 ### Optimization from a log file
