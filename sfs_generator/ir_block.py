@@ -40,7 +40,7 @@ def init_globals():
 
     global opcodes40
     opcodes40 = ["BLOCKHASH", "COINBASE", "TIMESTAMP", "NUMBER",
-                 "DIFFICULTY", "GASLIMIT","SELFBALANCE","CHAINID"]
+                 "DIFFICULTY", "PREVRANDAO", "GASLIMIT","SELFBALANCE","CHAINID","BASEFEE"]
 
     global opcodes50
     opcodes50 = ["POP", "MLOAD", "MSTORE", "MSTORE8", "SLOAD",
@@ -97,6 +97,9 @@ def init_globals():
 
     global gas_counter
     gas_counter = 0
+
+    global hash_counter
+    hash_counter = 0
 
     global timestamp_counter
     timestamp_counter = 0
@@ -244,13 +247,13 @@ def translateOpcodes0(opcode,index_variables):
         v2, updated_variables = get_consume_variable(updated_variables)
         v3, updated_variables = get_consume_variable(updated_variables)
         v4, updated_variables = get_new_variable(updated_variables)
-        instr = v4+" = (" + v1 + "+" + v2 + ") % " + v3
+        instr = v4+" = addmod(" + v1 + "," + v2 + ", " + v3+")"
     elif opcode == "MULMOD":
         v1, updated_variables = get_consume_variable(index_variables)
         v2, updated_variables = get_consume_variable(updated_variables)
         v3, updated_variables = get_consume_variable(updated_variables)
         v4, updated_variables = get_new_variable(updated_variables)
-        instr = v4+" = (" + v1 + "*" + v2 + ") % " + v3
+        instr = v4+" = mulmod(" + v1 + "," + v2 + ","  + v3+")"
     elif opcode == "EXP":
         v1, updated_variables = get_consume_variable(index_variables)
         v2, updated_variables = get_consume_variable(updated_variables)
@@ -396,20 +399,24 @@ corresponding translated instruction and the variables's index
 updated. It also updated the corresponding global variables.
 '''
 def translateOpcodes20(opcode, index_variables):
+    global hash_counter
+
     if opcode == "SHA3":
         v1, updated_variables = get_consume_variable(index_variables)
         v2, updated_variables = get_consume_variable(updated_variables)
         v3, updated_variables = get_new_variable(updated_variables)
-        instr = v3+" = sha3("+ v1+", "+v2+")"
+        instr = v3+" = sha3+"+str(hash_counter)+"("+ v1+", "+v2+")"
+        hash_counter+=1
     elif opcode == "KECCAK256":
         v1, updated_variables = get_consume_variable(index_variables)
         v2, updated_variables = get_consume_variable(updated_variables)
         v3, updated_variables = get_new_variable(updated_variables)
-        instr = v3+" = keccak256("+ v1+", "+v2+")"
+        instr = v3+" = keccak256"+str(hash_counter)+"("+ v1+", "+v2+")"
+        hash_counter+=1
     else:
         instr = "Error opcodes20: "+opcode
         updated_variables = index_variables
-
+    
     return instr, updated_variables
 
 '''
@@ -534,6 +541,15 @@ def translateOpcodes40(opcode, index_variables):
         v1, updated_variables = get_new_variable(index_variables)
         instr = v1+" = difficulty"
 
+    elif opcode == "PREVRANDAO":
+        v1, updated_variables = get_new_variable(index_variables)
+        instr = v1+" = prevrandao"
+
+    elif opcode == "BASEFEE":
+        v1, updated_variables = get_new_variable(index_variables)
+        instr = v1+" = basefee"
+
+        
     elif opcode == "GASLIMIT":
         v1, updated_variables = get_new_variable(index_variables)
         instr = v1+" = gaslimit"

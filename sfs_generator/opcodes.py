@@ -48,9 +48,11 @@ opcodes = {
     "TIMESTAMP": [0x42, 0, 1],
     "NUMBER": [0x43, 0, 1],
     "DIFFICULTY": [0x44, 0, 1],
+    "PREVRANDAO": [0x44, 0, 1],
     "GASLIMIT": [0x45, 0, 1],
     "CHAINID": [0x46,0,1],
     "SELFBALANCE": [0x47,0,1],
+    "BASEFEE": [0x48,0,1],
     "POP": [0x50, 1, 0],
     "MLOAD": [0x51, 1, 1],
     "MSTORE": [0x52, 2, 0],
@@ -107,6 +109,14 @@ opcodes = {
 }
 
 # Opcodes that have a blank character in their name are put together in our representation
+encoding_functor_name = {
+    "PUSH [tag]": "PUSHTAG" , #Yul opcode. Assembly Item: PushTag
+    "PUSH #[$]": "PUSHSUBSIZE", #Yul opcode. Assembly Item: PushSubSize
+    "PUSH [$]": "PUSHSUB" , #Yul opcode. Assembly Item: PushSub
+    "PUSH data": "PUSHDATA", #Yul opcode. Assembly Item: PushData
+}
+
+# Opcodes that have a blank character in their name are put together in our representation
 opcode_internal_representation_to_assembly_item = {
     "PUSHTAG": "PUSH [tag]", #Yul opcode. Assembly Item: PushTag
     "PUSH#[$]": "PUSH #[$]", #Yul opcode. Assembly Item: PushSubSize
@@ -159,7 +169,8 @@ Wzero = ("STOP", "RETURN", "REVERT", "ASSERTFAIL")
 
 Wbase = ("ADDRESS", "ORIGIN", "CALLER", "CALLVALUE", "CALLDATASIZE",
          "CODESIZE", "GASPRICE", "COINBASE", "TIMESTAMP", "NUMBER",
-         "DIFFICULTY", "GASLIMIT", "POP", "PC", "MSIZE", "GAS", "RETURNDATASIZE","CHAINID")
+         "DIFFICULTY","PREVRANDAO","BASEFEE", "GASLIMIT", "POP", "PC",
+         "MSIZE", "GAS", "RETURNDATASIZE","CHAINID")
 
 Wverylow = ("ADD", "SUB", "NOT", "LT", "GT", "SLT", "SGT", "EQ",
             "ISZERO", "AND", "OR", "XOR", "BYTE", "CALLDATALOAD",
@@ -174,6 +185,8 @@ Whigh = ("JUMPI")
 Wext = ("EXTCODESIZE")
 
 Wextcodehash = ("EXTCODEHASH")
+
+ac_opcodes = {"ADD", "MUL", "AND", "OR", "XOR"}
 
 def get_opcode(opcode):
     if opcode in opcodes:

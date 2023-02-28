@@ -1,7 +1,5 @@
 import math
-
 import sfs_generator.opcodes as opcodes
-
 
 def toInt(a):
     elem = a.split("_")
@@ -145,7 +143,7 @@ Function that identifies the PUSH opcodes used in the yul translation that are n
 (PUSH tag, PUSHDEPLOYADDRESS, PUSH data...)
 '''
 def isYulInstruction(opcode):
-    if opcode.find("tag") ==-1 and opcode.find("#") ==-1 and opcode.find("$") ==-1 \
+    if opcode.find("tag") ==-1 and opcode.find("#") ==-1 and opcode.find("$") ==-1 and opcode.find("LIB") ==-1 \
             and opcode.find("data") ==-1 and opcode.find("DEPLOY") ==-1 and opcode.find("SIZE")==-1 and opcode.find("IMMUTABLE")==-1:
         return False
     else:
@@ -189,6 +187,11 @@ def isYulInstructionUpper(opcode):
 # https://github.com/ethereum/solidity/blob/develop/libsolutil/Numeric.h
 def number_encoding_size(number):
     i = 0
+    
+    if number < 0 :
+        number = (2**256)+number
+
+    
     while number != 0:
         i += 1
         number = number >> 8
@@ -228,7 +231,10 @@ def get_ins_size(op_name, val = None, address_length = 4):
         return 1 + 20
     elif op_name == "PUSHIMMUTABLE":
         return 1 + 32
-    elif not op_name.startswith("PUSH") or op_name == "tag":
+    # JUMPDEST are already included in the json_solc file, so tags do not count either in size or gas
+    elif op_name == "tag":
+        return 0
+    elif not op_name.startswith("PUSH"):
         return 1
     else:
         raise ValueError("Opcode not recognized", op_name)
@@ -262,3 +268,24 @@ def get_ins_size_seq(instructions_disasm):
 def check_and_print_debug_info(debug,msg):
     if debug:
         print(msg)
+
+
+def process_blocks_split(subblocks):
+    split_opcodes = []
+    if len(subblocks) != 1:
+        for i in range(0,len(subblocks)-1):
+            block = subblocks[i].pop()
+            subblocks[i+1].pop(0)
+            split_opcodes.append(block)
+
+
+    print(subblocks)
+    return subblocks
+
+def get_block(blocks, tag):
+    for b in blocks:
+        if b.tag == tag:
+            return b
+
+    raise Exception("The tag does not correspond to any block. Tag: "+str(tag))
+

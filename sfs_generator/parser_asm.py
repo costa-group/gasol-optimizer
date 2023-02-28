@@ -11,14 +11,22 @@ from sfs_generator.asm_json import AsmJSON
 from sfs_generator.utils import isYulKeyword
 
 
-def build_asm_bytecode(instruction : ASM_Json_T) -> AsmBytecode:
+def build_asm_bytecode(instruction : ASM_Json_T, pushlib_values: dict) -> AsmBytecode:
+    if instruction['name'] == 'PUSHLIB':
+        value = instruction['value']
+        if value not in pushlib_values:
+            pushlib_values[value] = len(pushlib_values)
+        value = pushlib_values[value]
+    else:
+        value = instruction.get("value", None)
+
     begin = instruction.get("begin", -1)
     end = instruction.get("end", -1)
     name = instruction.get("name", -1)
     source = instruction.get("source", -1)
-    value = instruction.get("value", None)
+    jump_type = instruction.get("jumpType", None)
 
-    asm_bytecode = AsmBytecode(begin,end,source,name,value)
+    asm_bytecode = AsmBytecode(begin, end, source, name, value, jump_type)
     return asm_bytecode
 
 
@@ -33,17 +41,19 @@ def build_blocks_from_asm_representation(cname : str, block_name_prefix : str, i
     block_id = 0
     block = AsmBlock(cname, block_id, _generate_block_name_from_id(block_name_prefix, block_id), is_init_code)
     block_id += 1
+    pushlib_values = dict()
 
     i = 0
     while i < len(instr_list):
         instr_name = instr_list[i]["name"]
-        asm_bytecode = build_asm_bytecode(instr_list[i])
+        asm_bytecode = build_asm_bytecode(instr_list[i], pushlib_values)
 
         # Final instructions of a block
         if instr_name in ["JUMP","JUMPI","STOP","RETURN","REVERT","INVALID"]:
             block.add_instruction(asm_bytecode)
             bytecodes.append(block)
             block = AsmBlock(cname, block_id, _generate_block_name_from_id(block_name_prefix, block_id), is_init_code)
+            pushlib_values = dict()
             block_id+=1
 
         # Tag always correspond to the beginning of a new block. JUMPDEST is always preceded by a tag instruction
@@ -52,7 +62,10 @@ def build_blocks_from_asm_representation(cname : str, block_name_prefix : str, i
             if block.instructions:
                 bytecodes.append(block)
                 block = AsmBlock(cname, block_id, _generate_block_name_from_id(block_name_prefix, block_id), is_init_code)
+                pushlib_values = dict()
                 block_id += 1
+                
+            block.tag = instr_list[i]["value"]
             block.add_instruction(asm_bytecode)
         else:
             block.add_instruction(asm_bytecode)
@@ -61,15 +74,12 @@ def build_blocks_from_asm_representation(cname : str, block_name_prefix : str, i
     # If last block has any instructions left, it must be added to the bytecode
     if block.instructions:
         bytecodes.append(block)
-
+        
     return bytecodes
 
-        
+
 def build_asm_contract(cname : str, cinfo : Dict[str, Any]) -> AsmContract:
     asm_c = AsmContract(cname)
-
-    if len(cinfo) > 2:
-        raise Exception("ERROR. Check")
 
     initCode = cinfo[".code"]
 
@@ -77,17 +87,21 @@ def build_asm_contract(cname : str, cinfo : Dict[str, Any]) -> AsmContract:
     simplified_cname = (cname.split("/")[-1]).split(":")[-1]
 
     init_bytecode = build_blocks_from_asm_representation(simplified_cname, '_'.join([simplified_cname, "initial"]), initCode, True)
-    
+
     asm_c.init_code = init_bytecode
-        
+
+    # Only available from solc v 0.8.14
+    source_list = cinfo.get("sourceList", None)
+    asm_c.source_list = source_list
+
     data = cinfo[".data"]
 
-    
     for elem in data:
 
         if not isinstance(data[elem],str):
-            aux_data = data[elem][".auxdata"]
-            asm_c.set_auxdata(elem, aux_data)
+            aux_data = data[elem].get(".auxdata", None)
+            if aux_data is not None:
+                asm_c.set_auxdata(elem, aux_data)
 
             code = data[elem][".code"]
             run_bytecode = build_blocks_from_asm_representation(simplified_cname, '_'.join([simplified_cname, "run_code_of", str(elem)]), code, False)
@@ -99,6 +113,9 @@ def build_asm_contract(cname : str, cinfo : Dict[str, Any]) -> AsmContract:
             
         else:
             asm_c.set_data_field_with_address(elem, data[elem])
+
+    asm_c.build_static_edges_init()
+    asm_c.build_static_edges_runtime()
     return asm_c
 
 
@@ -136,11 +153,18 @@ def plain_instructions_to_asm_representation(raw_instruction_str : str) -> [ASM_
     ops = list(filter(lambda x: x != '', split_str))
     opcodes = []
     i = 0
+    pushlib_values = dict()
 
     while i < len(ops):
         op = ops[i]
         if op.startswith("ASSIGNIMMUTABLE") or op.startswith("tag"):
-            opcodes.append({"name": op, "value": ops[i+1]})
+            opcodes.append({"name": op, "value": ops[i + 1]})
+            i += 1
+        elif op.startswith('PUSHLIB'):
+            value = ops[i+1]
+            if value not in pushlib_values:
+                pushlib_values[value] = len(pushlib_values)
+            opcodes.append({"name": op, "value": pushlib_values[ops[i+1]]})
             i += 1
         elif not op.startswith("PUSH"):
             opcodes.append({"name": op})
@@ -190,6 +214,14 @@ def parse_blocks_from_plain_instructions(raw_instructions_str):
     blocks = build_blocks_from_asm_representation("isolated", "isolated", instr_list, False)
     return blocks
 
+
+# Similar to the previous function, but assuming the raw_instructions correspond to a simple block
+def generate_block_from_plain_instructions(raw_instructions_str: str, block_name: str, is_init_block: bool = False) -> AsmBlock:
+    instr_list = plain_instructions_to_asm_representation(raw_instructions_str)
+    block = AsmBlock('optimized', -1, block_name, is_init_block)
+    pushlib_value = dict()
+    block.instructions = [build_asm_bytecode(instr, pushlib_value) for instr in instr_list]
+    return block
 
 # Conversion from an ASMBlock to a plain sequence of instructions
 def parse_asm_representation_from_block(asm_block : AsmBlock):

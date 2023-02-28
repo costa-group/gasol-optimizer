@@ -24,8 +24,9 @@ class AsmBlock:
         self.source_stack = 0
         self.is_init_block = is_init_block
         self._jump_type = None
-        self.jump_to = None
-        self.falls_to = None
+        self._jump_to = None
+        self._falls_to = None
+        self._tag = -1
 
     @property
     def instructions(self) -> List[AsmBytecode]:
@@ -55,6 +56,33 @@ class AsmBlock:
             raise Exception("Wrong jump type")
         else:
             self._jump_type = t
+
+    @property
+    def tag(self) -> int:
+        '''
+        It contains the value of the corresponding tag
+        '''
+        return self._tag
+
+    @tag.setter
+    def tag(self, t : int) -> None:
+        self._tag = t
+
+    @property
+    def jump_to(self) -> int:
+        return self._jump_to
+
+    @jump_to.setter
+    def jump_to(self, blockId : int) -> None:
+        self._jump_to = blockId
+
+    @property
+    def falls_to(self) -> int:
+        return self._falls_to
+
+    @falls_to.setter
+    def falls_to(self, blockId : int) -> None:
+        self._falls_to = blockId
 
     def set_types(self) -> None:
         """
@@ -118,7 +146,6 @@ class AsmBlock:
     def instructions_final_plain(self) -> List[str]:
         return [instruction.to_plain() for instruction in self.instructions_final_bytecode()]
 
-
     @property
     def bytes_required(self) -> int:
         return sum([instruction.bytes_required for instruction in self.instructions])
@@ -126,3 +153,22 @@ class AsmBlock:
     @property
     def gas_spent(self) -> int:
         return sum([instruction.gas_spent for instruction in self.instructions])
+
+    @property
+    def length(self) -> int:
+        return len(self.instructions)
+
+    def get_contract_name(self):
+        return self.contract_name
+
+    def get_block_id(self):
+        return self.block_id
+
+    def set_block_id(self, identifier):
+        self.block_id = identifier
+        
+    def get_block_name(self):
+        return self.block_name
+
+    def set_block_name(self,block_name):
+        self.block_name = block_name

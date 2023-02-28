@@ -1,4 +1,5 @@
 from sfs_generator.asm_block import AsmBlock
+from sfs_generator.utils import get_block
 from typing import List, Dict, Optional, Union, Any
 
 
@@ -13,6 +14,7 @@ class AsmContract:
         self.data = {}
         self.data_addresses = {}
         self.has_asm_field = contains_asm_field
+        self._source_list = None
 
     @property
     def init_code(self) -> List[AsmBlock]:
@@ -22,6 +24,17 @@ class AsmContract:
     def init_code(self, new_value : List[AsmBlock]):
         self._code = new_value
 
+    @property
+    def source_list(self) -> Optional[List[str]]:
+        """
+        Returns the associated sourceList field for a data id. Included in solc 0.8.14
+        """
+        return self._source_list
+
+    @source_list.setter
+    def source_list(self, source_list: List[str]) -> None:
+
+        self._source_list = source_list
 
     def set_auxdata(self, data_id : str, aux : str) -> None:
         """
@@ -137,7 +150,7 @@ class AsmContract:
         :param data_id: data id that identifies current assembly structure
         :return: a string containing the auxdata information
         """
-        return self.data[data_id]["auxdata"]
+        return self.data[data_id].get("auxdata", None)
     
     def get_data_field(self, data_id : str) -> Optional[Dict[str, str]]:
         """
@@ -149,6 +162,33 @@ class AsmContract:
         """
         return self.data[data_id].get("data", None)
 
+
+    def build_static_edges_init(self)->None:
+        self.build_static_edges(self.init_code)
+
+
+    def build_static_edges_runtime(self)->None:
+        for data_id in self.data:
+            self.build_static_edges(self.data[data_id]["code"])
+            
+    def build_static_edges(self,blocks:[AsmBlock])-> None:
+        for block in blocks:
+            instructions = block.instructions
+            last_instruction = instructions[-1].get_disasm()
+
+            if "JUMP" == last_instruction and len(instructions)>1:
+                if "PUSH [tag]" == instructions[-2].get_disasm():
+                    tag = instructions[-2].get_value()
+                    block.jump_to = get_block(blocks, tag).get_block_id()
+
+            elif "JUMPI" == last_instruction and len(instructions)>1:
+                if "PUSH [tag]" == instructions[-2].get_disasm():
+                    tag = instructions[-2].get_value()
+                    block.jump_to = get_block(blocks, tag).get_block_id()
+                    block.falls_to = block.get_block_id()+1
+            elif block.jump_type == "falls_to":
+                block.falls_to = block.get_block_id()+1
+                
     def to_json(self) -> Dict[str, Any]:
 
         # If it has no asm field, we just return the contract name with an empty dict tied
@@ -156,6 +196,10 @@ class AsmContract:
             return {self.contract_name : {}}
 
         json_contract = {".code": [instruction.to_json() for block in self.init_code for instruction in block.instructions]}
+
+        source_list = self.source_list
+        if source_list is not None:
+            json_contract["sourceList"] = source_list
 
         data_ids = self.get_data_ids_with_code()
 
@@ -166,7 +210,8 @@ class AsmContract:
             json_data_fields = {}
 
             aux_data = self.get_auxdata(data_id)
-            json_data_fields[".auxdata"] = aux_data
+            if aux_data is not None:
+                json_data_fields[".auxdata"] = aux_data
 
             run_bytecode = [instruction.to_json() for block in self.get_run_code(data_id) for instruction in block.instructions]
             json_data_fields[".code"] = run_bytecode
@@ -211,3 +256,5 @@ class AsmContract:
         # content+=str(self.code)+"\n"
         content+=str(self.data)
         return content
+
+    

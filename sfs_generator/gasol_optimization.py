@@ -9,12 +9,13 @@ import global_params.paths as paths
 import sfs_generator.opcodes as opcodes
 from sfs_generator.utils import (all_integers, find_sublist, get_num_bytes_int,
                                  is_integer, isYulInstructionUpper, get_ins_size,check_and_print_debug_info)
+from typing import Optional
 
 terminate_block = ["ASSERTFAIL","RETURN","REVERT","SUICIDE","STOP"]
 
 pre_defined_functions = ["PUSH","POP","SWAP","DUP"]
 
-zero_ary = ["origin","caller","callvalue","address","number","gasprice","difficulty","coinbase","timestamp","codesize","gaslimit","gas","calldatasize","returndatasize","msize","selfbalance","chainid","pushdeployaddress","pushsize"]
+zero_ary = ["origin","caller","callvalue","address","number","gasprice","difficulty","prevrandao","basefee","coinbase","timestamp","codesize","gaslimit","gas","calldatasize","returndatasize","msize","selfbalance","chainid","pushdeployaddress","pushsize"]
 
 commutative_bytecodes = ["ADD","MUL","EQ","AND","OR","XOR"]
 
@@ -82,6 +83,10 @@ revert_flag = False
 
 global assignImm_values
 assignImm_values = {}
+
+global debug
+debug = False
+
 
 def init_globals():
     
@@ -154,8 +159,17 @@ def init_globals():
     global sto_delete_pos
     sto_delete_pos = []
 
-    global debug
-    debug = False
+    global rule_applied
+    rule_applied = False
+
+    global modified_userdef_vals
+    modified_userdef_vals = {}
+
+    global rules_applied
+    rules_applied = []
+
+    global rule
+    rule = ""
     
 def filter_opcodes(rule):
     instructions = rule.get_instructions()
@@ -373,6 +387,9 @@ def search_for_value_aux(var, instructions,source_stack,level,evaluate = True):
     global s_dict
     global u_counter
     global u_dict
+    global rule_applied
+    global rules_applied
+    global rule
     
     i = 0
     found = False
@@ -404,16 +421,22 @@ def search_for_value_aux(var, instructions,source_stack,level,evaluate = True):
                 val = int(new_vars[0])
             else:
                 val = new_vars[0]
+
             update_unary_func(funct,var,new_vars[0],evaluate)
-            
+            if rule_applied:
+                rules_applied.append(rule)
+                rule = ""
         else:
+
             if new_vars[0] not in zero_ary and new_vars[0].find("gas")==-1 and new_vars[0].find("timestamp")==-1:
                 search_for_value_aux(new_vars[0],instructions[i:],source_stack,level,evaluate)
                 val = s_dict[new_vars[0]]
             else:
                 val = new_vars[0]
             update_unary_func(funct,var,val,evaluate)
-            
+            if rule_applied:
+                rules_applied.append(rule)
+                rule = ""
     else:
     
         u_var = create_new_svar()
@@ -431,8 +454,9 @@ def search_for_value_aux(var, instructions,source_stack,level,evaluate = True):
         r = exp_join[0]
         exp = (exp_join[1],exp_join[2])
 
-        
         if r:
+            rules_applied.append(rule)
+            rule = ""
             s_dict[var] = exp[0]
 
         else:
@@ -448,7 +472,7 @@ def search_for_value_aux(var, instructions,source_stack,level,evaluate = True):
             s_dict[var] = u_var
 
             
-def generate_sstore_mstore(store_ins,instructions,source_stack,pos):
+def generate_sstore_mstore(store_ins,instructions,source_stack,pos,simp):
     level = 0
     new_vars, funct = get_involved_vars(store_ins,"")
     
@@ -457,17 +481,18 @@ def generate_sstore_mstore(store_ins,instructions,source_stack,pos):
     pre = already_considered 
 
     for v in new_vars:
-        search_for_value_aux(v,instructions,source_stack,pos)
-    
+        search_for_value_aux(v,instructions,source_stack,pos,simp)
+        
         values[v] = s_dict[v]
 
-    post = already_considered
 
-    exp_join = rebuild_expression(new_vars,funct,values,level)
+    exp_join = rebuild_expression(new_vars,funct,values,level,simp)
 
+    
     return exp_join[1],exp_join[2]
 
-def generate_sload_mload(load_ins,instructions,source_stack,pos):
+
+def generate_sload_mload(load_ins,instructions,source_stack,pos,simp):
 
     level = pos
 
@@ -492,7 +517,7 @@ def generate_sload_mload(load_ins,instructions,source_stack,pos):
             
     else:
         if new_vars[0] not in zero_ary and new_vars[0].find("gas")==-1 and new_vars[0].find("timestamp")==-1:
-            search_for_value_aux(new_vars[0],instructions,source_stack,level)
+            search_for_value_aux(new_vars[0],instructions,source_stack,level,simp)
             val = s_dict[new_vars[0]]
         else:
             val = new_vars[0]
@@ -502,6 +527,30 @@ def generate_sload_mload(load_ins,instructions,source_stack,pos):
         new_uvar, defined = is_already_defined(elem)
         return new_uvar,elem
 
+
+def generate_instruction(load_ins,instructions,source_stack,pos,simp):
+
+    level = pos
+
+    if load_ins.find("=")!=-1:
+        load_ins = load_ins.split("=")[-1].strip()
+
+    
+    new_vars, funct = get_involved_vars(load_ins,"")
+    
+    values = {}
+
+    pre = already_considered 
+
+    for v in new_vars:
+        search_for_value_aux(v,instructions,source_stack,pos,simp)
+    
+        values[v] = s_dict[v]
+
+    exp_join = rebuild_expression(new_vars,funct,values,level,simp)
+
+    return exp_join[1],exp_join[2]
+    
 
 def is_already_defined(elem):
     for u_var in u_dict.keys():
@@ -528,6 +577,8 @@ def update_unary_func(func,var,val,evaluate):
     global s_dict
     global u_dict
     global gas_saved_op    
+    global rule_applied
+    global rule
     
     if func != "":
 
@@ -545,6 +596,8 @@ def update_unary_func(func,var,val,evaluate):
                     if bytes_sol <= bytes_v0+1:
                         s_dict[var] = val_end
                         gas_saved_op+=3
+                        rule_applied = True
+                        rule = "NOT(X)"
                     else:
                         u_var = create_new_svar()
 
@@ -564,16 +617,19 @@ def update_unary_func(func,var,val,evaluate):
                 else:
                     gas_saved_op+=3
                     s_dict[var] = val_end
+                    rule = "NOT(X)"
+                    rule_applied = True
 
             elif func == "iszero":
                 aux = int(val)
                 val_end = 1 if aux == 0 else 0
                 gas_saved_op+=3
+                rule = "EVAL(ISZERO("+str(val_end)+"))"
                 s_dict[var] = val_end
+                rule_applied = True
 
                 
         else:
-        
             u_var = create_new_svar()
 
             if val in zero_ary or val.find("gas")!=-1 or val.find("timestamp")!=-1:
@@ -597,7 +653,7 @@ def update_unary_func(func,var,val,evaluate):
 def get_involved_vars(instr,var):
     var_list = []
     funct = ""
-
+    
     if instr.find("mload")!=-1:
         instr_new = instr.strip("\n")
         pos = instr_new.find("(")
@@ -663,34 +719,45 @@ def get_involved_vars(instr,var):
         var_list.append(instr)
         funct =  instr
 
+    elif instr.find("prevrandao")!=-1:
+        var_list.append("prevrandao")
+        funct =  "prevrandao"
+
     elif instr.find("msize")!=-1:
         var_list.append("msize")
         funct =  "msize"
 
-    elif instr.find("sha3(",0)!=-1:
+    elif instr.find("sha3",0)!=-1:
         instr_new = instr.strip("\n")
-        pos = instr_new.find("sha3(")
-        arg01 = instr[pos+5:-1]
+        pos = instr_new.find("(")
+        arg01 = instr[pos+1:-1]
         var01 = arg01.split(",")
         var0 = var01[0].strip()
         var1 = var01[1].strip()
         var_list.append(var0)
         var_list.append(var1)
 
-        funct = "sha3"
-
-    elif instr.find("keccak256(",0)!=-1:
+        if not split_sto:
+            funct = instr_new[:pos]
+        else:
+            funct = "sha3"
+            
+    elif instr.find("keccak256",0)!=-1:
+        
         instr_new = instr.strip("\n")
-        pos = instr_new.find("keccak256(")
-        arg01 = instr[pos+10:-1]
+        pos = instr_new.find("(")
+        arg01 = instr[pos+1:-1]
         var01 = arg01.split(",")
         var0 = var01[0].strip()
         var1 = var01[1].strip()
         var_list.append(var0)
         var_list.append(var1)
 
-        funct = "keccak256"
-
+        
+        if not split_sto: 
+            funct = instr_new[:pos]
+        else:
+            funct = "keccak256"
         
     elif instr.find("signextend(",0)!=-1:
         instr_new = instr.strip("\n")
@@ -866,60 +933,60 @@ def get_involved_vars(instr,var):
 
         funct = "byte"
 
-    elif instr.find("*")!=-1:
-        if instr.find("%")!=-1: #MULMOD
-            instr_new = instr.strip("\n")
-            args012 = instr_new.split("%")
-            args01 = args012[0].strip()
-            var2 = args012[1].strip()
+    elif instr.find("mulmod(")!=-1:
+        
+        instr_new = instr.strip("\n")
+        pos = instr_new.find("mulmod(")
+        args012 = instr_new[pos+7:-1]
+        var012 = args012.split(",")
 
-            vars01 = args01.split("*")
-            var0 = vars01[0][1:].strip()
-            var1 = vars01[1][:-1].strip()
+        var0 = var012[0].strip()
+        var1 = var012[1].strip()
+        var2 = var012[2].strip()
+        
+        var_list.append(var0)
+        var_list.append(var1)
+        var_list.append(var2)
 
-            var_list.append(var0)
-            var_list.append(var1)
-            var_list.append(var2)
-
-            funct = "*"
+        funct = "mulmod"
             
-        else: #MUL
+    elif instr.find("*")!=-1: #MUL
 
-            instr_new = instr.strip("\n")
-            var01 = instr_new.split("*")
-            var0 = var01[0].strip()
-            var1 = var01[1].strip()
-            var_list.append(var0)
-            var_list.append(var1)
+        instr_new = instr.strip("\n")
+        var01 = instr_new.split("*")
+        var0 = var01[0].strip()
+        var1 = var01[1].strip()
+        var_list.append(var0)
+        var_list.append(var1)
 
-            funct = "*"
+        funct = "*"
             
-    elif instr.find("+")!=-1:
-        if instr.find("%")!=-1: #ADDMOD
-            instr_new = instr.strip("\n")
-            args012 = instr_new.split("%")
-            args01 = args012[0].strip()
-            var2 = args012[1].strip()
+    elif instr.find("addmod(")!=-1:
 
-            vars01 = args01.split("+")
-            var0 = vars01[0][1:].strip()
-            var1 = vars01[1][:-1].strip()
+        instr_new = instr.strip("\n")
+        pos = instr_new.find("addmod(")
+        args012 = instr_new[pos+7:-1]
+        var012 = args012.split(",")
 
-            var_list.append(var0)
-            var_list.append(var1)
-            var_list.append(var2)
+        var0 = var012[0].strip()
+        var1 = var012[1].strip()
+        var2 = var012[2].strip()
+        
+        var_list.append(var0)
+        var_list.append(var1)
+        var_list.append(var2)
 
-            funct = "+"
+        funct = "addmod"
             
-        else: #ADD
-            instr_new = instr.strip("\n")
-            var01 = instr_new.split("+")
-            var0 = var01[0].strip()
-            var1 = var01[1].strip()
-            var_list.append(var0)
-            var_list.append(var1)
+    elif instr.find("+")!=-1: #ADD
+        instr_new = instr.strip("\n")
+        var01 = instr_new.split("+")
+        var0 = var01[0].strip()
+        var1 = var01[1].strip()
+        var_list.append(var0)
+        var_list.append(var1)
 
-            funct = "+"
+        funct = "+"
 
     elif instr.find("-")!=-1:
         instr_new = instr.strip("\n")
@@ -974,6 +1041,16 @@ def get_involved_vars(instr,var):
         var_list.append(var1)
 
         funct = "shr"
+
+    # pushlib must come before shl to avoid overlapping
+    elif instr.startswith("pushlib("):
+        instr_new = instr.strip("\n")
+        pos = instr_new.find("pushlib(")
+        arg0 = instr[pos+8:-1]
+        var0 = arg0.strip()
+        var_list.append(var0)
+
+        funct = "pushlib"
 
     elif instr.startswith("shl("):
         instr_new = instr.strip("\n")
@@ -1082,6 +1159,10 @@ def get_involved_vars(instr,var):
     elif instr.find("difficulty")!=-1:
         var_list.append("difficulty")
         funct =  "difficulty"
+
+    elif instr.find("basefee")!=-1:
+        var_list.append("basefee")
+        funct =  "basefee"
 
     elif instr.find("coinbase")!=-1:
         var_list.append("coinbase")
@@ -1207,16 +1288,6 @@ def get_involved_vars(instr,var):
 
         funct = "pushtag"
 
-    elif instr.startswith("pushlib("):
-        instr_new = instr.strip("\n")
-        pos = instr_new.find("pushlib(")
-        arg0 = instr[pos+8:-1]
-        var0 = arg0.strip()
-        var_list.append(var0)
-
-        funct = "pushlib"
-
-
     elif instr.startswith("push#[$]("):
         instr_new = instr.strip("\n")
         pos = instr_new.find("push#[$](")
@@ -1279,7 +1350,7 @@ def evaluate_expression(funct,val0,val1):
     elif funct == "*":
         return val0*val1
     elif funct == "/":
-        return val0/val1
+        return math.floor(val0/val1)
     elif funct == "^":
         return val0**val1
     elif funct == "and":
@@ -1317,6 +1388,8 @@ def compute_binary(expression,level):
     global saved_push
     global gas_saved_op
     global already_considered    
+    global rule_applied
+    global rule
     
     v0 = expression[0]
     v1 = expression[1]
@@ -1343,23 +1416,26 @@ def compute_binary(expression,level):
                 gas_saved_op+=5
             else:
                 gas_saved_op+=3
-
+                
             saved_push+=2
             
             if (funct in ["+","*","and","or","xor","eq","shl","shr","sar"]) and (exp_str not in already_considered):
                 discount_op+=2
+                rule = "EVAL "+str(expression)
                 msg = "[RULE]: Evaluate expression "+str(expression)
                 check_and_print_debug_info(debug, msg)
-
+                rule_applied = True
+                
             elif funct not in ["+","*","and","or","xor","eq","shl","shr","sar"]:
                 discount_op+=2
+                rule = "EVAL "+str(expression)
                 msg = "[RULE]: Evaluate expression "+str(expression)
                 check_and_print_debug_info(debug, msg)
-
+                rule_applied = True
 
         already_considered.append(exp_str)
         
-        return True, val
+        return True, str(val)
         
     else:
         return False, expression
@@ -1368,6 +1444,8 @@ def compute_ternary(expression):
     global discount_op
     global saved_push
     global gas_saved_op
+    global rule_applied
+    global rule
     
     v0 = expression[0]
     v1 = expression[1]
@@ -1375,16 +1453,21 @@ def compute_ternary(expression):
     funct = expression[3]
 
     r, vals = all_integers([v0,v1,v2])
-    if r and funct in ["+","*"]:
+    if r and funct in ["addmod","mulmod"]:
         val = evaluate_expression_ter(funct,vals[0],vals[1],vals[2])
+
+        rule = "EVAL "+str(expression)
+
         msg = "[RULE]: Evaluate expression "+str(expression)
         check_and_print_debug_info(debug, msg)
+
+        rule_applied = True
         
         gas_saved_op+=8
         saved_push+=3
         
         discount_op+=3
-        return True, val
+        return True, str(val)
     else:
         return False, expression
 
@@ -1422,11 +1505,12 @@ def rebuild_expression(vars_input,funct,values,level,evaluate = True):
         v0 = values[vars_input[0]]
         v1 = values[vars_input[1]]
         v2 = values[vars_input[2]]
-        expression = (v0,v1,v2,funct)
+        expression_without_simp = (v0,v1,v2,funct)
         if evaluate:
             r, expression = compute_ternary(expression_without_simp)
         else:
             r = False
+            expression = expression_without_simp
         arity = 3
 
     else:
@@ -1495,12 +1579,12 @@ def generate_encoding(instructions,variables,source_stack,simplification=True):
         variable_content[v] = s_dict[v]
         
     if not split_sto:
-        generate_storage_info(instructions,source_stack)
+        generate_storage_info(instructions,source_stack,simplification)
     else:
         memory_order = []
         storage_order = []
         
-def generate_storage_info(instructions,source_stack):
+def generate_storage_info(instructions,source_stack,simplification=True):
     global sstore_seq
     global mstore_seq
     global storage_order
@@ -1516,29 +1600,31 @@ def generate_storage_info(instructions,source_stack):
 
         if instructions[x].find("sstore")!=-1:
             ins_list = [] if x == 0 else instructions[x-1::-1]
-            exp = generate_sstore_mstore(instructions[x],ins_list,source_stack,len(instructions)-x)
+            exp = generate_sstore_mstore(instructions[x],ins_list,source_stack,len(instructions)-x, simplification)
             sstore_seq.append(exp)
 
         elif instructions[x].find("keccak")!=-1 or instructions[x].find("sha3")!=-1:
-            mstore_seq.append("keccak")
-            sstore_seq.append("keccak")
+            ins_list = [] if x == 0 else instructions[x-1::-1]
+            exp = generate_instruction(instructions[x],ins_list,source_stack,len(instructions)-x,simplification)
+            sstore_seq.append(exp)
+            mstore_seq.append(exp)
         elif instructions[x].find("mstore")!=-1:
             ins_list = [] if x == 0 else instructions[x-1::-1]
-            exp = generate_sstore_mstore(instructions[x],ins_list,source_stack,len(instructions)-x)
+            exp = generate_sstore_mstore(instructions[x],ins_list,source_stack,len(instructions)-x,simplification)
             mstore_seq.append(exp)
 
     last_sload = ""
     sstores = list(sstore_seq)
     last_mload = ""
     mstores = list(mstore_seq)
-
+    
     storage_order = []
     memory_order = []
     
     for x in range(0,len(instructions)):
         if instructions[x].find("sload")!=-1:
             ins_list = [] if x == 0 else instructions[x-1::-1]
-            exp,r = generate_sload_mload(instructions[x],ins_list,source_stack,len(instructions)-x)
+            exp,r = generate_sload_mload(instructions[x],ins_list,source_stack,len(instructions)-x,simplification)
             last_sload = exp
             storage_order.append(r)
             
@@ -1548,11 +1634,13 @@ def generate_storage_info(instructions,source_stack):
             
         elif instructions[x].find("mload")!=-1:
             ins_list = [] if x == 0 else instructions[x-1::-1]
-            exp,r = generate_sload_mload(instructions[x],ins_list,source_stack,len(instructions)-x)
+            exp,r = generate_sload_mload(instructions[x],ins_list,source_stack,len(instructions)-x,simplification)
             last_mload = exp
             memory_order.append(r)
             
         elif instructions[x].find("mstore")!=-1: #and last_mload != "" and mload_relative_pos.get(last_mload,[])==[]:
+            # print(instructions[x])
+            # print("*/*/*/*/*/*/*/*/*/")
             mload_relative_pos[last_mload]=mstores.pop(0)
             memory_order.append(mload_relative_pos[last_mload])
 
@@ -1561,31 +1649,62 @@ def generate_storage_info(instructions,source_stack):
             keccak1 = sstores.pop(0)
             memory_order.append(keccak)
             storage_order.append(keccak)
-
+            
     remove_loads_instructions()
+    
+    if simplification:
+        simp = True
+        while(simp):
+            simp = simplify_memory(storage_order, memory_order, "storage")
 
-
-    simp = True
-    while(simp):
-        simp = simplify_memory(storage_order,"storage")
-
+    # print(memory_order)
+            
     storage_order = list(filter(lambda x: type(x) == tuple, storage_order))
     unify_loads_instructions(storage_order, "storage")
+
+
+    msg = "Storage order: "+str(storage_order)
+    check_and_print_debug_info(debug, msg)
+
     stdep = generate_dependences(storage_order,"storage")
-    stdep = simplify_dependencies(stdep)
 
-    simp = True
-    while(simp):
-        simp = simplify_memory(memory_order,"memory")
+    msg = "Storage dep: "+str(stdep)
+    check_and_print_debug_info(debug, msg)
 
+    if len(stdep)< 300:
+        stdep = simplify_dependencies(stdep)
+
+        msg = "Storage dep simplified: "+str(stdep)
+        check_and_print_debug_info(debug, msg)
+    
+    if simplification:
+        simp = True
+        while(simp):
+            simp = simplify_memory(memory_order, storage_order, "memory")
+            
     memory_order = list(filter(lambda x: type(x) == tuple, memory_order))    
-    unify_loads_instructions(memory_order, "memory")
-    memdep = generate_dependences(memory_order,"memory")
-    memdep = simplify_dependencies(memdep)
 
+    unify_loads_instructions(memory_order, "memory")
+    
+    unify_keccak_instructions(memory_order,storage_order)
+
+    msg = "Memory order: "+str(memory_order)
+    check_and_print_debug_info(debug, msg)
+    
+    memdep = generate_dependences(memory_order,"memory")
+    
+    msg = "Memory dep: "+str(memdep)
+    check_and_print_debug_info(debug, msg)
+
+    if len(memdep) < 300:
+        memdep = simplify_dependencies(memdep)
+
+        msg = "Memory dep simplified: "+str(memdep)
+        check_and_print_debug_info(debug, msg)
+    
     s1= compute_clousure(stdep)
     m1 = compute_clousure(memdep)
-
+    
     get_best_storage(s1, len(storage_order))
     
     storage_dep = stdep
@@ -1716,6 +1835,7 @@ def generate_sstore_info(sstore_elem):
     obj["gas"] = opcodes.get_ins_cost(instr_name)
     obj["commutative"] = False
     obj["storage"] = True
+    obj["size"] = get_ins_size(instr_name)
     user_def_counter["SSTORE"]=idx+1
 
     return obj
@@ -1759,6 +1879,7 @@ def generate_mstore_info(mstore_elem):
     obj["outpt_sk"] = []
     
     obj["gas"] = opcodes.get_ins_cost(instr_name)
+    obj["size"] = get_ins_size(instr_name)
     obj["commutative"] = False
     obj["storage"] = True
     
@@ -1770,13 +1891,32 @@ def generate_mstore_info(mstore_elem):
     return obj
 
 
+def modified_variables_userdefins(storage_ins):
+    global modified_userdef_vals
+    
+    for s in modified_userdef_vals.keys():
+        ins_lis = filter(lambda x: str(x[0][0]).find(s)!=-1,storage_ins)
+        for x in ins_lis:
+            pos = storage_ins.index(x)
+            ins = storage_ins[pos]
+            new_ins =((modified_userdef_vals[s],ins[0][1],ins[0][-1]),ins[1])
+            storage_ins[pos] = new_ins
+
+        ins_lis = filter(lambda x: str(x[0][1]).find(s)!=-1,storage_ins)
+        for x in ins_lis:
+            pos = storage_ins.index(x)
+            ins = storage_ins[pos]
+            new_ins =((ins[0][0],modified_userdef_vals[s],ins[0][-1]),ins[1])
+            storage_ins[pos] = new_ins
+    
 
 
 def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,simplification = True):
     global max_instr_size
     global num_pops
     global blocks_json_dict
-    
+    global rule_applied
+    global rules_applied
     split_by = False
     
     max_ss_idx = compute_max_idx(max_ss_idx1,ss)
@@ -1785,7 +1925,7 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
 
     new_ss = []
     new_ts = []
-
+    
     ts_aux = compute_target_stack(ts)
     
     for v in ss:
@@ -1802,17 +1942,22 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
             
     sto_objs = []
 
-    sstore_ins = filter(lambda x: x[0][-1].find("sstore")!=-1,storage_order)
+    sstore_ins = list(filter(lambda x: x[0][-1].find("sstore")!=-1,storage_order))
+
+    modified_variables_userdefins(sstore_ins)
+
     for sto in sstore_ins:
         x = generate_sstore_info(sto)
         sto_objs.append(x)
 
     mem_objs = []
-    mstore_ins = filter(lambda x: x[0][-1].find("mstore")!=-1,memory_order)
+    mstore_ins = list(filter(lambda x: x[0][-1].find("mstore")!=-1,memory_order))
+
+    modified_variables_userdefins(mstore_ins)
+
     for mem in mstore_ins:
         x = generate_mstore_info(mem)
         mem_objs.append(x)
-        
 
     all_user_defins = user_defins+sto_objs+mem_objs
         
@@ -1831,21 +1976,29 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     vars_list = compute_vars_set(new_ss,new_ts)
 
     #Adding sstore seq
-
+    
     if simplification:
         new_user_defins,new_ts = apply_all_simp_rules(all_user_defins,vars_list,new_ts)
         apply_all_comparison(new_user_defins,new_ts)
     else:
         new_user_defins = all_user_defins
 
+    
+    new_user_defins1 = update_user_defins(new_ts,new_user_defins)
 
+    removed_instructions = list(filter(lambda x: x not in new_user_defins1,new_user_defins))
+    
+    update_storage_sequences(removed_instructions)
+    
+    new_user_defins, new_ts = unify_all_user_defins(new_ts,new_user_defins1,vars_list)
+    
     new_user_defins = update_user_defins(new_ts,new_user_defins)
-        
-    if simplification:
-        vars_list = recompute_vars_set(new_ss,new_ts,new_user_defins,[])
-    else:
-        vars_list = recompute_vars_set(new_ss,new_ts,new_user_defins,opcodes_seq["non_inter"])
-        
+    
+    # if simplification:
+    vars_list = recompute_vars_set(new_ss,new_ts,new_user_defins,[])
+    # else:
+    #     vars_list = recompute_vars_set(new_ss,new_ts,new_user_defins,opcodes_seq["non_inter"])
+    
     total_inpt_vars = []
     
     for user_ins in new_user_defins:
@@ -1881,14 +2034,14 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     else:
         sto_dep, mem_dep = [],[]
 
-
+        
     if push_flag:
         new_var_list, new_push_ins = transform_push_uninterpreted_functions(new_ts,new_user_defins)
         
     else:
         new_var_list = []
         new_push_ins = []
-                
+        
     json_dict["init_progr_len"] = max_instr_size-discount_op
     json_dict["max_progr_len"] = max_instr_size
     json_dict["max_sk_sz"] = max_sk_sz_idx-len(remove_vars)
@@ -1897,9 +2050,12 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     json_dict["tgt_ws"] = new_ts
     json_dict["user_instrs"] = new_user_defins+pop_instructions+new_push_ins
     json_dict["current_cost"] = gas
-    json_dict["storage_dependences"] = sto_dep
-    json_dict["memory_dependences"]= mem_dep
+    json_dict["storage_dependences"] = [list(dep) for dep in sto_dep]
+    json_dict["memory_dependences"]= [list(dep) for dep in mem_dep]
     json_dict["is_revert"]= True if revert_flag else False
+    json_dict["rules_applied"] = rule_applied
+    json_dict["rules"] = list(filter(lambda x: x != "", rules_applied))
+
     
     new_original_ins = []
     for e in original_ins:
@@ -1912,11 +2068,11 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     
     json_dict["original_instrs"] = " ".join(original_ins)
 
-    
-    if not simplification:
-        op = opcodes_seq["non_inter"]
-        opcodes_seq["non_inter"] = op+sto_objs+mem_objs
-        json_dict["init_info"] = opcodes_seq
+
+    # if not simplification:
+    #     op = opcodes_seq["non_inter"]
+    #     opcodes_seq["non_inter"] = op+sto_objs+mem_objs
+    #     json_dict["init_info"] = opcodes_seq
 
         
     if subblock is not None:
@@ -1924,16 +2080,23 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     else:
         block_nm = block_name + "_0"
 
+        
+    if rule_applied:
+        msg = "SFS with rule: "+block_nm + "_input.json"
+        check_and_print_debug_info(debug, msg)
+
+        
     blocks_json_dict[block_nm] = json_dict
 
+    if "jsons" not in os.listdir(paths.gasol_path):
+        os.mkdir(paths.json_path)
 
-    if simplification:
-        if "jsons" not in os.listdir(paths.gasol_path):
-            os.mkdir(paths.json_path)
+    with open(paths.json_path+"/"+ block_nm + "_input.json","w") as json_file:
+        json.dump(json_dict,json_file)
 
-        with open(paths.json_path+"/"+ block_nm + "_input.json","w") as json_file:
-            json.dump(json_dict,json_file)
-
+    #print(paths.json_path+"/"+ block_nm + "_input.json")
+    rule_applied = False
+    
     return split_by,""
 
 def get_not_used_stack_variables(new_ss,new_ts,total_inpt_vars):
@@ -2023,19 +2186,22 @@ def build_initblock_userdef(u_var,args_exp,arity_exp):
 def build_userdef_instructions():
     global user_defins
     global already_defined_userdef
+    global modified_userdef_vals
+
     
     already_defined_userdef = []
     
     u_dict_sort = sorted(u_dict.keys())
+    
     for u_var in u_dict_sort:
         exp = u_dict[u_var]
         arity_exp = exp[1]
         args_exp = exp[0]
-        
+
         if arity_exp ==0 or arity_exp == 1:
             funct = args_exp[1]
             args = args_exp[0]
-            
+
             is_new, obj = generate_userdefname(u_var,funct,[args],arity_exp)
 
             
@@ -2044,7 +2210,7 @@ def build_userdef_instructions():
                     user_defins.append(obj)
                 else:
                     modified_svariable(u_var, obj["outpt_sk"][0])
-
+                    modified_userdef_vals[u_var] = obj["outpt_sk"][0]
             else:
                 user_defins.append(obj)
             
@@ -2053,9 +2219,10 @@ def build_userdef_instructions():
             args = [args_exp[0],args_exp[1]]
             is_new, obj = generate_userdefname(u_var,funct,args,arity_exp)
 
+            
             if not is_new:
                 modified_svariable(u_var, obj["outpt_sk"][0])
-
+                modified_userdef_vals[u_var] = obj["outpt_sk"][0]
             else:
                 user_defins.append(obj)
 
@@ -2070,7 +2237,8 @@ def build_userdef_instructions():
 
                 if not is_new:
                     modified_svariable(new_uvar, obj["outpt_sk"][0])
-
+                    modified_userdef_vals[new_uvar] = obj["outpt_sk"][0]
+                    
                 else:
                     user_defins.append(obj)
 
@@ -2086,7 +2254,7 @@ def build_userdef_instructions():
 
                 if not is_new:
                     modified_svariable(new_uvar, obj["outpt_sk"][0])
-
+                    modified_userdef_vals[new_uvar] = obj["outpt_sk"][0]
                 else:
                     user_defins.append(obj)
 
@@ -2097,7 +2265,7 @@ def build_userdef_instructions():
 
                 if not is_new:
                     modified_svariable(u_var, obj["outpt_sk"][0])
-
+                    modified_userdef_vals[u_var] = obj["outpt_sk"][0]
                 else:
                     user_defins.append(obj)
         else:
@@ -2110,207 +2278,223 @@ def build_userdef_instructions():
 
             if not is_new:
                 modified_svariable(u_var, obj["outpt_sk"][0])
-
+                modified_userdef_vals[u_var] = obj["outpt_sk"][0]
             else:
                 user_defins.append(obj)
 
-            
-def generate_userdefname(u_var,funct,args,arity,init=False):
-    global user_def_counter
-    global already_defined_userdef
 
-    
+def funct_to_opcode(funct: str) -> Optional[str]:
+    instr_name = None
+
     if funct.find("+") != -1:
         instr_name = "ADD"
+
+    elif funct.find("mulmod") != -1:
+        instr_name = "MULMOD"
+
+    elif funct.find("addmod") != -1:
+        instr_name = "ADDMOD"
 
     elif funct.find("-") != -1:
         instr_name = "SUB"
 
-    elif funct.find("*") !=-1:
+    elif funct.find("*") != -1:
         instr_name = "MUL"
 
-    elif funct.find("/") !=-1:
+    elif funct.find("/") != -1:
         instr_name = "DIV"
-        
-    elif funct.find("^") !=-1:
+
+    elif funct.find("^") != -1:
         instr_name = "EXP"
 
-    elif funct.find("%") !=-1:
+    elif funct.find("%") != -1:
         instr_name = "MOD"
 
-    elif funct.find("and") !=-1:
+    elif funct.find("prevrandao") != -1:
+        instr_name = "PREVRANDAO"
+        
+    elif funct.find("and") != -1:
         instr_name = "AND"
 
-    elif funct.find("origin")!=-1:
+    elif funct.find("origin") != -1:
         instr_name = "ORIGIN"
 
-    elif funct.find("pushdeployaddress")!=-1:
+    elif funct.find("pushdeployaddress") != -1:
         instr_name = "PUSHDEPLOYADDRESS"
 
-    elif funct.find("pushsize")!=-1:
+    elif funct.find("pushsize") != -1:
         instr_name = "PUSHSIZE"
 
-        
-    elif funct.find("xor") !=-1:
+    elif funct.find("xor") != -1:
         instr_name = "XOR"
-        
-    elif funct.find("or") !=-1:
+
+    elif funct.find("or") != -1:
         instr_name = "OR"
 
-    elif funct.find("not") !=-1:
+    elif funct.find("not") != -1:
         instr_name = "NOT"
 
-    elif funct.find("gt") !=-1:
-        instr_name = "GT"
-
-    elif funct.find("sgt") !=-1:
+    elif funct.find("sgt") != -1:
         instr_name = "SGT"
 
-    elif funct.find("shr") !=-1:
+    elif funct.find("gt") != -1:
+        instr_name = "GT"
+
+    elif funct.find("shr") != -1:
         instr_name = "SHR"
 
-    elif funct.find("shl") !=-1:
+    # pushlib must come before shl to avoid overlapping
+    elif funct.find("pushlib") != -1:
+        instr_name = "PUSHLIB"
+
+    elif funct.find("shl") != -1:
         instr_name = "SHL"
 
-    elif funct.find("sar") !=-1:
+    elif funct.find("sar") != -1:
         instr_name = "SAR"
-        
+
     elif funct.startswith("lt"):
         instr_name = "LT"
 
-    elif funct.find("slt") !=-1:
+    elif funct.find("slt") != -1:
         instr_name = "SLT"
 
-    elif funct.find("selfbalance") !=-1:
+    elif funct.find("selfbalance") != -1:
         instr_name = "SELFBALANCE"
 
-    elif funct.find("extcodehash") !=-1:
+    elif funct.find("extcodehash") != -1:
         instr_name = "EXTCODEHASH"
 
-    elif funct.find("chainid") !=-1:
+    elif funct.find("chainid") != -1:
         instr_name = "CHAINID"
 
-    elif funct.find("create2") !=-1:
+    elif funct.find("create2") != -1:
         instr_name = "CREATE2"
 
-    elif funct.find("byte") !=-1:
+    elif funct.find("byte") != -1:
         instr_name = "BYTE"
 
-    elif funct.find("eq") !=-1:
+    elif funct.find("eq") != -1:
         instr_name = "EQ"
 
-    elif funct.find("iszero") !=-1:
+    elif funct.find("iszero") != -1:
         instr_name = "ISZERO"
-        
 
-    elif funct.find("caller")!=-1:
+    elif funct.find("caller") != -1:
         instr_name = "CALLER"
 
-    elif funct.find("callvalue")!=-1:
+    elif funct.find("callvalue") != -1:
         instr_name = "CALLVALUE"
-        
-    elif funct.find("calldataload")!=-1:
+
+    elif funct.find("calldataload") != -1:
         instr_name = "CALLDATALOAD"
-    
-    elif funct.find("address")!=-1:
+
+    elif funct.find("address") != -1:
         instr_name = "ADDRESS"
 
-    elif funct.find("calldatasize")!=-1:
+    elif funct.find("calldatasize") != -1:
         instr_name = "CALLDATASIZE"
-        
-    elif funct.find("number")!=-1:
+
+    elif funct.find("number") != -1:
         instr_name = "NUMBER"
 
-    elif funct.find("gasprice")!=-1:
+    elif funct.find("gasprice") != -1:
         instr_name = "GASPRICE"
 
-    elif funct.find("difficulty")!=-1:
+    elif funct.find("difficulty") != -1:
         instr_name = "DIFFICULTY"
 
-    elif funct.find("blockhash")!=-1:
+    elif funct.find("basefee") != -1:
+        instr_name = "BASEFEE"
+
+    elif funct.find("blockhash") != -1:
         instr_name = "BLOCKHASH"
 
-    elif funct.find("balance")!=-1:
+    elif funct.find("balance") != -1:
         instr_name = "BALANCE"
 
-    elif funct.find("coinbase")!=-1:
+    elif funct.find("coinbase") != -1:
         instr_name = "COINBASE"
 
-    elif funct.find("mload")!=-1:
+    elif funct.find("mload") != -1:
         instr_name = "MLOAD"
 
-    elif funct.find("sload")!=-1:
+    elif funct.find("sload") != -1:
         instr_name = "SLOAD"
 
-    elif funct.find("timestamp")!=-1:
+    elif funct.find("timestamp") != -1:
         instr_name = funct.upper()
 
-    elif funct.find("msize")!=-1:
+    elif funct.find("msize") != -1:
         instr_name = "MSIZE"
-        
-    elif funct.find("signextend")!=-1:
+
+    elif funct.find("signextend") != -1:
         instr_name = "SIGNEXTEND"
 
-    elif funct.find("extcodesize")!=-1:
+    elif funct.find("extcodesize") != -1:
         instr_name = "EXTCODESIZE"
 
-    elif funct.find("create")!=-1:
+    elif funct.find("create") != -1:
         instr_name = "CREATE"
 
-    elif funct.find("gaslimit")!=-1:
+    elif funct.find("gaslimit") != -1:
         instr_name = "GASLIMIT"
-    
-    elif funct.find("codesize")!=-1:
+
+    elif funct.find("codesize") != -1:
         instr_name = "CODESIZE"
-        
-    elif funct.find("sha3")!=-1:
+
+    elif funct.find("sha3") != -1:
         instr_name = "SHA3"
 
-    elif funct.find("keccak256")!=-1:
+    elif funct.find("keccak256") != -1:
         instr_name = "KECCAK256"
 
-    elif funct.find("gas")!=-1:
+    elif funct.find("gas") != -1:
         instr_name = funct.upper()
 
-    elif funct.find("returndatasize")!=-1:
+    elif funct.find("returndatasize") != -1:
         instr_name = "RETURNDATASIZE"
 
-    elif funct.find("callcode")!=-1:
+    elif funct.find("callcode") != -1:
         instr_name = "CALLCODE"
 
-    elif funct.find("delegatecall")!=-1:
+    elif funct.find("delegatecall") != -1:
         instr_name = "DELEGATECALL"
 
-    elif funct.find("staticcall")!=-1:
+    elif funct.find("staticcall") != -1:
         instr_name = "STATICCALL"
 
-    elif funct.find("callstatic")!=-1:
+    elif funct.find("callstatic") != -1:
         instr_name = "CALLSTATIC"
 
-    elif funct.find("call")!=-1:
+    elif funct.find("call") != -1:
         instr_name = "CALL"
 
-    #Yul opcodes
-    
-    elif funct.find("pushtag")!=-1:
+    # Yul opcodes
+
+    elif funct.find("pushtag") != -1:
         instr_name = "PUSH [tag]"
 
-    elif funct.find("push#[$]")!=-1:
+    elif funct.find("push#[$]") != -1:
         instr_name = "PUSH #[$]"
 
-    elif funct.find("push[$]")!=-1:
+    elif funct.find("push[$]") != -1:
         instr_name = "PUSH [$]"
 
-    elif funct.find("pushdata")!=-1:
+    elif funct.find("pushdata") != -1:
         instr_name = "PUSH data"
 
-    elif funct.find("pushimmutable")!=-1:
+    elif funct.find("pushimmutable") != -1:
         instr_name = "PUSHIMMUTABLE"
 
-    elif funct.find("pushlib")!=-1:
-        instr_name = "PUSHLIB"
+    return instr_name
+
+def generate_userdefname(u_var,funct,args,arity,init=False):
+    global user_def_counter
+    global already_defined_userdef
 
     #TODO: Add more opcodes
+    instr_name = funct_to_opcode(funct)
     
     if instr_name in already_defined_userdef:
         if not split_sto and not init and instr_name in ["SLOAD","MLOAD","KECCAK256","SHA3"]:
@@ -2319,13 +2503,15 @@ def generate_userdefname(u_var,funct,args,arity,init=False):
             defined = check_inputs(instr_name,args)
     else:
         defined = -1
+
         # if instr_name not in ["PUSH [tag]","PUSH #[$]","PUSH [$]","PUSH data"]:
         already_defined_userdef.append(instr_name)
             
     if defined == -1:
         obj = {}
 
-        if instr_name.find("GAS") !=-1 or instr_name.find("TIMESTAMP")!=-1:
+        if (instr_name.find("GAS")!=-1 and instr_name.find("GASPRICE")==-1 and instr_name.find("GASLIMIT")==-1) \
+                or instr_name.find("TIMESTAMP")!=-1:
             instr_name = instr_name[:-1]
         
         if funct == args: #0-ary functions
@@ -2381,8 +2567,9 @@ def process_opcode(result):
 def modified_svariable(old_uvar, new_uvar):
     global s_dict
     global u_dict
-
-
+    global variable_content
+    global user_defins
+    
     for s_var in s_dict.keys():
         if str(s_dict[s_var]).find(old_uvar)!=-1:
             s_dict[s_var] = new_uvar
@@ -2395,7 +2582,16 @@ def modified_svariable(old_uvar, new_uvar):
             elems[pos_var] = new_uvar
             new_val = (tuple(elems),u_dict[u_var][1])
             u_dict[u_var] = new_val
-    
+            
+    for v_var in variable_content.keys():
+        if str(variable_content[v_var]).find(old_uvar)!=-1:
+            variable_content[v_var] = new_uvar
+
+    for uf in user_defins:
+        if old_uvar in uf["inpt_sk"]:
+            pos = uf["inpt_sk"].index(old_uvar)
+            uf["inpt_sk"][pos] = new_uvar
+        
 def check_inputs(instr_name,args_aux):
     
     args = []
@@ -2554,11 +2750,11 @@ def translate_block(rule,instructions,opcodes,isolated,sub_block_name,simp):
         
         new_opcodes = compute_opcodes2write(opcodes,num_guard)
 
-        if not simp:
-            index, fin = find_sublist(rule.get_instructions(),new_opcodes)
-            init_info = get_encoding_init_block(rule.get_instructions()[index:fin+1],source_stack)
-        else:
-            init_info = {}
+        # if not simp:
+        #     index, fin = find_sublist(rule.get_instructions(),new_opcodes)
+        #     init_info = get_encoding_init_block(rule.get_instructions()[index:fin+1],source_stack)
+        # else:
+        init_info = {}
         generate_json(sub_block_name,source_stack,t_vars,source_stack_idx-1,gas, init_info,simplification = simp)
         if simp:
             write_instruction_block(sub_block_name,new_opcodes)
@@ -2680,11 +2876,11 @@ def translate_subblock(rule,instrs,sstack,tstack,sstack_idx,idx,next_block,sub_b
             new_ops = list(map(lambda x: x[4:-1],new_opcodes))
             original_ins = new_ops
 
-            if not simp:
-                index, fin = find_sublist(instructions,new_opcodes)
-                init_info = get_encoding_init_block(instructions[index:fin+1],sstack)
-            else:
-                init_info = {}
+            # if not simp:
+            #     index, fin = find_sublist(instructions,new_opcodes)
+            #     init_info = get_encoding_init_block(instructions[index:fin+1],sstack)
+            # else:
+            init_info = {}
 
             if prev_pops != 0:
                 gas = gas+2*prev_pops
@@ -2825,7 +3021,7 @@ def translate_last_subblock(rule,block,sstack,sstack_idx,idx,isolated,block_name
         else:
             block_nm = block_name + "_0"
 
-        
+
         msg = paths.json_path+"/"+ block_nm + "_input.json"
         check_and_print_debug_info(debug, msg)
 
@@ -2841,11 +3037,11 @@ def translate_last_subblock(rule,block,sstack,sstack_idx,idx,isolated,block_name
 
             original_ins = new_ops
             
-            if not simp:
-                index, fin = find_sublist(block,new_opcodes)
-                init_info = get_encoding_init_block(block[index:fin+1],sstack)
-            else:
-                init_info = {}
+            # if not simp:
+            #     index, fin = find_sublist(block,new_opcodes)
+            #     init_info = get_encoding_init_block(block[index:fin+1],sstack)
+            # else:
+            init_info = {}
 
             if prev_pops!=0:
                 gas+=2*prev_pops
@@ -3118,7 +3314,7 @@ def smt_translate_block(rule,file_name,block_name,immutable_dict,simplification=
     assignImm_values = immutable_dict
     debug = debug_info
 
-    
+
     sfs_contracts = {}
 
     blocks_json_dict = {}
@@ -3208,6 +3404,8 @@ def apply_transform(instr):
     global discount_op
     global saved_push
     global gas_saved_op
+    global rule
+
     
     opcode = instr["disasm"]
     if opcode == "AND":
@@ -3217,12 +3415,14 @@ def apply_transform(instr):
             gas_saved_op+=3
             
             discount_op+=1
+            rule = "AND(X,0)"
             return 0
         elif inp_vars[0] == inp_vars[1]:
             saved_push+=1
             gas_saved_op+=3
 
             discount_op+=1
+            rule = "AND(X,X)"
             return inp_vars[0]
     
         elif inp_vars[0] in int_not0 or inp_vars[1] in int_not0:
@@ -3230,6 +3430,7 @@ def apply_transform(instr):
             gas_saved_op+=3
 
             discount_op+=1
+            rule = "AND(X,2^256-1)"
             return inp_vars[1] if (inp_vars[0] in int_not0) else inp_vars[0]
         else:
             return -1
@@ -3241,12 +3442,14 @@ def apply_transform(instr):
             gas_saved_op+=3
 
             discount_op+=1
+            rule = "OR(X,0)"
             return inp_vars[1] if inp_vars[0] == 0 else inp_vars[0]
         elif inp_vars[0] == inp_vars[1]:
             saved_push+=1
             gas_saved_op+=3
 
             discount_op+=1
+            rule = "OR(X,X)"
             return inp_vars[0]
         else:
             return -1
@@ -3259,12 +3462,14 @@ def apply_transform(instr):
             gas_saved_op+=3
 
             discount_op+=1
+            rule = "XOR(X,X)"
             return 0
         elif 0 in inp_vars:
             saved_push+=2
             gas_saved_op+=3
 
             discount_op+=1
+            rule = "XOR(X,0)"
             return inp_vars[1] if inp_vars[0] == 0 else inp_vars[0]
         else:
             return -1
@@ -3277,18 +3482,21 @@ def apply_transform(instr):
             gas_saved_op+=60
 
             discount_op+=1
+            rule = "EXP(X,0)"
             return 1
         elif inp_vars[1] == 1:
             saved_push+=1
             gas_saved_op+=60
             
             discount_op+=1
+            rule = "EXP(X,1)"
             return inp_vars[0]
         elif inp_vars[0] == 1:
             gas_saved_op+=60
             
             discount_op+=1
-            return inp_vars[1]
+            rule = "EXP(1,X)"
+            return 1
         else:
             return -1
 
@@ -3299,6 +3507,7 @@ def apply_transform(instr):
             gas_saved_op+=3
 
             discount_op+=1
+            rule = "ADD(X,0)"
             return inp_vars[1] if inp_vars[0] == 0 else inp_vars[0]
         else:
             return -1
@@ -3310,12 +3519,14 @@ def apply_transform(instr):
             gas_saved_op+=3
 
             discount_op+=1
+            rule = "SUB(X,0)"
             return inp_vars[0]
         elif inp_vars[0] == inp_vars[1]:
             saved_push+=1
             gas_saved_op+=3
 
             discount_op+=1
+            rule = "SUB(X,X)"
             return 0
         else:
             return -1
@@ -3327,12 +3538,14 @@ def apply_transform(instr):
             gas_saved_op+=5
 
             discount_op+=1
+            rule = "MUL(X,0)"
             return 0
         elif 1 in inp_vars:
             saved_push+=1
             gas_saved_op+=5
             
             discount_op+=1
+            rule = "MUL(X,1)"
             return inp_vars[1] if inp_vars[0] == 1 else inp_vars[0]
         else:
             return -1
@@ -3344,15 +3557,24 @@ def apply_transform(instr):
             gas_saved_op+=5
             
             discount_op+=1
+            rule = "DIV(X,1)"
             return inp_vars[0]
 
-        elif inp_vars == 0:
+        elif 0 in inp_vars:
             saved_push+=2
             gas_saved_op+=5
 
             discount_op+=1
+            rule = "DIV(X,0)"
             return 0
 
+        elif inp_vars[0] == inp_vars[1]:
+            saved_push+=2
+            gas_saved_op+=5
+
+            discount_op+=1
+            rule = "DIV(X,X)"
+            return 1
         else:
             return -1
 
@@ -3363,6 +3585,7 @@ def apply_transform(instr):
             gas_saved_op+=5
             
             discount_op+=1
+            rule = "MOD(X,1)"
             return 0
 
         elif inp_vars[0] == inp_vars[1]:
@@ -3370,6 +3593,7 @@ def apply_transform(instr):
             gas_saved_op+=5
 
             discount_op+=1
+            rule = "MOD(X,X)"
             return 0
 
         elif inp_vars[1] == 0:
@@ -3377,9 +3601,9 @@ def apply_transform(instr):
             gas_saved_op+=5
 
             discount_op+=1
+            rule = "MOD(X,0)"
             return 0
 
-            
         else:
             return -1
 
@@ -3389,6 +3613,8 @@ def apply_transform(instr):
             discount_op+=1
             saved_push+=2
             gas_saved_op+=3
+
+            rule = "EQ(X,X)"
             
             return 1
         else:
@@ -3401,12 +3627,16 @@ def apply_transform(instr):
             gas_saved_op+=3
 
             discount_op+=1
+
+            rule = "GT(0,X)"
+            
             return 0
         elif inp_vars[0] == inp_vars[1]:
             discount_op+=1
             saved_push+=2
             gas_saved_op+=3
-            
+
+            rule = "GT(X,X)"
             return 0
         else:
             return -1
@@ -3418,12 +3648,15 @@ def apply_transform(instr):
             gas_saved_op+=3
 
             discount_op+=1
+
+            rule = "LT(X,0)"
             return 0
         elif inp_vars[0] == inp_vars[1]:
             discount_op+=1
             saved_push+=2
             gas_saved_op+=3
-            
+
+            rule = "LT(X,X)"
             return 0
         else:
             return -1
@@ -3442,7 +3675,7 @@ def apply_transform(instr):
                 if bytes_sol <= bytes_v0+1:    
                     saved_push+=1
                     gas_saved_op+=3
-
+                    rule = "NOT(X)"
                     return val_end
                 else:
                     return -1
@@ -3450,6 +3683,7 @@ def apply_transform(instr):
             else:
                 saved_push+=1
                 gas_saved_op+=3
+                rule = "NOT(X)"
                 return val_end
             
         else:
@@ -3460,10 +3694,12 @@ def apply_transform(instr):
         if inp_vars[0] == 0:
             gas_saved_op+=3
             saved_push+=1
+            rule = "ISZ(0)"
             return 1
         elif inp_vars[0] == 1:
             gas_saved_op+=3
             saved_push+=1
+            rule = "ISZ(1)"
             return 0
         else:
             return -1
@@ -3474,35 +3710,48 @@ def apply_transform(instr):
             discount_op+=1
             saved_push+=2
             gas_saved_op+=3
+
+            rule = opcode+"(0,X)"
+            
             return inp_vars[1]
         elif inp_vars[1] == 0:
             discount_op+=1
             saved_push+=2
             gas_saved_op+=3
+            rule = opcode+"(X,0)"
             return inp_vars[0]
         else:
             return -1
 
 
 def apply_all_simp_rules(user_def,list_vars,tstack):
+    global rule_applied
+    
     modified = True
     user_def_instrs = user_def
     target_stack = tstack
     while(modified):
 
         modified, user_def_instrs,target_stack = apply_transform_rules(user_def_instrs,list_vars,target_stack)
+        if modified:
+           rule_applied = True 
     return user_def_instrs,target_stack
 
 def apply_transform_rules(user_def_instrs,list_vars,tstack):
+    global rules_applied
+    global rule
+
     to_delete = []
     target_stack = tstack
     modified = False
     for instr in user_def_instrs:
-
+        
         if instr["disasm"] in ["AND","OR","XOR","ADD","SUB","MUL","DIV","EXP","EQ","GT","LT","NOT","ISZERO"]:
             r = apply_transform(instr)
 
             if r!=-1:
+                rules_applied.append(rule)
+                rule = ""
                 msg = "[RULE]: Simplification rule type 1: "+str(instr)
                 check_and_print_debug_info(debug, msg)
                 
@@ -3519,7 +3768,7 @@ def apply_transform_rules(user_def_instrs,list_vars,tstack):
             new_user_def.append(instr)
 
 
-    return modified, new_user_def, target_stack, 
+    return modified, new_user_def, target_stack
 
 def replace_var_userdef(out_var,value,user_def):
     modified_instrs = []
@@ -3561,7 +3810,7 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
     global saved_push
     global gas_saved_op
     global user_def_counter
-
+    global rule
     
     opcode = instr["disasm"]
     
@@ -3569,18 +3818,24 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
         if 0 == instr["inpt_sk"][1]:
             out_var = instr["outpt_sk"][0]
             is_zero = list(filter(lambda x: out_var in x["inpt_sk"] and x["disasm"] == "ISZERO",user_def_instrs))
-            if len(is_zero) == 1:
+            if len(is_zero) == 1 and out_var not in tstack:
+                # print(tstack)
+                # raise Exception
                 index = user_def_instrs.index(is_zero[0])
                 zero_instr = user_def_instrs[index]
                 zero_instr["inpt_sk"] = [instr["inpt_sk"][0]]
                 saved_push+=2
                 gas_saved_op+=3
 
-                discount_op+=2
+                
+                if out_var not in tstack:
+                    discount_op+=2
 
                 msg = "ISZ(GT(X,0))"
+                rule = msg
                 check_and_print_debug_info(debug, msg)
-                return True, [instr]
+                
+                return True, []
             else:
                 return False, []
 
@@ -3598,6 +3853,7 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
             user_def_counter["ISZERO"]=idx+1
             
             msg = "GT(1,X)"
+            rule = msg
             check_and_print_debug_info(debug, msg)
             return True, []
 
@@ -3619,8 +3875,9 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                     gas_saved_op+=6
 
                     msg = "ISZ(ISZ(GT(X,Y)))"
+                    rule = msg
                     check_and_print_debug_info(debug, msg)
-                    
+
                     update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
                     
                     return True, [zero,zero2[0]]
@@ -3654,6 +3911,7 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                 gas_saved_op+=6
 
                 msg = "ISZ(ISZ(ISZ(X)))"
+                rule = msg
                 check_and_print_debug_info(debug, msg)
 
                 update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
@@ -3676,6 +3934,7 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                 gas_saved_op+=3
 
                 msg = "EQ(1,ISZ(X))"
+                rule = msg
                 check_and_print_debug_info(debug, msg)
 
                 update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
@@ -3692,39 +3951,53 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
          if 0 == instr["inpt_sk"][0]:
             out_var = instr["outpt_sk"][0]
             is_zero = list(filter(lambda x: out_var in x["inpt_sk"] and x["disasm"] == "ISZERO",user_def_instrs))
-            if len(is_zero) == 1:
+            if len(is_zero) == 1 and out_var not in tstack:
                 index = user_def_instrs.index(is_zero[0])
                 zero_instr = user_def_instrs[index]
                 zero_instr["inpt_sk"] = [instr["inpt_sk"][1]]
-                discount_op+=1
+
+                if out not in tstack:
+                    discount_op+=2
 
                 saved_push+=1
                 gas_saved_op+=3
 
                 msg = "ISZ(LT(0,X))"
+                rule = msg
                 check_and_print_debug_info(debug, msg)
                 
-                return True, [instr]
+                return True, []
             else:
                 return False, []
 
          elif 1 == instr["inpt_sk"][1]:
             var = instr["inpt_sk"][0]
-            idx = user_def_counter.get("ISZERO",0)
-            instr["id"] = "ISZERO_"+str(idx)
-            instr["opcode"] = "15"
-            instr["disasm"] = "ISZERO"
-            instr["inpt_sk"] = [var]
-            instr["commutative"] = False
+
+            new_exist = list(filter(lambda x: x["inpt_sk"] == [var] and x["disasm"] == "ISZERO", user_def_instrs))
+                        
+            if len(new_exist) >0:
+                old_var = instr["outpt_sk"]
+                new_var = new_exist[0]["outpt_sk"]
+                update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
+                delete = [instr]
+            else:
+                idx = user_def_counter.get("ISZERO",0)
+                instr["id"] = "ISZERO_"+str(idx)
+                instr["opcode"] = "15"
+                instr["disasm"] = "ISZERO"
+                instr["inpt_sk"] = [var]
+                instr["commutative"] = False
+                user_def_counter["ISZERO"]=idx+1
+                delete = []
+                
             discount_op+=1
 
             saved_push+=1
 
-            user_def_counter["ISZERO"]=idx+1
-            
             msg = "LT(X,1)"
+            rule = msg
             check_and_print_debug_info(debug, msg)
-            return True, []
+            return True, delete
         
          else:
             out_var = instr["outpt_sk"][0]
@@ -3743,6 +4016,7 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                     gas_saved_op+=6
 
                     msg = "ISZ(ISZ(LT(X,Y)))"
+                    rule = msg
                     check_and_print_debug_info(debug, msg)
 
                     update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
@@ -3760,22 +4034,37 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
             var1 = instr["inpt_sk"][1]
 
             nonz = var1 if var0 == 0 else var0
-            idx = user_def_counter.get("ISZERO",0)
-            instr["id"] = "ISZERO_"+str(idx)
-            instr["opcode"] = "15"
-            instr["disasm"] = "ISZERO"
-            instr["inpt_sk"] = [nonz]
-            instr["commutative"] = False
+
+            new_exist = list(filter(lambda x: x["inpt_sk"] == [nonz] and x["disasm"] == "ISZERO", user_def_instrs))
+
+            if len(new_exist) >0:
+                old_var = instr["outpt_sk"]
+                new_var = new_exist[0]["outpt_sk"]
+                update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
+                delete = [instr]
+
+            else:
+                idx = user_def_counter.get("ISZERO",0)
+                instr["id"] = "ISZERO_"+str(idx)
+                instr["opcode"] = "15"
+                instr["disasm"] = "ISZERO"
+                instr["inpt_sk"] = [nonz]
+                instr["commutative"] = False
+                user_def_counter["ISZERO"]=idx+1
+                delete = []
+
+            
 
             discount_op+=1
             saved_push+=1
 
             msg = "EQ(0,X)"
+            rule = msg
             check_and_print_debug_info(debug, msg)
+
+            # user_def_counter["ISZERO"]=idx+1
             
-            user_def_counter["ISZERO"]=idx+1
-            
-            return True, []
+            return True, delete
 
         else:
 
@@ -3796,6 +4085,7 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
 
 
                     msg = "ISZ(ISZ(EQ(X,Y)))"
+                    rule = msg
                     check_and_print_debug_info(debug, msg)
 
                     update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
@@ -3827,6 +4117,7 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                 gas_saved_op+=3
 
                 msg = "AND(X,AND(X,Y))"
+                rule = msg
                 check_and_print_debug_info(debug, msg)
 
                 update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
@@ -3862,7 +4153,8 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
             while (i<len(tstack)):
                 if tstack[i] == (out_pt2):
                     tstack[i] = x
-
+                i+=1
+                
             for elems in user_def_instrs:
                 if out_pt2 in elems["inpt_sk"]:
                     pos = elems["inpt_sk"].index(out_pt2)
@@ -3873,9 +4165,10 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
 
 
             msg = "OR(X,AND(X,Y))"
+            rule = msg
             check_and_print_debug_info(debug, msg)
             
-            return True, [or_instr,instr]
+            return True, [or_instr]
             
 
         else:
@@ -3895,6 +4188,7 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                 gas_saved_op+=3
 
                 msg = "OR(OR(X,Y),Y)"
+                rule = msg
                 check_and_print_debug_info(debug, msg)
                 
                 return True, [or_instr]
@@ -3928,7 +4222,8 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
             while (i<len(tstack)):
                 if tstack[i] == (out_pt2):
                     tstack[i] = x
-
+                i+=1
+                    
             for elems in user_def_instrs:
                 if out_pt2 in elems["inpt_sk"]:
                     pos = elems["inpt_sk"].index(out_pt2)
@@ -3938,9 +4233,10 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
             gas_saved_op+=6
 
             msg = "AND(X,OR(X,Y))"
+            rule = msg
             check_and_print_debug_info(debug, msg)
             
-            return True, [and_instr,instr]
+            return True, [and_instr]
             
         else:
             return False,[]
@@ -3978,7 +4274,9 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
             while (i<len(tstack)):
                 if tstack[i] == (out_pt2):
                     tstack[i] = y
+                i+=1
 
+                    
             for elems in user_def_instrs:
                 if out_pt2 in elems["inpt_sk"]:
                     pos = elems["inpt_sk"].index(out_pt2)
@@ -3988,28 +4286,57 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
             gas_saved_op+=6
 
             msg = "XOR(X,XOR(X,Y))"
+            rule = msg
             check_and_print_debug_info(debug, msg)
             
-            return True, [xor_instr,instr]
+            return True, [xor_instr]
 
         elif len(isz_op) == 1: #ISZ(XOR(X,Y)) = EQ(X,Y)
             isz_instr = isz_op[0]
-            idx = user_def_counter.get("EQ",0)
-            
-            instr["outpt_sk"] = isz_instr["outpt_sk"]
-            instr["id"] = "EQ_"+str(idx)
-            instr["opcode"] = "14"
-            instr["disasm"] = "EQ"
-            instr["commutative"] = True            
 
-            discount_op+=1
-            gas_saved_op+=3
 
-            user_def_counter["EQ"]=idx+1
+            comm_inpt = [instr["inpt_sk"][1], instr["inpt_sk"][0]]
+            new_exist = list(filter(lambda x: (x["inpt_sk"] == instr["inpt_sk"] or x["inpt_sk"] == comm_inpt) and x["disasm"] == "EQ", user_def_instrs))
+
+            if len(new_exist) >0:
+                old_var = isz_instr["outpt_sk"]
+                new_var = new_exist[0]["outpt_sk"]
+                update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
+                delete = [isz_instr]
+
+                # discount_op+=1
+                # gas_saved_op+=3
+
+                
+            elif outpt not in tstack and len(list(filter(lambda x: outpt in x["inpt_sk"] and x!= isz_instr, user_def_instrs))) == 0:
+                idx = user_def_counter.get("EQ",0)
+                isz_instr["inpt_sk"] = instr["inpt_sk"]
+                isz_instr["id"] = "EQ_"+str(idx)
+                isz_instr["opcode"] = "14"
+                isz_instr["disasm"] = "EQ"
+                isz_instr["commutative"] = True
+                user_def_counter["EQ"]=idx+1
+                delete = []
+                
+                discount_op+=1
+                gas_saved_op+=3
+                
+            else:
+                return False, []
+            # idx = user_def_counter.get("EQ",0)            
+            # instr["outpt_sk"] = isz_instr["outpt_sk"]
+            # instr["id"] = "EQ_"+str(idx)
+            # instr["opcode"] = "14"
+            # instr["disasm"] = "EQ"
+            # instr["commutative"] = True            
+
+
+            # user_def_counter["EQ"]=idx+1
+            rule = msg
             msg = "ISZ(XOR(X,Y))"
             check_and_print_debug_info(debug, msg)
             
-            return True, [isz_instr]
+            return True, delete
                 
         else:
             return False,[]
@@ -4040,9 +4367,10 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                 gas_saved_op+=6
 
                 msg = "NOT(NOT(X))"
+                rule = msg
                 check_and_print_debug_info(debug, msg)
                 
-                return True, [not_instr,instr]
+                return True, [not_instr]
             else:
                 return False, []
 
@@ -4056,7 +4384,8 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                 while (i<len(tstack)):
                     if tstack[i] == (out_pt2):
                         tstack[i] = real_var
-
+                    i+=1
+                    
                 for elems in user_def_instrs:
                     if out_pt2 in elems["inpt_sk"]:
                         pos = elems["inpt_sk"].index(out_pt2)
@@ -4066,9 +4395,10 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                 gas_saved_op+=6
 
                 msg = "AND(X,NOT(X))"
+                rule = msg
                 check_and_print_debug_info(debug, msg)
                 
-                return True, [and_instr,instr]
+                return True, [and_instr]
 
             else:
                 return False, []
@@ -4083,7 +4413,8 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                 while (i<len(tstack)):
                     if tstack[i] == (out_pt2):
                         tstack[i] = real_var
-
+                    i+=1
+                    
                 for elems in user_def_instrs:
                     if out_pt2 in elems["inpt_sk"]:
                         pos = elems["inpt_sk"].index(out_pt2)
@@ -4093,9 +4424,10 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                 gas_saved_op+=6
 
                 msg = "OR(X,NOT(X))"
+                rule = msg
                 check_and_print_debug_info(debug, msg)
                 
-                return True, [or_instr,instr]
+                return True, [or_instr]
 
         else:
             return False,[]
@@ -4117,6 +4449,7 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                 gas_saved_op+=3
 
                 msg = "AND(ORIGIN,2^160-1)"
+                rule = msg
                 check_and_print_debug_info(debug, msg)
 
                 update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
@@ -4135,28 +4468,51 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
 
         if len(isz_op) == 1: #ISZ(SUB(X,Y)) = EQ(X,Y)
             isz_instr = isz_op[0]
-            idx = user_def_counter.get("EQ",0)
-            
-            old_var = instr["outpt_sk"]
-            new_var = isz_instr["outpt_sk"]
-            instr["outpt_sk"] = new_var
-            
-            # instr["outpt_sk"] = isz_instr["outpt_sk"]
-            instr["id"] = "EQ_"+str(idx)
-            instr["opcode"] = "14"
-            instr["disasm"] = "EQ"
-            instr["commutative"] = True            
 
-            discount_op+=1
-            gas_saved_op+=3
+            comm_inpt = [instr["inpt_sk"][1],instr["inpt_sk"][0]]
+            
+            new_exist = list(filter(lambda x: (x["inpt_sk"] == instr["inpt_sk"] or x["inpt_sk"] == comm_inpt) and x["disasm"] == "EQ", user_def_instrs))
 
-            user_def_counter["EQ"]=idx+1
+            if len(new_exist) >0:
+                old_var = isz_instr["outpt_sk"]
+                new_var = new_exist[0]["outpt_sk"]
+                update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
+                delete = [isz_instr]
+
+            elif out_pt not in tstack and len(list(filter(lambda x: out_pt in x["inpt_sk"] and x!=isz_instr, user_def_instrs))) == 0:
+                idx = user_def_counter.get("EQ",0)
+                isz_instr["inpt_sk"] = instr["inpt_sk"]
+                isz_instr["id"] = "EQ_"+str(idx)
+                isz_instr["opcode"] = "14"
+                isz_instr["disasm"] = "EQ"
+                isz_instr["commutative"] = True
+                user_def_counter["EQ"]=idx+1
+                delete = []
+
+                discount_op+=1
+                gas_saved_op+=3
+
+            else:
+                return False, []
+            # old_var = instr["outpt_sk"]
+            # new_var = isz_instr["outpt_sk"]
+            # instr["outpt_sk"] = new_var
+            
+            # # instr["outpt_sk"] = isz_instr["outpt_sk"]
+            # instr["id"] = "EQ_"+str(idx)
+            # instr["opcode"] = "14"
+            # instr["disasm"] = "EQ"
+            # instr["commutative"] = True            
+
+
+
             msg = "ISZ(SUB(X,Y))"
+            rule = msg
             check_and_print_debug_info(debug, msg)
 
-            update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
+            # update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
             
-            return True, [isz_instr]
+            return True, delete
                 
         else:
             return False,[]
@@ -4169,39 +4525,81 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
             mul_instr = mul_op[0]
 
             if mul_instr["inpt_sk"][1] == out_pt:
-                old_var = instr["outpt_sk"]
-                new_var = mul_instr["outpt_sk"]
-                instr["outpt_sk"] = new_var
-                instr["inpt_sk"][1] = mul_instr["inpt_sk"][0]
+                new_input = [instr["inpt_sk"][0],mul_instr["inpt_sk"][0]]
+                new_exist = list(filter(lambda x: x["inpt_sk"] == new_input and x["disasm"] == "SHL", user_def_instrs))
+
+                if len(new_exist) > 0:
+                    old_var = mul_instr["outpt_sk"]
+                    new_var = new_exist[0]["outpr_sk"]
+                    update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
+                    delete = [mul_instr]
+
+                else:
+                    mul_instr["inpt_sk"] = new_input
+                                        
+                    idx = user_def_counter.get("SHL",0)
+                    mul_instr["id"] = "SHL_"+str(idx)
+                    mul_instr["opcode"] = "1b"
+                    mul_instr["disasm"] = "SHL"
+                    mul_instr["commutative"] = False            
+                    user_def_counter["SHL"]=idx+1
+                    delete = []
+                    
+                # old_var = instr["outpt_sk"]
+                # new_var = mul_instr["outpt_sk"]
+                # instr["outpt_sk"] = new_var
+                # instr["inpt_sk"][1] = mul_instr["inpt_sk"][0]
 
                 discount_op+=1
                 gas_saved_op+=5
                 saved_push+=1
 
                 msg = "MUL(X,SHL(Y,1)"
+                rule = msg
                 check_and_print_debug_info(debug, msg)
 
-                update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
+                # update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
                 
-                return True, [mul_instr]
+                return True, delete
 
             elif mul_instr["inpt_sk"][0] == out_pt:
+                new_input = [instr["inpt_sk"][0],mul_instr["inpt_sk"][1]]
+                new_exist = list(filter(lambda x: x["inpt_sk"] == new_input and x["disasm"] == "SHL", user_def_instrs))
+
+                if len(new_exist) > 0:
+                    old_var = mul_instr["outpt_sk"]
+                    new_var = new_exist[0]["outpr_sk"]
+                    update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
+                    delete = [mul_instr]
+
+                else:
+                    mul_instr["inpt_sk"] = new_input
+                                        
+                    idx = user_def_counter.get("SHL",0)
+                    mul_instr["id"] = "SHL_"+str(idx)
+                    mul_instr["opcode"] = "1b"
+                    mul_instr["disasm"] = "SHL"
+                    mul_instr["commutative"] = False            
+                    user_def_counter["SHL"]=idx+1
+                    delete = []
+
                 # instr["outpt_sk"] = mul_instr["outpt_sk"]
-                old_var = instr["outpt_sk"]
-                new_var = mul_instr["outpt_sk"]
-                instr["outpt_sk"] = new_var
-                instr["inpt_sk"][1] = mul_instr["inpt_sk"][1]
+                # old_var = instr["outpt_sk"]
+                # new_var = mul_instr["outpt_sk"]
+                # instr["outpt_sk"] = new_var
+                # instr["inpt_sk"][1] = mul_instr["inpt_sk"][1]
 
                 discount_op+=1
                 gas_saved_op+=5
                 saved_push+=1
 
                 msg = "MUL(SHL(X,1),Y)"
+                rule = msg
                 check_and_print_debug_info(debug, msg)
 
-                update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
+                # update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
                 
-                return True, [mul_instr]
+                return True, delete
 
             else:
                 return False, []
@@ -4210,31 +4608,52 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
             div_instr = div_op[0]
 
             if div_instr["inpt_sk"][1] == out_pt:
-                old_var = instr["outpt_sk"]
-                new_var = div_instr["outpt_sk"]
-                instr["outpt_sk"] = new_var
-                # instr["outpt_sk"] = div_instr["outpt_sk"]
-                instr["inpt_sk"][1] = div_instr["inpt_sk"][0]
+                new_input = [instr["inpt_sk"][0], div_instr["inpt_sk"][0]]
+                new_exist = list(filter(lambda x: x["inpt_sk"] == new_input and x["disasm"] == "SHR", user_def_instrs))
 
-                idx = user_def_counter.get("SHR",0)
+                if len(new_exist) > 0:
+                    old_var = div_instr["outpt_sk"]
+                    new_var = new_exist[0]["outpt_sk"]
+                    update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
+                    delete = [div_instr]
+                else:
+                    div_instr["inpt_sk"] = new_input
+                    
+                    idx = user_def_counter.get("SHR",0)
+                    div_instr["id"] = "SHR_"+str(idx)
+                    div_instr["opcode"] = "1c"
+                    div_instr["disasm"] = "SHR"
+                    div_instr["commutative"] = False            
+                    user_def_counter["SHR"]=idx+1
+                    delete = []
+                    
+                # old_var = instr["outpt_sk"]
+                # new_var = div_instr["outpt_sk"]
+                # instr["outpt_sk"] = new_var
+                # # instr["outpt_sk"] = div_instr["outpt_sk"]
+                # instr["inpt_sk"][1] = div_instr["inpt_sk"][0]
+
+                # idx = user_def_counter.get("SHR",0)
             
-                instr["id"] = "SHR_"+str(idx)
-                instr["opcode"] = "1c"
-                instr["disasm"] = "SHR"
-                instr["commutative"] = False            
+                # instr["id"] = "SHR_"+str(idx)
+                # instr["opcode"] = "1c"
+                # instr["disasm"] = "SHR"
+                # instr["commutative"] = False            
                 
                 
                 discount_op+=1
                 gas_saved_op+=5
                 saved_push+=1
 
-                user_def_counter["SHR"]=idx+1
+                # user_def_counter["SHR"]=idx+1
                 msg = "DIV(X,SHL(Y,1))"
+                rule = msg
                 check_and_print_debug_info(debug, msg)
 
-                update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
+                # update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
                 
-                return True, [div_instr]
+                return True, delete
+            
             
         else:
             return False, []
@@ -4248,29 +4667,49 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
         if len(bal_op) == 1:
             bal_instr = bal_op[0]
 
-            old_var = instr["outpt_sk"]
-            new_var = bal_instr["outpt_sk"]
-            instr["outpt_sk"] = new_var
+            new_exist = list(filter(lambda x: x["disasm"] == "SELFBALANCE", user_def_instrs))
+
+            if len(new_exist) > 0:
+                    old_var = bal_instr["outpt_sk"]
+                    new_var = new_exist[0]["outpt_sk"]
+                    update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
+                    delete = [bal_instr]
+            else:
+                bal_instr["inpt_sk"] = []
+                    
+                idx = user_def_counter.get("SELFBALANCE",0)
+                bal_instr["id"] = "SELFBALANCE_"+str(idx)
+                bal_instr["opcode"] = "47"
+                bal_instr["disasm"] = "SELFBALANCE"
+                bal_instr["commutative"] = False            
+                user_def_counter["SELFBALANCE"]=idx+1
+                delete = []
+
+            
+            # old_var = instr["outpt_sk"]
+            # new_var = bal_instr["outpt_sk"]
+            # instr["outpt_sk"] = new_var
             
             # instr["outpt_sk"] = bal_instr["outpt_sk"]
 
-            idx = user_def_counter.get("SELFBALANCE",0)
+            # idx = user_def_counter.get("SELFBALANCE",0)
             
-            instr["id"] = "SELFBALANCE_"+str(idx)
-            instr["opcode"] = "47"
-            instr["disasm"] = "SELFBALANCE"
-            instr["commutative"] = False            
+            # instr["id"] = "SELFBALANCE_"+str(idx)
+            # instr["opcode"] = "47"
+            # instr["disasm"] = "SELFBALANCE"
+            # instr["commutative"] = False            
                 
             discount_op+=1
             gas_saved_op+=397 #BALANCE 400 ADDRESS 2 SELFBALANCE 5
 
-            user_def_counter["SELFBALANCE"]=idx+1
+            # user_def_counter["SELFBALANCE"]=idx+1
             msg = "BALANCE(ADDRESS)"
+            rule = msg
             check_and_print_debug_info(debug, msg)
 
-            update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
+            # update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
             
-            return True,[bal_instr]
+            return True, delete
         
         elif len(and_op) == 1:
             and_instr = and_op[0]
@@ -4286,6 +4725,7 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                 gas_saved_op+=3
 
                 msg = "AND(ADDRESS,2^160)"
+                rule = msg
                 check_and_print_debug_info(debug, msg)
 
                 update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
@@ -4300,39 +4740,72 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
         if instr["inpt_sk"][0] == 0:
             instr["inpt_sk"].pop(0)
 
-            idx = user_def_counter.get("ISZERO",0)
+            new_exist = list(filter(lambda x: x["inpt_sk"] == instr["inpt_sk"] and x["disasm"] == "ISZERO", user_def_instrs))
+
+            if len(new_exist) > 0:
+                old_var = instr["outpt_sk"]
+                new_var = new_exist[0]["outpt_sk"]
+                update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
+                delete = [instr]
+            else:
+                idx = user_def_counter.get("ISZERO",0)
             
-            instr["id"] = "ISZERO_"+str(idx)
-            instr["opcode"] = "15"
-            instr["disasm"] = "ISZERO"
-            instr["commutative"] = False            
+                instr["id"] = "ISZERO_"+str(idx)
+                instr["opcode"] = "15"
+                instr["disasm"] = "ISZERO"
+                instr["commutative"] = False            
+                user_def_counter["ISZERO"]=idx+1
+                delete = []
                 
             saved_push+=1
             gas_saved_op+=57
 
-            user_def_counter["ISZERO"]=idx+1
+
             msg = "EXP(0,X)"
+            rule = msg
             check_and_print_debug_info(debug, msg)
             
-            return True, []
+            return True, delete
 
         elif instr["inpt_sk"][0] == 2:
             instr["inpt_sk"].pop(0)
-            instr["inpt_sk"].append(1)
-            idx = user_def_counter.get("SHL",0)
+
+            new_input = [instr["inpt_sk"][0],1]
+            new_exist = list(filter(lambda x: x["inpt_sk"] == new_input and x["disasm"] == "SHL", user_def_instrs))
+
+            if len(new_exist) > 0:
+                old_var = instr["outpt_sk"]
+                new_var = new_exist[0]["outpt_sk"]
+                update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
+                delete = [instr]
+            else:
+                idx = user_def_counter.get("SHL",0)
+                instr["inpt_sk"] = new_input
+                instr["id"] = "SHL_"+str(idx)
+                instr["opcode"] = "1b"
+                instr["disasm"] = "SHL"
+                instr["commutative"] = False            
+                user_def_counter["SHL"]=idx+1
+                delete = []
             
-            instr["id"] = "SHL_"+str(idx)
-            instr["opcode"] = "1b"
-            instr["disasm"] = "SHL"
-            instr["commutative"] = False            
+            
+            
+            # instr["inpt_sk"].append(1)
+            # idx = user_def_counter.get("SHL",0)
+            
+            # instr["id"] = "SHL_"+str(idx)
+            # instr["opcode"] = "1b"
+            # instr["disasm"] = "SHL"
+            # instr["commutative"] = False            
                 
             gas_saved_op+=57 #EXP-SHL
 
-            user_def_counter["SHL"]=idx+1
+            # user_def_counter["SHL"]=idx+1
             msg = "EXP(2,X)"
+            rule = msg
             check_and_print_debug_info(debug, msg)
-            
-            return True, []
+
+            return True, delete
 
         else:
             return False, []
@@ -4343,14 +4816,20 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
 
     
 def apply_all_comparison(user_def_instrs,tstack):
+    global rule_applied
+
     modified = True
     while(modified):
         msg = "********************IT*********************"
         check_and_print_debug_info(debug, msg)
         modified = apply_comparation_rules(user_def_instrs,tstack)
-
+        if modified:
+            rule_applied = True
         
 def apply_comparation_rules(user_def_instrs,tstack):
+    global rules_applied
+    global rule
+    
     modified = False
 
     for instr in user_def_instrs:
@@ -4358,10 +4837,13 @@ def apply_comparation_rules(user_def_instrs,tstack):
         r, d_instr = apply_cond_transformation(instr,user_def_instrs,tstack)
 
         if r:
+            
+            rules_applied.append(rule)
+            rule = ""
             msg = "[RULE]: Simplification rule type 2: "+str(instr)
             msg = msg+"\n[RULE]: Delete rules: "+str(d_instr)
             check_and_print_debug_info(debug, msg)
-            
+
             modified = True
             for b in d_instr:
                 idx = user_def_instrs.index(b)
@@ -4437,12 +4919,14 @@ def remove_loads_instructions():
 
 #Here it means that we have sloads between the sstores that are equals.
 #Otherwise it would have been removed with remove_store_recursive_dif
-def replace_loads_by_sstores(storage_location, location):
+def replace_loads_by_sstores(storage_location, complementary_location, location):
     global u_dict
     global variable_content
     global gas_store_op
     global gas_memory_op
     global discount_op
+    global rule_applied
+    global rules_applied
     
     if location == "storage":
         store_ins = "sstore"
@@ -4464,22 +4948,33 @@ def replace_loads_by_sstores(storage_location, location):
                 load = l_ins[0]
                 pos = storage_location[i+1::].index(load)
                 rest_list = storage_location[i+1:i+pos+1]
-                dep = list(map(lambda x: are_dependent(var,x[0][0],elem[0][-1],x[0][-1]),rest_list))
+                dep = list(map(lambda x: are_dependent(elem,x),rest_list))
+
+                if True in dep and elem[0][-1].find("mstore8") == -1:
+                    j = 0
+                    while(j<len(dep)):
+                        if dep[j] and rest_list[j][0][-1].find("keccak")!=-1:
+                            dep[j] = False
+                        j+=1
+                        
                 if True not in dep and elem[0][-1].find("mstore8") == -1: #it does not work for mstore8
                     if location == "storage":
                         msg = "[OPT]: Replaced sload by its value"
                         check_and_print_debug_info(debug, msg)
-                        
+
                         gas_store_op+=700
                     else:
                         msg = "[OPT]: Replaced mload by its value"
                         check_and_print_debug_info(debug, msg)
-                        
+
                         gas_memory_op+=3
                     storage_location.pop(i+pos+1)
-                    discount_op+=1
+                    # discount_op+=1  @It may be replace by a DUP+SWAP
                     finish = True
 
+                    rule_applied = True
+                    rules_applied.append(str(load)+"= "+str(elem[0]))
+                    
                     for v in u_dict:
                         elem = u_dict[v]
                         if elem == load:
@@ -4505,9 +5000,17 @@ def replace_loads_by_sstores(storage_location, location):
                             list_tuple[pos] = value
                             storage_location[i] = (tuple(list_tuple),elem[1])
 
+                    for i in range(0,len(complementary_location)):
+                        elem = complementary_location[i]
+                        list_tuple = list(elem[0])
+                        if var2replace in list_tuple:
+                            pos = list_tuple.index(var2replace)
+                            list_tuple[pos] = value
+                            complementary_location[i] = (tuple(list_tuple),elem[1])
+
                     del u_dict[var2replace]
 
-                    replace_loads_by_sstores(storage_location,location)
+                    replace_loads_by_sstores(storage_location, complementary_location,location)
         i+=1
 
     
@@ -4515,6 +5018,9 @@ def remove_store_recursive_dif(storage_location, location):
     global gas_store_op
     global gas_memory_op
     global discount_op
+    global rule_applied
+    global rules_applied
+    
     if location == "storage":
         instruction = "sstore"
     else:
@@ -4526,31 +5032,96 @@ def remove_store_recursive_dif(storage_location, location):
     while(i<len(storage_location) and not finish):
         elem = storage_location[i]
         
-        if elem[0][-1].find(instruction)!=-1: #it can be mstore8 or mstore but the second has to be mstore
+        if elem[0][-1].find(instruction)!=-1:
             var = elem[0][0]
-            rest = list(filter(lambda x: x[0][0] == var and x[0][-1].find(instruction)!=-1 and x[0][-1].find("mstore8")==-1, storage_location[i+1::]))
+            rest = list(filter(lambda x: x[0][0] == var and x[0][-1].find(instruction)!=-1 and x[0][-1] == elem[0][-1], storage_location[i+1::]))
+            # # If instruction is mstore and the next one is mstore8, then i cannot remove any of them. Otherwise, it is
+            # # possible if both instructions are dependent
+            # rest = list(filter(lambda x: x[0][-1].find(instruction)!=-1 and (elem[0][-1] != "mstore" or x[0][-1] != "mstore8") and
+            #                              are_dependent(x[0][0],var,x[0][-1],elem[0][-1]), storage_location[i+1::]))
             if rest !=[]:
                 next_ins = rest[0]
                 pos = storage_location[i+1::].index(next_ins)
                 sublist = storage_location[i+1:pos+i+1]
-                dep = list(map(lambda x: are_dependent(x[0][0],var,x[0][-1],elem[0][-1]),sublist)) #It checks for loads betweeen the stores
 
-                if True not in dep and "keccak" not in sublist:
+                dep = list(map(lambda x: are_dependent(elem, x),sublist)) #It checks for loads and and keccaks betweeen the stores
+
+                #Keccaks are considered in dep list
+                if True not in dep:
                     storage_location.pop(i)
                     discount_op+=1
                     if location == "storage":
                         msg = "[OPT]: Removed sstore sstore "
                         check_and_print_debug_info(debug, msg)
-                        
+
                         gas_store_op+=5000
                     else:
                         msg = "[OPT]: Removed mstore mstore "
                         check_and_print_debug_info(debug, msg)
-                        
+
                         gas_memory_op+=3
+
+                    rule_applied = True
+                    rules_applied.append(str(elem[0])+" useless")
                     
                     remove_store_recursive_dif(storage_location,location)
                     finish = True
+
+                elif True in dep and next_ins == elem and location == "memory": #It may happend that two mstores can be optimized though a keccak is between them. mstore(x,y) keccak(x,z), mstore(x,y)
+                    #All trues have to correspond to keccaks
+                    j = 0
+                    all_keccaks = True
+                    while(j < len(sublist) and all_keccaks):
+                        ins = sublist[j]
+                        if dep[j]:
+                            if ins[0][-1].find("keccak256")==-1:
+                                all_keccaks = False
+                        j+=1
+                        
+                    if all_keccaks:
+                        rules_applied.append(str(storage_location[i+pos+1])+" useless")
+
+                        storage_location.pop(i+pos+1)
+                        discount_op+=1
+                        msg = "[OPT]: Removed mstore mstore with KECCAK"
+                        check_and_print_debug_info(debug, msg)
+                        gas_memory_op+=3
+
+                        rule_applied = True
+
+                        
+                        remove_store_recursive_dif(storage_location,location)
+                        finish = True
+
+                else: #True in list. If we have dependences, we an delete them if all are stores. mstore(x,y) mstore(z,w) mstore(x,k)
+                        j = 0
+                        all_mstores = True
+                        while(j<len(sublist) and all_mstores):
+                            ins = sublist[j]
+                            if dep[j]:
+                                if ins[0][-1].find(elem[0][-1])==-1:
+                                    all_mstores = False
+                            j+=1
+
+                        if all_mstores:
+                            storage_location.pop(i)
+                            discount_op+=1
+                            if location == "storage":
+                                msg = "[OPT]: Removed sstore sstore "
+                                check_and_print_debug_info(debug, msg)
+
+                                gas_store_op+=5000
+                            else:
+                                msg = "[OPT]: Removed mstore mstore "
+                                check_and_print_debug_info(debug, msg)
+
+                                gas_memory_op+=3
+                               
+                            rule_applied = True
+                            rules_applied.append(str(elem[0])+" useless")
+                            
+                            remove_store_recursive_dif(storage_location,location)
+                            finish = True
                     
         i+=1
 
@@ -4560,7 +5131,9 @@ def remove_store_loads(storage_location, location):
     global gas_store_op
     global gas_memory_op
     global discount_op
-
+    global rule_applied
+    global rules_applied
+    
     if storage_location == "storage":
         store_ins = "sstore"
         load_ins = "sload"
@@ -4580,28 +5153,36 @@ def remove_store_loads(storage_location, location):
                 if symb_ins[0][-1].find(load_ins)!=-1 and symb_ins[0][0] == var:
                     pos = storage_location.index(symb_ins)
                     rest_instructions = storage_location[i+1:pos]
-                    variables = list(map(lambda x: are_dependent(var,x[0][0],elem[0][-1],x[0][-1]),rest_instructions))
-                    if True not in variables and "keccak" not in rest_instructions:
+                    variables = list(map(lambda x: are_dependent(elem,x),rest_instructions))
+
+                    #Keccaks are considered in the previous list
+                    if True not in variables:
                         storage_location.pop(i)
                         discount_op+=1
                         finished = True
+
                         if storage_location == "storage":
                             msg = "[OPT]: OPTIMIZATION sstore OF sload"
                             check_and_print_debug_info(debug, msg)
-                            
+
                             gas_store_op+=5000
                         else:
                             msg = "[OPT]: OPTIMIZATION mstore OF mload"
                             check_and_print_debug_info(debug, msg)
-                            
+
                             gas_memory_op+=3
+
+                        rule_applied = True
+                        rules_applied.append(str(elem[0])+" of mload")
+
+                        
                         remove_store_loads(storage_location,location)
         i+=1
 
 
 
 
-def simplify_memory(storage_location,location):
+def simplify_memory(storage_location, complementary_location, location):
     global memory_opt
     global storage_opt
     global mem_delete_pos
@@ -4610,7 +5191,7 @@ def simplify_memory(storage_location,location):
     del_pos = []
     old_storage_location = list(storage_location)
     
-    replace_loads_by_sstores(storage_location,location)
+    replace_loads_by_sstores(storage_location, complementary_location, location)
     
     if old_storage_location != storage_location:
         old_storage_location = list(filter(lambda x: type(x)==tuple, old_storage_location))
@@ -4668,7 +5249,42 @@ def simplify_memory(storage_location,location):
         return True
     else:
         return False
-        
+
+
+
+def are_dependent_variables(v1,v2):
+    # print("AREDEPENDENTVARIABLES")
+    # print(v1)
+    # print(v2)
+    # print(u_dict)
+    # print(u_dict[v1][0])
+    # print(u_dict[v2][0])
+
+    exp_v1 = (v1) if v1 not in u_dict.keys() else u_dict[v1][0]
+    exp_v2 = (v2) if v2 not in u_dict.keys() else u_dict[v2][0]
+
+    if v1 == v2:
+        return False
+
+    if is_integer(v1)!=-1 and is_integer(v2)!=-1:
+        return False
+
+    if is_integer(v1)!=-1 or is_integer(v2)!=-1:
+        return True
+    
+    if v2 in exp_v1:
+        return True
+    if v1 in exp_v2:
+        return True
+
+    for v in exp_v1:
+        if v in exp_v2:
+            return True
+    
+    return False
+
+    
+    
 #storage location may be storage_order or memory_order
 def generate_dependences(storage_location, location):
     storage_dependences = []
@@ -4683,27 +5299,71 @@ def generate_dependences(storage_location, location):
     for i in range(len(storage_location)-1,-1,-1):
         elem = storage_location[i]
         var = elem[0][0]
+
+        # print("****************")
         
         if elem[0][-1].find(instruction)!=-1:
             predecessor = storage_location[:i]
-
+            # print(predecessor)
             j = len(predecessor)-1
             already = False
-            while((j>=0) and not already):
+            # while((j>=0) and not already):
+            while(j>=0):
                 store = predecessor[j]
                 if store[0][-1].find(instruction)!=-1:
                     var_rest = store[0][0]
-                    dep = are_dependent(var,var_rest,elem[0][-1],store[0][-1])
+                    # print("ARE DEPENDENT")
+                    # print(elem)
+                    # print(store)
+                    dep = are_dependent(elem,store)
                     if dep:
                         if elem[0][1] != store[0][1]: #if the value is the same they are not dependent
                             storage_dependences.append((j,i))
                             already = True
                         else:
-                            if str(var) == str(var_rest) and location == "memory":
+                            # print(elem)
+                            # print(store)
+                            # print(are_dependent_variables(elem[0][0],store[0][0]))
+                            if are_dependent_variables(elem[0][0],store[0][0]): #if they stored the same value but on index depends on the other
+                            # store[0][0] in u_dict[elem[0][0]][0]:
+
                                 storage_dependences.append((j,i))
                                 already = True
                                 
+                            if str(var) == str(var_rest) and location == "memory":
+                                storage_dependences.append((j,i))
+                                already = True
+
+                                
                 j-=1
+
+        elif elem[0][-1].find("keccak")!=-1:
+            predecessor = storage_location[:i]
+
+            j = len(predecessor)-1
+            while(j>=0):
+                store = predecessor[j]
+                if store[0][-1].find(instruction)!=-1:
+                    var_rest = store[0][0]
+                    dep = are_dependent(store,elem)
+                    if dep:
+                        storage_dependences.append((j,i))                                
+                j-=1
+
+            j = 0
+            successor = storage_location[i+1:]
+            while(j<len(successor)):
+                store = successor[j]
+                if store[0][-1].find(instruction)!=-1:
+                    var_rest = store[0][0]
+                    dep = are_dependent(elem,store)
+                    if dep:
+                        storage_dependences.append((i,i+j+1))
+
+                j+=1                                
+
+                
+            
         else: #loads
             predecessor = storage_location[:i]
             successor = storage_location[i+1:]
@@ -4711,11 +5371,11 @@ def generate_dependences(storage_location, location):
             #pre
             j = len(predecessor)-1
             already = False
-            while((j>=0) and not already):
+            while((j>=0)):
                 store = predecessor[j]
                 if store[0][-1].find(instruction)!=-1:
                     var_rest = store[0][0]
-                    dep = are_dependent(var,var_rest,elem[0][-1],store[0][-1])
+                    dep = are_dependent(elem,store)
                     if dep:
                         if elem[0][1] != store[0][1]: #if the value is the same they are not dependent
                             storage_dependences.append((j,i))
@@ -4728,11 +5388,11 @@ def generate_dependences(storage_location, location):
 
             j = 0
             already = False
-            while(j<len(successor) and not already):
+            while(j<len(successor)):
                 store = successor[j]
                 if store[0][-1].find(instruction)!=-1:
                     var_rest = store[0][0]
-                    dep = are_dependent(var,var_rest,elem[0][-1],store[0][-1])
+                    dep = are_dependent(elem,store)
                     if dep:
                         if elem[0][1] != store[0][1]: #if the value is the same they are not dependent
                             storage_dependences.append((i,i+j+1))
@@ -4759,7 +5419,64 @@ def simplify_dependencies(dep):
                     new_dep.pop(pos)
 
     return new_dep
-def update_variables_loads(elem1, elem2, storage_location):
+
+def update_variables_loads(elem1, elem2, storage_location, location):
+    global variable_content
+    global storage_order
+    global memory_order
+    global u_dict
+
+
+    for v in u_dict:
+        elem = u_dict[v]
+        if elem == elem1:
+            var2keep = v
+        if elem == elem2:
+            var2replace = v
+            
+    #We remove the second sload
+    u_dict.pop(var2replace)
+
+    for v in u_dict:
+        elem = u_dict[v]
+        list_tuple = list(elem[0])
+        if var2replace in list_tuple:
+            pos = elem[0].index(var2replace)
+            list_tuple[pos] = var2keep
+            u_dict[v] = (tuple(list_tuple),elem[1])
+    
+    for var in variable_content:
+        if variable_content[var] == var2replace:
+            variable_content[var] = var2keep
+
+    for i in range(0,len(storage_location)):
+        elem = storage_location[i]
+        list_tuple = list(elem[0])
+        if var2replace in list_tuple:
+            pos = list_tuple.index(var2replace)
+            list_tuple[pos] = var2keep
+            storage_location[i] = (tuple(list_tuple),elem[1])
+
+
+    if location == "storage":
+        complement_order = memory_order
+    else:
+        complement_order = storage_order
+
+    for i in range(0,len(complement_order)):
+        elem = complement_order[i]
+        list_tuple = list(elem[0])
+        if var2replace in list_tuple:
+            pos = list_tuple.index(var2replace)
+            list_tuple[pos] = var2keep
+            complement_order[i] = (tuple(list_tuple),elem[1])
+
+        
+
+            
+            
+
+def update_variables_keccaks(elem1, elem2, storage_location, storage_order):
     global variable_content
     global u_dict
 
@@ -4795,8 +5512,17 @@ def update_variables_loads(elem1, elem2, storage_location):
             storage_location[i] = (tuple(list_tuple),elem[1])
 
 
+    #It may affect also to storage instructions
+    for i in range(0,len(storage_order)):
+        elem = storage_order[i]
+        list_tuple = list(elem[0])
+        if var2replace in list_tuple:
+            pos = list_tuple.index(var2replace)
+            list_tuple[pos] = var2keep
+            storage_order[i] = (tuple(list_tuple),elem[1])
+            
     
-#It checks in which cases the loads are 
+#It checks in which cases the loads are the same
 def unify_loads_instructions(storage_location, location):
     global variable_content
 
@@ -4809,6 +5535,7 @@ def unify_loads_instructions(storage_location, location):
 
     i = 0
     finished = False
+    
     while(i<len(storage_location) and not finished):
         elem = storage_location[i]
         if elem[0][-1].find(instruction)!=-1:
@@ -4818,10 +5545,15 @@ def unify_loads_instructions(storage_location, location):
                 pos_aux = storage_location[i+1::].index(load_ins)
                 rest_list = storage_location[i+1:i+pos_aux+1]
                 st_list = list(filter(lambda x: x[0][-1].find(store_ins)!=-1, rest_list))
-                dep = list(map(lambda x: are_dependent(elem[0][0],x[0][0],elem[0][-1],x[0][-1]),st_list))
+                dep = list(map(lambda x: are_dependent(elem,x),st_list))
                 if True not in dep:
+                    # print(storage_location)
+                    # print(memory_order)
+                    # print(u_dict)
+                    # print(elem, load_ins)
+
                     old = storage_location.pop(pos_aux+i+1)
-                    update_variables_loads(elem,load_ins,storage_location)
+                    update_variables_loads(elem,load_ins,storage_location, location)
                     unify_loads_instructions(storage_location,location)
                     # storage_location.insert(pos_aux+i+1,old)
                     finished = True
@@ -4829,6 +5561,38 @@ def unify_loads_instructions(storage_location, location):
             
         i+=1
 
+
+#It checks in which cases the loads are the same
+#It is checked only respect to memory as it is the storage location that may affect keccaks
+def unify_keccak_instructions(storage_location,storage_order):
+    global variable_content
+
+    instruction = "keccak"
+    store_ins = "mstore"
+
+    i = 0
+    finished = False
+    while(i<len(storage_location) and not finished):
+        elem = storage_location[i]
+        if elem[0][-1].find(instruction)!=-1:
+            keccaks = list(filter(lambda x: x[0][0] == elem[0][0] and x[0][1] == elem[0][1] and x[0][-1].find(instruction)!=-1,storage_location[i+1::]))
+            if len(keccaks)>0:
+                k_ins = keccaks[0]
+                pos_aux = storage_location[i+1::].index(k_ins)
+                rest_list = storage_location[i+1:i+pos_aux+1]
+                st_list = list(filter(lambda x: x[0][-1].find(store_ins)!=-1, rest_list))
+                dep = list(map(lambda x: are_dependent(elem,x),st_list))
+                if True not in dep:
+                    old = storage_location.pop(pos_aux+i+1)
+                    update_variables_keccaks(elem,k_ins,storage_location,storage_order)
+                    unify_keccak_instructions(storage_location,storage_order)
+                    # storage_location.insert(pos_aux+i+1,old)
+                    finished = True
+                
+            
+        i+=1
+
+        
 def compute_identifiers_storage_instructions(storage_location, location, new_user_defins):
 
     if location == "storage":
@@ -4846,14 +5610,17 @@ def compute_identifiers_storage_instructions(storage_location, location, new_use
     
     store_count = 0
     store8_count = 0
+    keccak_count = 0
     
     storage_identifiers = []
 
     key_list = list(u_dict.keys())
     values_list = list(u_dict.values())
 
+    
     for i in range(0,len(storage_location)):
         ins = storage_location[i]
+        
         if ins[0][-1].find(store)!=-1:
             if location !="storage" and ins[0][-1].find(store8)!=-1:
                 storage_identifiers.append(store8_up+"_"+str(store8_count))
@@ -4863,6 +5630,22 @@ def compute_identifiers_storage_instructions(storage_location, location, new_use
             else:
                 storage_identifiers.append(store_up+"_"+str(store_count))
                 store_count+=1
+
+        elif ins[0][-1].find("keccak")!=-1:
+            keccak_ins = list(filter(lambda x: x[0][-1] == ins[0][-1],values_list))
+            if len(keccak_ins)!=1: #if it does not exist means that it does not appear in the target stack and we have to create the identifier
+                storage_identifiers.append("KECCAK256_"+str(keccak_count))
+                keccak_count+=1
+            else:
+                pos = values_list.index(keccak_ins[0])
+                var = key_list[pos]
+                k_ins = list(filter(lambda x: x["disasm"] == "KECCAK256" and x["outpt_sk"] == [var],new_user_defins))
+                if len(k_ins)!= 1:
+                    raise Exception("Error in looking for keccak instruction")
+                else:
+                    storage_identifiers.append(k_ins[0]["id"])
+
+            
         else: # loads instructions
             load_ins = list(filter(lambda x: x[0][-1] == ins[0][-1],values_list))
             if len(load_ins)!=1:
@@ -4878,13 +5661,78 @@ def compute_identifiers_storage_instructions(storage_location, location, new_use
 
     return storage_identifiers
 
+
+
+def update_storage_sequences(removed_instructions):
+    global storage_order
+    global memory_order
+    global storage_dep
+    global memory_dep
+    
+    new_storage_order = []
+    new_memory_order = []
+    
+    for ins in storage_order:
+        instructions_name = ins[0][-1]
+        inpt_var = ins[0][0]
+        if instructions_name.find("sload")!=-1:
+            unused = list(filter(lambda x: x["disasm"] == "SLOAD" and inpt_var in x["inpt_sk"],removed_instructions))
+            if len(unused)==0:
+                new_storage_order.append(ins)
+        elif instructions_name.find("sstore")!=-1:
+            unused = list(filter(lambda x: x["disasm"] == "SSTORE" and inpt_var == x["inpt_sk"][0],removed_instructions))
+            if len(unused)==0:
+                new_storage_order.append(ins)
+        else:
+            new_storage_order.append(ins)
+
+
+    if storage_order != new_storage_order:
+        stdep = generate_dependences(new_storage_order,"storage")
+        stdep = simplify_dependencies(stdep)
+        
+        storage_dep = stdep
+        storage_order = new_storage_order
+        
+    for ins in memory_order:
+        instructions_name = ins[0][-1]
+        inpt_var = ins[0][0]
+        if instructions_name.find("mload")!=-1:
+            unused = list(filter(lambda x: x["disasm"] == "MLOAD" and inpt_var in x["inpt_sk"],removed_instructions))
+            if len(unused)==0:
+                new_memory_order.append(ins)
+
+        elif instructions_name.find("mstore8")!=-1:
+            unused = list(filter(lambda x: x["disasm"] == "MSTORE8" and inpt_var == x["inpt_sk"][0],removed_instructions))
+            if len(unused)==0:
+                new_memory_order.append(ins)
+
+        elif instructions_name.find("mstore")!=-1:
+            unused = list(filter(lambda x: x["disasm"] == "MSTORE" and inpt_var == x["inpt_sk"][0],removed_instructions))
+            if len(unused)==0:
+                new_memory_order.append(ins)
+
+        elif instructions_name.find("keccak")!=-1:
+            unused = list(filter(lambda x: x["disasm"] == "KECCAK256" and inpt_var == x["inpt_sk"][0],removed_instructions))
+            if len(unused)==0:
+                new_memory_order.append(ins)
+        else:
+            new_storage_order.append(ins)
+            
+    if memory_order != new_memory_order:
+        memdep = generate_dependences(new_memory_order,"memory")
+        memdep = simplify_dependencies(memdep)
+        
+        memory_dep = memdep
+        memory_order = new_memory_order
+        
 def translate_dependences_sfs(new_user_defins):    
     new_storage_dep = []
     new_memory_dep = []
     
     storage = compute_identifiers_storage_instructions(storage_order,"storage",new_user_defins)
     memory = compute_identifiers_storage_instructions(memory_order,"memory",new_user_defins)
-
+    
     for e in storage_dep:
         first, second = e    
         new_storage_dep.append((storage[first],storage[second]))
@@ -4895,11 +5743,48 @@ def translate_dependences_sfs(new_user_defins):
 
     return new_storage_dep, new_memory_dep
 
-def are_dependent(var1,var2,ins1,ins2):
+
+#it receives two tuples of the form ((ar1,arg2, opcode),arity) and
+#checks if t1 has to be executed before t2.
+def are_dependent(t1, t2):
     dep = False
-    if str(var1) == str(var2):
+   
+    var1 = t1[0][0]
+    ins1 = t1[0][-1]
+    var2 = t2[0][0]
+    ins2 = t2[0][-1]
+    
+    if (ins1.find("keccak")!=-1 and (ins2.find("sload")!=-1 or ins2.find("sstore")!=-1)) or ((ins2.find("keccak")!=-1 and (ins1.find("sload")!=-1 or ins1.find("sstore")!=-1))):
+        dep = False
+
+    elif str(var1) == str(var2):
         dep = True
 
+    #The dependences with keccaks have to be computed only for mstore instructions.    
+    elif ins1.find("mstore")!=-1 and ins2.find("keccak256")!=-1:
+        if str(var1).startswith("s") or str(var2).startswith("s"):
+            dep = True
+        else:
+            if int(var1)>= int(var2):
+                if str(t2[0][1]).startswith("s") or int(var1)< int(var2)+int(t2[0][1]):
+                    dep = True
+                else:
+                    dep = False
+            else:
+                dep = False
+
+    elif ins1.find("keccak256")!=-1 and ins2.find("mstore")!=-1:
+        if str(var1).startswith("s") or str(var2).startswith("s"):
+            dep = True
+        else:
+            if int(var2)>= int(var1):
+                if str(t1[0][1]).startswith("s") or int(var2)< int(var1)+int(t1[0][1]):
+                    dep = True
+                else:
+                    dep = False
+            else:
+                dep = False
+        
     else:
         var1_str = str(var1)
         var2_str = str(var2)
@@ -4924,9 +5809,17 @@ def are_dependent(var1,var2,ins1,ins2):
                 dep = True
 
         else: #two int values
-            if ins1.find("mstore8")!=-1 and var1>=var2 and var1<var2+32:
+            var1_int, var2_int = int(var1), int(var2)
+            # if ins1.find("mstore8")!=-1 and var1>=var2 and var1<int(var2)+32:
+
+            # Two mstore8 are dependant if they affect the same memory position
+            if ins1.find("mstore8") != -1 and ins2.find("mstore8") != -1:
+                dep = var1_int == var2_int
+            # ins1 is mstore8 and ins2 is mstore
+            elif ins1.find("mstore8")!=-1 and var1_int>=var2_int and var1_int<var2_int+32:
                 dep = True
-            elif ins2.find("mstore8")!=-1 and var2>=var1 and var2<var1+32:
+            # elif ins2.find("mstore8")!=-1 and var2>=var1 and var2<var1+32:
+            elif ins2.find("mstore8")!=-1 and var2_int>=var1_int and var2_int<var1_int+32:
                 dep = True
             else:
                 dep = False
@@ -5136,6 +6029,7 @@ def generate_pops(not_used_variables):
         obj["inpt_sk"] = [v]
         obj["outpt_sk"] = []
         obj["gas"] = opcodes.get_ins_cost("POP")
+        obj["size"] = get_ins_size("POP")
         obj["commutative"] = False
         obj["storage"] = False #It is true only for MSTORE and SSTORE
 
@@ -5183,7 +6077,8 @@ def transform_push_uninterpreted_functions(target_stack,uninterpreted_functions)
                 new_uninterpreted.append(new_obj)
                 
             target_stack[i] = s_var
-            new_variables.append(s_var)
+            if s_var not in new_variables:
+                new_variables.append(s_var)
         i+=1
 
     i = 0
@@ -5205,9 +6100,54 @@ def transform_push_uninterpreted_functions(target_stack,uninterpreted_functions)
                     new_uninterpreted.append(new_obj)
 
                 input_sk[j] = s_var
-                new_variables.append(s_var)
+
+                if s_var not in new_variables:
+                    new_variables.append(s_var)
+
+                
             j+=1
         
         i+=1
 
     return new_variables, new_uninterpreted
+
+
+def unify_all_user_defins(ts,user_def_instructions,list_vars):
+
+    modified = True
+    target_stack = ts
+    user_defins = user_def_instructions
+    while(modified):
+        modified, user_defins, target_stack = unify_user_defins(target_stack,user_defins,list_vars)
+
+    return user_defins,target_stack
+
+def unify_user_defins(ts,user_def_instructions,list_vars):
+
+    to_delete = []
+    target_stack = ts
+    user_defins = user_def_instructions
+    modified = False
+    
+    for ins in user_defins:
+        if ins["disasm"] not in ["SHA3","SLOAD","MLOAD","KECCAK256","SSTORE","MSTORE","GAS","TIMESTAMP"] and ins not in to_delete:
+            duplicated = list(filter(lambda x: x["inpt_sk"] == ins["inpt_sk"] and x["disasm"] == ins["disasm"] and x.get("value",-1) == -1, user_defins))
+            if len(duplicated) > 1:
+                tokeep = duplicated[0]
+                # print(duplicated)
+                for rest in duplicated[1:]:
+                    replace_var_userdef(rest["outpt_sk"][0],tokeep["outpt_sk"][0],user_defins)
+                    target_stack = replace_var(rest["outpt_sk"][0],tokeep["outpt_sk"][0],target_stack)
+                    # print(list_vars)
+                    delete_from_listvars(rest["outpt_sk"][0],list_vars)
+                    to_delete.append(rest)
+                modified = True
+    i = 0
+    new_user_def = []
+    while len(user_defins)>0:
+        instr = user_defins.pop()
+        if instr not in to_delete:
+            new_user_def.append(instr)
+
+    return modified, new_user_def, target_stack
+
