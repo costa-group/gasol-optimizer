@@ -1,10 +1,7 @@
-import copy
-
 from smt_encoding.complete_encoding.synthesis_full_encoding import FullEncoding, SMS_T, Namespace, Sort
 from smt_encoding.solver.solver import Solver, OptimizeOutcome
 from smt_encoding.solver.oms_executable import OMSExecutable
 from smt_encoding.solver.z3_executable import Z3Executable
-from sfs_generator.asm_bytecode import AsmBytecode
 from typing import List, Tuple
 import global_params.paths as paths
 import pathlib
@@ -65,7 +62,7 @@ class BlockOptimizer:
         solver.declare_function(*declared_functions)
         self._solver = solver
 
-    def optimize_block(self) -> Tuple[OptimizeOutcome, float, List[AsmBytecode]]:
+    def optimize_block(self) -> Tuple[OptimizeOutcome, float, List[str]]:
         pathlib.Path(paths.smt_encoding_path).mkdir(parents=True, exist_ok=True)
         optimization_outcome = self._solver.check_sat()
         time = self._solver.time_statistics()
@@ -80,11 +77,10 @@ class BlockOptimizer:
             for sentence in self._solver.to_smt2():
                 print(sentence, file=f)
 
-    def _rebuild_block_from_solver(self) -> List[AsmBytecode]:
+    def _rebuild_block_from_solver(self) -> List[str]:
         bounds = self._full_encoding._bounds
         theta_to_instr = self._full_encoding.theta_to_instr
         theta_val_encoding_to_instr = dict()
-        asm_instructions = []
 
         if self._flags.encode_terms == "uninterpreted_uf":
             # Theta values are UF, so the getting the associated values returns a representation on that internal value.
@@ -95,26 +91,5 @@ class BlockOptimizer:
             # Otherwise, theta values appear in the encoding exactly as their numerical value
             theta_val_encoding_to_instr = {str(theta_val): instr for theta_val, instr in theta_to_instr.items()}
 
-        for j in range(bounds.first_position_sequence, bounds.last_position_sequence + 1):
-            t_j = self._solver.get_value(f"t_{j}")
-            associated_instr = theta_val_encoding_to_instr[t_j]
-
-            # NOP instructions are not considered in the solution
-            if associated_instr.id == "NOP":
-                continue
-
-            # If push basic, then we need to retrieve also a_j
-            if associated_instr.id == "PUSH":
-                a_j = self._solver.get_value(f"a_{j}")
-                value = hex(int(a_j))[2:]
-                asm_instructions.append(AsmBytecode(-1, -1, -1, associated_instr.opcode_name, value))
-            # If it is a PUSH instruction, we need to convert the value to hexadecimal
-            # TODO change pseudo-PUSH instructions to store directly the value without transforming it to decimal
-            elif associated_instr.opcode_name == "PUSH" or associated_instr.opcode_name == "PUSH [tag]" or \
-                    associated_instr.opcode_name == "PUSH data" or associated_instr.opcode_name == "PUSHIMMUTABLE":
-                value = hex(int(associated_instr.value))[2:]
-                asm_instructions.append(AsmBytecode(-1, -1, -1, associated_instr.opcode_name, value))
-            else:
-                asm_instructions.append(AsmBytecode(-1, -1, -1, associated_instr.opcode_name, associated_instr.value))
-
-        return asm_instructions
+        return [theta_val_encoding_to_instr[self._solver.get_value(f"t_{j}")].id
+                for j in range(bounds.first_position_sequence, bounds.last_position_sequence + 1)]

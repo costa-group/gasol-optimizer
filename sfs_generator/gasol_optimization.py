@@ -1,3 +1,4 @@
+import copy
 import json
 import math
 import os
@@ -9,7 +10,8 @@ import global_params.paths as paths
 import sfs_generator.opcodes as opcodes
 from sfs_generator.utils import (all_integers, find_sublist, get_num_bytes_int,
                                  is_integer, isYulInstructionUpper, get_ins_size,check_and_print_debug_info)
-from typing import Optional
+from typing import Optional, List, Tuple
+import networkx as nx
 
 terminate_block = ["ASSERTFAIL","RETURN","REVERT","SUICIDE","STOP"]
 
@@ -1671,12 +1673,11 @@ def generate_storage_info(instructions,source_stack,simplification=True):
     msg = "Storage dep: "+str(stdep)
     check_and_print_debug_info(debug, msg)
 
-    if len(stdep)< 300:
-        stdep = simplify_dependencies(stdep)
+    stdep = simplify_dependencies(stdep)
 
-        msg = "Storage dep simplified: "+str(stdep)
-        check_and_print_debug_info(debug, msg)
-        
+    msg = "Storage dep simplified: "+str(stdep)
+    check_and_print_debug_info(debug, msg)
+    
     if simplification:
         simp = True
         while(simp):
@@ -1696,11 +1697,10 @@ def generate_storage_info(instructions,source_stack,simplification=True):
     msg = "Memory dep: "+str(memdep)
     check_and_print_debug_info(debug, msg)
 
-    if len(memdep) < 300:
-        memdep = simplify_dependencies(memdep)
+    memdep = simplify_dependencies(memdep)
 
-        msg = "Memory dep simplified: "+str(memdep)
-        check_and_print_debug_info(debug, msg)
+    msg = "Memory dep simplified: "+str(memdep)
+    check_and_print_debug_info(debug, msg)
     
     s1= compute_clousure(stdep)
     m1 = compute_clousure(memdep)
@@ -5409,19 +5409,11 @@ def generate_dependences(storage_location, location):
     return storage_dependences
 
 
-def simplify_dependencies(dep):
-    new_dep = list(dep)
-    for d in dep:
-        second = d[1]
-        pre = list(filter(lambda x: x[1] == second, dep))
-        post = list(filter(lambda x: x[0] == second, dep))
-        for i in pre:
-            for j in post:
-                if (i[0],j[1]) in new_dep:
-                    pos = new_dep.index((i[0],j[1]))
-                    new_dep.pop(pos)
+def simplify_dependencies(deps: List[Tuple[int, int]]) -> List[Tuple[int, int]]:
+    dg = nx.DiGraph(deps)
+    tr = nx.transitive_reduction(dg)
+    return list(tr.edges)
 
-    return new_dep
 
 def update_variables_loads(elem1, elem2, storage_location, location):
     global variable_content

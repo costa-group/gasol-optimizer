@@ -12,7 +12,7 @@ def happens_before(current_id: Id_T, prev_id: Id_T, dependency_graph: Dict[Id_T,
     #  graph outside this scope requires updating the map
 
     for other_id in dependency_graph[current_id]:
-        if current_id == prev_id or happens_before(other_id, prev_id, dependency_graph):
+        if other_id == prev_id or happens_before(other_id, prev_id, dependency_graph):
             return True
     return False
 

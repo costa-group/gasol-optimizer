@@ -1,10 +1,7 @@
 #!/usr/bin/python3
 import argparse
 import json
-import os
-import pathlib
 import shutil
-import sys
 from typing import Tuple, Optional, List, Dict
 from copy import deepcopy
 from timeit import default_timer as dtimer
@@ -19,21 +16,11 @@ from sfs_generator.gasol_optimization import get_sfs_dict
 from sfs_generator.parser_asm import (parse_asm,
                                       generate_block_from_plain_instructions,
                                       parse_blocks_from_plain_instructions)
-from sfs_generator.utils import (compute_stack_size, get_ins_size_seq,
-                                 is_constant_instruction, isYulInstruction,
-                                 isYulKeyword)
-from smt_encoding.gasol_encoder import (execute_syrup_backend,
-                                        execute_syrup_backend_combined,
-                                        generate_theta_dict_from_sequence)
-from solution_generation.disasm_generation import (
-    generate_sub_block_asm_representation_from_log)
-from solution_generation.solver_output_generation import obtain_solver_output
 from verification.sfs_verify import verify_block_from_list_of_sfs, are_equals
-from verification.solver_solution_verify import (
-    check_solver_output_is_correct)
 from solution_generation.optimize_from_sub_blocks import rebuild_optimized_asm_block
 from sfs_generator.asm_block import AsmBlock, AsmBytecode
 from smt_encoding.block_optimizer import BlockOptimizer, OptimizeOutcome
+from solution_generation.ids2asm import asm_from_ids
 
 def init():
     global previous_gas
@@ -53,46 +40,6 @@ def init():
 
     global prev_n_instrs
     prev_n_instrs = 0
-
-
-def clean_dir():
-    ext = ["rbr", "csv", "sol", "bl", "disasm", "json"]
-    if paths.gasol_folder in os.listdir(paths.tmp_path):
-        for elem in os.listdir(paths.gasol_path):
-            last = elem.split(".")[-1]
-            if last in ext:
-                os.remove(paths.gasol_path+elem)
-
-        if "jsons" in os.listdir(paths.gasol_path):
-            shutil.rmtree(paths.gasol_path + "jsons")
-
-        if "disasms" in os.listdir(paths.gasol_path):
-            shutil.rmtree(paths.gasol_path + "disasms")
-
-        if "smt_encoding" in os.listdir(paths.gasol_path):
-            shutil.rmtree(paths.gasol_path + "smt_encoding")
-
-        if "solutions" in os.listdir(paths.gasol_path):
-            shutil.rmtree(paths.gasol_path + "solutions")
-
-
-def remove_last_constant_instructions(instructions):
-    constant = True
-    cons_instructions = []
-    
-    while constant and instructions != []:
-        ins = instructions[-1]
-        constant = is_constant_instruction(ins)
-        if constant:
-            cons_instructions.append(ins)
-            instructions.pop()
-
-    if instructions == []:
-        instructions = cons_instructions
-        cons_instructions =  []
-        
-    new_stack_size = compute_stack_size(instructions)
-    return new_stack_size, cons_instructions[::-1]
 
 
 def compute_original_sfs_with_simplifications(block: AsmBlock, parsed_args: Namespace):
@@ -133,7 +80,7 @@ def compute_original_sfs_with_simplifications(block: AsmBlock, parsed_args: Name
 # block id, returns the output given by the solver, the name given to that block and current gas associated
 # to that sequence.
 def optimize_block(sfs_dict, timeout, parsed_args: Namespace) -> List[Tuple[AsmBlock, OptimizeOutcome, float,
-                                                                            List[AsmBytecode], int, int, List[str]]]:
+                                                                            List[AsmBytecode], int, int, List[str], List[str]]]:
 
     block_solutions = []
     # SFS dict of syrup contract contains all sub-blocks derived from a block after splitting
@@ -154,9 +101,10 @@ def optimize_block(sfs_dict, timeout, parsed_args: Namespace) -> List[Tuple[AsmB
         print(f"Optimizing {block_name}... Timeout:{str(tout)}")
 
         if parsed_args.backend:
-            optimization_outcome, solver_time, optimized_asm = optimizer.optimize_block()
+            optimization_outcome, solver_time, optimized_ids = optimizer.optimize_block()
+            optimized_asm = asm_from_ids(sfs_block, optimized_ids)
             block_solutions.append((original_block, optimization_outcome, solver_time,
-                                    optimized_asm, tout, initial_solver_bound, sfs_block['rules']))
+                                    optimized_asm, tout, initial_solver_bound, sfs_block['rules'], optimized_ids))
         else:
             optimizer.generate_intermediate_files()
 
@@ -200,19 +148,9 @@ def generate_sfs_dicts_from_log(block, json_log, parsed_args: Namespace):
     return syrup_contracts, optimized_sfs_dict, sub_block_list, instr_sequence_dict, ids
 
 
-# Verify information derived from log file is correct
-def check_log_file_is_correct(sfs_dict, instr_sequence_dict):
-    execute_syrup_backend_combined(sfs_dict, instr_sequence_dict, "verify", "oms")
-
-    solver_output, time_check = obtain_solver_output("verify", "oms", 0)
-
-    return check_solver_output_is_correct(solver_output)
-
-
-
 # Given a dict with the sfs from each block and another dict that contains whether previous block was optimized or not,
 # generates the corresponding solution. All checks are assumed to have been done previously
-def optimize_asm_block_from_log(block, sfs_dict, sub_block_list, instr_sequence_dict):
+def optimize_asm_block_from_log(block, sfs_dict, sub_block_list, instr_sequence_dict: Dict[str, List[str]]):
     # Optimized blocks. When a block is not optimized, None is pushed to the list.
     optimized_blocks = {}
 
@@ -221,16 +159,7 @@ def optimize_asm_block_from_log(block, sfs_dict, sub_block_list, instr_sequence_
         if sub_block_name not in instr_sequence_dict:
             optimized_blocks[sub_block_name] = None
         else:
-            log_info = instr_sequence_dict[sub_block_name]
-            user_instr = sfs_sub_block['user_instrs']
-            bs = sfs_sub_block['max_sk_sz']
-
-            _, instruction_theta_dict, opcodes_theta_dict, gas_theta_dict, values_dict = generate_theta_dict_from_sequence(
-                bs, user_instr)
-
-            new_sub_block = generate_sub_block_asm_representation_from_log(log_info, opcodes_theta_dict,
-                                                                              instruction_theta_dict,
-                                                                              gas_theta_dict, values_dict)
+            new_sub_block = asm_from_ids(sfs_sub_block, instr_sequence_dict[sub_block_name])
             optimized_blocks[sub_block_name] = new_sub_block
 
     new_block = rebuild_optimized_asm_block(block, sub_block_list, optimized_blocks)
@@ -271,9 +200,11 @@ def optimize_asm_from_log(file_name, json_log, output_file, parsed_args: Namespa
                 generate_sfs_dicts_from_log(block, json_log, parsed_args)
 
             new_block = optimize_asm_block_from_log(block, sfs_all, sub_block_list, instr_sequence_dict_block)
-            sfs_dict_to_check.update(sfs_optimized)
-            instr_sequence_dict.update(instr_sequence_dict_block)
-            file_ids.update(block_ids)
+            eq, reason = compare_asm_block_asm_format(block, new_block, parsed_args)
+
+            if not eq:
+                raise ValueError(f"Error parsing the log file. [REASON]: {reason}")
+
             init_code_blocks.append(new_block)
 
         new_contract.init_code = init_code_blocks
@@ -295,33 +226,26 @@ def optimize_asm_from_log(file_name, json_log, output_file, parsed_args: Namespa
                     generate_sfs_dicts_from_log(block, json_log, parsed_args)
 
                 new_block = optimize_asm_block_from_log(block, sfs_all, sub_block_list, instr_sequence_dict_block)
-                sfs_dict_to_check.update(sfs_optimized)
-                instr_sequence_dict.update(instr_sequence_dict_block)
-                file_ids.update(block_ids)
+                eq, reason = compare_asm_block_asm_format(block, new_block, parsed_args)
+
+                if not eq:
+                    raise ValueError(f"Error parsing the log file. [REASON]: {reason}")
+
                 run_code_blocks.append(new_block)
 
             new_contract.set_run_code(identifier, run_code_blocks)
 
         contracts.append(new_contract)
 
-    # We check ids in json log file matches the ones generated from the source file
-    if not set(json_log.keys()).issubset(file_ids):
-        print("Log file does not match source file")
-    else:
-        not_empty = {k : v for k,v in sfs_dict_to_check.items() if v != []}
-        correct = check_log_file_is_correct(not_empty, instr_sequence_dict)
-        if correct:
-            print("Solution generated from log file has been verified correctly")
-            new_asm = deepcopy(asm)
-            new_asm.contracts = contracts
+    print("Solution generated from log file has been verified correctly")
+    new_asm = deepcopy(asm)
+    new_asm.contracts = contracts
 
-            with open(output_file, 'w') as f:
-                f.write(json.dumps(new_asm.to_json()))
+    with open(output_file, 'w') as f:
+        f.write(json.dumps(new_asm.to_json()))
 
-            print("")
-            print("Optimized code stored at " + output_file)
-        else:
-            print("Log file does not contain a valid solution")
+    print("")
+    print("Optimized code stored at " + output_file)
 
 
 def optimize_isolated_asm_block(block_name,output_file, csv_file, parsed_args: Namespace, timeout=10):
@@ -390,50 +314,6 @@ def update_length_count(old_block : AsmBlock, new_block : AsmBlock):
 
     prev_n_instrs += len([True for instruction in old_block.instructions if instruction.disasm != 'tag'])
     new_n_instrs += len([True for instruction in new_block.instructions if instruction.disasm != 'tag'])
-
-
-# Due to intra block optimization, we need to be wary of those cases in which the optimized outcome is determined
-# from other blocks. In particular, when a sub block starts with a POP opcode, then it can be optimized iff the
-# previous block has been optimized
-def filter_optimized_blocks_by_intra_block_optimization(asm_sub_blocks, optimized_sub_blocks):
-    final_sub_blocks = []
-
-    current_pop_streak_blocks = []
-
-    previous_block_starts_with_pop = False
-    # Traverse from right to left
-    for asm_sub_block, optimized_sub_block in zip(reversed(asm_sub_blocks), reversed(optimized_sub_blocks)):
-        if asm_sub_block[0].disasm == "POP":
-            current_pop_streak_blocks.append(deepcopy(optimized_sub_block))
-            previous_block_starts_with_pop = True
-        elif previous_block_starts_with_pop:
-            current_pop_streak_blocks.append(deepcopy(optimized_sub_block))
-
-            # All elements are not None, so the optimization can be applied
-            if all(current_pop_streak_blocks):
-                final_sub_blocks.extend(current_pop_streak_blocks)
-            # Otherwise, all optimized blocks must be set to None
-
-            else:
-                none_pop_blocks = [None] * len(current_pop_streak_blocks)
-                final_sub_blocks.extend(none_pop_blocks)
-
-            previous_block_starts_with_pop = False
-            current_pop_streak_blocks = []
-        else:
-            final_sub_blocks.append(deepcopy(optimized_sub_block))
-            previous_block_starts_with_pop = False
-
-    # Final check in case first block also starts with a POP instruction
-    if previous_block_starts_with_pop:
-        if all(current_pop_streak_blocks):
-            final_sub_blocks.extend(current_pop_streak_blocks)
-        else:
-            none_pop_blocks = [None] * len(current_pop_streak_blocks)
-            final_sub_blocks.extend(none_pop_blocks)
-
-    # Finally, as we were working with reversed list, we reverse the solution to obtain the proper one
-    return list(reversed(final_sub_blocks))
 
 
 def generate_statistics_info(original_block: AsmBlock, outcome: Optional[OptimizeOutcome], solver_time: float,
@@ -529,7 +409,7 @@ def optimize_asm_block_asm_format(block: AsmBlock, timeout: int, parsed_args: Na
         optimize_block(sfs_dict, timeout, parsed_args)
         return new_block, {}, []
 
-    for sub_block, optimization_outcome, solver_time, optimized_asm, tout, initial_solver_bound, rules in optimize_block(sfs_dict, timeout, parsed_args):
+    for sub_block, optimization_outcome, solver_time, optimized_asm, tout, initial_solver_bound, rules, optimized_log_rep in optimize_block(sfs_dict, timeout, parsed_args):
 
         statistics_info = generate_statistics_info(sub_block, optimization_outcome, solver_time, optimized_asm,
                                                    initial_solver_bound, tout, rules)
@@ -541,7 +421,7 @@ def optimize_asm_block_asm_format(block: AsmBlock, timeout: int, parsed_args: Na
             sub_block_name = sub_block.block_name
             if block_has_been_optimized(sub_block, optimized_asm, parsed_args.size, parsed_args.length):
                 optimized_blocks[sub_block_name] = optimized_asm
-                # log_dicts[sub_block_name] = generate_solution_dict(solver_output)
+                log_dicts[sub_block_name] = optimized_log_rep
             else:
                 optimized_blocks[sub_block_name] = None
 
@@ -679,7 +559,7 @@ def optimize_from_sfs(json_file: str, output_file: str, csv_file: str, parsed_ar
     sfs_dict = {block_name: sfs_block}
 
     csv_statistics = []
-    for original_block, optimization_outcome, solver_time, optimized_asm, tout, initial_solver_bound, rules \
+    for original_block, optimization_outcome, solver_time, optimized_asm, tout, initial_solver_bound, rules, optimized_log_rep \
             in optimize_block(sfs_dict, parsed_args.tout, parsed_args):
 
         statistics_info = generate_statistics_info(original_block, optimization_outcome, solver_time, optimized_asm,
@@ -780,7 +660,7 @@ def parse_encoding_args() -> Namespace:
 
     log_generation = ap.add_argument_group('Log generation options', 'Options for managing the log generation')
 
-    log_generation.add_argument("-log", "--generate-log", help ="Enable log file for Etherscan verification",
+    log_generation.add_argument("-log", "--generate-log", help ="Enable log file for verification",
                                 action = "store_true", dest='log')
     log_generation.add_argument("-dest-log", help ="Log output path", action = "store", dest='log_stored_final')
     log_generation.add_argument("-optimize-from-log", dest='log_path', action='store', metavar="log_file",
@@ -861,6 +741,7 @@ def parse_encoding_args() -> Namespace:
 
     return parsed_args
 
+
 if __name__ == '__main__':
     global previous_gas
     global new_gas
@@ -870,7 +751,6 @@ if __name__ == '__main__':
     global new_n_instrs
 
     init()
-    clean_dir()
     parsed_args = parse_encoding_args()
 
     # If storage or partition flag are activated, the blocks are split using store instructions
