@@ -1676,7 +1676,7 @@ def generate_storage_info(instructions,source_stack,simplification=True):
 
         msg = "Storage dep simplified: "+str(stdep)
         check_and_print_debug_info(debug, msg)
-    
+        
     if simplification:
         simp = True
         while(simp):
@@ -5152,9 +5152,12 @@ def remove_store_loads(storage_location, location):
                 symb_ins = u_dict[value]
                 if symb_ins[0][-1].find(load_ins)!=-1 and symb_ins[0][0] == var:
                     pos = storage_location.index(symb_ins)
-                    rest_instructions = storage_location[i+1:pos]
+                    # rest_instructions = storage_location[i+1:pos]
+                    rest_instructions = storage_location[pos+1:i]
+                    
                     variables = list(map(lambda x: are_dependent(elem,x),rest_instructions))
 
+                    
                     #Keccaks are considered in the previous list
                     if True not in variables:
                         storage_location.pop(i)
@@ -5654,6 +5657,7 @@ def compute_identifiers_storage_instructions(storage_location, location, new_use
             pos = values_list.index(load_ins[0])
             var = key_list[pos]
             sload_ins = list(filter(lambda x: x["disasm"] == load and x["outpt_sk"] == [var],new_user_defins))
+
             if len(sload_ins)!= 1:
                 raise Exception("Error in looking for load instruction")
             else:
