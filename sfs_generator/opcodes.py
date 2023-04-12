@@ -128,24 +128,24 @@ opcode_internal_representation_to_assembly_item = {
 
 GCOST = {
     "Gzero": 0,
+    "Gjumpdest":1,
     "Gbase": 2,
     "Gverylow": 3,
     "Glow": 5,
     "Gmid": 8,
     "Ghigh": 10,
-    "Gextcode": 700,
-    "Gextcodehash": 400,
-    "Gbalance": 400,
-    "Gsload": 700,
-    "Gjumpdest": 1,
+    "Gwarmaccess":100,
+    "Gaccesslistaddress":2400,
+    "Gaccessliststorage":1900,
+    "Gcoldaccountaccess":2600,
+    "Gcoldsload":2100,
     "Gsset": 20000,
-    "Gsreset": 5000,
+    "Gsreset": 2900,
     "Rsclear": 15000,
     "Rsuicide": 24000,
     "Gsuicide": 5000,
     "Gcreate": 32000,
     "Gcodedeposit": 200,
-    "Gcall": 34700,
     "Gcallvalue": 9000,
     "Gcallstipend": 2300,
     "Gnewaccount": 25000,
@@ -163,6 +163,11 @@ GCOST = {
     "Gsha3word": 6,
     "Gcopy": 3,
     "Gblockhash": 20
+    "Gcall": 100, #bestcase
+    "Gextcode": 700,
+    "Gextcodehash": 400,
+    "Gbalance": 400,
+    "Gsload": 700,
 }
 
 Wzero = ("STOP", "RETURN", "REVERT", "ASSERTFAIL")
@@ -182,9 +187,11 @@ Wmid = ("ADDMOD", "MULMOD", "JUMP")
 
 Whigh = ("JUMPI")
 
-Wext = ("EXTCODESIZE")
+Wcopy = ("CALLDATACOPY","CODECOPY","RETURNDATACOPY")
 
-Wextcodehash = ("EXTCODEHASH")
+Wcall = ("CALL","CALLCODE","DELEGATECALL","STATICCALL")
+
+Wextaccount = ("BALANCE","EXTCODESIZE","EXTCODEHASH")
 
 ac_opcodes = {"ADD", "MUL", "AND", "OR", "XOR"}
 
@@ -237,36 +244,42 @@ def get_ins_cost(opcode,params=None):
         return GCOST["Gmid"]
     elif opcode in Whigh:
         return GCOST["Ghigh"]
-    elif opcode in Wext:
-        return GCOST["Gextcode"]
-    elif opcode in Wextcodehash:
-        return GCOST["Gextcodehash"]
+    elif opcode in Wextaccount or opcode == "EXTCODECOPY":
+        return GCOST["Gwarmaccess"]
+    # elif opcode in Wext:
+    #     return GCOST["Gextcode"]
+    # elif opcode in Wextcodehash:
+    #     return GCOST["Gextcodehash"]
     elif opcode == "SLOAD":
-        return GCOST["Gsload"]
+        return GCOST["Gwarmaccess"]
     elif opcode == "JUMPDEST":
         return GCOST["Gjumpdest"]
     elif opcode == "CREATE":
         return GCOST["Gcreate"]
     elif opcode == "CREATE2":
         return GCOST["Gcreate"]
-    elif opcode in ("CALL", "CALLCODE","DELEGATECALL","STATICCALL"):
+    elif opcode in Wcall:
         return GCOST["Gcall"]
     elif opcode in ("LOG0", "LOG1", "LOG2", "LOG3", "LOG4"):
         num_topics = int(opcode[3:])
         return GCOST["Glog"] + num_topics * GCOST["Glogtopic"]
-    elif opcode in ("CALLDATACOPY", "CODECOPY","RETURNDATACOPY"):
+    elif opcode in Wcopy:
         return GCOST["Gverylow"]
-    elif opcode == "BALANCE":
-        return GCOST["Gbalance"]
+    # elif opcode == "BALANCE":
+    #     return GCOST["Gbalance"]
     elif opcode == "BLOCKHASH":
         return GCOST["Gblockhash"]
     elif opcode == "EXP":
         return 60
     elif opcode == "SHA3":
-        return GCOST["Gsha3"]
+        return GCOST["Gsha3"]+GCOST["Gsha3word"]
     elif opcode == "SSTORE":
-        return 5000
+        #return 5000
+        return GCOST["Gwarmaccess"]
     elif opcode == "KECCAK256":
         return GCOST["Gsha3"]
+
+    elif opcode == "SELFDESTRUCT":
+        return GCOST["Gsuicide"]
     return 0
     
