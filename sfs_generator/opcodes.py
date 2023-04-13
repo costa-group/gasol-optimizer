@@ -162,7 +162,7 @@ GCOST = {
     "Gsha3": 30,
     "Gsha3word": 6,
     "Gcopy": 3,
-    "Gblockhash": 20
+    "Gblockhash": 20,
     "Gcall": 100, #bestcase
     "Gextcode": 700,
     "Gextcodehash": 400,
