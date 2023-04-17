@@ -5817,6 +5817,10 @@ def are_dependent(t1, t2):
             # elif ins2.find("mstore8")!=-1 and var2>=var1 and var2<var1+32:
             elif ins2.find("mstore8")!=-1 and var2_int>=var1_int and var2_int<var1_int+32:
                 dep = True
+            elif (ins1.find("mstore")!=-1 or ins2.find("mstore")!=-1) and (ins1.find("mstore8")==-1 and ins2.find("mstore8")==-1):
+                alt1 = var1_int>=var2_int and var1_int<var2_int+32
+                alt2 = var2_int>=var1_int and var2_int<var1_int+32
+                dep = alt1 or alt2
             else:
                 dep = False
             
