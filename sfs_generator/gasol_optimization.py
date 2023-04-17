@@ -3622,7 +3622,7 @@ def apply_transform(instr):
 
     elif opcode == "GT" or opcode == "SGT":
         inp_vars = instr["inpt_sk"]
-        if inp_vars[0] == 0:
+        if inp_vars[0] == 0 and opcode == "GT":
             saved_push+=2
             gas_saved_op+=3
 
@@ -3636,14 +3636,14 @@ def apply_transform(instr):
             saved_push+=2
             gas_saved_op+=3
 
-            rule = "GT(X,X)"
+            rule = opcode+"(X,X)"
             return 0
         else:
             return -1
 
     elif opcode == "LT" or opcode == "SLT":
         inp_vars = instr["inpt_sk"]
-        if inp_vars[1] == 0:
+        if inp_vars[1] == 0 and opcode == "LT":
             saved_push+=2
             gas_saved_op+=3
 
@@ -3656,7 +3656,7 @@ def apply_transform(instr):
             saved_push+=2
             gas_saved_op+=3
 
-            rule = "LT(X,X)"
+            rule = opcode+"(X,X)"
             return 0
         else:
             return -1
@@ -3746,7 +3746,7 @@ def apply_transform_rules(user_def_instrs,list_vars,tstack):
     modified = False
     for instr in user_def_instrs:
         
-        if instr["disasm"] in ["AND","OR","XOR","ADD","SUB","MUL","DIV","EXP","EQ","GT","LT","NOT","ISZERO"]:
+        if instr["disasm"] in ["AND","OR","XOR","ADD","SUB","MUL","DIV","EXP","EQ","GT","LT","SGT","SLT","NOT","ISZERO"]:
             r = apply_transform(instr)
 
             if r!=-1:
@@ -3815,7 +3815,7 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
     opcode = instr["disasm"]
     
     if opcode == "GT" or opcode == "SGT":
-        if 0 == instr["inpt_sk"][1]:
+        if 0 == instr["inpt_sk"][1] and opcode == "GT":
             out_var = instr["outpt_sk"][0]
             is_zero = list(filter(lambda x: out_var in x["inpt_sk"] and x["disasm"] == "ISZERO",user_def_instrs))
             if len(is_zero) == 1 and out_var not in tstack:
@@ -3839,7 +3839,7 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
             else:
                 return False, []
 
-        elif 1 == instr["inpt_sk"][0]:
+        elif 1 == instr["inpt_sk"][0] and opcode == "GT":
             var = instr["inpt_sk"][1]
             idx = user_def_counter.get("ISZERO",0)
             instr["id"] = "ISZERO_"+str(idx)
@@ -3874,7 +3874,7 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
 
                     gas_saved_op+=6
 
-                    msg = "ISZ(ISZ(GT(X,Y)))"
+                    msg = "ISZ(ISZ("+opcode+"(X,Y)))" #It may be GT or SGT
                     rule = msg
                     check_and_print_debug_info(debug, msg)
 
@@ -3948,7 +3948,7 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
             return False, []
             
     elif opcode == "LT" or opcode == "SLT":
-         if 0 == instr["inpt_sk"][0]:
+         if 0 == instr["inpt_sk"][0] and opcode == "LT":
             out_var = instr["outpt_sk"][0]
             is_zero = list(filter(lambda x: out_var in x["inpt_sk"] and x["disasm"] == "ISZERO",user_def_instrs))
             if len(is_zero) == 1 and out_var not in tstack:
@@ -3970,7 +3970,7 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
             else:
                 return False, []
 
-         elif 1 == instr["inpt_sk"][1]:
+         elif 1 == instr["inpt_sk"][1] and opcode == "LT":
             var = instr["inpt_sk"][0]
 
             new_exist = list(filter(lambda x: x["inpt_sk"] == [var] and x["disasm"] == "ISZERO", user_def_instrs))
@@ -4015,7 +4015,7 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
 
                     gas_saved_op+=6
 
-                    msg = "ISZ(ISZ(LT(X,Y)))"
+                    msg = "ISZ(ISZ("+opcode+"(X,Y)))" # It may be LT or SLT
                     rule = msg
                     check_and_print_debug_info(debug, msg)
 
