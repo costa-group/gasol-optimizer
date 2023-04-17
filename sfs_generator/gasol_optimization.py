@@ -2353,11 +2353,11 @@ def funct_to_opcode(funct: str) -> Optional[str]:
     elif funct.find("sar") != -1:
         instr_name = "SAR"
 
-    elif funct.startswith("lt"):
-        instr_name = "LT"
-
     elif funct.find("slt") != -1:
         instr_name = "SLT"
+        
+    elif funct.startswith("lt"):
+        instr_name = "LT"
 
     elif funct.find("selfbalance") != -1:
         instr_name = "SELFBALANCE"
