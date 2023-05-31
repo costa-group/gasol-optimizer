@@ -199,6 +199,9 @@ def get_opcode(opcode):
     if opcode in opcodes:
         return opcodes[opcode]
 
+    elif opcode == "SELFDESTRUCT":
+        return [0x3d, 1, 0]
+
     #PG
     elif opcode == "RETURNDATASIZE":
         return [0x3d, 0, 1]
@@ -214,7 +217,7 @@ def get_opcode(opcode):
 
     elif opcode.startswith("tag"):
         return [hex(0x00), 0, 0]
-    
+
     # check PUSHi
     for i in range(32):
         if opcode == 'PUSH' + str(i + 1):
@@ -231,7 +234,8 @@ def get_opcode(opcode):
             return [hex(0x90 + i), i + 2, i + 2]
     raise ValueError('Bad Opcode ' + opcode)
 
-def get_ins_cost(opcode,params=None):
+
+def get_ins_cost(opcode, params=None, already=False, store_changed_original_value=False):
     if opcode in Wzero:
         return GCOST["Gzero"]
     elif opcode in Wbase:
@@ -245,13 +249,13 @@ def get_ins_cost(opcode,params=None):
     elif opcode in Whigh:
         return GCOST["Ghigh"]
     elif opcode in Wextaccount or opcode == "EXTCODECOPY":
-        return GCOST["Gwarmaccess"]
+        return GCOST["Gcoldaccountaccess"] if not already else GCOST["Gwarmaccess"]
     # elif opcode in Wext:
     #     return GCOST["Gextcode"]
     # elif opcode in Wextcodehash:
     #     return GCOST["Gextcodehash"]
     elif opcode == "SLOAD":
-        return GCOST["Gwarmaccess"]
+        return GCOST["Gcoldsload"] if not already else GCOST["Gwarmaccess"]
     elif opcode == "JUMPDEST":
         return GCOST["Gjumpdest"]
     elif opcode == "CREATE":
@@ -272,14 +276,14 @@ def get_ins_cost(opcode,params=None):
     elif opcode == "EXP":
         return 60
     elif opcode == "SHA3":
-        return GCOST["Gsha3"]+GCOST["Gsha3word"]
+        return GCOST["Gsha3"] + GCOST["Gsha3word"]
     elif opcode == "SSTORE":
-        #return 5000
-        return GCOST["Gwarmaccess"]
+        # return 5000
+        return (GCOST["Gcoldsload"] if not already else 0) + (GCOST["Gwarmaccess"] if store_changed_original_value else GCOST["Gsreset"])
     elif opcode == "KECCAK256":
         return GCOST["Gsha3"]
 
     elif opcode == "SELFDESTRUCT":
         return GCOST["Gsuicide"]
     return 0
-    
+

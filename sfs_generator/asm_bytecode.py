@@ -67,6 +67,8 @@ class AsmBytecode:
     def gas_spent(self) -> int:
         return opcodes.get_ins_cost(self.disasm, self.value)
 
+    def gas_spent_accesses(self, warm_access: bool, store_changed_original_value: bool) -> int:
+        return opcodes.get_ins_cost(self.disasm, self.value, already=warm_access)
 
     def get_disasm(self) -> str:
         return self.disasm
