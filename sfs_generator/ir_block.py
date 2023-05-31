@@ -939,7 +939,7 @@ def translateYulOpcodes(opcode, value, index_variables):
         dec_value = int(value,16)
 
         if opcode == "PUSH [tag]":
-            instr = v1+" = pushtag(" + str(dec_value)+")"
+            instr = v1+" = pushtag(" + str(value)+")"
 
         elif opcode == "PUSH #[$]":
             instr = v1+" = push#[$](" + str(dec_value)+")"
