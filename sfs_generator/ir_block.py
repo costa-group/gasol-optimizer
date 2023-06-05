@@ -824,8 +824,12 @@ updated. It also updated the corresponding global variables.
 -value is astring that contains the number pushed to the stack.
 '''
 def translateOpcodes60(opcode, value, index_variables):
+
+    if opcode.startswith("PUSH0"):
+        v1,updated_variables = get_new_variable(index_variables)
+        instr = v1+" = 0"
     
-    if opcode == "PUSH":
+    elif opcode.startswith("PUSH"):
         v1,updated_variables = get_new_variable(index_variables)
         dec_value = int(value,16)
         instr = v1+" = " + str(dec_value)
@@ -1004,7 +1008,10 @@ def compile_instr(rule,evm_opcode,variables,list_jumps,cond):
         else:
             rule.add_instr(value)
     elif opcode_name[:4] in opcodes60 and not isYulInstruction(opcode_name):
-        value, index_variables = translateOpcodes60(opcode_name[:4], opcode_rest, variables)
+        if opcode_name.startswith("PUSH0"):
+            opcode_rest = "0"
+            
+        value, index_variables = translateOpcodes60(opcode_name, opcode_rest, variables)
         pushid = get_push_number_hex(opcode_rest)
         rule.add_instr(value)
     elif opcode_name[:3] in opcodes80:
