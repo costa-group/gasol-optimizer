@@ -2055,16 +2055,6 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     json_dict["is_revert"]= True if revert_flag else False
     json_dict["rules_applied"] = rule_applied
     json_dict["rules"] = list(filter(lambda x: x != "", rules_applied))
-
-    
-    new_original_ins = []
-    for e in original_ins:
-        if e.find("PUSH")!=-1:
-            aux = e.split()
-            new = "PUSH "+str(aux[-1]) if not isYulInstructionUpper(e) and aux[0][:4] == "PUSH" else e
-            new_original_ins.append(new)
-        else:
-            new_original_ins.append(e)
     
     json_dict["original_instrs"] = " ".join(original_ins)
 
@@ -2557,7 +2547,6 @@ def times_used_userdef_instructions(user_def,tstack,all_input_values):
         instr["times_used"] = len(used)
 
 def process_opcode(result):
-    
     op_val = hex(int(result))[2:]
 
     if (int(op_val,16)<12):
@@ -3216,27 +3205,6 @@ def write_instruction_block(rule_name,opcodes,subblock = None):
     for e in op:
         byte_file.write(e+"\n")
     byte_file.close()
-
-def get_bytecode_representation(instructions):
-    str_b = ""
-    for i in instructions:
-        i_aux = i.split()[0]
-        c = opcodes.get_opcode(i_aux)
-        hex_val = str(c[0])
-        if hex_val.startswith("0x"):
-            op_val = hex_val[2:]
-               
-        else:
-            op_val = hex(int(hex_val))[2:]
-
-            if (int(op_val,16)<12):
-                op_val = "0"+str(op_val)
-
-        if i.startswith("PUSH"):
-            num = i.split()[1][2:]
-        else:
-            num = ""
-        str_b = str_b+op_val+num
 
 def max_idx_used(instructions,tstack):
     
@@ -6040,13 +6008,13 @@ def generate_pops(not_used_variables):
 
 def generate_push_instruction(idx, value, out):
     obj = {}
-    obj["id"] = "PUSH_"+str(idx)
-    obj["opcode"] = process_opcode(str(opcodes.get_opcode("PUSH")[0]))
-    obj["disasm"] = "PUSH"
+    obj["id"] = "PUSH_"+str(idx) if value != 0 else "PUSH0_"+str(idx)
+    obj["opcode"] = process_opcode(str(opcodes.get_opcode("PUSH")[0])) if value != 0 else process_opcode(str(opcodes.get_opcode("PUSH0")[0]))
+    obj["disasm"] = "PUSH" if value != 0 else "PUSH0"
     obj["inpt_sk"] = []
     obj["value"] = [value]
     obj["outpt_sk"] = [out]
-    obj["gas"] = opcodes.get_ins_cost("PUSH")
+    obj["gas"] = opcodes.get_ins_cost("PUSH") if value != 0 else opcodes.get_ins_cost("PUSH0")
     obj["commutative"] = False
     obj["storage"] = False #It is true only for MSTORE and SSTORE
     obj["size"] = get_ins_size("PUSH",value)
