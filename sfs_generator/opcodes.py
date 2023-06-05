@@ -175,7 +175,7 @@ Wzero = ("STOP", "RETURN", "REVERT", "ASSERTFAIL")
 Wbase = ("ADDRESS", "ORIGIN", "CALLER", "CALLVALUE", "CALLDATASIZE",
          "CODESIZE", "GASPRICE", "COINBASE", "TIMESTAMP", "NUMBER",
          "DIFFICULTY","PREVRANDAO","BASEFEE", "GASLIMIT", "POP", "PC",
-         "MSIZE", "GAS", "RETURNDATASIZE","CHAINID")
+         "MSIZE", "GAS", "RETURNDATASIZE","CHAINID", "PUSH0")
 
 Wverylow = ("ADD", "SUB", "NOT", "LT", "GT", "SLT", "SGT", "EQ",
             "ISZERO", "AND", "OR", "XOR", "BYTE", "CALLDATALOAD",
@@ -200,15 +200,18 @@ def get_opcode(opcode):
         return opcodes[opcode]
 
     elif opcode == "SELFDESTRUCT":
-        return [0x3d, 1, 0]
+        return [hex(0xff), 1, 0]
 
     #PG
     elif opcode == "RETURNDATASIZE":
-        return [0x3d, 0, 1]
+        return [hex(0x3d), 0, 1]
 
     elif opcode == "RETURNDATACOPY":
-        return [0x3e, 3, 0]
+        return [hex(0x3e), 3, 0]
 
+    elif opcode == "PUSH0":
+        return [0x5f, 0, 1]
+    
     elif opcode.startswith("PUSH"):
     # # check PUSHi
     # for i in range(32):
