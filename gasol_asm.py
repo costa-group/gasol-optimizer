@@ -341,9 +341,11 @@ def generate_statistics_info(original_block: AsmBlock, outcome: Optional[Optimiz
 
     # The solver has returned a valid model
     else:
+        optimal_block = AsmBlock('optimized', -1, block_name, original_block.is_init_block)
+        optimal_block.instructions = optimized_asm
         shown_optimal = outcome == OptimizeOutcome.optimal
-        optimized_size = sum([instr.bytes_required for instr in optimized_asm])
-        optimized_gas = sum([instr.gas_spent for instr in optimized_asm])
+        optimized_size = optimal_block.bytes_required
+        optimized_gas = optimal_block.gas_spent
         optimized_length = len(optimized_asm)
         initial_size = original_block.bytes_required
         initial_gas = original_block.gas_spent
