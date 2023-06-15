@@ -56,14 +56,14 @@ def select_model_and_config(model: str, criteria: str, i:int) -> Tuple[str, int]
 
 
 def create_ml_models(parsed_args: Namespace) -> None:
-    if parsed_args.bound_select != -1 or parsed_args.opt_select != -1:
+    if parsed_args.bound_select or parsed_args.opt_select:
         import torch
         torch.set_num_threads(1)
         torch.set_num_interop_threads(1)
 
     criteria = "size" if parsed_args.size else "gas"
 
-    if parsed_args.bound_select != -1:
+    if parsed_args.bound_select:
         import gasol_ml.bound_predictor as bound_predictor
 
         model_name, conf = select_model_and_config("bound", criteria, parsed_args.bound_select)
@@ -71,7 +71,7 @@ def create_ml_models(parsed_args: Namespace) -> None:
     else:
         parsed_args.bound_model = None
 
-    if parsed_args.opt_select != -1:
+    if parsed_args.opt_select:
         import gasol_ml.opt_predictor as opt_predictor
 
         model_name, conf = select_model_and_config("opt", criteria, parsed_args.opt_select)
@@ -130,7 +130,6 @@ def optimize_block(sfs_dict, timeout, parsed_args: Namespace) -> List[Tuple[AsmB
         original_block = generate_block_from_plain_instructions(original_instr, block_name)
 
         if parsed_args.bound_model is not None:
-            print(sfs_block)
             inferred_bound = parsed_args.bound_model.eval(sfs_block)
             if inferred_bound == 0:
                 new_bound = previous_bound

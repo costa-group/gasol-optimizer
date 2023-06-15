@@ -226,6 +226,8 @@ def get_ins_size(op_name, val = None, address_length = 2):
             return 2
         else:
             return (immutableOccurrences - 1) * (5 + 32) + (3 + 32)
+    elif op_name == "PUSH0":
+        return 1
     elif op_name == "PUSH":
         return 1 + get_num_bytes_int(val)
     elif op_name == "PUSH #[$]" or op_name == "PUSHSIZE":
