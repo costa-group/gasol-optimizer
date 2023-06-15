@@ -10,6 +10,8 @@ import global_params.paths as paths
 import sfs_generator.opcodes as opcodes
 from sfs_generator.utils import (all_integers, find_sublist, get_num_bytes_int,
                                  is_integer, isYulInstructionUpper, get_ins_size,check_and_print_debug_info)
+from typing import Optional
+from smt_encoding.json_with_dependencies import extended_json_with_minlength
 from typing import Optional, List, Tuple
 import networkx as nx
 
@@ -88,6 +90,9 @@ assignImm_values = {}
 
 global debug
 debug = False
+
+global push_rebuilt
+push_rebuilt = dict()
 
 
 def init_globals():
@@ -1392,6 +1397,7 @@ def compute_binary(expression,level):
     global already_considered    
     global rule_applied
     global rule
+    global push_rebuilt
     
     v0 = expression[0]
     v1 = expression[1]
@@ -1405,6 +1411,15 @@ def compute_binary(expression,level):
         exp_str_comm = str(funct)+" "+str(vals[1])+" "+str(vals[0])+","+str(level)
 
         val = evaluate_expression(funct,vals[0],vals[1])
+
+        # To rebuild the expression, we either use the operands that have already been used for any
+        # of the operands or a direct PUSH otherwise. Note that gasol_optimization works under the assumption
+        # that values are int, and hence, we need to do the cast to hex. Also, as we are operating with a stack,
+        # operands are retrieved in reverse order
+
+        # The condition filters computations of the form * PUSH 1 MUL or * PUSH 0 ADD
+        if vals[0] != val and vals[1] != val:
+            push_rebuilt[val] = (vals[1], vals[0], funct_to_opcode(funct))
 
         if size_flag:
             r, exp = check_size(expression,val)
@@ -1457,6 +1472,16 @@ def compute_ternary(expression):
     r, vals = all_integers([v0,v1,v2])
     if r and funct in ["addmod","mulmod"]:
         val = evaluate_expression_ter(funct,vals[0],vals[1],vals[2])
+
+        # To rebuild the expression, we either use the operands that have already been used for any
+        # of the operands or a direct PUSH otherwise. Note that gasol_optimization works under the assumption
+        # that values are int, and hence, we need to do the cast to hex. Also, as we are operating with a stack,
+        # operands are retrieved in reverse order
+
+        # The condition filters computations of the form * PUSH 1 MUL or * PUSH 0 ADD
+        if vals[1] != val and vals[2] != val and vals[0] != val:
+            push_rebuilt[val] = (vals[2], vals[1], vals[0], funct_to_opcode(funct))
+
 
         rule = "EVAL "+str(expression)
 
@@ -2034,7 +2059,9 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     else:
         sto_dep, mem_dep = [],[]
 
-        
+    bound_comp = compute_vars(new_ts, new_ss, new_user_defins)
+    stack_bound = min(max_sk_sz_idx-len(remove_vars),bound_comp)
+
     if push_flag:
         new_var_list, new_push_ins = transform_push_uninterpreted_functions(new_ts,new_user_defins)
         
@@ -2044,7 +2071,7 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
         
     json_dict["init_progr_len"] = max_instr_size-discount_op
     json_dict["max_progr_len"] = max_instr_size
-    json_dict["max_sk_sz"] = max_sk_sz_idx-len(remove_vars)
+    json_dict["max_sk_sz"] = stack_bound #max_sk_sz_idx-len(remove_vars)
     json_dict["vars"] = vars_list+new_var_list
     json_dict["src_ws"] = new_ss
     json_dict["tgt_ws"] = new_ts
@@ -2057,6 +2084,7 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     json_dict["rules"] = list(filter(lambda x: x != "", rules_applied))
     
     json_dict["original_instrs"] = " ".join(original_ins)
+    json_dict = extended_json_with_minlength(json_dict)
 
 
     # if not simplification:
@@ -2075,6 +2103,10 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
         msg = "SFS with rule: "+block_nm + "_input.json"
         check_and_print_debug_info(debug, msg)
 
+    if ((max_sk_sz_idx-len(remove_vars)) > bound_comp):
+        msg = "MEJORADO: "+paths.json_path+"/"+ block_nm + "_input.json --- "+str((max_sk_sz_idx, bound_comp))
+        check_and_print_debug_info(debug, msg)
+        # print("MEJORADO: "+paths.json_path+"/"+ block_nm + "_input.json --- "+str((max_sk_sz_idx, bound_comp)))
         
     blocks_json_dict[block_nm] = json_dict
 
@@ -5242,9 +5274,10 @@ def are_dependent_variables(v1,v2):
 
     if is_integer(v1)!=-1 or is_integer(v2)!=-1:
         return True
-    
+
     if v2 in exp_v1:
         return True
+
     if v1 in exp_v2:
         return True
 
@@ -6007,6 +6040,9 @@ def generate_pops(not_used_variables):
     return pop_instructions
 
 def generate_push_instruction(idx, value, out):
+    # If v is not in push rebuilt, then it has been introduced from a direct PUSH
+    # disasm_list = replace_repeated_values_by_dup(value, push_rebuilt, []) if value in push_rebuilt else [f'PUSH {hex(value)[2:]}']
+    disasm_list = ['PUSH']
     obj = {}
     obj["id"] = "PUSH_"+str(idx) if value != 0 else "PUSH0_"+str(idx)
     obj["opcode"] = process_opcode(str(opcodes.get_opcode("PUSH")[0])) if value != 0 else process_opcode(str(opcodes.get_opcode("PUSH0")[0]))
@@ -6019,12 +6055,12 @@ def generate_push_instruction(idx, value, out):
     obj["storage"] = False #It is true only for MSTORE and SSTORE
     obj["size"] = get_ins_size("PUSH",value)
 
-    
+
     return obj
 
 def transform_push_uninterpreted_functions(target_stack,uninterpreted_functions):
     global s_counter
-    
+
     push_variables = {}
     new_variables = []
     new_uninterpreted = []
@@ -6079,6 +6115,241 @@ def transform_push_uninterpreted_functions(target_stack,uninterpreted_functions)
 
     return new_variables, new_uninterpreted
 
+def compute_vars(tstack, sstack, userdef_ins):
+    total_vars = 0
+    visited = []
+    
+    last_atomic = True
+    total_current = 0
+    sstack_aux = list(sstack)
+    coincide = True
+    i = len(sstack)-1
+    j = len(tstack)-1
+    
+    while(i>=0 and coincide and tstack != []):
+        if(sstack[i] == tstack[j]):
+            sstack_aux.pop()
+        else:
+            coincide = False
+
+        i-=1
+        j-=1
+            
+    if not coincide and sstack_aux != sstack:
+        current = len(sstack_aux)
+    else:
+        current = 0
+        
+    
+    # current = 0#len(sstack)
+    for v in tstack[::-1]:
+        # print(v)
+        visited_old = list(visited)
+        max_stack,current_var,is_atomic=compute_vars_aux(v,sstack,tstack,userdef_ins,visited)
+
+        # print(max_stack)
+        # print(current_var)
+        
+        
+        num_vars = current+max_stack
+
+        #If the current variable needs to be considered from the beginning as part of the input stack
+        if v in sstack and v not in visited_old:
+            v_value = int(v[2:-1])
+            sstack_vars = list(filter(lambda x: x in sstack,visited_old))
+            if sstack_vars != []:
+                v_already = max(list(map(lambda x: int(x[2:-1]),sstack_vars)))
+
+                if v_value > v_already:
+                    total_vars+= v_value-v_already
+            else:
+                total_vars+=v_value+1
+        current+=current_var
+        # print(current)
+        # print(num_vars)
+        
+        if total_vars < max(num_vars,current):
+            total_vars = max(num_vars,current)
+        
+        # if last_atomic:
+        #     total_vars+=max_stack
+
+        # else:
+        #     total_current = current+total_vars
+            
+        # last_atomic = is_atomic
+        # print(total_vars)
+        # print(total_current)
+        # print("************")
+        # if (max_stack > total_vars):
+        #     total_vars += max_stack
+        # total_vars+=m
+    # print(total_vars)
+    storage = list(filter(lambda x: x["disasm"].find("MSTORE")!=-1 or x["disasm"] == "SSTORE", userdef_ins))
+    for s in storage:
+        inp_vars = s["inpt_sk"]
+        for v in inp_vars:
+            t,m,_=compute_vars_aux(v,sstack,tstack,userdef_ins,visited)
+            total_vars+= t
+
+    # for v in visited:
+    #     if v in sstack and v not in tstack:
+    #         total_vars+=1
+            
+
+    for v in sstack:
+        is_input = list(filter(lambda x: v in x["inpt_sk"], userdef_ins))
+        if (len(is_input) == 0) and (v not in tstack):
+            total_vars+=1
+        elif (len(is_input)>0 and (v in tstack)):
+            total_vars+=tstack.count(v)-(len(is_input)-1)
+
+    max_stacks = max(len(sstack), len(tstack))
+            
+    return max(max_stacks,total_vars)
+        
+def compute_vars_aux(var, sstack, tstack, userdef_ins, visited):
+
+    if var in visited:
+        return 1,1, True
+    elif var in sstack and var not in visited:
+        
+        val = int(var[2:-1])
+        
+        already_computed = list(filter(lambda x: x in sstack,visited))
+        already_val = -1 if already_computed == [] else max(list(map(lambda x: int(x[2:-1]), already_computed)))
+
+        visited.append(var)
+        
+        # print("++++++++")
+        # print(visited)
+        # print(already_computed)
+        # print(already_val)
+        # print(val)
+        # print("+++++++")
+        
+        if val > already_val:
+            # print("HOLA")
+            return val+1,1, True
+        else:
+            return 1,1, True
+            
+    elif is_integer(var)!=-1:
+        if var not in visited:
+            visited.append(var) 
+        return 1,1, True
+    else:
+        instr_l = list(filter(lambda x: var in x["outpt_sk"], userdef_ins))
+        if len(instr_l) == 0:
+            raise Exception("Error in computing vars")
+
+        instr = instr_l[0]
+        inpt_vars = instr["inpt_sk"]
+        
+        if inpt_vars == []:
+            visited.append(var)
+            return 1,1, True
+
+        # print(instr["disasm"])
+        total = 0
+        total_current=0
+        acc_current=0
+        last_var_atomic = True
+
+        for v in inpt_vars[::-1]:
+            num_vars, current, _ = compute_vars_aux(v,sstack,tstack,userdef_ins,visited)
+            acc_current+=current
+            # print("AQUI!")
+            # print(num_vars)
+            # print(current)
+            
+            if(last_var_atomic):
+                total+=num_vars
+            else:
+                total = max(total,acc_current+num_vars)
+            
+            last_var_atomic = is_atomic(v,sstack)
+
+        # print(total)
+        # print(total_current)
+        #     print("--")
+        # print("TERMINO:"+ instr["disasm"])
+        # print("*********")
+
+        acc_current+=len(instr["outpt_sk"])-len(inpt_vars)
+
+        if var not in visited:
+            visited.append(var)
+
+        return max(total,acc_current), acc_current, False
+
+def is_atomic(var,sstack):
+    if var in sstack or is_integer(var)!=-1:
+        return True
+    else:
+        return False
+
+    
+def generate_subblocks2split(rule,part,split_sto):
+
+    instructions = filter_opcodes(rule)
+    opcodes = get_opcodes(rule)    
+
+    res = is_optimizable(opcodes,instructions)
+    if res:
+        ops = list(map(lambda x: x[4:-1],opcodes))
+
+        original_ins = ops
+
+        if part:
+            if len(opcodes) > max_bound and not split_sto:
+                stores_pos = compute_position_stores(opcodes)
+                where2split = split_by_numbers(stores_pos)
+
+                if where2split == []:
+                    subblocks = [opcodes]
+
+                else:
+                    subblocks = split_blocks_by_number(rule.get_instructions(),where2split)
+            else:
+                subblocks = [opcodes]
+        else:
+            subblocks = [opcodes]
+    else: #we need to split the blocks into subblocks
+        r = False
+        new_instructions = []
+
+        subblocks = split_blocks(rule,r,new_instructions)       
+        if part:
+            end_subblocks = []
+            for s in subblocks:
+                o = list(filter(lambda x:x.find("nop(")!=-1,s))
+
+                if split_sto:
+                    stores_pos = []
+                else:
+                    stores_pos = compute_position_stores(o)
+
+                if len(o)> max_bound and stores_pos !=[]:
+                    where2split = split_by_numbers(stores_pos)
+                    if where2split == []:
+                        end_subblocks.append(s)
+                    else:
+                        subblocks_aux = split_blocks_by_number(s,where2split)
+                        end_subblocks+=subblocks_aux
+                else:
+                    end_subblocks.append(s)
+            subblocks = end_subblocks
+
+    subblocks_postprocess = []
+    for s in subblocks:
+        s1 = list(filter(lambda x: x.find("nop(")!=-1,s))
+        ins = list(map(lambda x: x.strip()[4:-1],s1))
+        subblocks_postprocess.append(ins)
+
+    # print(subblocks_postprocess)
+        
+    return subblocks_postprocess
 
 def unify_all_user_defins(ts,user_def_instructions,list_vars):
 
@@ -6118,4 +6389,3 @@ def unify_user_defins(ts,user_def_instructions,list_vars):
             new_user_def.append(instr)
 
     return modified, new_user_def, target_stack
-

@@ -1,5 +1,10 @@
 import math
+from typing import Tuple, Dict, List
+import os
+from copy import deepcopy
 import sfs_generator.opcodes as opcodes
+import global_params.paths as paths
+
 
 def toInt(a):
     elem = a.split("_")
@@ -191,7 +196,7 @@ def number_encoding_size(number):
     if number < 0 :
         number = (2**256)+number
 
-    
+
     while number != 0:
         i += 1
         number = number >> 8
@@ -270,17 +275,16 @@ def check_and_print_debug_info(debug,msg):
         print(msg)
 
 
-def process_blocks_split(subblocks):
-    split_opcodes = []
-    if len(subblocks) != 1:
-        for i in range(0,len(subblocks)-1):
-            block = subblocks[i].pop()
-            subblocks[i+1].pop(0)
-            split_opcodes.append(block)
+# Given a list of sub-blocks obtained that include the instruction use for splitting,
+# returns a similar list removing these opcodes
+def process_blocks_split(sub_blocks: List[List[str]]) -> List[List[str]]:
+    optimization_sub_blocks = deepcopy(sub_blocks)
+    for i in range(len(sub_blocks)-1):
+        _ = optimization_sub_blocks[i].pop()
+        optimization_sub_blocks[i+1].pop(0)
 
+    return optimization_sub_blocks
 
-    print(subblocks)
-    return subblocks
 
 def get_block(blocks, tag):
     for b in blocks:

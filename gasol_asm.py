@@ -1,13 +1,17 @@
 #!/usr/bin/python3
 import argparse
 import json
+import os
 import shutil
+import sys
 from typing import Tuple, Optional, List, Dict
 from copy import deepcopy
 from timeit import default_timer as dtimer
 from argparse import ArgumentParser, Namespace
 
 import pandas as pd
+
+sys.path.append(os.path.dirname(os.path.realpath(__file__))+"/gasol_ml")
 
 import global_params.constants as constants
 import global_params.paths as paths
@@ -16,6 +20,7 @@ from sfs_generator.gasol_optimization import get_sfs_dict
 from sfs_generator.parser_asm import (parse_asm,
                                       generate_block_from_plain_instructions,
                                       parse_blocks_from_plain_instructions)
+from sfs_generator.utils import process_blocks_split
 from verification.sfs_verify import verify_block_from_list_of_sfs, are_equals
 from solution_generation.optimize_from_sub_blocks import rebuild_optimized_asm_block
 from sfs_generator.asm_block import AsmBlock, AsmBytecode
@@ -40,6 +45,39 @@ def init():
 
     global prev_n_instrs
     prev_n_instrs = 0
+
+
+def select_model_and_config(model: str, criteria: str, i:int) -> Tuple[str, int]:
+    configurations = {"bound_size": ("bound_size.pyt", 4), "bound_gas": ("bound_gas.pyt", 4), "opt_size": ("opt_size.pyt", 0),
+                      "opt_gas": ("opt_gas.pyt", 0)}
+
+    selected_config = configurations.get(f"{model}_{criteria}", [])
+    return f"models/{selected_config[0]}", selected_config[1]
+
+
+def create_ml_models(parsed_args: Namespace) -> None:
+    if parsed_args.bound_select != -1 or parsed_args.opt_select != -1:
+        import torch
+        torch.set_num_threads(1)
+        torch.set_num_interop_threads(1)
+
+    criteria = "size" if parsed_args.size else "gas"
+
+    if parsed_args.bound_select != -1:
+        import gasol_ml.bound_predictor as bound_predictor
+
+        model_name, conf = select_model_and_config("bound", criteria, parsed_args.bound_select)
+        parsed_args.bound_model = bound_predictor.ModelQuery(model_name, conf)
+    else:
+        parsed_args.bound_model = None
+
+    if parsed_args.opt_select != -1:
+        import gasol_ml.opt_predictor as opt_predictor
+
+        model_name, conf = select_model_and_config("opt", criteria, parsed_args.opt_select)
+        parsed_args.optimized_predictor_model = opt_predictor.ModelQuery(model_name, conf)
+    else:
+        parsed_args.optimized_predictor_model = None
 
 
 def compute_original_sfs_with_simplifications(block: AsmBlock, parsed_args: Namespace):
@@ -88,7 +126,20 @@ def optimize_block(sfs_dict, timeout, parsed_args: Namespace) -> List[Tuple[AsmB
         sfs_block = sfs_dict[block_name]
         initial_solver_bound = sfs_block['init_progr_len']
         original_instr = sfs_block['original_instrs']
+        previous_bound = sfs_block['init_progr_len']
         original_block = generate_block_from_plain_instructions(original_instr, block_name)
+
+        if parsed_args.bound_model is not None:
+            print(sfs_block)
+            inferred_bound = parsed_args.bound_model.eval(sfs_block)
+            if inferred_bound == 0:
+                new_bound = previous_bound
+            else:
+                new_bound = min(previous_bound, inferred_bound)
+            sfs_block['init_progr_len'] = new_bound
+
+            if parsed_args.debug_flag:
+                print(f"Previous bound: {previous_bound} Inferred bound: {inferred_bound} Final bound: {new_bound}")
 
         # To match previous results, multiply timeout by number of storage instructions
         # TODO devise better heuristics to deal with timeouts
@@ -397,13 +448,56 @@ def optimize_asm_block_asm_format(block: AsmBlock, timeout: int, parsed_args: Na
 
     instructions = block.instructions_to_optimize_plain()
 
+    sfs_dict = {}
     # No instructions to optimize
     if instructions == []:
         return new_block, {}, []
 
-    contracts_dict, sub_block_list = compute_original_sfs_with_simplifications(block, parsed_args)
+    if parsed_args.optimized_predictor_model is not None and parsed_args.backend:
 
-    sfs_dict = contracts_dict["syrup_contract"]
+        stack_size = block.source_stack
+
+        instructions_to_optimize = block.instructions_to_optimize_plain()
+        block_data = {"instructions": instructions_to_optimize, "input": stack_size}
+        sub_block_list = ir_block.get_subblocks(block_data,storage = parsed_args.storage,part = parsed_args.partition)
+        subblocks2analyze = [instructions for instructions in process_blocks_split(sub_block_list) if instructions != []]
+
+        for i, subblock in enumerate(subblocks2analyze):
+
+            ins_str = " ".join(subblock)
+            new_block = parse_blocks_from_plain_instructions(ins_str)[0]
+            new_block.set_block_name(block.get_block_name())
+            new_block.set_block_id(i)
+            out = parsed_args.optimized_predictor_model.eval(ins_str)
+
+            # The new sub block name is generated as follows. Important to match the format in the sfs_dict
+            sub_block_name = f'{new_block.get_block_name()}_{new_block.get_block_id()}'
+
+            # Out == 1 means the predictors predicts the block won't lead to any optimization, and hence, it's not worthy
+            # to try optimization
+            if out == 0:
+                optimized_blocks[sub_block_name] = None
+                if parsed_args.debug_flag:
+                    print(f"{block.block_name} has been chosen not to be optimized")
+
+            else:
+                try:
+                    contracts_dict, _ = compute_original_sfs_with_simplifications(new_block, parsed_args)
+                except Exception as e:
+                    failed_row = {'instructions': instructions, 'exception': str(e)}
+                    return new_block, {}, []
+
+                old_name = list(contracts_dict["syrup_contract"].keys())[0]
+                sfs_dict[sub_block_name] = contracts_dict["syrup_contract"][old_name]
+
+    else:
+        try:
+            contracts_dict, sub_block_list = compute_original_sfs_with_simplifications(block, parsed_args)
+        except Exception as e:
+            failed_row = {'instructions': instructions, 'exception': str(e)}
+            return new_block, {}, []
+
+        sfs_dict = contracts_dict["syrup_contract"]
 
     if not parsed_args.backend:
         optimize_block(sfs_dict, timeout, parsed_args)
@@ -739,6 +833,12 @@ def parse_encoding_args() -> Namespace:
     additional.add_argument('-order-conflicts', action='store_false', dest='order_conflicts',
                             help='Disable the order among the uninterpreted opcodes in the encoding')
 
+    ml_options = ap.add_argument_group('ML Options', 'Options to execute the different ML modules')
+    ml_options.add_argument('-bound-model', "--bound-model", action='store_true', dest='bound_select',
+                            help="Enable bound regression model")
+    ml_options.add_argument('-opt-model', "--opt-model", action='store_true', dest='opt_select',
+                            help="Select which representation model is used for the opt classification")
+
     parsed_args = ap.parse_args()
 
     # Additional check: if ufs are used, push instructions must be represented as uninterpreted too
@@ -758,6 +858,7 @@ if __name__ == '__main__':
 
     init()
     parsed_args = parse_encoding_args()
+    create_ml_models(parsed_args)
 
     # If storage or partition flag are activated, the blocks are split using store instructions
     if parsed_args.storage or parsed_args.partition:

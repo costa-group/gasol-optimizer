@@ -65,6 +65,31 @@ def generate_dependency_graph_only_memory(uninterpreted_instr: List[Uninterprete
     return dependency_graph
 
 
+def generate_dependency_graph_only_instr(uninterpreted_instr : List[UninterpretedInstruction], order_tuples : List[Tuple[Id_T, Id_T]],
+                                         stack_elem_to_id : Dict[str, Id_T]) -> Dict[Id_T, List[Id_T]]:
+    dependency_graph = {}
+    for instr in uninterpreted_instr:
+        instr_id = instr.id
+        dependency_graph[instr_id] = []
+
+        for stack_elem in instr.input_stack:
+
+            # We search for another instruction that generates the
+            # stack elem as an output and add it to the set
+            if type(stack_elem) == str:
+
+                # This means the stack element corresponds to another uninterpreted instruction
+                if stack_elem in stack_elem_to_id:
+                    dependency_graph[instr.id].append(stack_elem_to_id[stack_elem])
+
+            # If we have an int, then we must perform a PUSHx to obtain that value
+            else:
+                dependency_graph[instr_id].append('PUSH')
+                if 'PUSH' not in dependency_graph:
+                    dependency_graph['PUSH'] = []
+
+    return dependency_graph
+
 def generate_dependency_graph_transitive_closure(uninterpreted_instr : List[UninterpretedInstruction], order_tuples : List[List[Id_T]],
                                                  stack_elem_to_id : Dict[str, Id_T]) -> Dict[Id_T, List[Id_T]]:
     """
