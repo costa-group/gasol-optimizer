@@ -459,9 +459,12 @@ def optimize_asm_block_asm_format(block: AsmBlock, timeout: int, parsed_args: Na
         instructions_to_optimize = block.instructions_to_optimize_plain()
         block_data = {"instructions": instructions_to_optimize, "input": stack_size}
         sub_block_list = ir_block.get_subblocks(block_data,storage = parsed_args.storage,part = parsed_args.partition)
-        subblocks2analyze = [instructions for instructions in process_blocks_split(sub_block_list) if instructions != []]
+        subblocks2analyze = [instructions for instructions in process_blocks_split(sub_block_list)]
 
         for i, subblock in enumerate(subblocks2analyze):
+            # If we have an empty sub block, we just consider it has not been optimized and go on with the new block
+            if subblock == []:
+                continue
 
             ins_str = " ".join(subblock)
             new_block = parse_blocks_from_plain_instructions(ins_str)[0]
