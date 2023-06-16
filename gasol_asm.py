@@ -774,7 +774,7 @@ def parse_encoding_args() -> Namespace:
     basic.add_argument("-solver", "--solver", help="Choose the solver", choices=["z3", "barcelogic", "oms"],
                        default="oms")
     basic.add_argument("-tout", metavar='timeout', action='store', type=int,
-                       help="Timeout in seconds. By default, set to 10s per block.", default=10)
+                       help="Timeout in seconds. By default, set to 2s per block.", default=2)
     basic.add_argument("-direct-tout", dest='direct_timeout', action='store_true',
                        help="Sets the Max-SMT timeout to -tout directly, "
                             "without considering the structure of the block")

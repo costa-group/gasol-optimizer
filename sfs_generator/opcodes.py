@@ -200,14 +200,14 @@ def get_opcode(opcode):
         return opcodes[opcode]
 
     elif opcode == "SELFDESTRUCT":
-        return [hex(0xff), 1, 0]
+        return [0xff, 1, 0]
 
     #PG
     elif opcode == "RETURNDATASIZE":
-        return [hex(0x3d), 0, 1]
+        return [0x3d, 0, 1]
 
     elif opcode == "RETURNDATACOPY":
-        return [hex(0x3e), 3, 0]
+        return [0x3e, 3, 0]
 
     elif opcode == "PUSH0":
         return [0x5f, 0, 1]
