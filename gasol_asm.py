@@ -1,13 +1,17 @@
 #!/usr/bin/python3
 import argparse
 import json
+import os
 import shutil
+import sys
 from typing import Tuple, Optional, List, Dict
 from copy import deepcopy
 from timeit import default_timer as dtimer
 from argparse import ArgumentParser, Namespace
 
 import pandas as pd
+
+sys.path.append(os.path.dirname(os.path.realpath(__file__))+"/gasol_ml")
 
 import global_params.constants as constants
 import global_params.paths as paths
@@ -16,6 +20,7 @@ from sfs_generator.gasol_optimization import get_sfs_dict
 from sfs_generator.parser_asm import (parse_asm,
                                       generate_block_from_plain_instructions,
                                       parse_blocks_from_plain_instructions)
+from sfs_generator.utils import process_blocks_split
 from verification.sfs_verify import verify_block_from_list_of_sfs, are_equals
 from solution_generation.optimize_from_sub_blocks import rebuild_optimized_asm_block
 from sfs_generator.asm_block import AsmBlock, AsmBytecode
@@ -40,6 +45,39 @@ def init():
 
     global prev_n_instrs
     prev_n_instrs = 0
+
+
+def select_model_and_config(model: str, criteria: str, i:int) -> Tuple[str, int]:
+    configurations = {"bound_size": ("bound_size.pyt", 4), "bound_gas": ("bound_gas.pyt", 4), "opt_size": ("opt_size.pyt", 0),
+                      "opt_gas": ("opt_gas.pyt", 0)}
+
+    selected_config = configurations.get(f"{model}_{criteria}", [])
+    return f"models/{selected_config[0]}", selected_config[1]
+
+
+def create_ml_models(parsed_args: Namespace) -> None:
+    if parsed_args.bound_select or parsed_args.opt_select:
+        import torch
+        torch.set_num_threads(1)
+        torch.set_num_interop_threads(1)
+
+    criteria = "size" if parsed_args.size else "gas"
+
+    if parsed_args.bound_select:
+        import gasol_ml.bound_predictor as bound_predictor
+
+        model_name, conf = select_model_and_config("bound", criteria, parsed_args.bound_select)
+        parsed_args.bound_model = bound_predictor.ModelQuery(model_name, conf)
+    else:
+        parsed_args.bound_model = None
+
+    if parsed_args.opt_select:
+        import gasol_ml.opt_predictor as opt_predictor
+
+        model_name, conf = select_model_and_config("opt", criteria, parsed_args.opt_select)
+        parsed_args.optimized_predictor_model = opt_predictor.ModelQuery(model_name, conf)
+    else:
+        parsed_args.optimized_predictor_model = None
 
 
 def compute_original_sfs_with_simplifications(block: AsmBlock, parsed_args: Namespace):
@@ -88,7 +126,19 @@ def optimize_block(sfs_dict, timeout, parsed_args: Namespace) -> List[Tuple[AsmB
         sfs_block = sfs_dict[block_name]
         initial_solver_bound = sfs_block['init_progr_len']
         original_instr = sfs_block['original_instrs']
+        previous_bound = sfs_block['init_progr_len']
         original_block = generate_block_from_plain_instructions(original_instr, block_name)
+
+        if parsed_args.bound_model is not None:
+            inferred_bound = parsed_args.bound_model.eval(sfs_block)
+            if inferred_bound == 0:
+                new_bound = previous_bound
+            else:
+                new_bound = min(previous_bound, inferred_bound)
+            sfs_block['init_progr_len'] = new_bound
+
+            if parsed_args.debug_flag:
+                print(f"Previous bound: {previous_bound} Inferred bound: {inferred_bound} Final bound: {new_bound}")
 
         # To match previous results, multiply timeout by number of storage instructions
         # TODO devise better heuristics to deal with timeouts
@@ -317,7 +367,7 @@ def update_length_count(old_block : AsmBlock, new_block : AsmBlock):
 
 
 def generate_statistics_info(original_block: AsmBlock, outcome: Optional[OptimizeOutcome], solver_time: float,
-                             optimized_asm: List[AsmBytecode], initial_bound: int, tout: int, rules: List[str]) -> Dict:
+                             optimized_block: AsmBlock, initial_bound: int, tout: int, rules: List[str]) -> Dict:
 
     block_name = original_block.block_name
     original_instr = ' '.join(original_block.instructions_to_optimize_plain())
@@ -342,17 +392,17 @@ def generate_statistics_info(original_block: AsmBlock, outcome: Optional[Optimiz
     # The solver has returned a valid model
     else:
         shown_optimal = outcome == OptimizeOutcome.optimal
-        optimized_size = sum([instr.bytes_required for instr in optimized_asm])
-        optimized_gas = sum([instr.gas_spent for instr in optimized_asm])
-        optimized_length = len(optimized_asm)
+        optimized_size = optimized_block.bytes_required
+        optimized_gas = optimized_block.gas_spent
+        optimized_length = len(optimized_block.instructions_to_optimize_plain())
         initial_size = original_block.bytes_required
         initial_gas = original_block.gas_spent
         initial_length = len(original_block.instructions_to_optimize_plain())
 
         statistics_row.update({"solver_time_in_sec": round(solver_time, 3), "saved_size": initial_size - optimized_size,
                                "saved_gas": initial_gas - optimized_gas, "model_found": True, "shown_optimal": shown_optimal,
-                               "solution_found": ' '.join([instr.to_plain() for instr in optimized_asm]),
-                               "optimized_n_instrs": len(optimized_asm), 'optimized_length': optimized_length,
+                               "solution_found": ' '.join([instr.to_plain() for instr in optimized_block.instructions]),
+                               "optimized_n_instrs": optimized_length, 'optimized_length': optimized_length,
                                'optimized_estimated_size': optimized_size, 'optimized_estimated_gas': optimized_gas,
                                'outcome': 'model', 'saved_length': initial_length - optimized_length})
 
@@ -374,11 +424,11 @@ def improves_criterion(saved_criterion: int, *saved_other):
         return False
 
 
-def block_has_been_optimized(original_block: AsmBlock, optimized_asm: List[AsmBytecode],
+def block_has_been_optimized(original_block: AsmBlock, optimized_block: AsmBlock,
                              size_criterion: bool, length_criterion: bool) -> bool:
-    saved_size = original_block.bytes_required - sum([instr.bytes_required for instr in optimized_asm])
-    saved_gas = original_block.gas_spent - sum([instr.gas_spent for instr in optimized_asm])
-    saved_length = original_block.length - len(optimized_asm)
+    saved_size = original_block.bytes_required - optimized_block.bytes_required
+    saved_gas = original_block.gas_spent - optimized_block.gas_spent
+    saved_length = original_block.length - optimized_block.length
 
     return (size_criterion and improves_criterion(saved_size, saved_gas)) or \
            (length_criterion and improves_criterion(saved_length, saved_gas, saved_size)) or \
@@ -397,13 +447,59 @@ def optimize_asm_block_asm_format(block: AsmBlock, timeout: int, parsed_args: Na
 
     instructions = block.instructions_to_optimize_plain()
 
+    sfs_dict = {}
     # No instructions to optimize
     if instructions == []:
         return new_block, {}, []
 
-    contracts_dict, sub_block_list = compute_original_sfs_with_simplifications(block, parsed_args)
+    if parsed_args.optimized_predictor_model is not None and parsed_args.backend:
 
-    sfs_dict = contracts_dict["syrup_contract"]
+        stack_size = block.source_stack
+
+        instructions_to_optimize = block.instructions_to_optimize_plain()
+        block_data = {"instructions": instructions_to_optimize, "input": stack_size}
+        sub_block_list = ir_block.get_subblocks(block_data,storage = parsed_args.storage,part = parsed_args.partition)
+        subblocks2analyze = [instructions for instructions in process_blocks_split(sub_block_list)]
+
+        for i, subblock in enumerate(subblocks2analyze):
+            # If we have an empty sub block, we just consider it has not been optimized and go on with the new block
+            if subblock == []:
+                continue
+
+            ins_str = " ".join(subblock)
+            new_block = parse_blocks_from_plain_instructions(ins_str)[0]
+            new_block.set_block_name(block.get_block_name())
+            new_block.set_block_id(i)
+            out = parsed_args.optimized_predictor_model.eval(ins_str)
+
+            # The new sub block name is generated as follows. Important to match the format in the sfs_dict
+            sub_block_name = f'{new_block.get_block_name()}_{new_block.get_block_id()}'
+
+            # Out == 1 means the predictors predicts the block won't lead to any optimization, and hence, it's not worthy
+            # to try optimization
+            if out == 0:
+                optimized_blocks[sub_block_name] = None
+                if parsed_args.debug_flag:
+                    print(f"{block.block_name} has been chosen not to be optimized")
+
+            else:
+                try:
+                    contracts_dict, _ = compute_original_sfs_with_simplifications(new_block, parsed_args)
+                except Exception as e:
+                    failed_row = {'instructions': instructions, 'exception': str(e)}
+                    return new_block, {}, []
+
+                old_name = list(contracts_dict["syrup_contract"].keys())[0]
+                sfs_dict[sub_block_name] = contracts_dict["syrup_contract"][old_name]
+
+    else:
+        try:
+            contracts_dict, sub_block_list = compute_original_sfs_with_simplifications(block, parsed_args)
+        except Exception as e:
+            failed_row = {'instructions': instructions, 'exception': str(e)}
+            return new_block, {}, []
+
+        sfs_dict = contracts_dict["syrup_contract"]
 
     if not parsed_args.backend:
         optimize_block(sfs_dict, timeout, parsed_args)
@@ -411,7 +507,10 @@ def optimize_asm_block_asm_format(block: AsmBlock, timeout: int, parsed_args: Na
 
     for sub_block, optimization_outcome, solver_time, optimized_asm, tout, initial_solver_bound, rules, optimized_log_rep in optimize_block(sfs_dict, timeout, parsed_args):
 
-        statistics_info = generate_statistics_info(sub_block, optimization_outcome, solver_time, optimized_asm,
+        optimal_block = AsmBlock('optimized', sub_block.block_id, sub_block.block_name, sub_block.is_init_block)
+        optimal_block.instructions = optimized_asm
+
+        statistics_info = generate_statistics_info(sub_block, optimization_outcome, solver_time, optimal_block,
                                                    initial_solver_bound, tout, rules)
 
         csv_statistics.append(statistics_info)
@@ -419,7 +518,7 @@ def optimize_asm_block_asm_format(block: AsmBlock, timeout: int, parsed_args: Na
         # Only check if the new block is considered if the solver has generated a new one
         if optimization_outcome == OptimizeOutcome.non_optimal or optimization_outcome == OptimizeOutcome.optimal:
             sub_block_name = sub_block.block_name
-            if block_has_been_optimized(sub_block, optimized_asm, parsed_args.size, parsed_args.length):
+            if block_has_been_optimized(sub_block, optimal_block, parsed_args.size, parsed_args.length):
                 optimized_blocks[sub_block_name] = optimized_asm
                 log_dicts[sub_block_name] = optimized_log_rep
             else:
@@ -562,7 +661,10 @@ def optimize_from_sfs(json_file: str, output_file: str, csv_file: str, parsed_ar
     for original_block, optimization_outcome, solver_time, optimized_asm, tout, initial_solver_bound, rules, optimized_log_rep \
             in optimize_block(sfs_dict, parsed_args.tout, parsed_args):
 
-        statistics_info = generate_statistics_info(original_block, optimization_outcome, solver_time, optimized_asm,
+        optimal_block = AsmBlock('optimized', original_block.block_id, original_block.block_name, original_block.is_init_block)
+        optimal_block.instructions = optimized_asm
+
+        statistics_info = generate_statistics_info(original_block, optimization_outcome, solver_time, optimal_block,
                                                    initial_solver_bound, tout, rules)
 
         csv_statistics.append(statistics_info)
@@ -580,7 +682,7 @@ def optimize_from_sfs(json_file: str, output_file: str, csv_file: str, parsed_ar
             print("")
 
         elif (optimization_outcome == OptimizeOutcome.optimal or optimization_outcome == OptimizeOutcome.optimal) \
-                and block_has_been_optimized(original_block, optimized_asm, parsed_args.size, parsed_args.length):
+                and block_has_been_optimized(original_block, optimal_block, parsed_args.size, parsed_args.length):
             final_block = deepcopy(original_block)
             final_block.instructions = optimized_asm
 
@@ -672,7 +774,7 @@ def parse_encoding_args() -> Namespace:
     basic.add_argument("-solver", "--solver", help="Choose the solver", choices=["z3", "barcelogic", "oms"],
                        default="oms")
     basic.add_argument("-tout", metavar='timeout', action='store', type=int,
-                       help="Timeout in seconds. By default, set to 10s per block.", default=10)
+                       help="Timeout in seconds. By default, set to 2s per block.", default=2)
     basic.add_argument("-direct-tout", dest='direct_timeout', action='store_true',
                        help="Sets the Max-SMT timeout to -tout directly, "
                             "without considering the structure of the block")
@@ -733,6 +835,12 @@ def parse_encoding_args() -> Namespace:
     additional.add_argument('-order-conflicts', action='store_false', dest='order_conflicts',
                             help='Disable the order among the uninterpreted opcodes in the encoding')
 
+    ml_options = ap.add_argument_group('ML Options', 'Options to execute the different ML modules')
+    ml_options.add_argument('-bound-model', "--bound-model", action='store_true', dest='bound_select',
+                            help="Enable bound regression model")
+    ml_options.add_argument('-opt-model', "--opt-model", action='store_true', dest='opt_select',
+                            help="Select which representation model is used for the opt classification")
+
     parsed_args = ap.parse_args()
 
     # Additional check: if ufs are used, push instructions must be represented as uninterpreted too
@@ -752,6 +860,7 @@ if __name__ == '__main__':
 
     init()
     parsed_args = parse_encoding_args()
+    create_ml_models(parsed_args)
 
     # If storage or partition flag are activated, the blocks are split using store instructions
     if parsed_args.storage or parsed_args.partition:

@@ -52,7 +52,7 @@ class AsmBytecode:
     def to_plain_with_byte_number(self) -> str:
         op_name = ''.join([self.disasm, str(get_push_number_hex(self.value))]) if self.disasm == "PUSH" else self.disasm
         op_value = ''.join(['0x', self.value]) if self.disasm == "PUSH" else str(self.value) if self.value is not None else ''
-        return f"{op_name} {op_value}" if self.value is not None else f"{self.disasm} {self.jump_type}" \
+        return f"{op_name} {op_value}" if self.value is not None and self.disasm == "PUSH" else f"{self.disasm} {self.jump_type}" \
             if self.jump_type is not None else self.disasm
 
     @property
@@ -67,6 +67,8 @@ class AsmBytecode:
     def gas_spent(self) -> int:
         return opcodes.get_ins_cost(self.disasm, self.value)
 
+    def gas_spent_accesses(self, warm_access: bool, store_changed_original_value: bool) -> int:
+        return opcodes.get_ins_cost(self.disasm, self.value, already=warm_access)
 
     def get_disasm(self) -> str:
         return self.disasm

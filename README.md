@@ -6,7 +6,7 @@ GASOL
 GASOL is a generic framework that optimizes smart contracts by applying the technique called *super-optimization* that consists in optimizing basic blocks (sequences of EVM instructions). For each basic block, GASOL tries to find a sequence of EVM instructions that produces the same state as the original block, but consumes a smaller amount of gas or decreases the amount of bytes. 
 
 ## Installation (Ubuntu)
-GASOL is implemented in Python and runs Python3. It only needs [pandas](https://pandas.pydata.org/) library to be run. In order to install it, run one of the following commands:
+GASOL is implemented in Python and runs Python3. It only needs [pandas](https://pandas.pydata.org/) and [networkx](https://pypi.org/project/networkx/) libraries to be run. In order to install it, run one of the following commands:
 
 
 A. Clone the GitHub repository in the desired directory of your machine using the command
@@ -27,7 +27,7 @@ The following sections detail how to interact with GASOL to enable different set
 
 ### General settings
 
-By default, GASOL uses the SMT solver [OptiMathSAT](http://optimathsat.disi.unitn.it/), with a timeout of 10s per block. This timeout can be changed using `-tout` flag followed by the new timeout in seconds.
+By default, GASOL uses the SMT solver [OptiMathSAT](http://optimathsat.disi.unitn.it/), with a timeout of 2s per block. This timeout can be changed using `-tout` flag followed by the new timeout in seconds.
 
 GASOL allows two different optimization criteria: gas and bytes-size. By default, the gas criterion is enabled. The byte-size criterion can be enabled using the `-size` flag. In general, enabling the gas size criterion leads to increasing the bytes-size, whereas the byte-size criterion tends to reduce (slightly) the gas consumption. Byte-size criteria also takes longer.
 
@@ -97,6 +97,37 @@ Estimated size optimized in bytes: 2
 Initial number of instructions: 5
 Final number of instructions: 2
 ```
+
+### Neural-guided Superoptimization (NGS)
+
+GASOL can enable ML techniques to speed up the superoptimization process and 
+improve the optimization results for large blocks. These techniques are implemented 
+in a separate repository, [gasol_ml](https://github.com/costa-group/gasol_ml), 
+which must be imported as a submodule using the following commands:
+
+```
+git submodule init
+git submodule update
+```
+
+`gasol_ml` contains a [requirements](https://github.com/costa-group/gasol_ml/blob/master/requirements.txt)
+file with the libraries needed to enable the ML modules.
+There are two ML models that can be enabled for each optimization criteria: 
+a classification model that filters blocks that are likely not to be optimized further and 
+a regression model that infers the number of instructions of the optimal solution 
+in order to speed up the search. The first model can be enabled using `-opt-model` 
+and the second one with `-bound-model`. 
+For instance, to execute GASOL on the previous asm file using both models, run the following command:
+
+```
+./gasol_asm.py examples/jsons-solc/0x20e7Efc18f4D03670EDC2FD86b840AB2D01E030D.json_solc -tout 5 -storage -size -opt-model -bound-model
+```
+
+The classifier can skip blocks that could obtain additional savings, but in general the 
+loss is nearly negligible and the overall time is decreased in more than half. The regression model 
+can return bounds that are too low, which results in not finding any equivalent solution. 
+Nevertheless, it still achieves significant additional savings and decreases the overall time slightly. 
+We recommend using both models combined, as the bound regression compensates the loss of savings from the classifier.
 
 ### Optimization from a log file
 
