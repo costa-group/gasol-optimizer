@@ -177,7 +177,7 @@ def plain_instructions_to_asm_representation(raw_instruction_str : str) -> [ASM_
             # This case refers to PUSHx opcodes, that are allowed in the plain representation
             elif op.startswith("PUSH0"):
                 val_representation = "0"
-                final_op = {"name": "PUSH", "value": val_representation}
+                final_op = {"name": "PUSH0", "value": val_representation}
                 
             elif re.fullmatch("PUSH([0-9]+)", op) is not None:
                 val = ops[i + 1]
