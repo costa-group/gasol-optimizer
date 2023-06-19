@@ -1,0 +1,3 @@
+[submodule "gasol_ml"]
+	path = gasol_ml
+	url = git@github.com:costa-group/gasol_ml.git

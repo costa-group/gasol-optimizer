@@ -10,6 +10,39 @@ Block_id_T = int
 # Jump types identified as strings (maybe in the future use enum)
 Jump_Type_T = str
 
+
+def execute_asm(current_stack: List[str], asm_bytecode: AsmBytecode) -> List[str]:
+    instr_name = asm_bytecode.disasm
+    if instr_name == "PUSH":
+        current_stack.insert(0, str(int(asm_bytecode.value, 16)))
+    elif instr_name.startswith("SWAP"):
+        index = int(instr_name[4:])
+        current_stack[0], current_stack[index] = current_stack[index], current_stack[0]
+    elif instr_name.startswith("DUP"):
+        index = int(instr_name[3:])
+        current_stack.insert(0, current_stack[index - 1])
+    elif instr_name == "POP":
+        current_stack.pop(0)
+    else:
+        opcode_info = opcodes.get_opcode(instr_name)
+        operands = []
+        for _ in range(opcode_info[1]):
+            operands.append(current_stack[0])
+            current_stack.pop(0)
+        joined_operands = ','.join(operands)
+        if opcode_info[2] == 0:
+            pass
+        elif instr_name == "KECCAK256":
+            pass
+            current_stack.insert(0, f'{instr_name}({joined_operands})')
+        elif operands == []:
+            current_stack.insert(0, instr_name)
+        else:
+            joined_operands = ','.join(operands)
+            current_stack.insert(0, f'{instr_name}({joined_operands})')
+    return current_stack
+
+
 class AsmBlock:
     """
     Class for representing an Assembly block
@@ -152,7 +185,39 @@ class AsmBlock:
 
     @property
     def gas_spent(self) -> int:
-        return sum([instruction.gas_spent for instruction in self.instructions])
+        stack_size = utils.compute_stack_size(map(lambda x: x.disasm, self.instructions))
+        current_stack = [f's({i})' for i in range(stack_size)]
+        total_gas = 0
+        touched_addresses, touched_slots, touched_slots_store = set(), set(), set()
+        for instruction in self.instructions:
+            stack_top = current_stack[0] if len(current_stack) > 0 else None
+            if instruction.disasm == "SLOAD":
+                assert stack_top is not None
+                # print(instruction.gas_spent_accesses(stack_top in touched_slots, stack_top in touched_slots_store))
+                # print(instruction.disasm, stack_top)
+                total_gas += instruction.gas_spent_accesses(stack_top in touched_slots, False)
+                touched_slots.add(stack_top)
+            elif instruction.disasm == "SSTORE":
+                assert stack_top is not None
+                total_gas += instruction.gas_spent_accesses(stack_top in touched_slots, stack_top in touched_slots_store)
+                # print(instruction.gas_spent_accesses(stack_top in touched_slots, stack_top in touched_slots_store))
+                # print(instruction.disasm, stack_top)
+                touched_slots.add(stack_top)
+                touched_slots_store.add(stack_top)
+            elif instruction.disasm in ("BALANCE","EXTCODESIZE","EXTCODEHASH", "EXTCODECOPY"):
+                assert stack_top is not None
+                total_gas += instruction.gas_spent_accesses(stack_top in touched_addresses, False)
+                # print(instruction.gas_spent_accesses(stack_top in touched_slots, stack_top in touched_slots_store))
+                # print(instruction.disasm, stack_top)
+                touched_addresses.add(stack_top)
+            else:
+                total_gas += instruction.gas_spent
+
+            # Update stack
+            current_stack = execute_asm(current_stack, instruction)
+        # if len(touched_slots) > 0 or len(touched_addresses) > 0:
+        #     print("Block", self.block_id)
+        return total_gas
 
     @property
     def length(self) -> int:

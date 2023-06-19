@@ -175,6 +175,10 @@ def plain_instructions_to_asm_representation(raw_instruction_str : str) -> [ASM_
             elif op.startswith("PUSH") and op.find("SIZE") != -1:
                 final_op = {"name": op}
             # This case refers to PUSHx opcodes, that are allowed in the plain representation
+            elif op.startswith("PUSH0"):
+                val_representation = "0"
+                final_op = {"name": "PUSH", "value": val_representation}
+                
             elif re.fullmatch("PUSH([0-9]+)", op) is not None:
                 val = ops[i + 1]
                 # The hex representation omits

@@ -5,7 +5,7 @@ import traceback
 from timeit import default_timer as dtimer
 
 import global_params.paths as paths
-from sfs_generator.gasol_optimization import smt_translate_block
+from sfs_generator.gasol_optimization import smt_translate_block, generate_subblocks2split
 from sfs_generator.rbr_rule import RBRRule
 from sfs_generator.utils import get_push_number_hex, isYulInstruction
 
@@ -824,8 +824,12 @@ updated. It also updated the corresponding global variables.
 -value is astring that contains the number pushed to the stack.
 '''
 def translateOpcodes60(opcode, value, index_variables):
+
+    if opcode.startswith("PUSH0"):
+        v1,updated_variables = get_new_variable(index_variables)
+        instr = v1+" = 0"
     
-    if opcode == "PUSH":
+    elif opcode.startswith("PUSH"):
         v1,updated_variables = get_new_variable(index_variables)
         dec_value = int(value,16)
         instr = v1+" = " + str(dec_value)
@@ -939,7 +943,7 @@ def translateYulOpcodes(opcode, value, index_variables):
         dec_value = int(value,16)
 
         if opcode == "PUSH [tag]":
-            instr = v1+" = pushtag(" + str(dec_value)+")"
+            instr = v1+" = pushtag(" + str(value)+")"
 
         elif opcode == "PUSH #[$]":
             instr = v1+" = push#[$](" + str(dec_value)+")"
@@ -1004,7 +1008,10 @@ def compile_instr(rule,evm_opcode,variables,list_jumps,cond):
         else:
             rule.add_instr(value)
     elif opcode_name[:4] in opcodes60 and not isYulInstruction(opcode_name):
-        value, index_variables = translateOpcodes60(opcode_name[:4], opcode_rest, variables)
+        if opcode_name.startswith("PUSH0"):
+            opcode_rest = "0"
+            
+        value, index_variables = translateOpcodes60(opcode_name, opcode_rest, variables)
         pushid = get_push_number_hex(opcode_rest)
         rule.add_instr(value)
     elif opcode_name[:3] in opcodes80:
@@ -1130,7 +1137,24 @@ def evm2rbr_compiler(file_name = None,block = None, block_id = -1, block_name = 
         traceback.print_exc()
         raise Exception("Error in RBR generation",4)
             
+def get_subblocks(block = None,storage = False,part = False,block_id = -1):
+    init_globals()
 
+    try:
+        instructions = block["instructions"]
+        input_stack = int(block["input"])
+        
+        rule = compile_block(instructions,input_stack,block_id)
+
+        subblocks = generate_subblocks2split(rule,part,storage)
+        
+        return subblocks
+        
+    except Exception as e:
+        traceback.print_exc()
+        raise Exception("Error in RBR generation",4)
+
+    
 def has_storage_ins(instructions):
     if "MSTORE" in instructions or "SSTORE" in instructions or "MSTORE8" in instructions:
         return True

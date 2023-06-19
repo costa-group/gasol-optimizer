@@ -320,7 +320,7 @@ def compare_variables(var_origin, var_opt, src_origin, src_opt, user_def_origin,
             if elem_origin["disasm"] != elem_opt["disasm"]:
                 return False, "Different opcode between "+str(var_origin)+ "and "+ str(var_opt)+". Original: "+str(elem_origin["disasm"])+" --- Optimized: "+str(elem_opt["disasm"])
 
-            if elem_origin["disasm"] == "PUSH":
+            if 'value' in elem_origin and 'value' in elem_opt:
                 if elem_origin["value"] == elem_opt["value"]:
                     return True, ""
                 else:

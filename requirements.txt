@@ -1,0 +1,4 @@
+pandas==2.0.2
+stopit==1.1.2
+sympy==1.12
+networkx==3.1
