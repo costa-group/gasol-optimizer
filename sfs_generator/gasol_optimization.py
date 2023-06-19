@@ -95,7 +95,7 @@ global push_rebuilt
 push_rebuilt = dict()
 
 global push0_enabled
-push0_enabled= False
+push0_enabled= True
 
 
 def init_globals():
@@ -3287,7 +3287,7 @@ def compute_max_program_len(opcodes, num_guard,block = None):
     return len(new_opcodes)
     
 
-def smt_translate_block(rule,file_name,block_name,immutable_dict,simplification=True,storage = False, size = False, part = False, pop = False, push = False, revert = False, debug_info = False):
+def smt_translate_block(rule,file_name,block_name,immutable_dict,simplification=True,storage = False, size = False, part = False, pop = False, push = False, revert = False,extra_dependencies_info={}, debug_info = False):
     global s_counter
     global max_instr_size
     global int_not0
