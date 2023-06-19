@@ -6,7 +6,7 @@ GASOL
 GASOL is a generic framework that optimizes smart contracts by applying the technique called *super-optimization* that consists in optimizing basic blocks (sequences of EVM instructions). For each basic block, GASOL tries to find a sequence of EVM instructions that produces the same state as the original block, but consumes a smaller amount of gas or decreases the amount of bytes. 
 
 ## Installation (Ubuntu)
-GASOL is implemented in Python and runs Python3. It only needs [pandas](https://pandas.pydata.org/) and [pandas](https://pypi.org/project/networkx/) libraries to be run. In order to install it, run one of the following commands:
+GASOL is implemented in Python and runs Python3. It only needs [pandas](https://pandas.pydata.org/) and [networkx](https://pypi.org/project/networkx/) libraries to be run. In order to install it, run one of the following commands:
 
 
 A. Clone the GitHub repository in the desired directory of your machine using the command
@@ -107,6 +107,8 @@ git submodule init
 git submodule update
 ```
 
+`gasol_ml` contains a [requirements](https://github.com/costa-group/gasol_ml/blob/master/requirements.txt)
+file with the libraries needed to enable the ML modules.
 There are two ML models that can be enabled for each optimization criteria: 
 a classification model that filters blocks that are likely not to be optimized further and 
 a regression model that infers the number of instructions of the optimal solution 
