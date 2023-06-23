@@ -95,7 +95,7 @@ global push_rebuilt
 push_rebuilt = dict()
 
 global push0_enabled
-push0_enabled= False
+push0_enabled= True
 
 
 def init_globals():
@@ -180,6 +180,18 @@ def init_globals():
 
     global rule
     rule = ""
+
+    global extra_dep_info
+    extra_dep_info = {}
+
+def process_extra_dependences_info(info):
+    global extra_dep_info
+
+    extra_dep_info["mstore_useless"] = info.get("mstore_useless",[])
+    extra_dep_info["sstore_useless"] = info.get("sstore_useless",[])
+    extra_dep_info["memory_deps"] = info.get("memory_deps",[])
+    extra_dep_info["storage_deps"] = info.get("storage_deps",[])
+    
     
 def filter_opcodes(rule):
     instructions = rule.get_instructions()
@@ -3287,7 +3299,7 @@ def compute_max_program_len(opcodes, num_guard,block = None):
     return len(new_opcodes)
     
 
-def smt_translate_block(rule,file_name,block_name,immutable_dict,simplification=True,storage = False, size = False, part = False, pop = False, push = False, revert = False, debug_info = False):
+def smt_translate_block(rule,file_name,block_name,immutable_dict,simplification=True,storage = False, size = False, part = False, pop = False, push = False, revert = False,extra_dependences_info={}, debug_info = False):
     global s_counter
     global max_instr_size
     global int_not0
@@ -3317,6 +3329,8 @@ def smt_translate_block(rule,file_name,block_name,immutable_dict,simplification=
     assignImm_values = immutable_dict
     debug = debug_info
 
+    process_extra_dependences_info(extra_dependences_info)
+    
 
     sfs_contracts = {}
 
