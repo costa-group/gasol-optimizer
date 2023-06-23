@@ -46,7 +46,7 @@ class AsmBytecode:
         by the corresponding value or jump Type in hexadecimal if any
         :return: a string containing the representation
         """
-        return f"{self.disasm} {str(self.value)}" if self.value is not None and self.disasm == "PUSH" else f"{self.disasm} {self.jump_type}" \
+        return f"{self.disasm} {str(self.value)}" if self.value is not None and self.disasm != "PUSH0" else f"{self.disasm} {self.jump_type}" \
             if self.jump_type is not None else self.disasm
 
     def to_plain_with_byte_number(self) -> str:
