@@ -234,7 +234,7 @@ def optimize_asm_from_log(file_name, json_log, output_file, parsed_args: Namespa
             contracts.append(new_contract)
             continue
 
-        contract_name = (c.contract_name.split("/")[-1]).split(":")[-1]
+        contract_name = c.shortened_name
         init_code = c.init_code
         init_code_blocks = []
 
@@ -563,12 +563,13 @@ def optimize_asm_in_asm_format(file_name, output_file, csv_file, log_file, parse
 
         new_contract = deepcopy(c)
 
-        # If it does not have the asm field, then we skip it, as there are no instructions to optimize
-        if not c.has_asm_field:
+        # If it does not have the asm field, then we skip it, as there are no instructions to optimize. Same if a
+        # contract has been specified and current name does not match.
+        if not c.has_asm_field or (parsed_args.contract is not None and c.shortened_name != parsed_args.contract):
             contracts.append(new_contract)
             continue
 
-        contract_name = (c.contract_name.split("/")[-1]).split(":")[-1]
+        contract_name = c.shortened_name
         init_code = c.init_code
 
         print("\nAnalyzing Init Code of: " + contract_name)
@@ -748,6 +749,10 @@ def parse_encoding_args() -> Namespace:
     group_input = input.add_mutually_exclusive_group()
     group_input.add_argument("-bl", "--block", help="Enable analysis of a single asm block", action = "store_true")
     group_input.add_argument("-sfs", "--sfs", dest='sfs', help="Enable analysis of a single SFS", action="store_true")
+    group_input.add_argument("-c", "--contract", dest="contract", action='store',
+                             help='Specify the specific contract in the json_solc to be optimized. The name of the '
+                                  'contract must match the name that appears in the solc file. '
+                                  'The remaining contracts are left unchanged.')
 
     output = ap.add_argument_group('Output options')
 
