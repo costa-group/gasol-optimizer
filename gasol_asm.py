@@ -778,6 +778,8 @@ def parse_encoding_args() -> Namespace:
     basic.add_argument("-direct-tout", dest='direct_timeout', action='store_true',
                        help="Sets the Max-SMT timeout to -tout directly, "
                             "without considering the structure of the block")
+    basic.add_argument("-push0", "--push0", dest='push0_enabled', action='store_true',
+                       help="Enables reasoning for optimizations with PUSH0 opcode.")
 
     blocks = ap.add_argument_group('Split block options', 'Options for deciding how to split blocks when optimizing')
 
@@ -865,6 +867,9 @@ if __name__ == '__main__':
     # If storage or partition flag are activated, the blocks are split using store instructions
     if parsed_args.storage or parsed_args.partition:
         constants.append_store_instructions_to_split()
+
+    # Set push0 global variable to the corresponding flag
+    constants._set_push0(parsed_args.push0_enabled)
 
     output_file, csv_file, log_file = final_file_names(parsed_args)
 

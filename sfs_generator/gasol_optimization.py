@@ -94,9 +94,6 @@ debug = False
 global push_rebuilt
 push_rebuilt = dict()
 
-global push0_enabled
-push0_enabled= True
-
 
 def init_globals():
     
@@ -6059,17 +6056,16 @@ def generate_pops(not_used_variables):
 def generate_push_instruction(idx, value, out):
     # If v is not in push rebuilt, then it has been introduced from a direct PUSH
     # disasm_list = replace_repeated_values_by_dup(value, push_rebuilt, []) if value in push_rebuilt else [f'PUSH {hex(value)[2:]}']
-    global push0_enabled
 
     disasm_list = ['PUSH']
     obj = {}
-    obj["id"] = "PUSH_"+str(idx) if value != 0 or not push0_enabled else "PUSH0_"+str(idx)
-    obj["opcode"] = process_opcode(str(opcodes.get_opcode("PUSH")[0])) if value != 0 or not push0_enabled else process_opcode(str(opcodes.get_opcode("PUSH0")[0]))
-    obj["disasm"] = "PUSH" if value != 0 or not push0_enabled else "PUSH0"
+    obj["id"] = "PUSH_"+str(idx) if value != 0 or not constants.push0_enabled else "PUSH0_"+str(idx)
+    obj["opcode"] = process_opcode(str(opcodes.get_opcode("PUSH")[0])) if value != 0 or not constants.push0_enabled else process_opcode(str(opcodes.get_opcode("PUSH0")[0]))
+    obj["disasm"] = "PUSH" if value != 0 or not constants.push0_enabled else "PUSH0"
     obj["inpt_sk"] = []
     obj["value"] = [value]
     obj["outpt_sk"] = [out]
-    obj["gas"] = opcodes.get_ins_cost("PUSH") if value != 0 or not push0_enabled else opcodes.get_ins_cost("PUSH0")
+    obj["gas"] = opcodes.get_ins_cost("PUSH") if value != 0 or not constants.push0_enabled else opcodes.get_ins_cost("PUSH0")
     obj["commutative"] = False
     obj["storage"] = False #It is true only for MSTORE and SSTORE
     obj["size"] = get_ins_size("PUSH",value)
