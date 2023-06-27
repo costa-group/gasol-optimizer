@@ -4371,6 +4371,7 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
             while (i<len(tstack)):
                 if tstack[i] == (out_pt2):
                     tstack[i] = real_var
+                i += 1
 
             for elems in user_def_instrs:
                 if out_pt2 in elems["inpt_sk"]:
