@@ -184,11 +184,16 @@ def init_globals():
 def process_extra_dependences_info(info):
     global extra_dep_info
 
-    extra_dep_info["mstore_useless"] = info.get("mstore_useless",[])
-    extra_dep_info["sstore_useless"] = info.get("sstore_useless",[])
-    extra_dep_info["memory_deps"] = info.get("memory_deps",[])
-    extra_dep_info["storage_deps"] = info.get("storage_deps",[])
-    
+
+    print(info)
+
+    # extra_dep_info["mstore_useless"] = info.get("mstore_useless",[])
+    # extra_dep_info["sstore_useless"] = info.get("sstore_useless",[])
+    extra_dep_info["memory_deps_eqs"] = list(map(lambda x: x.order(),info.get_equal_pairs()))
+    extra_dep_info["memory_deps_noneqs"] = list(map(lambda x: x.order(), info.get_nonequal_pairs()))
+    # extra_dep_info["storage_deps"] = info.get("storage_deps",[])
+    print(extra_dep_info)
+    raise Exception
     
 def filter_opcodes(rule):
     instructions = rule.get_instructions()
@@ -3326,7 +3331,8 @@ def smt_translate_block(rule,file_name,block_name,immutable_dict,simplification=
     assignImm_values = immutable_dict
     debug = debug_info
 
-    process_extra_dependences_info(extra_dependences_info)
+    if extra_dependences_info != {}:
+        process_extra_dependences_info(extra_dependences_info)
     
 
     sfs_contracts = {}
