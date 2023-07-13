@@ -80,7 +80,7 @@ def create_ml_models(parsed_args: Namespace) -> None:
         parsed_args.optimized_predictor_model = None
 
 
-def compute_original_sfs_with_simplifications(block: AsmBlock, parsed_args: Namespace):
+def compute_original_sfs_with_simplifications(block: AsmBlock, parsed_args: Namespace, dep_mem_info: Dict = {}):
 
 
     stack_size = block.source_stack
@@ -107,7 +107,7 @@ def compute_original_sfs_with_simplifications(block: AsmBlock, parsed_args: Name
     exit_code, subblocks_list = \
         ir_block.evm2rbr_compiler(file_name = fname, block=block_data, block_name=block_name, block_id=block_id,
                                   simplification=not parsed_args.no_simp, storage=parsed_args.storage, size = parsed_args.size, part = parsed_args.partition,
-                                  pop= not parsed_args.pop_basic, push =not parsed_args.push_basic, revert=revert_flag, debug_info = parsed_args.debug_flag)
+                                  pop= not parsed_args.pop_basic, push =not parsed_args.push_basic, revert=revert_flag, extra_dependences_info = dep_mem_info, debug_info = parsed_args.debug_flag)
 
     sfs_dict = get_sfs_dict()
 
@@ -436,7 +436,7 @@ def block_has_been_optimized(original_block: AsmBlock, optimized_block: AsmBlock
 
 
 # Given an asm_block and its contract name, returns the asm block after the optimization
-def optimize_asm_block_asm_format(block: AsmBlock, timeout: int, parsed_args: Namespace) -> Tuple[AsmBlock, Dict, List[Dict]]:
+def optimize_asm_block_asm_format(block: AsmBlock, timeout: int, parsed_args: Namespace, dep_mem_info: Dict = {}) -> Tuple[AsmBlock, Dict, List[Dict]]:
     csv_statistics = []
     new_block = deepcopy(block)
 
@@ -484,7 +484,7 @@ def optimize_asm_block_asm_format(block: AsmBlock, timeout: int, parsed_args: Na
 
             else:
                 try:
-                    contracts_dict, _ = compute_original_sfs_with_simplifications(new_block, parsed_args)
+                    contracts_dict, _ = compute_original_sfs_with_simplifications(new_block, parsed_args,dep_mem_info)
                 except Exception as e:
                     failed_row = {'instructions': instructions, 'exception': str(e)}
                     return new_block, {}, []
@@ -494,7 +494,7 @@ def optimize_asm_block_asm_format(block: AsmBlock, timeout: int, parsed_args: Na
 
     else:
         try:
-            contracts_dict, sub_block_list = compute_original_sfs_with_simplifications(block, parsed_args)
+            contracts_dict, sub_block_list = compute_original_sfs_with_simplifications(block, parsed_args, dep_mem_info)
         except Exception as e:
             failed_row = {'instructions': instructions, 'exception': str(e)}
             return new_block, {}, []
@@ -529,13 +529,13 @@ def optimize_asm_block_asm_format(block: AsmBlock, timeout: int, parsed_args: Na
     return new_block, log_dicts, csv_statistics
 
 
-def compare_asm_block_asm_format(old_block: AsmBlock, new_block: AsmBlock, parsed_args: Namespace) -> Tuple[bool, str]:
+def compare_asm_block_asm_format(old_block: AsmBlock, new_block: AsmBlock, parsed_args: Namespace, dep_mem_info: Dict = {}) -> Tuple[bool, str]:
 
-    new_sfs_information, _ = compute_original_sfs_with_simplifications(new_block, parsed_args)
+    new_sfs_information, _ = compute_original_sfs_with_simplifications(new_block, parsed_args, dep_mem_info)
 
     new_sfs_dict = new_sfs_information["syrup_contract"]
 
-    old_sfs_information, _ = compute_original_sfs_with_simplifications(old_block, parsed_args)
+    old_sfs_information, _ = compute_original_sfs_with_simplifications(old_block, parsed_args, dep_mem_info)
 
     old_sfs_dict = old_sfs_information["syrup_contract"]
 
