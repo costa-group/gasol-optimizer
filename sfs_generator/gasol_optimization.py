@@ -196,8 +196,6 @@ def process_extra_dependences_info(info):
     list(map(lambda x: x.set_values(x.get_first()-offset,x.get_second()-offset), info.get_nonequal_pairs()))
     extra_dep_info["memory_deps_noneqs"] =  info.get_nonequal_pairs()
     # extra_dep_info["storage_deps"] = info.get("storage_deps",[])
-
-    print(extra_dep_info)
     # raise Exception
     check_and_print_debug_info(debug, extra_dep_info)
     
@@ -1674,9 +1672,6 @@ def generate_storage_info(instructions,source_stack,opcodes,simplification=True)
 
     extra_dep_info_ins2int = {}
 
-    print(len(instructions))
-    print(original_opcodes)
-
     opcodes_idx = 0
     next_val = 0
     for x in range(0,len(instructions)):
@@ -1696,7 +1691,6 @@ def generate_storage_info(instructions,source_stack,opcodes,simplification=True)
             exp,r = generate_sload_mload(instructions[x],ins_list,source_stack,len(instructions)-x,simplification)
             last_mload = exp
             memory_order.append(r)
-            print(opcodes_idx)
             extra_dep_info_ins2int[opcodes_idx] = (r,len(memory_order)-1)
             
         elif instructions[x].find("mstore")!=-1: #and last_mload != "" and mload_relative_pos.get(last_mload,[])==[]:
@@ -1765,9 +1759,6 @@ def generate_storage_info(instructions,source_stack,opcodes,simplification=True)
     check_and_print_debug_info(debug, msg)
     
     memdep = generate_dependences(memory_order,"memory")
-
-    print(memory_order)
-    print(memdep)
     
     msg = "Memory dep: "+str(memdep)
     check_and_print_debug_info(debug, msg)
@@ -2166,7 +2157,7 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     with open(paths.json_path+"/"+ block_nm + "_input.json","w") as json_file:
         json.dump(json_dict,json_file)
 
-    print(paths.json_path+"/"+ block_nm + "_input.json")
+    # print(paths.json_path+"/"+ block_nm + "_input.json")
     rule_applied = False
     
     return split_by,""
@@ -4942,7 +4933,6 @@ def is_identity_map(source_stack,target_stack,instructions):
 
 
 def get_idx_in_instructions(idx_in_seq):
-    print(extra_dep_info)
     for i in extra_dep_info["mem_deps_int2ins"]:
         if idx_in_seq in extra_dep_info["mem_deps_int2ins"][i]:
             return i
@@ -5405,13 +5395,9 @@ def generate_dependences(storage_location, location):
         instruction = "mstore"
         load_instruction = "mload"
 
-
-    print("HOLA")
     for i in range(len(storage_location)-1,-1,-1):
         elem = storage_location[i]
         var = elem[0][0]
-
-        print("****************")
         
         if elem[0][-1].find(instruction)!=-1:
             predecessor = storage_location[:i]
