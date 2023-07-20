@@ -6,6 +6,9 @@ import sfs_generator.opcodes as opcodes
 import global_params.paths as paths
 
 
+def get_gasol_path():
+    return paths.gasol_path
+
 def toInt(a):
     elem = a.split("_")
     if len(elem)>1:
