@@ -3331,7 +3331,6 @@ def smt_translate_block(rule,file_name,block_name,immutable_dict,simplification=
 
     process_extra_dependences_info(extra_dependences_info)
     
-
     sfs_contracts = {}
 
     blocks_json_dict = {}
@@ -4325,7 +4324,7 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                 # gas_saved_op+=3
 
                 
-            elif outpt not in tstack and len(list(filter(lambda x: outpt in x["inpt_sk"] and x!= isz_instr, user_def_instrs))) == 0:
+            elif out_pt not in tstack and len(list(filter(lambda x: outpt in x["inpt_sk"] and x!= isz_instr, user_def_instrs))) == 0:
                 idx = user_def_counter.get("EQ",0)
                 isz_instr["inpt_sk"] = instr["inpt_sk"]
                 isz_instr["id"] = "EQ_"+str(idx)
@@ -4538,6 +4537,7 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
         out_pt = instr["outpt_sk"][0]
         mul_op = list(filter(lambda x: out_pt in x["inpt_sk"] and x["disasm"] == "MUL", user_def_instrs))
         div_op = list(filter(lambda x: out_pt in x["inpt_sk"] and x["disasm"] == "DIV", user_def_instrs))
+        and_op = list(filter(lambda x: out_pt in x["inpt_sk"] and x["disasm"] == "AND", user_def_instrs))
         if len(mul_op) == 1 and instr["inpt_sk"][1] == 1:
             mul_instr = mul_op[0]
 
@@ -4670,8 +4670,59 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                 # update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
                 
                 return True, delete
-            
-            
+
+        elif len(and_op) > 0: #AND(SHL(X,Y), SHL(X,Z)) => SHL(X,AND(Y,Z))
+
+            found = False
+            i = 0
+            while i < len(and_op) and not found:
+                
+                and_ins = and_op[i]
+                if out_pt == and_ins["inpt_sk"][0]:
+                    out_pt1 = and_ins["inpt_sk"][1]
+                else:
+                    out_pt1 = and_ins["inpt_sk"][0]
+
+                new_ins = list(filter(lambda x: out_pt1 in x["outpt_sk"] and x["disasm"] == "SHL" and x["inpt_sk"][0] == instr["inpt_sk"][0],user_def_instrs))
+                if len(new_ins) == 1:
+                    shl1 = new_ins[0]
+                    found = True
+
+                i+=1
+
+            #if the shl instructions are not used by any other operation or do not appear in the target stack, then I can simplify them
+            if found and out_pt not in tstack and out_pt1 not in tstack and len(list(filter(lambda x: out_pt in x["inpt_sk"] and x!= and_ins, user_def_instrs))) == 0 and len(list(filter(lambda x: out_pt1 in x["inpt_sk"] and x!= and_ins, user_def_instrs))) == 0:
+
+                inpt1 = instr["inpt_sk"][0]
+                inpt2 = instr["inpt_sk"][1]
+                inpt3 = shl1["inpt_sk"][1]
+                
+                new_and_idx = user_def_counter.get("AND",0)
+
+                instr["inpt_sk"] = [inpt2,inpt3]
+                instr["id"] = "AND_"+str(new_and_idx)
+                instr["opcode"] = "16"
+                instr["disasm"] = "AND"
+                instr["commutative"] = True
+                user_def_counter["AND"]=new_and_idx+1
+
+                new_shl_idx = user_def_counter.get("SHL",0)
+                
+                and_ins["inpt_sk"] = [inpt1,instr["outpt_sk"][0]]
+                and_ins["id"] = "SHL_"+str(new_shl_idx)
+                and_ins["opcode"] = "1b"
+                and_ins["disasm"] = "SHL"
+                and_ins["commutative"] = False
+                user_def_counter["SHL"]=new_shl_idx+1
+
+                delete = [shl1]
+                
+                discount_op+=1
+                gas_saved_op+=3
+
+                return True, delete
+            else:
+                return False, []
         else:
             return False, []
 
