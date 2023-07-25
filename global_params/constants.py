@@ -17,6 +17,15 @@ max_k_swap = 16
 
 int_limit = 2**256
 
+# Flag to consider PUSH0 opcode in the optimization process
+push0_enabled = False
+
+
 def append_store_instructions_to_split():
     global split_block
     split_block = split_block.union(store_instructions)
+
+
+def _set_push0(val: bool) -> None:
+    global push0_enabled
+    push0_enabled = val

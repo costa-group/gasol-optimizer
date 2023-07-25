@@ -80,7 +80,7 @@ def create_ml_models(parsed_args: Namespace) -> None:
         parsed_args.optimized_predictor_model = None
 
 
-def compute_original_sfs_with_simplifications(block: AsmBlock, parsed_args: Namespace):
+def compute_original_sfs_with_simplifications(block: AsmBlock, parsed_args: Namespace, dep_mem_info: Dict = {}):
 
 
     stack_size = block.source_stack
@@ -107,7 +107,7 @@ def compute_original_sfs_with_simplifications(block: AsmBlock, parsed_args: Name
     exit_code, subblocks_list = \
         ir_block.evm2rbr_compiler(file_name = fname, block=block_data, block_name=block_name, block_id=block_id,
                                   simplification=not parsed_args.no_simp, storage=parsed_args.storage, size = parsed_args.size, part = parsed_args.partition,
-                                  pop= not parsed_args.pop_basic, push =not parsed_args.push_basic, revert=revert_flag, debug_info = parsed_args.debug_flag)
+                                  pop= not parsed_args.pop_basic, push =not parsed_args.push_basic, revert=revert_flag, extra_dependences_info = dep_mem_info, debug_info = parsed_args.debug_flag)
 
     sfs_dict = get_sfs_dict()
 
@@ -234,7 +234,7 @@ def optimize_asm_from_log(file_name, json_log, output_file, parsed_args: Namespa
             contracts.append(new_contract)
             continue
 
-        contract_name = (c.contract_name.split("/")[-1]).split(":")[-1]
+        contract_name = c.shortened_name
         init_code = c.init_code
         init_code_blocks = []
 
@@ -436,7 +436,7 @@ def block_has_been_optimized(original_block: AsmBlock, optimized_block: AsmBlock
 
 
 # Given an asm_block and its contract name, returns the asm block after the optimization
-def optimize_asm_block_asm_format(block: AsmBlock, timeout: int, parsed_args: Namespace) -> Tuple[AsmBlock, Dict, List[Dict]]:
+def optimize_asm_block_asm_format(block: AsmBlock, timeout: int, parsed_args: Namespace, dep_mem_info: Dict = {}) -> Tuple[AsmBlock, Dict, List[Dict]]:
     csv_statistics = []
     new_block = deepcopy(block)
 
@@ -484,7 +484,7 @@ def optimize_asm_block_asm_format(block: AsmBlock, timeout: int, parsed_args: Na
 
             else:
                 try:
-                    contracts_dict, _ = compute_original_sfs_with_simplifications(new_block, parsed_args)
+                    contracts_dict, _ = compute_original_sfs_with_simplifications(new_block, parsed_args,dep_mem_info)
                 except Exception as e:
                     failed_row = {'instructions': instructions, 'exception': str(e)}
                     return new_block, {}, []
@@ -494,7 +494,7 @@ def optimize_asm_block_asm_format(block: AsmBlock, timeout: int, parsed_args: Na
 
     else:
         try:
-            contracts_dict, sub_block_list = compute_original_sfs_with_simplifications(block, parsed_args)
+            contracts_dict, sub_block_list = compute_original_sfs_with_simplifications(block, parsed_args, dep_mem_info)
         except Exception as e:
             failed_row = {'instructions': instructions, 'exception': str(e)}
             return new_block, {}, []
@@ -529,13 +529,13 @@ def optimize_asm_block_asm_format(block: AsmBlock, timeout: int, parsed_args: Na
     return new_block, log_dicts, csv_statistics
 
 
-def compare_asm_block_asm_format(old_block: AsmBlock, new_block: AsmBlock, parsed_args: Namespace) -> Tuple[bool, str]:
+def compare_asm_block_asm_format(old_block: AsmBlock, new_block: AsmBlock, parsed_args: Namespace, dep_mem_info: Dict = {}) -> Tuple[bool, str]:
 
-    new_sfs_information, _ = compute_original_sfs_with_simplifications(new_block, parsed_args)
+    new_sfs_information, _ = compute_original_sfs_with_simplifications(new_block, parsed_args, dep_mem_info)
 
     new_sfs_dict = new_sfs_information["syrup_contract"]
 
-    old_sfs_information, _ = compute_original_sfs_with_simplifications(old_block, parsed_args)
+    old_sfs_information, _ = compute_original_sfs_with_simplifications(old_block, parsed_args, dep_mem_info)
 
     old_sfs_dict = old_sfs_information["syrup_contract"]
 
@@ -563,12 +563,13 @@ def optimize_asm_in_asm_format(file_name, output_file, csv_file, log_file, parse
 
         new_contract = deepcopy(c)
 
-        # If it does not have the asm field, then we skip it, as there are no instructions to optimize
-        if not c.has_asm_field:
+        # If it does not have the asm field, then we skip it, as there are no instructions to optimize. Same if a
+        # contract has been specified and current name does not match.
+        if not c.has_asm_field or (parsed_args.contract is not None and c.shortened_name != parsed_args.contract):
             contracts.append(new_contract)
             continue
 
-        contract_name = (c.contract_name.split("/")[-1]).split(":")[-1]
+        contract_name = c.shortened_name
         init_code = c.init_code
 
         print("\nAnalyzing Init Code of: " + contract_name)
@@ -748,6 +749,10 @@ def parse_encoding_args() -> Namespace:
     group_input = input.add_mutually_exclusive_group()
     group_input.add_argument("-bl", "--block", help="Enable analysis of a single asm block", action = "store_true")
     group_input.add_argument("-sfs", "--sfs", dest='sfs', help="Enable analysis of a single SFS", action="store_true")
+    group_input.add_argument("-c", "--contract", dest="contract", action='store',
+                             help='Specify the specific contract in the json_solc to be optimized. The name of the '
+                                  'contract must match the name that appears in the solc file. '
+                                  'The remaining contracts are left unchanged.')
 
     output = ap.add_argument_group('Output options')
 
@@ -778,6 +783,8 @@ def parse_encoding_args() -> Namespace:
     basic.add_argument("-direct-tout", dest='direct_timeout', action='store_true',
                        help="Sets the Max-SMT timeout to -tout directly, "
                             "without considering the structure of the block")
+    basic.add_argument("-push0", "--push0", dest='push0_enabled', action='store_true',
+                       help="Enables reasoning for optimizations with PUSH0 opcode.")
 
     blocks = ap.add_argument_group('Split block options', 'Options for deciding how to split blocks when optimizing')
 
@@ -865,6 +872,9 @@ if __name__ == '__main__':
     # If storage or partition flag are activated, the blocks are split using store instructions
     if parsed_args.storage or parsed_args.partition:
         constants.append_store_instructions_to_split()
+
+    # Set push0 global variable to the corresponding flag
+    constants._set_push0(parsed_args.push0_enabled)
 
     output_file, csv_file, log_file = final_file_names(parsed_args)
 

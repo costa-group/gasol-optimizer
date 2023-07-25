@@ -15,6 +15,7 @@ class AsmContract:
         self.data_addresses = {}
         self.has_asm_field = contains_asm_field
         self._source_list = None
+        self.shortened_name = (cname.split("/")[-1]).split(":")[-1]
 
     @property
     def init_code(self) -> List[AsmBlock]:
