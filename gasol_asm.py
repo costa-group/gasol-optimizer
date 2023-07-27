@@ -531,6 +531,7 @@ def optimize_asm_block_asm_format(block: AsmBlock, timeout: int, parsed_args: Na
 
 def compare_asm_block_asm_format(old_block: AsmBlock, new_block: AsmBlock, parsed_args: Namespace, dep_mem_info: Dict = {}) -> Tuple[bool, str]:
 
+    new_block.set_block_name("alreadyOptimized_"+new_block.get_block_name())
     new_sfs_information, _ = compute_original_sfs_with_simplifications(new_block, parsed_args, dep_mem_info)
 
     new_sfs_dict = new_sfs_information["syrup_contract"]
