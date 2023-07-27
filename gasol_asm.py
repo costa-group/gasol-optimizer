@@ -298,13 +298,13 @@ def optimize_asm_from_log(file_name, json_log, output_file, parsed_args: Namespa
     print("Optimized code stored at " + output_file)
 
 
-def optimize_isolated_asm_block(block_name,output_file, csv_file, parsed_args: Namespace, timeout=10):
+def optimize_isolated_asm_block(file_name,output_file, csv_file, parsed_args: Namespace, timeout=10, block_name = "", block_name_prefix=""):
     statistics_rows = []
 
-    with open(block_name,"r") as f:        
+    with open(file_name,"r") as f:        
         instructions = f.read()
 
-    blocks = parse_blocks_from_plain_instructions(instructions)
+    blocks = parse_blocks_from_plain_instructions(instructions, block_name, block_name_prefix)
     asm_blocks = []
 
     for old_block in blocks:
