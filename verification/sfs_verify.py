@@ -360,15 +360,18 @@ def compare_variables(var_origin, var_opt, src_origin, src_opt, user_def_origin,
 # compares the equivalence between them.
 def verify_block_from_list_of_sfs(old_sfs_dict, new_sfs_dict):
     old_block_ids = old_sfs_dict.keys()
-    new_block_ids = new_sfs_dict.keys()
-
+    new_block_ids_aux = new_sfs_dict.keys()
+    
+    new_block_ids = map(lambda x: x.replace("alreadyOptimized_","") , new_block_ids_aux) 
+    
+    
     # Both sfs dicts must contain the same sub blocks
     if set(old_block_ids) != set(new_block_ids):
         return False, "Different number of subblocks"
 
     for key in old_block_ids:
         old_sfs = old_sfs_dict[key]
-        new_sfs = new_sfs_dict[key]
+        new_sfs = new_sfs_dict["alreadyOptimized_"+key]
 
         eq, reason = are_equals(old_sfs, new_sfs)
 
