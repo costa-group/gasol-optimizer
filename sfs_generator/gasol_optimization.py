@@ -181,20 +181,44 @@ def init_globals():
     global extra_dep_info
     extra_dep_info = {}
 
-def process_extra_dependences_info(info):
+def process_extra_dependences_info(info,location="memory"):
     global extra_dep_info
 
+    if location == "storage":
+        equal_pairs = info.get_equal_pairs_storage()
+        nonequal_pairs = info.get_nonequal_pairs_storage()
+    elif location == "memory":
+        equal_pairs = info.get_equal_pairs_memory()
+        nonequal_pairs = info.get_nonequal_pairs_memory()
+    else:
+        raise Exception("Unknown location")
 
+    print(nonequal_pairs)
+    
     # extra_dep_info["mstore_useless"] = info.get("mstore_useless",[])
     # extra_dep_info["sstore_useless"] = info.get("sstore_useless",[])
     offset = 0
     if "JUMPDEST" in info.get_instructions():
         offset = 1
-    list(map(lambda x: x.set_values(x.get_first()-offset,x.get_second()-offset),map(lambda x: x.order(),info.get_equal_pairs())))
-    extra_dep_info["memory_deps_eqs"] = info.get_equal_pairs()    
-    list(map(lambda x: x.order(), info.get_nonequal_pairs()))
-    list(map(lambda x: x.set_values(x.get_first()-offset,x.get_second()-offset), info.get_nonequal_pairs()))
-    extra_dep_info["memory_deps_noneqs"] =  info.get_nonequal_pairs()
+    list(map(lambda x: x.set_values(x.get_first()-offset,x.get_second()-offset),map(lambda x: x.order(),equal_pairs)))
+
+    if location == "memory":
+        extra_dep_info["memory_deps_eqs"] = equal_pairs    
+    else:
+        extra_dep_info["storage_deps_eqs"] = equal_pairs
+
+
+        
+    list(map(lambda x: x.order(), nonequal_pairs))
+    list(map(lambda x: x.set_values(x.get_first()-offset,x.get_second()-offset), nonequal_pairs))
+    
+    if location == "memory":
+        extra_dep_info["memory_deps_noneqs"] =  nonequal_pairs
+    else:
+        extra_dep_info["storage_deps_noneqs"] =  nonequal_pairs
+
+    
+        
     # extra_dep_info["storage_deps"] = info.get("storage_deps",[])
     # raise Exception
     check_and_print_debug_info(debug, extra_dep_info)
