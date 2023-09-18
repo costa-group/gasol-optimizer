@@ -1695,6 +1695,7 @@ def generate_storage_info(instructions,source_stack,opcodes,simplification=True)
     memory_order = []
 
     extra_dep_info_ins2int = {}
+    extra_dep_info_ins2int_sto = {}
 
     opcodes_idx = 0
     next_val = 0
@@ -1705,10 +1706,12 @@ def generate_storage_info(instructions,source_stack,opcodes,simplification=True)
             exp,r = generate_sload_mload(instructions[x],ins_list,source_stack,len(instructions)-x,simplification)
             last_sload = exp
             storage_order.append(r)
+            extra_dep_info_ins2int_sto[opcodes_idx] = (r,len(storage_order)-1)
             
         elif instructions[x].find("sstore")!=-1: #and last_sload != "" and sload_relative_pos.get(last_sload,[])==[]:
             sload_relative_pos[last_sload]=sstores.pop(0)
             storage_order.append(sload_relative_pos[last_sload])
+            extra_dep_info_ins2int_sto[opcodes_idx] = (sload_relative_pos[last_sload],len(storage_order)-1)
             
         elif instructions[x].find("mload")!=-1:
             ins_list = [] if x == 0 else instructions[x-1::-1]
@@ -1741,6 +1744,7 @@ def generate_storage_info(instructions,source_stack,opcodes,simplification=True)
     # print(memory_order)
     if extra_dep_info != {}:
         extra_dep_info["mem_deps_int2ins"] = extra_dep_info_ins2int
+        extra_dep_info["sto_deps_int2ins"] = extra_dep_info_ins2int_sto
     
     remove_loads_instructions()
     
@@ -5009,18 +5013,26 @@ def is_identity_map(source_stack,target_stack,instructions):
     return True
 
 
-def get_idx_in_instructions(idx_in_seq):
-    for i in extra_dep_info["mem_deps_int2ins"]:
-        if idx_in_seq in extra_dep_info["mem_deps_int2ins"][i]:
-            return i
+def get_idx_in_instructions(idx_in_seq, location = "memory"):
+    if location == "memory":
+        for i in extra_dep_info["mem_deps_int2ins"]:
+            if idx_in_seq in extra_dep_info["mem_deps_int2ins"][i]:
+                return i
+    elif location == "storage":
+        for i in extra_dep_info["sto_deps_int2ins"]:
+            if idx_in_seq in extra_dep_info["sto_deps_int2ins"][i]:
+                return i
+    else:
+        raise Exception("Unknown location")
+    
     return -1
 
-def remove_extra_deps_info(idx_in_seq):
+def remove_extra_deps_info(idx_in_seq, location = "memory"):
     global extra_dep_info
 
-    idx = get_idx_in_instructions(idx_in_seq)
+    idx = get_idx_in_instructions(idx_in_seq, location)
 
-    if idx != -1:
+    if idx != -1 and location == "memory":
         extra_dep_info["memory_deps_eqs"] = list(filter(lambda x: x.get_first()!=idx and x.get_second()!= idx,extra_dep_info["memory_deps_eqs"]))
         extra_dep_info["memory_deps_noneqs"] = list(filter(lambda x: x.get_first()!=idx and x.get_second()!= idx,extra_dep_info["memory_deps_noneqs"]))
         extra_dep_info["mem_deps_int2ins"].pop(idx) 
@@ -5040,6 +5052,27 @@ def remove_extra_deps_info(idx_in_seq):
         for i in extra_dep_info["mem_deps_int2ins"]:
             if extra_dep_info["mem_deps_int2ins"][i][1]>idx_in_seq:
                 extra_dep_info["mem_deps_int2ins"][i] = (extra_dep_info["mem_deps_int2ins"][i][0],extra_dep_info["mem_deps_int2ins"][i][1]-1)
+
+    elif idx != -1 and location == "storage":
+        extra_dep_info["storage_deps_eqs"] = list(filter(lambda x: x.get_first()!=idx and x.get_second()!= idx,extra_dep_info["storage_deps_eqs"]))
+        extra_dep_info["storage_deps_noneqs"] = list(filter(lambda x: x.get_first()!=idx and x.get_second()!= idx,extra_dep_info["storage_deps_noneqs"]))
+        extra_dep_info["sto_deps_int2ins"].pop(idx) 
+
+        for x in extra_dep_info["storage_deps_eqs"]:
+            if x.get_first() > idx:
+                x.set_first(x.get_first()-1)
+            if x.get_second() > idx:
+                x.set_second(x.get_second()-1)
+
+        for x in extra_dep_info["storage_deps_noneqs"]:
+            if x.get_first() > idx:
+                x.set_first(x.get_first()-1)
+            if x.get_second() > idx:
+                x.set_second(x.get_second()-1)
+
+        for i in extra_dep_info["sto_deps_int2ins"]:
+            if extra_dep_info["sto_deps_int2ins"][i][1]>idx_in_seq:
+                extra_dep_info["sto_deps_int2ins"][i] = (extra_dep_info["sto_deps_int2ins"][i][0],extra_dep_info["sto_deps_int2ins"][i][1]-1)
             
 def remove_loads(storage,instruction):
     new_storage = []
