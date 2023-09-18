@@ -3381,8 +3381,9 @@ def smt_translate_block(rule,file_name,block_name,immutable_dict,simplification=
     debug = debug_info
 
     if extra_dependences_info != {}:
-        process_extra_dependences_info(extra_dependences_info)
-    
+        process_extra_dependences_info(extra_dependences_info,"memory")
+        process_extra_dependences_info(extra_dependences_info,"storage")
+        
     sfs_contracts = {}
 
     blocks_json_dict = {}
