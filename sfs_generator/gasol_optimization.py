@@ -1919,7 +1919,7 @@ def generate_sstore_info(sstore_elem):
     obj["disasm"] = instr_name
     obj["inpt_sk"] = args_aux
     obj["sto_var"] = ["sto"+str(idx)]
-
+    obj["push"] = False
     obj["outpt_sk"] = []
     
     obj["gas"] = opcodes.get_ins_cost(instr_name)
@@ -1965,7 +1965,7 @@ def generate_mstore_info(mstore_elem):
     obj["disasm"] = instr_name
     obj["inpt_sk"] = args_aux
     obj["mem_var"] = ["mem"+str(idx)]
-        
+    obj["push"] = False
     obj["outpt_sk"] = []
     
     obj["gas"] = opcodes.get_ins_cost(instr_name)
@@ -2620,6 +2620,7 @@ def generate_userdefname(u_var,funct,args,arity,init=False):
         obj["disasm"] = instr_name
         obj["inpt_sk"] = [] if arity==0 or instr_name in ["PUSH [tag]","PUSH #[$]","PUSH [$]","PUSH data","PUSHIMMUTABLE","PUSHLIB"] else args_aux
         obj["outpt_sk"] = [u_var]
+        obj["push"] = "PUSH" in instr_name
         obj["gas"] = opcodes.get_ins_cost(instr_name)
         obj["commutative"] = True if instr_name in commutative_bytecodes else False
         obj["storage"] = False #It is true only for MSTORE and SSTORE
@@ -6234,6 +6235,7 @@ def generate_pops(not_used_variables):
         obj["disasm"] = "POP"
         obj["inpt_sk"] = [v]
         obj["outpt_sk"] = []
+        obj["push"] = False
         obj["gas"] = opcodes.get_ins_cost("POP")
         obj["size"] = get_ins_size("POP")
         obj["commutative"] = False
@@ -6255,6 +6257,7 @@ def generate_push_instruction(idx, value, out):
     obj["disasm"] = "PUSH" if value != 0 or not constants.push0_enabled else "PUSH0"
     obj["inpt_sk"] = []
     obj["value"] = [value]
+    obj["push"] = True
     obj["outpt_sk"] = [out]
     obj["gas"] = opcodes.get_ins_cost("PUSH") if value != 0 or not constants.push0_enabled else opcodes.get_ins_cost("PUSH0")
     obj["commutative"] = False
