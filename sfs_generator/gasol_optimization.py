@@ -5143,7 +5143,7 @@ def replace_loads_by_sstores(storage_location, complementary_location, location)
                 rest_list = storage_location[i+1:i+pos+1]
                 dep = []
                 for j in range(len(rest_list)):
-                    dep.append(are_dependent(elem, rest_list[j],i,j+i+1))
+                    dep.append(are_dependent(elem, rest_list[j],i,j+i+1, location))
                 # dep = list(map(lambda x: are_dependent(elem,x),rest_list))
 
                 if True in dep and elem[0][-1].find("mstore8") == -1:
@@ -5243,7 +5243,7 @@ def remove_store_recursive_dif(storage_location, location):
 
                 dep = []
                 for j in range(len(sublist)):
-                    dep.append(are_dependent(elem, sublist[j],i,j+i+1))
+                    dep.append(are_dependent(elem, sublist[j],i,j+i+1, location))
                 # dep = list(map(lambda x: are_dependent(elem, x),sublist)) #It checks for loads and and keccaks betweeen the stores
 
                 #Keccaks are considered in dep list
@@ -5360,7 +5360,7 @@ def remove_store_loads(storage_location, location):
 
                     variables = []
                     for j in range(len(rest_instructions)):
-                        variables.append(are_dependent(elem,rest_instructions[j],i,j+pos+1))
+                        variables.append(are_dependent(elem,rest_instructions[j],i,j+pos+1, location))
                     # variables = list(map(lambda x: are_dependent(elem,x),rest_instructions))
 
                     
@@ -5526,7 +5526,7 @@ def generate_dependences(storage_location, location):
                     # print(i)
                     # print(j)
                     # raise Exception
-                    dep = are_dependent(elem,store,i,j)
+                    dep = are_dependent(elem,store,i,j, location)
                     # dep = are_dependent(elem,store)
                     if dep:
                         if elem[0][1] != store[0][1]: #if the value is the same they are not dependent
@@ -5557,7 +5557,7 @@ def generate_dependences(storage_location, location):
                 store = predecessor[j]
                 if store[0][-1].find(instruction)!=-1:
                     var_rest = store[0][0]
-                    dep = are_dependent(store,elem,j,i)
+                    dep = are_dependent(store,elem,j,i, location)
                     # dep = are_dependent(store,elem)
                     if dep:
                         storage_dependences.append((j,i))                                
@@ -5569,7 +5569,7 @@ def generate_dependences(storage_location, location):
                 store = successor[j]
                 if store[0][-1].find(instruction)!=-1:
                     var_rest = store[0][0]
-                    dep = are_dependent(elem,store,i,i+1+j)
+                    dep = are_dependent(elem,store,i,i+1+j, location)
                     # dep = are_dependent(elem,store)
                     if dep:
                         storage_dependences.append((i,i+j+1))
@@ -5593,7 +5593,7 @@ def generate_dependences(storage_location, location):
                     # print(store)
                     # print(i)
                     # print(j)
-                    dep = are_dependent(elem, store,i,j)
+                    dep = are_dependent(elem, store,i,j, location)
                     # dep = are_dependent(elem,store)
                     if dep:
                         if elem[0][1] != store[0][1]: #if the value is the same they are not dependent
@@ -5611,7 +5611,7 @@ def generate_dependences(storage_location, location):
                 store = successor[j]
                 if store[0][-1].find(instruction)!=-1:
                     var_rest = store[0][0]
-                    dep = are_dependent(elem,store,i,i+1+j)
+                    dep = are_dependent(elem,store,i,i+1+j, location)
                     # dep = are_dependent(elem,store)
                     if dep:
                         if elem[0][1] != store[0][1]: #if the value is the same they are not dependent
@@ -5760,7 +5760,7 @@ def unify_loads_instructions(storage_location, location):
                 for j in range(len(rest_list)):
                     x = rest_list[j]
                     if(x[0][-1].find(store_ins)!=-1):
-                        dep.append(are_dependent(elem,x,i,i+1+j))
+                        dep.append(are_dependent(elem,x,i,i+1+j, location))
                 # st_list = list(filter(lambda x: x[0][-1].find(store_ins)!=-1, rest_list))
                 # dep = list(map(lambda x: are_dependent(elem,x),st_list))
                 
@@ -5804,7 +5804,7 @@ def unify_keccak_instructions(storage_location,storage_order):
                 for j in range(len(rest_list)):
                     x = rest_list[j]
                     if(x[0][-1].find(store_ins)!=-1):
-                        dep.append(are_dependent(elem,x,i,i+1+j))
+                        dep.append(are_dependent(elem,x,i,i+1+j, location))
                 
                 if True not in dep:
                     old = storage_location.pop(pos_aux+i+1)
@@ -5971,20 +5971,43 @@ def translate_dependences_sfs(new_user_defins):
 
 #it receives two tuples of the form ((ar1,arg2, opcode),arity) and
 #checks if t1 has to be executed before t2.
-def are_dependent(t1, t2, idx1, idx2):
+def are_dependent(t1, t2, idx1, idx2, location = "memory"):
     dep = False
 
 
     #It uses memory analysis dependences
     if extra_dep_info!={}:
-        pc_index1 = get_idx_in_instructions(idx1)
-        pc_index2 = get_idx_in_instructions(idx2)
+        pc_index1 = get_idx_in_instructions(idx1, location)
+        pc_index2 = get_idx_in_instructions(idx2, location)
+
+        if location == "memory":
+            eqs = extra_dep_info["memory_deps_eqs"]
+            neqs = extra_dep_info["memory_deps_noneqs"]
+        elif location == "storage":
+            eqs = extra_dep_info["storage_deps_eqs"]
+            neqs = extra_dep_info["storage_deps_noneqs"]
+        else:
+            raise Exception("Unknown location")
+
+        # print("*********************")
+        # print(memory_order)
+        # print(t1)
+        # print(t2)
+        # print(idx1)
+        # print(idx2)
+        # print(pc_index1)
+        # print(pc_index2)
+        # print(eqs)
+        # print(neqs)
+        # print("********************")
         
         if pc_index1 != -1 and pc_index2 != -1:
-            if any(filter(lambda x: x.same_pair(pc_index1, pc_index2),extra_dep_info["memory_deps_eqs"])):
+            if any(filter(lambda x: x.same_pair(pc_index1, pc_index2),eqs)):
+                # print("IGUALES")
                 return True
 
-            if any(filter(lambda x: x.same_pair(pc_index1, pc_index2),extra_dep_info["memory_deps_noneqs"])):
+            if any(filter(lambda x: x.same_pair(pc_index1, pc_index2),neqs)):
+                # print("DISTINTOS")
                 return False
     
     #If we reach this points means that the memory analysis is not able to finfer any information related to the pair and we apply the current solver
