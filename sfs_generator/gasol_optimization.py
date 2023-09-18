@@ -5083,7 +5083,9 @@ def remove_loads(storage,instruction):
                 new_storage.append(s)
             else:
                 if instruction == "mload": #in order to distinguish with the case of sload
-                    remove_extra_deps_info(i)
+                    remove_extra_deps_info(i,"memory")
+                elif instruction == "sload":
+                    remove_extra_deps_info(i, "storage")
         else:
             new_storage.append(s)
     return new_storage
@@ -5163,7 +5165,7 @@ def replace_loads_by_sstores(storage_location, complementary_location, location)
 
                         gas_memory_op+=3
                     storage_location.pop(i+pos+1)
-                    remove_extra_deps_info(i+pos+1)
+                    remove_extra_deps_info(i+pos+1, location)
                     # discount_op+=1  @It may be replace by a DUP+SWAP
                     finish = True
 
@@ -5247,7 +5249,7 @@ def remove_store_recursive_dif(storage_location, location):
                 #Keccaks are considered in dep list
                 if True not in dep:
                     storage_location.pop(i)
-                    remove_extra_deps_info(i)
+                    remove_extra_deps_info(i, location)
                     discount_op+=1
                     if location == "storage":
                         msg = "[OPT]: Removed sstore sstore "
@@ -5281,7 +5283,7 @@ def remove_store_recursive_dif(storage_location, location):
                         rules_applied.append(str(storage_location[i+pos+1])+" useless")
 
                         storage_location.pop(i+pos+1)
-                        remove_extra_deps_info(i+pos+1)
+                        remove_extra_deps_info(i+pos+1, location)
                         discount_op+=1
                         msg = "[OPT]: Removed mstore mstore with KECCAK"
                         check_and_print_debug_info(debug, msg)
@@ -5305,7 +5307,7 @@ def remove_store_recursive_dif(storage_location, location):
 
                         if all_mstores:
                             storage_location.pop(i)
-                            remove_extra_deps_info(i)
+                            remove_extra_deps_info(i, location)
                             discount_op+=1
                             if location == "storage":
                                 msg = "[OPT]: Removed sstore sstore "
@@ -5365,7 +5367,7 @@ def remove_store_loads(storage_location, location):
                     #Keccaks are considered in the previous list
                     if True not in variables:
                         storage_location.pop(i)
-                        remove_extra_deps_info(i)
+                        remove_extra_deps_info(i, location)
                         discount_op+=1
                         finished = True
 
