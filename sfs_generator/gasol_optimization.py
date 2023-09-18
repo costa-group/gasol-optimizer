@@ -192,15 +192,15 @@ def process_extra_dependences_info(info,location="memory"):
         nonequal_pairs = info.get_nonequal_pairs_memory()
     else:
         raise Exception("Unknown location")
-
-    print(nonequal_pairs)
     
     # extra_dep_info["mstore_useless"] = info.get("mstore_useless",[])
     # extra_dep_info["sstore_useless"] = info.get("sstore_useless",[])
     offset = 0
     if "JUMPDEST" in info.get_instructions():
         offset = 1
-    list(map(lambda x: x.set_values(x.get_first()-offset,x.get_second()-offset),map(lambda x: x.order(),equal_pairs)))
+
+    list(map(lambda x: x.order(),equal_pairs))
+    list(map(lambda x: x.set_values(x.get_first()-offset,x.get_second()-offset),equal_pairs))
 
     if location == "memory":
         extra_dep_info["memory_deps_eqs"] = equal_pairs    
