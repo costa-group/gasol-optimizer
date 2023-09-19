@@ -5787,7 +5787,7 @@ def unify_loads_instructions(storage_location, location):
 
 #It checks in which cases the loads are the same
 #It is checked only respect to memory as it is the storage location that may affect keccaks
-def unify_keccak_instructions(storage_location,storage_order):
+def unify_keccak_instructions(storage_location,storage_order, location = "memory"):
     global variable_content
 
     instruction = "keccak"
