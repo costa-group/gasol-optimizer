@@ -181,6 +181,9 @@ def init_globals():
     global extra_dep_info
     extra_dep_info = {}
 
+    global useless_info
+    useless_info = False
+
 def process_extra_dependences_info(info,location="memory"):
     global extra_dep_info
 
@@ -3354,7 +3357,7 @@ def compute_max_program_len(opcodes, num_guard,block = None):
     return len(new_opcodes)
     
 
-def smt_translate_block(rule,file_name,block_name,immutable_dict,simplification=True,storage = False, size = False, part = False, pop = False, push = False, revert = False,extra_dependences_info={}, debug_info = False):
+def smt_translate_block(rule,file_name,block_name,immutable_dict,simplification=True,storage = False, size = False, part = False, pop = False, push = False, revert = False,extra_dependences_info={},extra_useless_info= False, debug_info = False):
     global s_counter
     global max_instr_size
     global int_not0
@@ -3370,6 +3373,7 @@ def smt_translate_block(rule,file_name,block_name,immutable_dict,simplification=
     global revert_flag
     global assignImm_values
     global debug
+    global useless_info
     
     init_globals()
     
@@ -3383,7 +3387,8 @@ def smt_translate_block(rule,file_name,block_name,immutable_dict,simplification=
     revert_flag = revert
     assignImm_values = immutable_dict
     debug = debug_info
-
+    useless_info = extra_useless_info
+    
     if extra_dependences_info != {}:
         process_extra_dependences_info(extra_dependences_info,"memory")
         process_extra_dependences_info(extra_dependences_info,"storage")
