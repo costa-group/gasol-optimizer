@@ -182,8 +182,10 @@ def init_globals():
     extra_dep_info = {}
 
     global useless_info
-    useless_info = False
+    useless_info = []
 
+    
+    
 def process_extra_dependences_info(info,location="memory"):
     global extra_dep_info
 
@@ -225,6 +227,21 @@ def process_extra_dependences_info(info,location="memory"):
     # extra_dep_info["storage_deps"] = info.get("storage_deps",[])
     # raise Exception
     check_and_print_debug_info(debug, extra_dep_info)
+
+def process_useless_info(info):
+    global useless_info
+
+    offset = 0
+    if "JUMPDEST" in info.get_instructions():
+        offset = 1
+
+    l = info.get_useless_info()
+    useless_info = list(map(lambda x: x-offset,l))
+           
+    # extra_dep_info["storage_deps"] = info.get("storage_deps",[])
+    # raise Exception
+    check_and_print_debug_info(debug, useless_info)
+    
     
 def filter_opcodes(rule):
     instructions = rule.get_instructions()
@@ -3373,7 +3390,6 @@ def smt_translate_block(rule,file_name,block_name,immutable_dict,simplification=
     global revert_flag
     global assignImm_values
     global debug
-    global useless_info
     
     init_globals()
     
@@ -3392,6 +3408,11 @@ def smt_translate_block(rule,file_name,block_name,immutable_dict,simplification=
     if extra_dependences_info != {}:
         process_extra_dependences_info(extra_dependences_info,"memory")
         process_extra_dependences_info(extra_dependences_info,"storage")
+
+    if extra_useless_info:
+        process_useless_info(extra_dependences_info)
+        print(useless_info)
+
         
     sfs_contracts = {}
 
