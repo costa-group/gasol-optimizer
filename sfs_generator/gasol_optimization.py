@@ -1719,6 +1719,7 @@ def generate_storage_info(instructions,source_stack,opcodes,simplification=True)
 
     opcodes_idx = 0
     next_val = 0
+    
     for x in range(0,len(instructions)):
             
         if instructions[x].find("sload")!=-1:
@@ -1760,12 +1761,26 @@ def generate_storage_info(instructions,source_stack,opcodes,simplification=True)
             else:
                 opcodes_idx+=1
 
+
+                
     # print(instructions)
     # print(memory_order)
     if extra_dep_info != {}:
         extra_dep_info["mem_deps_int2ins"] = extra_dep_info_ins2int
         extra_dep_info["sto_deps_int2ins"] = extra_dep_info_ins2int_sto
-    
+
+    if useless_info != []: #It deletes from memory_order de useless mstores
+        new_memory_order = []
+        for i in range(len(memory_order)):
+
+            for x in extra_dep_info_ins2int:
+                if i in extra_dep_info_ins2int[x]:
+                    if x not in useless_info:
+                        new_memory_order.append(memory_order[i])
+                    else:
+                        extra_dep_info
+        memory_order = new_memory_order
+        
     remove_loads_instructions()
     
     if simplification:
@@ -3374,7 +3389,7 @@ def compute_max_program_len(opcodes, num_guard,block = None):
     return len(new_opcodes)
     
 
-def smt_translate_block(rule,file_name,block_name,immutable_dict,simplification=True,storage = False, size = False, part = False, pop = False, push = False, revert = False,extra_dependences_info={},extra_useless_info= False, debug_info = False):
+def smt_translate_block(rule,file_name,block_name,immutable_dict,simplification=True,storage = False, size = False, part = False, pop = False, push = False, revert = False,extra_dependences_info={},extra_opt_info= {}, debug_info = False):
     global s_counter
     global max_instr_size
     global int_not0
@@ -3403,17 +3418,7 @@ def smt_translate_block(rule,file_name,block_name,immutable_dict,simplification=
     revert_flag = revert
     assignImm_values = immutable_dict
     debug = debug_info
-    useless_info = extra_useless_info
-    
-    if extra_dependences_info != {}:
-        process_extra_dependences_info(extra_dependences_info,"memory")
-        process_extra_dependences_info(extra_dependences_info,"storage")
-
-    if extra_useless_info:
-        process_useless_info(extra_dependences_info)
-        print(useless_info)
-
-        
+            
     sfs_contracts = {}
 
     blocks_json_dict = {}
@@ -3430,6 +3435,17 @@ def smt_translate_block(rule,file_name,block_name,immutable_dict,simplification=
     
     opcodes = get_opcodes(rule)    
 
+    print(extra_opt_info)
+    
+    if extra_opt_info["relations"]:
+        process_extra_dependences_info(extra_dependences_info,"memory")
+        process_extra_dependences_info(extra_dependences_info,"storage")
+
+    if extra_opt_info["useless"]:
+        process_useless_info(extra_dependences_info)
+        print(useless_info)
+
+    
     info = "INFO DEPLOY "+paths.gasol_path+"ethir_OK_"+ block_name + " LENGTH="+str(len(opcodes))+" PUSH="+str(len(list(filter(lambda x: x.find("nop(PUSH")!=-1,opcodes))))
     info_deploy.append(info)
     
@@ -5655,7 +5671,6 @@ def generate_dependences(storage_location, location):
                 j+=1                                
             
     return storage_dependences
-
 
 def simplify_dependencies(deps: List[Tuple[int, int]]) -> List[Tuple[int, int]]:
     dg = nx.DiGraph(deps)
