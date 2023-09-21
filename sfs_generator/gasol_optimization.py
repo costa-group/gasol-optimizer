@@ -4,6 +4,7 @@ import math
 import os
 from timeit import default_timer as dtimer
 import re
+import traceback
 
 import global_params.constants as constants
 import global_params.paths as paths
@@ -3434,18 +3435,15 @@ def smt_translate_block(rule,file_name,block_name,immutable_dict,simplification=
     instructions = filter_opcodes(rule)
     
     opcodes = get_opcodes(rule)    
-
-    print(extra_opt_info)
     
-    if extra_opt_info["relations"]:
+    if extra_opt_info.get("dependences",False):
         process_extra_dependences_info(extra_dependences_info,"memory")
         process_extra_dependences_info(extra_dependences_info,"storage")
 
-    if extra_opt_info["useless"]:
+    if extra_opt_info.get("useless",False):
         process_useless_info(extra_dependences_info)
-        print(useless_info)
-
-    
+        # print(useless_info)
+        
     info = "INFO DEPLOY "+paths.gasol_path+"ethir_OK_"+ block_name + " LENGTH="+str(len(opcodes))+" PUSH="+str(len(list(filter(lambda x: x.find("nop(PUSH")!=-1,opcodes))))
     info_deploy.append(info)
     
