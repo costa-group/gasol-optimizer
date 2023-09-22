@@ -1754,6 +1754,7 @@ def generate_storage_info(instructions,source_stack,opcodes,simplification=True)
             keccak1 = sstores.pop(0)
             memory_order.append(keccak)
             storage_order.append(keccak)
+            extra_dep_info_ins2int[opcodes_idx] = (keccak,len(memory_order)-1)
 
         if x >= next_val:    
             if  opcodes[opcodes_idx].find("SWAP")!=-1:
@@ -6044,7 +6045,6 @@ def are_dependent(t1, t2, idx1, idx2, location = "memory"):
         # print(eqs)
         # print(neqs)
         # print("********************")
-        
         if pc_index1 != -1 and pc_index2 != -1:
             if any(filter(lambda x: x.same_pair(pc_index1, pc_index2),eqs)):
                 # print("IGUALES")
