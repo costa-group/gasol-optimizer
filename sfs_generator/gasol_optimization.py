@@ -1762,26 +1762,29 @@ def generate_storage_info(instructions,source_stack,opcodes,simplification=True)
                 opcodes_idx+=1
             else:
                 opcodes_idx+=1
-
-
-                
-    # print(instructions)
-    # print(memory_order)
+    
     if extra_dep_info != {}:
         extra_dep_info["mem_deps_int2ins"] = extra_dep_info_ins2int
         extra_dep_info["sto_deps_int2ins"] = extra_dep_info_ins2int_sto
 
     if useless_info != []: #It deletes from memory_order de useless mstores
         new_memory_order = []
+        extra_deps_todelete = []
         for i in range(len(memory_order)):
-
             for x in extra_dep_info_ins2int:
                 if i in extra_dep_info_ins2int[x]:
                     if x not in useless_info:
                         new_memory_order.append(memory_order[i])
                     else:
-                        extra_dep_info
+                        if extra_dep_info != {}:
+                            extra_deps_todelete.append(i)
+
+        if extra_dep_info != {}:
+            for x in extra_deps_todelete[::-1]:
+                remove_extra_deps_info(x, "memory")
+                
         memory_order = new_memory_order
+
         
     remove_loads_instructions()
     
