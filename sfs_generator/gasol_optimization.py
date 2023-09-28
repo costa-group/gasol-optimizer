@@ -2119,7 +2119,8 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
         new_v = compute_reverse_svar(v,max_ss_idx)
         new_ss.append(new_v)
 
-    new_ss = modify_sstack_context_info(new_ss)
+    if context_info != {}:
+        new_ss = modify_sstack_context_info(new_ss)
         
     for v in ts_aux:
         new_v = compute_reverse_svar(v,max_ss_idx)
