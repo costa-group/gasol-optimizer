@@ -1711,19 +1711,12 @@ def generate_encoding(instructions,variables,source_stack,opcodes,simplification
         search_for_value(v,instructions_reverse, source_stack,simplification)
         variable_content[v] = s_dict[v]
 
-    print(s_dict)
-    print(variable_content)
-    print(u_dict)
-
     if context_info != {}:
         update_info_with_context()
-        print(variable_content)
-        print(u_dict)
     
     if not split_sto:
         generate_storage_info(instructions,source_stack,opcodes,simplification)
-        print(memory_order)
-        print(storage_order)
+        
     else:
         memory_order = []
         storage_order = []
@@ -2149,7 +2142,6 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
         x = generate_mstore_info(mem)
         mem_objs.append(x)
 
-    print(user_defins)
         
     all_user_defins = user_defins+sto_objs+mem_objs
         
@@ -2930,8 +2922,6 @@ def translate_block(rule,instructions,opcodes,isolated,sub_block_name,simp):
     generate_encoding(instructions,t_vars,source_stack,opcodes,simp)
     
     build_userdef_instructions()
-    print("HOLA")
-    print(user_defins)
 
     gas = get_block_cost(opcodes,len(guards_op))
     max_stack_size = max_idx_used(instructions,t_vars)
@@ -3053,7 +3043,6 @@ def translate_subblock(rule,instrs,sstack,tstack,sstack_idx,idx,next_block,sub_b
         
         generate_encoding(instr,tstack,sstack,opcodes,simp)
         build_userdef_instructions()
-        print(user_def_ins)
         gas = get_block_cost(opcodes,0)
         max_stack_size = max_idx_used(instructions,tstack)
         pops2remove = 0
@@ -3221,7 +3210,6 @@ def translate_last_subblock(rule,block,sstack,sstack_idx,idx,isolated,block_name
         generate_encoding(instructions,tstack,sstack,opcodes,simp)
     
         build_userdef_instructions()
-        print(user_def_ins)
         gas = get_block_cost(opcodes,len(guards_op))
         max_stack_size = max_idx_used(instructions,tstack)
         if gas!=0 and not is_identity_map(sstack,tstack,instructions):
