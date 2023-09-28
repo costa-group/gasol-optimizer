@@ -185,6 +185,8 @@ def init_globals():
     global useless_info
     useless_info = []
 
+    global context_info
+    context_info = {}
     
     
 def process_extra_dependences_info(info,location="memory"):
@@ -242,7 +244,19 @@ def process_useless_info(info):
     # extra_dep_info["storage_deps"] = info.get("storage_deps",[])
     # raise Exception
     check_and_print_debug_info(debug, useless_info)
-    
+
+def process_context_info(info,stack_idx):
+    global context_info
+
+    constancy_context = info.get_constancy_context()
+    aliasing_context = info.get_aliasing_context()
+
+    valid_constancy_context = list(filter(lambda x: x[0]<stack_idx,constancy_context))
+    valid_aliasing_context = list(filter(lambda x: x[0]<stack_idx and x[1]<stack_idx,constancy_context))
+
+    context_info["constancy_context"] = valid_constancy_context
+    context_info["aliasing_context"] = valid_aliasing_context
+    context_info["stack_size"] = stack_idx
     
 def filter_opcodes(rule):
     instructions = rule.get_instructions()
@@ -1807,7 +1821,7 @@ def generate_storage_info(instructions,source_stack,opcodes,simplification=True)
     msg = "Storage dep: "+str(stdep)
     check_and_print_debug_info(debug, msg)
 
-    stdep = simplify_dependencies(stdep)
+    stdep = simplify_dependences(stdep)
 
     msg = "Storage dep simplified: "+str(stdep)
     check_and_print_debug_info(debug, msg)
@@ -1831,7 +1845,7 @@ def generate_storage_info(instructions,source_stack,opcodes,simplification=True)
     msg = "Memory dep: "+str(memdep)
     check_and_print_debug_info(debug, msg)
 
-    memdep = simplify_dependencies(memdep)
+    memdep = simplify_dependences(memdep)
 
     msg = "Memory dep simplified: "+str(memdep)
     check_and_print_debug_info(debug, msg)
@@ -2150,7 +2164,7 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
             vars_list.pop(idx)
 
     not_used = get_not_used_stack_variables(new_ss,new_ts,total_inpt_vars)
-
+    
     if pop_flag :
         pop_instructions = generate_pops(not_used)
     else:
@@ -2168,6 +2182,10 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     else:
         sto_dep, mem_dep = [],[]
 
+    if context_info != {}:
+        new_ss, new_ts, new_user_defins = modify_sfs_context_info(new_ss,new_ts,new_user_defins)
+        print(new_ss)
+    
     bound_comp = compute_vars(new_ts, new_ss, new_user_defins)
     stack_bound = min(max_sk_sz_idx-len(remove_vars),bound_comp)
 
@@ -3448,6 +3466,10 @@ def smt_translate_block(rule,file_name,block_name,immutable_dict,simplification=
         process_useless_info(extra_dependences_info)
         # print(useless_info)
         
+    if extra_opt_info.get("context",False):        
+        idx = get_stack_variables(rule)
+        process_context_info(extra_dependences_info,idx)
+        
     info = "INFO DEPLOY "+paths.gasol_path+"ethir_OK_"+ block_name + " LENGTH="+str(len(opcodes))+" PUSH="+str(len(list(filter(lambda x: x.find("nop(PUSH")!=-1,opcodes))))
     info_deploy.append(info)
     
@@ -3888,7 +3910,6 @@ def apply_transform_rules(user_def_instrs,list_vars,tstack):
     return modified, new_user_def, target_stack
 
 def replace_var_userdef(out_var,value,user_def):
-    modified_instrs = []
     for instr in user_def:
         inpt = instr["inpt_sk"]
         if out_var in inpt:
@@ -5674,7 +5695,7 @@ def generate_dependences(storage_location, location):
             
     return storage_dependences
 
-def simplify_dependencies(deps: List[Tuple[int, int]]) -> List[Tuple[int, int]]:
+def simplify_dependences(deps: List[Tuple[int, int]]) -> List[Tuple[int, int]]:
     dg = nx.DiGraph(deps)
     tr = nx.transitive_reduction(dg)
     return list(tr.edges)
@@ -5962,7 +5983,7 @@ def update_storage_sequences(removed_instructions):
 
     if storage_order != new_storage_order:
         stdep = generate_dependences(new_storage_order,"storage")
-        stdep = simplify_dependencies(stdep)
+        stdep = simplify_dependences(stdep)
         
         storage_dep = stdep
         storage_order = new_storage_order
@@ -5994,7 +6015,7 @@ def update_storage_sequences(removed_instructions):
             
     if memory_order != new_memory_order:
         memdep = generate_dependences(new_memory_order,"memory")
-        memdep = simplify_dependencies(memdep)
+        memdep = simplify_dependences(memdep)
         
         memory_dep = memdep
         memory_order = new_memory_order
@@ -6704,3 +6725,16 @@ def unify_user_defins(ts,user_def_instructions,list_vars):
             new_user_def.append(instr)
 
     return modified, new_user_def, target_stack
+
+def modify_sfs_context_info(sstack,tstack,userdef_ins):
+    for p in context_info["aliasing_context"]:
+        try:
+            pos = sstack.index("s("+str(p[1])+")")
+            sstack = sstack[:pos]+["s("+str(p[0])+")"]+sstack[pos+1:]
+        except:
+            pass
+
+    return sstack, tstack, userdef_ins
+        
+
+    
