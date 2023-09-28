@@ -1695,7 +1695,24 @@ def update_info_with_context():
         for s_var in s_dict:
             if str(s_dict[s_var]).find(old_value)!=-1:
                 s_dict[s_var] = new_value
-            
+
+def update_memory_with_context(sequence):
+
+    for p in context_info["aliasing_context"]:
+        old_value = "s("+str(context_info["stack_size"]-1-p[1])+")"
+        new_value = "s("+str(context_info["stack_size"]-1-p[0])+")"
+        i = 0
+        while(i<len(sequence)):
+            ins = list(sequence[i])
+            if old_value in ins:
+                pos = ins.index(old_value)
+                new_ins = ins[:pos]+[new_value]+ins[pos+1:]
+                new_var = (tuple(new_ins),var[1])
+                sequence[i] = new_var
+            i+=1
+                
+                
+                
 def generate_encoding(instructions,variables,source_stack,opcodes,simplification=True):
     global s_dict
     global u_dict
@@ -1716,7 +1733,9 @@ def generate_encoding(instructions,variables,source_stack,opcodes,simplification
     
     if not split_sto:
         generate_storage_info(instructions,source_stack,opcodes,simplification)
-        
+        if context_info != {}:
+            update_memory_with_context(memory_order)
+            update_memory_with_context(storage_order)
     else:
         memory_order = []
         storage_order = []
