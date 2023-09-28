@@ -1669,6 +1669,32 @@ def simplify_constants(opcodes_seq,user_def):
         r, elems = all_integers(inpt)
         if r:
             result = evaluate(elems)
+
+
+def update_info_with_context():
+    global u_dict
+    global variable_content
+    global s_dict
+    
+    for p in context_info["aliasing_context"]:
+        old_value = "s("+str(context_info["stack_size"]-1-p[1])+")"
+        new_value = "s("+str(context_info["stack_size"]-1-p[0])+")"
+        for u in u_dict:
+            var = u_dict[u]
+            ins = list(var[0])
+            if old_value in ins:
+                pos = ins.index(old_value)
+                new_ins = ins[:pos]+[new_value]+ins[pos+1:]
+                new_var = (tuple(new_ins),var[1])
+                u_dict[u] = new_var
+
+        for v in variable_content:
+            if str(variable_content[v]).find(old_value)!=-1:
+                variable_content[v] = new_value
+            
+        for s_var in s_dict:
+            if str(s_dict[s_var]).find(old_value)!=-1:
+                s_dict[s_var] = new_value
             
 def generate_encoding(instructions,variables,source_stack,opcodes,simplification=True):
     global s_dict
@@ -1684,9 +1710,20 @@ def generate_encoding(instructions,variables,source_stack,opcodes,simplification
         s_dict = {}
         search_for_value(v,instructions_reverse, source_stack,simplification)
         variable_content[v] = s_dict[v]
-        
+
+    print(s_dict)
+    print(variable_content)
+    print(u_dict)
+
+    if context_info != {}:
+        update_info_with_context()
+        print(variable_content)
+        print(u_dict)
+    
     if not split_sto:
         generate_storage_info(instructions,source_stack,opcodes,simplification)
+        print(memory_order)
+        print(storage_order)
     else:
         memory_order = []
         storage_order = []
@@ -2066,11 +2103,13 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     global rule_applied
     global rules_applied
     split_by = False
+
+
     
     max_ss_idx = compute_max_idx(max_ss_idx1,ss)
     
     json_dict = {}
-
+    
     new_ss = []
     new_ts = []
     
@@ -2080,6 +2119,8 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
         new_v = compute_reverse_svar(v,max_ss_idx)
         new_ss.append(new_v)
 
+    new_ss = modify_sstack_context_info(new_ss)
+        
     for v in ts_aux:
         new_v = compute_reverse_svar(v,max_ss_idx)
         v =  is_integer(new_v)
@@ -2107,6 +2148,8 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
         x = generate_mstore_info(mem)
         mem_objs.append(x)
 
+    print(user_defins)
+        
     all_user_defins = user_defins+sto_objs+mem_objs
         
             
@@ -2181,10 +2224,6 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
 
     else:
         sto_dep, mem_dep = [],[]
-
-    if context_info != {}:
-        new_ss, new_ts, new_user_defins = modify_sfs_context_info(new_ss,new_ts,new_user_defins)
-        print(new_ss)
     
     bound_comp = compute_vars(new_ts, new_ss, new_user_defins)
     stack_bound = min(max_sk_sz_idx-len(remove_vars),bound_comp)
@@ -2890,6 +2929,9 @@ def translate_block(rule,instructions,opcodes,isolated,sub_block_name,simp):
     generate_encoding(instructions,t_vars,source_stack,opcodes,simp)
     
     build_userdef_instructions()
+    print("HOLA")
+    print(user_defins)
+
     gas = get_block_cost(opcodes,len(guards_op))
     max_stack_size = max_idx_used(instructions,t_vars)
 
@@ -3010,6 +3052,7 @@ def translate_subblock(rule,instrs,sstack,tstack,sstack_idx,idx,next_block,sub_b
         
         generate_encoding(instr,tstack,sstack,opcodes,simp)
         build_userdef_instructions()
+        print(user_def_ins)
         gas = get_block_cost(opcodes,0)
         max_stack_size = max_idx_used(instructions,tstack)
         pops2remove = 0
@@ -3177,6 +3220,7 @@ def translate_last_subblock(rule,block,sstack,sstack_idx,idx,isolated,block_name
         generate_encoding(instructions,tstack,sstack,opcodes,simp)
     
         build_userdef_instructions()
+        print(user_def_ins)
         gas = get_block_cost(opcodes,len(guards_op))
         max_stack_size = max_idx_used(instructions,tstack)
         if gas!=0 and not is_identity_map(sstack,tstack,instructions):
@@ -6725,16 +6769,14 @@ def unify_user_defins(ts,user_def_instructions,list_vars):
             new_user_def.append(instr)
 
     return modified, new_user_def, target_stack
-
-def modify_sfs_context_info(sstack,tstack,userdef_ins):
-    for p in context_info["aliasing_context"]:
-        try:
-            pos = sstack.index("s("+str(p[1])+")")
-            sstack = sstack[:pos]+["s("+str(p[0])+")"]+sstack[pos+1:]
-        except:
-            pass
-
-    return sstack, tstack, userdef_ins
         
 
-    
+def modify_sstack_context_info(sstack):
+    for p in context_info["aliasing_context"]:
+        old_value = "s("+str(p[1])+")"
+        new_value = "s("+str(p[0])+")"
+        if old_value in sstack:
+            pos = sstack.index("s("+str(p[1])+")")
+            sstack = sstack[:pos]+["s("+str(p[0])+")"]+sstack[pos+1:]
+
+    return sstack
