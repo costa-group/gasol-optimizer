@@ -5175,12 +5175,12 @@ def remove_extra_deps_info(idx_in_seq, location = "memory"):
             
         for i in extra_dep_info["mem_deps_int2ins"]:
             if extra_dep_info["mem_deps_int2ins"][i][1]>idx_in_seq:
-                new_val = (extra_dep_info["mem_deps_int2ins"][i][0],extra_dep_info["mem_deps_int2ins"][i][1]-1)
-                new_dict[i-1] = new_val
-            else:
-                new_dict[i] = extra_dep_info["mem_deps_int2ins"][i]
+                extra_dep_info["mem_deps_int2ins"][i] = (extra_dep_info["mem_deps_int2ins"][i][0],extra_dep_info["mem_deps_int2ins"][i][1]-1)
+            #     new_dict[i-1] = new_val
+            # else:
+            #     new_dict[i] = extra_dep_info["mem_deps_int2ins"][i]
 
-        extra_dep_info["mem_deps_int2ins"] = new_dict
+         # = new_dict
                 
     elif idx != -1 and location == "storage":
         extra_dep_info["storage_deps_eqs"] = list(filter(lambda x: x.get_first()!=idx and x.get_second()!= idx,extra_dep_info["storage_deps_eqs"]))
@@ -5198,17 +5198,12 @@ def remove_extra_deps_info(idx_in_seq, location = "memory"):
                 x.set_first(x.get_first()-1)
             if x.get_second() > idx:
                 x.set_second(x.get_second()-1)
-
-        new_dict = {}
                 
         for i in extra_dep_info["sto_deps_int2ins"]:
             if extra_dep_info["sto_deps_int2ins"][i][1]>idx_in_seq:
-                new_val = (extra_dep_info["sto_deps_int2ins"][i][0],extra_dep_info["sto_deps_int2ins"][i][1]-1)
-                new_dict[i-1] = new_val
-            else:
-                new_dict[i] = extra_dep_info["sto_deps_int2ins"][i]
+                extra_dep_info["sto_deps_int2ins"] = (extra_dep_info["sto_deps_int2ins"][i][0],extra_dep_info["sto_deps_int2ins"][i][1]-1)
+                
 
-        extra_dep_info["sto_deps_int2ins"] = new_dict
                 
 def remove_loads(storage,instruction):
     new_storage = []
