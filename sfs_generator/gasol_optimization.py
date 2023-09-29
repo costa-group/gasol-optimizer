@@ -3516,7 +3516,9 @@ def smt_translate_block(rule,file_name,block_name,immutable_dict,simplification=
     opcodes = get_opcodes(rule)    
     
     if extra_opt_info.get("dependences",False):
+        print(extra_dependences_info)
         process_extra_dependences_info(extra_dependences_info,"memory")
+        print(extra_dep_info)
         process_extra_dependences_info(extra_dependences_info,"storage")
 
     if extra_opt_info.get("useless",False):
@@ -5175,12 +5177,16 @@ def remove_extra_deps_info(idx_in_seq, location = "memory"):
             
         for i in extra_dep_info["mem_deps_int2ins"]:
             if extra_dep_info["mem_deps_int2ins"][i][1]>idx_in_seq:
-                extra_dep_info["mem_deps_int2ins"][i] = (extra_dep_info["mem_deps_int2ins"][i][0],extra_dep_info["mem_deps_int2ins"][i][1]-1)
-            #     new_dict[i-1] = new_val
-            # else:
-            #     new_dict[i] = extra_dep_info["mem_deps_int2ins"][i]
+                new_val = (extra_dep_info["mem_deps_int2ins"][i][0],extra_dep_info["mem_deps_int2ins"][i][1]-1)
+                new_dict[i-1] = new_val
+            else:
+                new_dict[i] = extra_dep_info["mem_deps_int2ins"][i]
 
-         # = new_dict
+        extra_dep_info["mem_deps_int2ins"] = new_dict
+
+        # for i in extra_dep_info["mem_deps_int2ins"]:
+        #     if extra_dep_info["mem_deps_int2ins"][i][1]>idx_in_seq:
+        #         extra_dep_info["mem_deps_int2ins"][i] = (extra_dep_info["mem_deps_int2ins"][i][0],extra_dep_info["mem_deps_int2ins"][i][1]-1)  
                 
     elif idx != -1 and location == "storage":
         extra_dep_info["storage_deps_eqs"] = list(filter(lambda x: x.get_first()!=idx and x.get_second()!= idx,extra_dep_info["storage_deps_eqs"]))
@@ -5198,11 +5204,17 @@ def remove_extra_deps_info(idx_in_seq, location = "memory"):
                 x.set_first(x.get_first()-1)
             if x.get_second() > idx:
                 x.set_second(x.get_second()-1)
+
+        new_dict = {}
                 
         for i in extra_dep_info["sto_deps_int2ins"]:
             if extra_dep_info["sto_deps_int2ins"][i][1]>idx_in_seq:
-                extra_dep_info["sto_deps_int2ins"] = (extra_dep_info["sto_deps_int2ins"][i][0],extra_dep_info["sto_deps_int2ins"][i][1]-1)
-                
+                new_val = (extra_dep_info["sto_deps_int2ins"][i][0],extra_dep_info["sto_deps_int2ins"][i][1]-1)
+                new_dict[i-1] = new_val
+            else:
+                new_dict[i] = extra_dep_info["sto_deps_int2ins"][i]
+
+        extra_dep_info["sto_deps_int2ins"] = new_dict
 
                 
 def remove_loads(storage,instruction):
@@ -5311,7 +5323,9 @@ def replace_loads_by_sstores(storage_location, complementary_location, location)
 
                         gas_store_op+=700
                     else:
+                        
                         msg = "[OPT]: Replaced mload by its value"
+                        print(i+pos+1)
                         check_and_print_debug_info(debug, msg)
 
                         gas_memory_op+=3
@@ -5595,9 +5609,12 @@ def simplify_memory(storage_location, complementary_location, location):
 
     del_pos = []
     old_storage_location = list(storage_location)
-    
+
+    print(memory_order)
+    print(extra_dep_info)
     replace_loads_by_sstores(storage_location, complementary_location, location)
-    
+    print(extra_dep_info)
+
     if old_storage_location != storage_location:
         old_storage_location = list(filter(lambda x: type(x)==tuple, old_storage_location))
         storage_location1 = list(filter(lambda x: type(x)==tuple, storage_location))
@@ -5610,9 +5627,11 @@ def simplify_memory(storage_location, complementary_location, location):
             memory_opt[0] = True
 
     old_storage_location2 = list(storage_location)
+    print(memory_order)
+    print(extra_dep_info)
     remove_store_recursive_dif(storage_location,location)
+    print(extra_dep_info)
 
-    
     
     if old_storage_location2 != storage_location:
 
