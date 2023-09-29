@@ -669,6 +669,9 @@ def update_unary_func(func,var,val,evaluate):
     
     if func != "":
 
+        #check for value of val when considering constancy
+        #TODO
+        
         if is_integer(val)!=-1 and (func=="not" or func=="iszero") and evaluate:
             if func == "not":
                 val_end = ~(int(val))+2**256
@@ -1672,6 +1675,32 @@ def simplify_constants(opcodes_seq,user_def):
 
 
 def update_info_with_context():
+    global u_dict
+    global variable_content
+    global s_dict
+    
+    for p in context_info["aliasing_context"]:
+        old_value = "s("+str(context_info["stack_size"]-1-p[1])+")"
+        new_value = "s("+str(context_info["stack_size"]-1-p[0])+")"
+        for u in u_dict:
+            var = u_dict[u]
+            ins = list(var[0])
+            if old_value in ins:
+                pos = ins.index(old_value)
+                new_ins = ins[:pos]+[new_value]+ins[pos+1:]
+                new_var = (tuple(new_ins),var[1])
+                u_dict[u] = new_var
+
+        for v in variable_content:
+            if str(variable_content[v]).find(old_value)!=-1:
+                variable_content[v] = new_value
+            
+        for s_var in s_dict:
+            if str(s_dict[s_var]).find(old_value)!=-1:
+                s_dict[s_var] = new_value
+
+#TODO
+def update_info_with_constancy_context():
     global u_dict
     global variable_content
     global s_dict
@@ -5610,10 +5639,7 @@ def simplify_memory(storage_location, complementary_location, location):
     del_pos = []
     old_storage_location = list(storage_location)
 
-    print(memory_order)
-    print(extra_dep_info)
     replace_loads_by_sstores(storage_location, complementary_location, location)
-    print(extra_dep_info)
 
     if old_storage_location != storage_location:
         old_storage_location = list(filter(lambda x: type(x)==tuple, old_storage_location))
@@ -5627,11 +5653,8 @@ def simplify_memory(storage_location, complementary_location, location):
             memory_opt[0] = True
 
     old_storage_location2 = list(storage_location)
-    print(memory_order)
-    print(extra_dep_info)
-    remove_store_recursive_dif(storage_location,location)
-    print(extra_dep_info)
 
+    remove_store_recursive_dif(storage_location,location)
     
     if old_storage_location2 != storage_location:
 
