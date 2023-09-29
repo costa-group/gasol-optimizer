@@ -1906,8 +1906,6 @@ def generate_storage_info(instructions,source_stack,opcodes,simplification=True)
     
     storage_dep = stdep
     memory_dep = memdep
-
-    
         
 def generate_source_stack_variables(idx):
     ss_list = []
@@ -5241,9 +5239,12 @@ def replace_loads_by_sstores(storage_location, complementary_location, location)
     if location == "storage":
         store_ins = "sstore"
         load_ins = "sload"
+        extra_dep = extra_dep_info["storage_deps_eqs"] if extra_dep_info != {} else []
     else:
         store_ins = "mstore"
         load_ins = "mload"
+        extra_dep = extra_dep_info["memory_deps_eqs"] if extra_dep_info != {} else []
+
 
     i = 0
     finish = False
@@ -5253,7 +5254,24 @@ def replace_loads_by_sstores(storage_location, complementary_location, location)
         if elem[0][-1].find(store_ins) !=-1:
             var = elem[0][0]
             value = elem[0][1]
-            l_ins = list(filter(lambda x: x[0][0] == var and x[0][-1].find(load_ins)!=-1,storage_location[i+1::]))
+
+            if extra_dep_info != {} and len(storage_location[i+1::])>0:
+                l_ins = []
+                dep_pos = get_idx_in_instructions(i,location)
+                subl = storage_location[i+1::]
+                for j in range(len(subl)):
+                    ins = storage_location[i+1+j]
+                    if ins[0][-1].find(load_ins)!=-1:
+                        dep_pos_load = get_idx_in_instructions(j+i+1, location)
+
+                        l = list(filter(lambda x: x.get_first() == dep_pos and x.get_second() == dep_pos_load,extra_dep))
+                        
+                        if len(l) == 1:
+                            l_ins.append(ins)
+                
+            else:
+                l_ins = list(filter(lambda x: x[0][0] == var and x[0][-1].find(load_ins)!=-1,storage_location[i+1::]))
+
             if len(l_ins)>0:
                 load = l_ins[0]
                 pos = storage_location[i+1::].index(load)
@@ -5338,22 +5356,43 @@ def remove_store_recursive_dif(storage_location, location):
     
     if location == "storage":
         instruction = "sstore"
+        extra_dep = extra_dep_info["storage_deps_eqs"] if extra_dep_info != {} else []
     else:
         instruction = "mstore"
-
+        extra_dep = extra_dep_info["memory_deps_eqs"] if extra_dep_info != {} else []
+        
     i = 0
     finish = False
-
+    
     while(i<len(storage_location) and not finish):
         elem = storage_location[i]
         
         if elem[0][-1].find(instruction)!=-1:
             var = elem[0][0]
-            rest = list(filter(lambda x: x[0][0] == var and x[0][-1].find(instruction)!=-1 and x[0][-1] == elem[0][-1], storage_location[i+1::]))
-            # # If instruction is mstore and the next one is mstore8, then i cannot remove any of them. Otherwise, it is
+
+
+            if extra_dep_info != {} and len(storage_location[i+1::])>0:
+                rest = []
+                dep_pos = get_idx_in_instructions(i,location)
+                subl = storage_location[i+1::]
+                for j in range(len(subl)):
+                    ins = storage_location[i+1+j]
+                    if ins[0][-1].find(instruction)!=-1:
+                        dep_pos_load = get_idx_in_instructions(j+i+1, location)
+
+                        l = list(filter(lambda x: x.get_first() == dep_pos and x.get_second() == dep_pos_load,extra_dep))
+                        
+                        if len(l) == 1:
+                            rest.append(ins)
+                
+            else:
+                rest = list(filter(lambda x: x[0][0] == var and x[0][-1].find(instruction)!=-1 and x[0][-1] == elem[0][-1], storage_location[i+1::]))
+            
+                # # If instruction is mstore and the next one is mstore8, then i cannot remove any of them. Otherwise, it is
             # # possible if both instructions are dependent
             # rest = list(filter(lambda x: x[0][-1].find(instruction)!=-1 and (elem[0][-1] != "mstore" or x[0][-1] != "mstore8") and
             #                              are_dependent(x[0][0],var,x[0][-1],elem[0][-1]), storage_location[i+1::]))
+            
             if rest !=[]:
                 next_ins = rest[0]
                 pos = storage_location[i+1::].index(next_ins)
@@ -5461,10 +5500,12 @@ def remove_store_loads(storage_location, location):
     if storage_location == "storage":
         store_ins = "sstore"
         load_ins = "sload"
+        extra_dep = extra_dep_info["storage_deps_eqs"] if extra_dep_info != {} else []
     else:
         store_ins = "mstore"
         load_ins = "mload"
-
+        extra_dep = extra_dep_info["memory_deps_eqs"] if extra_dep_info != {} else []
+        
     i = 0
     finished = False
     while(i<len(storage_location) and not finished):
@@ -5474,7 +5515,23 @@ def remove_store_loads(storage_location, location):
             value = elem[0][1]
             if value in u_dict:
                 symb_ins = u_dict[value]
-                if symb_ins[0][-1].find(load_ins)!=-1 and symb_ins[0][0] == var:
+
+                find_potential = False
+                
+                if extra_dep_info != {} and symb_ins[0][-1].find(load_ins)!=-1:
+                    dep_pos = get_idx_in_instructions(i,location)
+                    pos = storage_location.index(symb_ins)
+                    dep_pos_load = get_idx_in_instructions(pos, location)
+                            
+                    l = list(filter(lambda x: x.get_first() == dep_pos_load and x.get_second() == dep_pos,extra_dep))    
+                    if len(l) == 1:
+                        find_potential = True
+
+                elif extra_dep_info == {}:
+                    if symb_ins[0][-1].find(load_ins)!=-1 and symb_ins[0][0] == var:
+                        find_potential = True
+                        
+                if find_potential:
                     pos = storage_location.index(symb_ins)
                     # rest_instructions = storage_location[i+1:pos]
                     rest_instructions = storage_location[pos+1:i]
@@ -5591,7 +5648,7 @@ def are_dependent_variables(v1,v2):
     # print(u_dict)
     # print(u_dict[v1][0])
     # print(u_dict[v2][0])
-
+    
     exp_v1 = (v1) if v1 not in u_dict.keys() else u_dict[v1][0]
     exp_v2 = (v2) if v2 not in u_dict.keys() else u_dict[v2][0]
 
