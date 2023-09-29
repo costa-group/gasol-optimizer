@@ -5199,10 +5199,17 @@ def remove_extra_deps_info(idx_in_seq, location = "memory"):
             if x.get_second() > idx:
                 x.set_second(x.get_second()-1)
 
+        new_dict = {}
+                
         for i in extra_dep_info["sto_deps_int2ins"]:
             if extra_dep_info["sto_deps_int2ins"][i][1]>idx_in_seq:
-                extra_dep_info["sto_deps_int2ins"][i] = (extra_dep_info["sto_deps_int2ins"][i][0],extra_dep_info["sto_deps_int2ins"][i][1]-1)
-            
+                new_val = (extra_dep_info["sto_deps_int2ins"][i][0],extra_dep_info["sto_deps_int2ins"][i][1]-1)
+                new_dict[i-1] = new_val
+            else:
+                new_dict[i] = extra_dep_info["sto_deps_int2ins"][i]
+
+        extra_dep_info["sto_deps_int2ins"] = new_dict
+                
 def remove_loads(storage,instruction):
     new_storage = []
     for i in range(0,len(storage)):
