@@ -6244,7 +6244,7 @@ def are_dependent(t1, t2, idx1, idx2, location = "memory"):
             if any(filter(lambda x: x.same_pair(pc_index1, pc_index2),neqs)):
                 # print("DISTINTOS")
                 return False
-    
+
     #If we reach this points means that the memory analysis is not able to finfer any information related to the pair and we apply the current solver
     var1 = t1[0][0]
     ins1 = t1[0][-1]
@@ -6318,10 +6318,17 @@ def are_dependent(t1, t2, idx1, idx2, location = "memory"):
             # elif ins2.find("mstore8")!=-1 and var2>=var1 and var2<var1+32:
             elif ins2.find("mstore8")!=-1 and var2_int>=var1_int and var2_int<var1_int+32:
                 dep = True
+
             elif (ins1.find("mstore")!=-1 or ins2.find("mstore")!=-1) and (ins1.find("mstore8")==-1 and ins2.find("mstore8")==-1):
-                alt1 = var1_int>=var2_int and var1_int<var2_int+32
-                alt2 = var2_int>=var1_int and var2_int<var1_int+32
-                dep = alt1 or alt2
+                if ins1.find("mstore")!=-1 and ins2.find("mstore")!=-1:
+                    if var1_int != var2_int:
+                        dep = False
+                    else:
+                        dep = True
+                else:
+                    alt1 = var1_int>=var2_int and var1_int<var2_int+32
+                    alt2 = var2_int>=var1_int and var2_int<var1_int+32
+                    dep = alt1 or alt2
             else:
                 dep = False
             
