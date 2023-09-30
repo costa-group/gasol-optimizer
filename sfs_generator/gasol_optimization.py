@@ -671,9 +671,10 @@ def update_unary_func(func,var,val,evaluate):
 
         #check for value of val when considering constancy
         #TODO
-
         if context_info.get("constancy_context",[]) != []:
+            
             val_aux = get_value_constancy_context(val)
+
             if val_aux != -1:
                 val = val_aux
         
@@ -1723,15 +1724,15 @@ def update_info_with_context():
             if str(s_dict[s_var]).find(old_value)!=-1:
                 s_dict[s_var] = new_value
 
-#TODO
-def update_info_with_constancy_context():
+
+def update_info_with_constancy():
     global u_dict
     global variable_content
     global s_dict
     
     for p in context_info["constancy_context"]:
-        old_value = "s("+str(context_info["stack_size"]-1-p[1])+")"
-        new_value = "s("+str(context_info["stack_size"]-1-p[0])+")"
+        old_value = "s("+str(context_info["stack_size"]-1-p[0])+")"
+        new_value = str(p[1])
         for u in u_dict:
             var = u_dict[u]
             ins = list(var[0])
@@ -1763,6 +1764,21 @@ def update_memory_with_context(sequence):
                 new_var = (tuple(new_ins),var[1])
                 sequence[i] = new_var
             i+=1
+
+def update_memory_with_constancy(sequence):
+
+    for p in context_info["constancy_context"]:
+        old_value = "s("+str(context_info["stack_size"]-1-p[0])+")"
+        new_value = str(p[1])
+        i = 0
+        while(i<len(sequence)):
+            ins = list(sequence[i])
+            if old_value in ins:
+                pos = ins.index(old_value)
+                new_ins = ins[:pos]+[new_value]+ins[pos+1:]
+                new_var = (tuple(new_ins),var[1])
+                sequence[i] = new_var
+            i+=1
                 
                 
                 
@@ -1773,7 +1789,6 @@ def generate_encoding(instructions,variables,source_stack,opcodes,simplification
     global memory_order
     global storage_order
 
-    print(source_stack)
     
     
     instructions_reverse = instructions[::-1]
@@ -1783,18 +1798,19 @@ def generate_encoding(instructions,variables,source_stack,opcodes,simplification
         s_dict = {}
         search_for_value(v,instructions_reverse, source_stack,simplification)
         variable_content[v] = s_dict[v]
-
-    print(variable_content)
-    print(u_dict)
     
     if context_info != {}:
         update_info_with_context()
-    
+        update_info_with_constancy()
+        
     if not split_sto:
         generate_storage_info(instructions,source_stack,opcodes,simplification)
         if context_info != {}:
             update_memory_with_context(memory_order)
+            update_memory_with_constancy(memory_order)
+            
             update_memory_with_context(storage_order)
+            update_memory_with_constancy(storage_order)
     else:
         memory_order = []
         storage_order = []
@@ -1890,8 +1906,6 @@ def generate_storage_info(instructions,source_stack,opcodes,simplification=True)
         extra_dep_info["sto_deps_int2ins"] = extra_dep_info_ins2int_sto
 
     if useless_info != []: #It deletes from memory_order de useless mstores
-        print("Initial memory order")
-        print(memory_order)
         new_memory_order = []
         extra_deps_todelete = []
         for i in range(len(memory_order)):
@@ -1903,15 +1917,10 @@ def generate_storage_info(instructions,source_stack,opcodes,simplification=True)
                         if extra_dep_info != {}:
                             extra_deps_todelete.append(i)
 
-        print("New Memory order")
-        print(new_memory_order)
-        print("BEFORE")
-        print(extra_dep_info)
         if extra_dep_info != {}:
             for x in extra_deps_todelete[::-1]:
                 remove_extra_deps_info(x, "memory")
-        print("AFTER")
-        print(extra_dep_info)
+
         memory_order = new_memory_order
 
         
@@ -1940,6 +1949,7 @@ def generate_storage_info(instructions,source_stack,opcodes,simplification=True)
 
     msg = "Storage dep simplified: "+str(stdep)
     check_and_print_debug_info(debug, msg)
+
     
     if simplification:
         simp = True
@@ -2261,11 +2271,31 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     
     new_user_defins = update_user_defins(new_ts,new_user_defins)
     
-    # if simplification:
-    vars_list = recompute_vars_set(new_ss,new_ts,new_user_defins,[])
     # else:
     #     vars_list = recompute_vars_set(new_ss,new_ts,new_user_defins,opcodes_seq["non_inter"])
+
+    if context_info != {}:
+        new_ts, new_user_defins = modify_json_info_with_constancy(new_ts,new_user_defins)
+        
+        if simplification:
+            new_user_defins,new_ts = apply_all_simp_rules(new_user_defins,vars_list,new_ts)
+            apply_all_comparison(new_user_defins,new_ts)
+        else:
+            new_user_defins = all_user_defins
+
+        new_user_defins1 = update_user_defins(new_ts,new_user_defins)
+
+        removed_instructions = list(filter(lambda x: x not in new_user_defins1,new_user_defins))
     
+        update_storage_sequences(removed_instructions)
+    
+        new_user_defins, new_ts = unify_all_user_defins(new_ts,new_user_defins1,vars_list)
+    
+        new_user_defins = update_user_defins(new_ts,new_user_defins)
+    
+    # if simplification:
+    vars_list = recompute_vars_set(new_ss,new_ts,new_user_defins,[])
+
     total_inpt_vars = []
     
     for user_ins in new_user_defins:
@@ -3575,9 +3605,7 @@ def smt_translate_block(rule,file_name,block_name,immutable_dict,simplification=
     opcodes = get_opcodes(rule)    
     
     if extra_opt_info.get("dependences",False):
-        print(extra_dependences_info)
         process_extra_dependences_info(extra_dependences_info,"memory")
-        print(extra_dep_info)
         process_extra_dependences_info(extra_dependences_info,"storage")
 
     if extra_opt_info.get("useless",False):
@@ -3587,6 +3615,7 @@ def smt_translate_block(rule,file_name,block_name,immutable_dict,simplification=
     if extra_opt_info.get("context",False):        
         idx = get_stack_variables(rule)
         process_context_info(extra_dependences_info,idx)
+        
         
     info = "INFO DEPLOY "+paths.gasol_path+"ethir_OK_"+ block_name + " LENGTH="+str(len(opcodes))+" PUSH="+str(len(list(filter(lambda x: x.find("nop(PUSH")!=-1,opcodes))))
     info_deploy.append(info)
@@ -5384,7 +5413,6 @@ def replace_loads_by_sstores(storage_location, complementary_location, location)
                     else:
                         
                         msg = "[OPT]: Replaced mload by its value"
-                        print(i+pos+1)
                         check_and_print_debug_info(debug, msg)
 
                         gas_memory_op+=3
@@ -6942,16 +6970,38 @@ def modify_sstack_context_info(sstack):
     return sstack
 
 def get_value_constancy_context(variable):
-    print(variable)
 
     if is_integer(variable) != -1:
         return variable
 
     if variable.find("s(")!=-1:
-        print(context_info["stack_size"]-1-int(variable[2:-1]))
         number = context_info["stack_size"]-1-int(variable[2:-1])
         c_info = list(filter(lambda x: x[0] == int(number), context_info["constancy_context"]))
         if len(c_info)!=0:
             return str(c_info[0][1])
         else:
             return -1
+
+
+def modify_json_info_with_constancy(ts,user_defins):
+
+    constancy_info = context_info["constancy_context"]
+
+    new_ts = ts
+    for c in constancy_info:
+        new_val = "s("+str(c[0])+")"
+        old_val = c[1]
+
+        for i in range(len(ts)):
+            t = ts[i]
+            if t == old_val:
+               ts[i] = new_val 
+
+        for u in user_defins:
+            inpt_sk = u["inpt_sk"]
+            if old_val in inpt_sk:
+                pos = inpt_sk.index(old_val)
+                new_inpt_sk = inpt_sk[:pos]+[new_val]+inpt_sk[pos+1:]
+                u["inpt_sk"] = new_inpt_sk
+                
+    return ts, user_defins
