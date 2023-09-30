@@ -671,6 +671,11 @@ def update_unary_func(func,var,val,evaluate):
 
         #check for value of val when considering constancy
         #TODO
+
+        if context_info.get("constancy_context",[]) != []:
+            val_aux = get_value_constancy_context(val)
+            if val_aux != -1:
+                val = val_aux
         
         if is_integer(val)!=-1 and (func=="not" or func=="iszero") and evaluate:
             if func == "not":
@@ -1487,6 +1492,14 @@ def compute_binary(expression,level):
     funct = expression[2]
 
     r, vals = all_integers([v0,v1])
+    
+    if not r and context_info.get("constancy_context",[]) != []:
+        v0 = get_value_constancy_context(v0)
+        v1 = get_value_constancy_context(v1)
+
+        if v0 != -1 and v1!=-1:
+            vals = [int(v0),int(v1)]
+            r = True
 
     if r and funct in ["+","-","*","/","^","and","or","xor","%","eq","gt","lt","shl","shr","sar"]:
 
@@ -1553,6 +1566,17 @@ def compute_ternary(expression):
     funct = expression[3]
 
     r, vals = all_integers([v0,v1,v2])
+
+    if not r and context_info.get("constancy_context",[]) != []:
+        v0 = get_value_constancy_context(v0)
+        v1 = get_value_constancy_context(v1)
+        v2 = get_value_constancy_context(v2)
+        
+        if v0 != -1 and v1!=-1 and v2!=-1:
+            vals = [v0,v1,v2]
+            r = True
+
+
     if r and funct in ["addmod","mulmod"]:
         val = evaluate_expression_ter(funct,vals[0],vals[1],vals[2])
 
@@ -1705,7 +1729,7 @@ def update_info_with_constancy_context():
     global variable_content
     global s_dict
     
-    for p in context_info["aliasing_context"]:
+    for p in context_info["constancy_context"]:
         old_value = "s("+str(context_info["stack_size"]-1-p[1])+")"
         new_value = "s("+str(context_info["stack_size"]-1-p[0])+")"
         for u in u_dict:
@@ -1748,6 +1772,9 @@ def generate_encoding(instructions,variables,source_stack,opcodes,simplification
     global variable_content
     global memory_order
     global storage_order
+
+    print(source_stack)
+    
     
     instructions_reverse = instructions[::-1]
     u_dict = {}
@@ -1757,6 +1784,9 @@ def generate_encoding(instructions,variables,source_stack,opcodes,simplification
         search_for_value(v,instructions_reverse, source_stack,simplification)
         variable_content[v] = s_dict[v]
 
+    print(variable_content)
+    print(u_dict)
+    
     if context_info != {}:
         update_info_with_context()
     
@@ -6910,3 +6940,18 @@ def modify_sstack_context_info(sstack):
             sstack = sstack[:pos]+["s("+str(p[0])+")"]+sstack[pos+1:]
 
     return sstack
+
+def get_value_constancy_context(variable):
+    print(variable)
+
+    if is_integer(variable) != -1:
+        return variable
+
+    if variable.find("s(")!=-1:
+        print(context_info["stack_size"]-1-int(variable[2:-1]))
+        number = context_info["stack_size"]-1-int(variable[2:-1])
+        c_info = list(filter(lambda x: x[0] == int(number), context_info["constancy_context"]))
+        if len(c_info)!=0:
+            return str(c_info[0][1])
+        else:
+            return -1
