@@ -252,7 +252,7 @@ def process_context_info(info,stack_idx):
     aliasing_context = info.get_aliasing_context()
 
     valid_constancy_context = list(filter(lambda x: x[0]<stack_idx,constancy_context))
-    valid_aliasing_context = list(filter(lambda x: x[0]<stack_idx and x[1]<stack_idx,constancy_context))
+    valid_aliasing_context = list(filter(lambda x: x[0]<stack_idx and x[1]<stack_idx,aliasing_context))
 
     context_info["constancy_context"] = valid_constancy_context
     context_info["aliasing_context"] = valid_aliasing_context
@@ -1798,7 +1798,8 @@ def generate_encoding(instructions,variables,source_stack,opcodes,simplification
         s_dict = {}
         search_for_value(v,instructions_reverse, source_stack,simplification)
         variable_content[v] = s_dict[v]
-    
+
+        
     if context_info != {}:
         update_info_with_context()
         update_info_with_constancy()
@@ -6693,6 +6694,7 @@ def compute_vars(tstack, sstack, userdef_ins):
     coincide = True
     i = len(sstack)-1
     j = len(tstack)-1
+
     
     while(i>=0 and coincide and tstack != []):
         if(sstack[i] == tstack[j]):
@@ -6777,7 +6779,7 @@ def compute_vars(tstack, sstack, userdef_ins):
     return max(max_stacks,total_vars)
         
 def compute_vars_aux(var, sstack, tstack, userdef_ins, visited):
-
+    
     if var in visited:
         return 1,1, True
     elif var in sstack and var not in visited:
