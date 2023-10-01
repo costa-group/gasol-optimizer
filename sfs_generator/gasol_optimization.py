@@ -675,7 +675,7 @@ def update_unary_func(func,var,val,evaluate):
             
             val_aux = get_value_constancy_context(val)
 
-            if val_aux != -1:
+            if val_aux != -1 and (func=="not" or func=="iszero"):
                 val = val_aux
         
         if is_integer(val)!=-1 and (func=="not" or func=="iszero") and evaluate:
@@ -1772,7 +1772,8 @@ def update_memory_with_constancy(sequence):
         new_value = str(p[1])
         i = 0
         while(i<len(sequence)):
-            ins = list(sequence[i])
+            var = sequence[i]
+            ins = list(var[0])
             if old_value in ins:
                 pos = ins.index(old_value)
                 new_ins = ins[:pos]+[new_value]+ins[pos+1:]
@@ -1788,7 +1789,8 @@ def generate_encoding(instructions,variables,source_stack,opcodes,simplification
     global variable_content
     global memory_order
     global storage_order
-
+    global storage_dep
+    global memory_dep
     
     
     instructions_reverse = instructions[::-1]
@@ -1797,24 +1799,87 @@ def generate_encoding(instructions,variables,source_stack,opcodes,simplification
     for v in variables:
         s_dict = {}
         search_for_value(v,instructions_reverse, source_stack,simplification)
-        variable_content[v] = s_dict[v]
-
-        
-    if context_info != {}:
-        update_info_with_context()
-        update_info_with_constancy()
+        variable_content[v] = s_dict[v]    
         
     if not split_sto:
         generate_storage_info(instructions,source_stack,opcodes,simplification)
         if context_info != {}:
+
+            update_info_with_context()
+            update_info_with_constancy()
+            
             update_memory_with_context(memory_order)
             update_memory_with_constancy(memory_order)
             
             update_memory_with_context(storage_order)
             update_memory_with_constancy(storage_order)
+
+            msg = "Recomputing memory simplification with context info"
+            check_and_print_debug_info(debug, msg)
+
+            storage_dep, memory_dep = compute_memory_dependences(storage_order,memory_order,simplification)
+            
     else:
         memory_order = []
         storage_order = []
+
+
+
+def compute_memory_dependences(storage_order,memory_order,simplification):
+    remove_loads_instructions()
+    
+    if simplification:
+        simp = True
+        while(simp):
+            simp = simplify_memory(storage_order, memory_order, "storage")
+
+            
+    storage_order = list(filter(lambda x: type(x) == tuple, storage_order))
+    unify_loads_instructions(storage_order, "storage")
+
+
+    msg = "Storage order: "+str(storage_order)
+    check_and_print_debug_info(debug, msg)
+
+    stdep = generate_dependences(storage_order,"storage")
+
+    msg = "Storage dep: "+str(stdep)
+    check_and_print_debug_info(debug, msg)
+
+    stdep = simplify_dependences(stdep)
+
+    msg = "Storage dep simplified: "+str(stdep)
+    check_and_print_debug_info(debug, msg)
+
+    
+    if simplification:
+        simp = True
+        while(simp):
+            simp = simplify_memory(memory_order, storage_order, "memory")
+            
+    memory_order = list(filter(lambda x: type(x) == tuple, memory_order))    
+
+    unify_loads_instructions(memory_order, "memory")
+    
+    unify_keccak_instructions(memory_order,storage_order)
+
+    msg = "Memory order: "+str(memory_order)
+    check_and_print_debug_info(debug, msg)
+    
+    memdep = generate_dependences(memory_order,"memory")
+    
+    msg = "Memory dep: "+str(memdep)
+    check_and_print_debug_info(debug, msg)
+
+    memdep = simplify_dependences(memdep)
+
+    msg = "Memory dep simplified: "+str(memdep)
+    check_and_print_debug_info(debug, msg)
+
+
+    return stdep, memdep
+
+
         
 def generate_storage_info(instructions,source_stack,opcodes,simplification=True):
     global sstore_seq
@@ -1824,7 +1889,8 @@ def generate_storage_info(instructions,source_stack,opcodes,simplification=True)
     global storage_dep
     global memory_dep
     global extra_dep_info
-    
+
+
     sload_relative_pos = {}
     mload_relative_pos = {}
 
@@ -1924,66 +1990,8 @@ def generate_storage_info(instructions,source_stack,opcodes,simplification=True)
 
         memory_order = new_memory_order
 
-        
-    remove_loads_instructions()
-    
-    if simplification:
-        simp = True
-        while(simp):
-            simp = simplify_memory(storage_order, memory_order, "storage")
-
-    # print(memory_order)
+    storage_dep, memory_dep = compute_memory_dependences(storage_order,memory_order,simplification)
             
-    storage_order = list(filter(lambda x: type(x) == tuple, storage_order))
-    unify_loads_instructions(storage_order, "storage")
-
-
-    msg = "Storage order: "+str(storage_order)
-    check_and_print_debug_info(debug, msg)
-
-    stdep = generate_dependences(storage_order,"storage")
-
-    msg = "Storage dep: "+str(stdep)
-    check_and_print_debug_info(debug, msg)
-
-    stdep = simplify_dependences(stdep)
-
-    msg = "Storage dep simplified: "+str(stdep)
-    check_and_print_debug_info(debug, msg)
-
-    
-    if simplification:
-        simp = True
-        while(simp):
-            simp = simplify_memory(memory_order, storage_order, "memory")
-            
-    memory_order = list(filter(lambda x: type(x) == tuple, memory_order))    
-
-    unify_loads_instructions(memory_order, "memory")
-    
-    unify_keccak_instructions(memory_order,storage_order)
-
-    msg = "Memory order: "+str(memory_order)
-    check_and_print_debug_info(debug, msg)
-    
-    memdep = generate_dependences(memory_order,"memory")
-    
-    msg = "Memory dep: "+str(memdep)
-    check_and_print_debug_info(debug, msg)
-
-    memdep = simplify_dependences(memdep)
-
-    msg = "Memory dep simplified: "+str(memdep)
-    check_and_print_debug_info(debug, msg)
-    
-    s1= compute_clousure(stdep)
-    m1 = compute_clousure(memdep)
-    
-    get_best_storage(s1, len(storage_order))
-    
-    storage_dep = stdep
-    memory_dep = memdep
-        
 def generate_source_stack_variables(idx):
     ss_list = []
     
@@ -6135,7 +6143,6 @@ def compute_identifiers_storage_instructions(storage_location, location, new_use
 
     key_list = list(u_dict.keys())
     values_list = list(u_dict.values())
-
     
     for i in range(0,len(storage_location)):
         ins = storage_location[i]
