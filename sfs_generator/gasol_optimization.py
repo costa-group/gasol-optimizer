@@ -254,10 +254,31 @@ def process_context_info(info,stack_idx):
     valid_constancy_context = list(filter(lambda x: x[0]<stack_idx,constancy_context))
     valid_aliasing_context = list(filter(lambda x: x[0]<stack_idx and x[1]<stack_idx,aliasing_context))
 
+
+    computed_aliasing = compute_potential_aliasing(valid_constancy_context, valid_aliasing_context)
+    
     context_info["constancy_context"] = valid_constancy_context
     context_info["aliasing_context"] = valid_aliasing_context
+    context_info["computed_aliasing"] = computed_aliasing
     context_info["stack_size"] = stack_idx
+
+
+def compute_potential_aliasing(constancy_list,aliasing_list):
+    same_values = {}
     
+    for p in constancy_list:
+        pos = p[0]
+        val = p[1]
+        alias = same_values.get(val,[])
+        alias.append(pos)
+        same_values[val] = alias
+
+    for val in same_values:
+        same_values[val].sort()
+        
+    return same_values
+
+        
 def filter_opcodes(rule):
     instructions = rule.get_instructions()
     rbr_ins_aux = list(filter(lambda x: x.find("nop(")==-1, instructions))
@@ -6827,6 +6848,8 @@ def compute_vars_aux(var, sstack, tstack, userdef_ins, visited):
             visited.append(var) 
         return 1,1, True
     else:
+        print(userdef_ins)
+        print(var)
         instr_l = list(filter(lambda x: var in x["outpt_sk"], userdef_ins))
         if len(instr_l) == 0:
             raise Exception("Error in computing vars")
@@ -6987,6 +7010,15 @@ def modify_sstack_context_info(sstack):
             pos = sstack.index("s("+str(p[1])+")")
             sstack = sstack[:pos]+["s("+str(p[0])+")"]+sstack[pos+1:]
 
+    for v in context_info["computed_aliasing"]:
+        alias = context_info["computed_aliasing"][v]
+        new_value = "s("+str(alias[0])+")"
+        for r in alias[1:]:
+            old_value = "s("+str(r)+")"
+            if old_value in sstack:
+                pos = sstack.index(old_value)
+                sstack = sstack[:pos]+[new_value]+sstack[pos+1:]
+            
     return sstack
 
 def get_value_constancy_context(variable):
@@ -7006,10 +7038,14 @@ def get_value_constancy_context(variable):
 def modify_json_info_with_constancy(ts,user_defins):
 
     constancy_info = context_info["constancy_context"]
-
-    new_ts = ts
-    for c in constancy_info:
-        new_val = "s("+str(c[0])+")"
+    
+    for c in constancy_info: #c is a pair (pos, val)
+        if c[1] in context_info["computed_aliasing"]:
+            val = c[1]
+            new_val = "s("+str(context_info["computed_aliasing"][val][0])+")"
+        else:
+            new_val = "s("+str(c[0])+")"
+        
         old_val = c[1]
 
         for i in range(len(ts)):
