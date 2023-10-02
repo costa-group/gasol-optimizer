@@ -1803,6 +1803,7 @@ def generate_encoding(instructions,variables,source_stack,opcodes,simplification
         
     if not split_sto:
         generate_storage_info(instructions,source_stack,opcodes,simplification)
+        
         if context_info != {}:
 
             update_info_with_context()
@@ -1817,15 +1818,19 @@ def generate_encoding(instructions,variables,source_stack,opcodes,simplification
             msg = "Recomputing memory simplification with context info"
             check_and_print_debug_info(debug, msg)
 
-            storage_dep, memory_dep = compute_memory_dependences(storage_order,memory_order,simplification)
-            
+            compute_memory_dependences(simplification)
+
     else:
         memory_order = []
         storage_order = []
 
 
-
-def compute_memory_dependences(storage_order,memory_order,simplification):
+def compute_memory_dependences(simplification):
+    global memory_order
+    global storage_order
+    global storage_dep
+    global memory_dep
+    
     remove_loads_instructions()
     
     if simplification:
@@ -1876,8 +1881,14 @@ def compute_memory_dependences(storage_order,memory_order,simplification):
     msg = "Memory dep simplified: "+str(memdep)
     check_and_print_debug_info(debug, msg)
 
+    s1= compute_clousure(stdep)
+    m1 = compute_clousure(memdep)
+    
+    get_best_storage(s1, len(storage_order))
+    
+    storage_dep = stdep
+    memory_dep = memdep
 
-    return stdep, memdep
 
 
         
@@ -1990,7 +2001,7 @@ def generate_storage_info(instructions,source_stack,opcodes,simplification=True)
 
         memory_order = new_memory_order
 
-    storage_dep, memory_dep = compute_memory_dependences(storage_order,memory_order,simplification)
+    compute_memory_dependences(simplification)
             
 def generate_source_stack_variables(idx):
     ss_list = []
