@@ -253,8 +253,7 @@ def process_context_info(info,stack_idx):
 
     valid_constancy_context = list(filter(lambda x: x[0]<stack_idx,constancy_context))
     valid_aliasing_context = list(filter(lambda x: x[0]<stack_idx and x[1]<stack_idx,aliasing_context))
-
-
+    
     computed_aliasing = compute_potential_aliasing(valid_constancy_context, valid_aliasing_context)
     
     context_info["constancy_context"] = valid_constancy_context
@@ -1728,6 +1727,7 @@ def update_info_with_context():
     for p in context_info["aliasing_context"]:
         old_value = "s("+str(context_info["stack_size"]-1-p[1])+")"
         new_value = "s("+str(context_info["stack_size"]-1-p[0])+")"
+
         for u in u_dict:
             var = u_dict[u]
             ins = list(var[0])
@@ -1771,35 +1771,41 @@ def update_info_with_constancy():
             if str(s_dict[s_var]).find(old_value)!=-1:
                 s_dict[s_var] = new_value
 
-def update_memory_with_context(sequence):
-
+def update_memory_with_context(m_sequence):
+    global memory_order
+    global storage_order
+    
     for p in context_info["aliasing_context"]:
         old_value = "s("+str(context_info["stack_size"]-1-p[1])+")"
         new_value = "s("+str(context_info["stack_size"]-1-p[0])+")"
         i = 0
-        while(i<len(sequence)):
-            ins = list(sequence[i])
-            if old_value in ins:
-                pos = ins.index(old_value)
-                new_ins = ins[:pos]+[new_value]+ins[pos+1:]
-                new_var = (tuple(new_ins),var[1])
-                sequence[i] = new_var
-            i+=1
 
-def update_memory_with_constancy(sequence):
-
-    for p in context_info["constancy_context"]:
-        old_value = "s("+str(context_info["stack_size"]-1-p[0])+")"
-        new_value = str(p[1])
-        i = 0
-        while(i<len(sequence)):
-            var = sequence[i]
+        while(i<len(m_sequence)):
+            var = m_sequence[i]
             ins = list(var[0])
             if old_value in ins:
                 pos = ins.index(old_value)
                 new_ins = ins[:pos]+[new_value]+ins[pos+1:]
                 new_var = (tuple(new_ins),var[1])
-                sequence[i] = new_var
+                m_sequence[i] = new_var
+            i+=1
+
+def update_memory_with_constancy(m_sequence):
+    global memory_order
+    global storage_order
+    
+    for p in context_info["constancy_context"]:
+        old_value = "s("+str(context_info["stack_size"]-1-p[0])+")"
+        new_value = str(p[1])
+        i = 0
+        while(i<len(m_sequence)):
+            var = m_sequence[i]
+            ins = list(var[0])
+            if old_value in ins:
+                pos = ins.index(old_value)
+                new_ins = ins[:pos]+[new_value]+ins[pos+1:]
+                new_var = (tuple(new_ins),var[1])
+                m_sequence[i] = new_var
             i+=1
                 
                 
@@ -1816,6 +1822,7 @@ def generate_encoding(instructions,variables,source_stack,opcodes,simplification
     
     instructions_reverse = instructions[::-1]
     u_dict = {}
+    
     variable_content = {}
     for v in variables:
         s_dict = {}
@@ -1840,7 +1847,7 @@ def generate_encoding(instructions,variables,source_stack,opcodes,simplification
             check_and_print_debug_info(debug, msg)
 
             compute_memory_dependences(simplification)
-
+            
     else:
         memory_order = []
         storage_order = []
@@ -6848,9 +6855,8 @@ def compute_vars_aux(var, sstack, tstack, userdef_ins, visited):
             visited.append(var) 
         return 1,1, True
     else:
-        print(userdef_ins)
-        print(var)
         instr_l = list(filter(lambda x: var in x["outpt_sk"], userdef_ins))
+
         if len(instr_l) == 0:
             raise Exception("Error in computing vars")
 
@@ -7003,6 +7009,7 @@ def unify_user_defins(ts,user_def_instructions,list_vars):
         
 
 def modify_sstack_context_info(sstack):
+    
     for p in context_info["aliasing_context"]:
         old_value = "s("+str(p[1])+")"
         new_value = "s("+str(p[0])+")"
@@ -7018,7 +7025,8 @@ def modify_sstack_context_info(sstack):
             if old_value in sstack:
                 pos = sstack.index(old_value)
                 sstack = sstack[:pos]+[new_value]+sstack[pos+1:]
-            
+    
+
     return sstack
 
 def get_value_constancy_context(variable):
