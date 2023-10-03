@@ -182,6 +182,9 @@ def init_globals():
     global extra_dep_info
     extra_dep_info = {}
 
+    global non_aliasing_disabled
+    non_aliasing_disabled = False
+    
     global useless_info
     useless_info = []
 
@@ -243,7 +246,6 @@ def process_useless_info(info):
            
     # extra_dep_info["storage_deps"] = info.get("storage_deps",[])
     # raise Exception
-    check_and_print_debug_info(debug, useless_info)
 
 def process_context_info(info,stack_idx):
     global context_info
@@ -3625,6 +3627,7 @@ def smt_translate_block(rule,file_name,block_name,immutable_dict,simplification=
     global revert_flag
     global assignImm_values
     global debug
+    global non_aliasing_disabled
     
     init_globals()
     
@@ -3658,7 +3661,8 @@ def smt_translate_block(rule,file_name,block_name,immutable_dict,simplification=
     if extra_opt_info.get("dependences",False):
         process_extra_dependences_info(extra_dependences_info,"memory")
         process_extra_dependences_info(extra_dependences_info,"storage")
-
+        non_aliasing_disabled = extra_opt_info.get("non_aliasing_disabled",False)
+        
     if extra_opt_info.get("useless",False):
         process_useless_info(extra_dependences_info)
         
@@ -6319,7 +6323,7 @@ def are_dependent(t1, t2, idx1, idx2, location = "memory"):
 
 
     #It uses memory analysis dependences
-    if extra_dep_info!={}:
+    if extra_dep_info!={} and not non_aliasing_disabled:
         pc_index1 = get_idx_in_instructions(idx1, location)
         pc_index2 = get_idx_in_instructions(idx2, location)
 
