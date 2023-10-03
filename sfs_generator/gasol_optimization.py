@@ -2017,8 +2017,6 @@ def generate_storage_info(instructions,source_stack,opcodes,simplification=True)
         new_memory_order = []
         extra_deps_todelete = []
 
-        print(extra_dep_info_ins2int)
-
         for i in range(len(memory_order)):
             for x in extra_dep_info_ins2int:
                 if i in extra_dep_info_ins2int[x]:
@@ -3663,7 +3661,6 @@ def smt_translate_block(rule,file_name,block_name,immutable_dict,simplification=
 
     if extra_opt_info.get("useless",False):
         process_useless_info(extra_dependences_info)
-        print(useless_info)
         
     if extra_opt_info.get("context",False):        
         idx = get_stack_variables(rule)
