@@ -1855,6 +1855,9 @@ def generate_encoding(instructions,variables,source_stack,opcodes,simplification
         storage_order = []
 
 
+    print(extra_dep_info)
+    print(opcodes)
+
 def compute_memory_dependences(simplification):
     global memory_order
     global storage_order
@@ -1966,9 +1969,20 @@ def generate_storage_info(instructions,source_stack,opcodes,simplification=True)
 
     opcodes_idx = 0
     next_val = 0
-    
+
+    # print(instructions)
+    # print(opcodes)
     for x in range(0,len(instructions)):
-            
+        # print(x)
+        # print(instructions[x])
+        # print(opcodes_idx)
+        # print(next_val)
+        # try:
+        #     print(opcodes[opcodes_idx])
+        # except:
+        #     print("NO")
+        # print("*******")
+        
         if instructions[x].find("sload")!=-1:
             ins_list = [] if x == 0 else instructions[x-1::-1]
             exp,r = generate_sload_mload(instructions[x],ins_list,source_stack,len(instructions)-x,simplification)
@@ -2006,10 +2020,15 @@ def generate_storage_info(instructions,source_stack,opcodes,simplification=True)
             if  opcodes[opcodes_idx].find("SWAP")!=-1:
                 next_val = x+3
                 opcodes_idx+=1
-            elif opcodes[opcodes_idx].find("POP")!=-1:
-                opcodes_idx+=2
             else:
                 opcodes_idx+=1
+
+            if opcodes_idx < len(opcodes):
+                if opcodes[opcodes_idx].find("POP")!=-1:
+                    opcodes_idx+=1
+
+    
+    print(extra_dep_info_ins2int)
     
     if extra_dep_info != {}:
         extra_dep_info["mem_deps_int2ins"] = extra_dep_info_ins2int
@@ -2018,7 +2037,7 @@ def generate_storage_info(instructions,source_stack,opcodes,simplification=True)
     if useless_info != []: #It deletes from memory_order de useless mstores
         new_memory_order = []
         extra_deps_todelete = []
-
+        
         for i in range(len(memory_order)):
             for x in extra_dep_info_ins2int:
                 if i in extra_dep_info_ins2int[x]:
@@ -6188,6 +6207,8 @@ def compute_identifiers_storage_instructions(storage_location, location, new_use
 
     key_list = list(u_dict.keys())
     values_list = list(u_dict.values())
+
+    print(storage_location)
     
     for i in range(0,len(storage_location)):
         ins = storage_location[i]
@@ -6203,14 +6224,19 @@ def compute_identifiers_storage_instructions(storage_location, location, new_use
                 store_count+=1
 
         elif ins[0][-1].find("keccak")!=-1:
+            print(ins)
+            print(values_list)
             keccak_ins = list(filter(lambda x: x[0][-1] == ins[0][-1],values_list))
+            print(keccak_ins)
             if len(keccak_ins)!=1: #if it does not exist means that it does not appear in the target stack and we have to create the identifier
                 storage_identifiers.append("KECCAK256_"+str(keccak_count))
                 keccak_count+=1
             else:
                 pos = values_list.index(keccak_ins[0])
                 var = key_list[pos]
+                print(new_user_defins)
                 k_ins = list(filter(lambda x: x["disasm"] == "KECCAK256" and x["outpt_sk"] == [var],new_user_defins))
+                print(k_ins)
                 if len(k_ins)!= 1:
                     raise Exception("Error in looking for keccak instruction")
                 else:
