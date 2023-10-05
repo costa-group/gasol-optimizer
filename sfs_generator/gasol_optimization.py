@@ -1863,7 +1863,14 @@ def compute_memory_dependences(simplification):
     global storage_order
     global storage_dep
     global memory_dep
-    
+    global non_aliasing_disabled
+
+    modified = False
+    if non_aliasing_disabled:
+        modified = True
+        old_value = non_aliasing_disabled
+        non_aliasing_disabled = not non_aliasing_disabled
+        
     remove_loads_instructions()
     
     if simplification:
@@ -1879,6 +1886,10 @@ def compute_memory_dependences(simplification):
     msg = "Storage order: "+str(storage_order)
     check_and_print_debug_info(debug, msg)
 
+    if modified:
+        non_aliasing_disabled = old_value
+        modified = False
+    
     stdep = generate_dependences(storage_order,"storage")
 
     msg = "Storage dep: "+str(stdep)
@@ -1888,6 +1899,13 @@ def compute_memory_dependences(simplification):
 
     msg = "Storage dep simplified: "+str(stdep)
     check_and_print_debug_info(debug, msg)
+
+
+    modified = False
+    if non_aliasing_disabled:
+        modified = True
+        old_value = non_aliasing_disabled
+        non_aliasing_disabled = not non_aliasing_disabled
 
     
     if simplification:
@@ -1903,6 +1921,10 @@ def compute_memory_dependences(simplification):
 
     msg = "Memory order: "+str(memory_order)
     check_and_print_debug_info(debug, msg)
+
+    if modified:
+        non_aliasing_disabled = old_value
+        modified = False
     
     memdep = generate_dependences(memory_order,"memory")
     
@@ -2050,8 +2072,6 @@ def generate_storage_info(instructions,source_stack,opcodes,simplification=True)
 
         memory_order = new_memory_order
 
-
-    print(extra_dep_info_ins2int_sto)
     compute_memory_dependences(simplification)
             
 def generate_source_stack_variables(idx):
@@ -2334,9 +2354,9 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     
     new_user_defins1 = update_user_defins(new_ts,new_user_defins)
 
-    removed_instructions = list(filter(lambda x: x not in new_user_defins1,new_user_defins))
-
-    update_storage_sequences(removed_instructions,simplification)
+    removed_instructions = list(filter(lambda x: x not in new_user_defins1,new_user_defins))    
+    
+    update_storage_sequences(removed_instructions,simplification,max_ss_idx)
 
     new_user_defins, new_ts = unify_all_user_defins(new_ts,new_user_defins1,vars_list)
     
@@ -2358,7 +2378,7 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
 
         removed_instructions = list(filter(lambda x: x not in new_user_defins1,new_user_defins))
     
-        update_storage_sequences(removed_instructions,simplification)
+        update_storage_sequences(removed_instructions,simplification,max_ss_idx)
     
         new_user_defins, new_ts = unify_all_user_defins(new_ts,new_user_defins1,vars_list)
     
@@ -5276,6 +5296,9 @@ def update_tstack_userdef(old_var, new_var,tstack, user_def_instrs):
 def get_sfs_dict():
     return sfs_contracts
 
+def get_discount_op():
+    return discount_op
+
 def is_identity_map(source_stack,target_stack,instructions):
 
     if len(user_defins) > 0:
@@ -6241,9 +6264,6 @@ def compute_identifiers_storage_instructions(storage_location, location, new_use
 
             
         else: # loads instructions
-            # print(ins)
-            # print(ins[0][-1])
-            # print(values_list)
             load_ins = list(filter(lambda x: x[0][-1] == ins[0][-1],values_list))
             if len(load_ins)!=1:
                 raise Exception("Error in looking load instruction")
@@ -6251,7 +6271,6 @@ def compute_identifiers_storage_instructions(storage_location, location, new_use
             pos = values_list.index(load_ins[0])
             var = key_list[pos]
             sload_ins = list(filter(lambda x: x["disasm"] == load and x["outpt_sk"] == [var],new_user_defins))
-            
             if len(sload_ins)!= 1:
                 raise Exception("Error in looking for load instruction")
             else:
@@ -6261,7 +6280,7 @@ def compute_identifiers_storage_instructions(storage_location, location, new_use
 
 
 
-def update_storage_sequences(removed_instructions,simplification):
+def update_storage_sequences(removed_instructions,simplification,max_ss_idx):
     global storage_order
     global memory_order
     global storage_dep
@@ -6274,21 +6293,42 @@ def update_storage_sequences(removed_instructions,simplification):
         instructions_name = ins[0][-1]
         inpt_var = ins[0][0]
         if instructions_name.find("sload")!=-1:
-            unused = list(filter(lambda x: x["disasm"] == "SLOAD" and inpt_var == str(x["inpt_sk"][0]),removed_instructions))
+            unused = list(filter(lambda x: x["disasm"] == "SLOAD", removed_instructions))
+            unify_stack_variables_unused(unused,max_ss_idx)
+            unsued = list(filter(lambda x: inpt_var == str(x["inpt_sk"][0]),unused))
             if len(unused)==0:
                 new_storage_order.append(ins)
+                
         elif instructions_name.find("sstore")!=-1:
-            unused = list(filter(lambda x: x["disasm"] == "SSTORE" and inpt_var == str(x["inpt_sk"][0]),removed_instructions))
+            unused = list(filter(lambda x: x["disasm"] == "SSTORE",removed_instructions))
+            unify_stack_variables_unused(unused,max_ss_idx)
+            unsued = list(filter(lambda x: inpt_var == str(x["inpt_sk"][0]),unused))
             if len(unused)==0:
                 new_storage_order.append(ins)
+                
         elif instructions_name.find("keccak")!=-1:
-            unused = list(filter(lambda x: x["disasm"] == "KECCAK256" and inpt_var == str(x["inpt_sk"][0]),removed_instructions))
+            unused = list(filter(lambda x: x["disasm"] == "KECCAK256", removed_instructions))
+            unify_stack_variables_unused(unused,max_ss_idx)
+            unsued = list(filter(lambda x: inpt_var == str(x["inpt_sk"][0]),unused))
             if len(unused)==0:
                 new_storage_order.append(ins)
             else:
-                out_var = unused[0]["outpt_sk"][0]
-                if u_dict[out_var] != ins:
+                found = False
+                for u in unused:
+                    out_var = u["outpt_sk"][0]
+                    if u_dict[out_var] == ins:
+                        found = True
+                if not found:
                     new_storage_order.append(ins)
+
+        # elif instructions_name.find("keccak")!=-1:
+        #     unused = list(filter(lambda x: x["disasm"] == "KECCAK256" and inpt_var == str(x["inpt_sk"][0]),removed_instructions))
+        #     if len(unused)==0:
+        #         new_storage_order.append(ins)
+        #     else:
+        #         out_var = unused[0]["outpt_sk"][0]
+        #         if u_dict[out_var] != ins:
+        #             new_storage_order.append(ins)        
         else:
             new_storage_order.append(ins)
 
@@ -6310,27 +6350,40 @@ def update_storage_sequences(removed_instructions,simplification):
         instructions_name = ins[0][-1]
         inpt_var = ins[0][0]
         if instructions_name.find("mload")!=-1:
-            unused = list(filter(lambda x: x["disasm"] == "MLOAD" and inpt_var == str(x["inpt_sk"][0]),removed_instructions))
+
+            unused = list(filter(lambda x: x["disasm"] == "MLOAD",removed_instructions))
+            unify_stack_variables_unused(unused,max_ss_idx)
+            unsued = list(filter(lambda x: inpt_var == str(x["inpt_sk"][0]),unused))
             if len(unused)==0:
                 new_memory_order.append(ins)
 
         elif instructions_name.find("mstore8")!=-1:
-            unused = list(filter(lambda x: x["disasm"] == "MSTORE8" and inpt_var == str(x["inpt_sk"][0]),removed_instructions))
+            unused = list(filter(lambda x: x["disasm"] == "MSTORE8",removed_instructions))
+            unify_stack_variables_unused(unused,max_ss_idx)
+            unsued = list(filter(lambda x: inpt_var == str(x["inpt_sk"][0]),unused))
             if len(unused)==0:
                 new_memory_order.append(ins)
 
         elif instructions_name.find("mstore")!=-1:
-            unused = list(filter(lambda x: x["disasm"] == "MSTORE" and inpt_var == str(x["inpt_sk"][0]),removed_instructions))
+            unused = list(filter(lambda x: x["disasm"] == "MSTORE",removed_instructions))
+            unify_stack_variables_unused(unused,max_ss_idx)
+            unsued = list(filter(lambda x: inpt_var == str(x["inpt_sk"][0]),unused))
             if len(unused)==0:
                 new_memory_order.append(ins)
 
         elif instructions_name.find("keccak")!=-1:
-            unused = list(filter(lambda x: x["disasm"] == "KECCAK256" and inpt_var == str(x["inpt_sk"][0]),removed_instructions))
+            unused = list(filter(lambda x: x["disasm"] == "KECCAK256", removed_instructions))
+            unify_stack_variables_unused(unused,max_ss_idx)
+            unsued = list(filter(lambda x: inpt_var == str(x["inpt_sk"][0]),unused))
             if len(unused)==0:
                 new_memory_order.append(ins)
             else:
-                out_var = unused[0]["outpt_sk"][0]
-                if u_dict[out_var] != ins:
+                found = False
+                for u in unused:
+                    out_var = u["outpt_sk"][0]
+                    if u_dict[out_var] == ins:
+                        found = True
+                if not found:
                     new_memory_order.append(ins)
         else:
             new_memory_order.append(ins)
@@ -6346,7 +6399,16 @@ def update_storage_sequences(removed_instructions,simplification):
         
         memory_dep = memdep
         # memory_order = new_memory_order
-        
+
+
+#variables in u_dict appears with s0 be the bottom and in uf s0 is top
+def unify_stack_variables_unused(unused,max_ss_idx):
+    for u in unused:
+        for i in range(len(u["inpt_sk"])):
+            if str(u["inpt_sk"][i]).find("s(")!=-1:
+                val = int(u["inpt_sk"][i][2:-1])
+                u["inpt_sk"][i] = "s("+str(max_ss_idx-val)+")"
+
 def translate_dependences_sfs(new_user_defins):    
     new_storage_dep = []
     new_memory_dep = []
