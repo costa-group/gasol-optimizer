@@ -1733,11 +1733,11 @@ def update_info_with_context():
         for u in u_dict:
             var = u_dict[u]
             ins = list(var[0])
-            if old_value in ins:
-                pos = ins.index(old_value)
-                new_ins = ins[:pos]+[new_value]+ins[pos+1:]
-                new_var = (tuple(new_ins),var[1])
-                u_dict[u] = new_var
+            for i in range(len(ins)):
+                if ins[i] == old_value:
+                    ins[i] = new_value
+            new_var = (tuple(ins),var[1])
+            u_dict[u] = new_var
 
         for v in variable_content:
             if str(variable_content[v]).find(old_value)!=-1:
@@ -1759,11 +1759,11 @@ def update_info_with_constancy():
         for u in u_dict:
             var = u_dict[u]
             ins = list(var[0])
-            if old_value in ins:
-                pos = ins.index(old_value)
-                new_ins = ins[:pos]+[new_value]+ins[pos+1:]
-                new_var = (tuple(new_ins),var[1])
-                u_dict[u] = new_var
+            for i in range(len(ins)):
+                if old_value == ins[i]:
+                    ins[i] = new_value
+            new_var = (tuple(ins),var[1])
+            u_dict[u] = new_var
 
         for v in variable_content:
             if str(variable_content[v]).find(old_value)!=-1:
@@ -1781,15 +1781,16 @@ def update_memory_with_context(m_sequence):
         old_value = "s("+str(context_info["stack_size"]-1-p[1])+")"
         new_value = "s("+str(context_info["stack_size"]-1-p[0])+")"
         i = 0
-
+        
         while(i<len(m_sequence)):
             var = m_sequence[i]
             ins = list(var[0])
-            if old_value in ins:
-                pos = ins.index(old_value)
-                new_ins = ins[:pos]+[new_value]+ins[pos+1:]
-                new_var = (tuple(new_ins),var[1])
-                m_sequence[i] = new_var
+
+            for j in range(len(ins)):
+                if old_value == ins[j]:
+                    ins[j] = new_value
+            new_var = (tuple(ins),var[1])
+            m_sequence[i] = new_var
             i+=1
 
 def update_memory_with_constancy(m_sequence):
@@ -1803,11 +1804,11 @@ def update_memory_with_constancy(m_sequence):
         while(i<len(m_sequence)):
             var = m_sequence[i]
             ins = list(var[0])
-            if old_value in ins:
-                pos = ins.index(old_value)
-                new_ins = ins[:pos]+[new_value]+ins[pos+1:]
-                new_var = (tuple(new_ins),var[1])
-                m_sequence[i] = new_var
+            for j in range(len(ins)):
+                if ins[j] == old_value:
+                    ins[j] = new_value
+            new_var = (tuple(ins),var[1])
+            m_sequence[i] = new_var
             i+=1
                 
                 
@@ -1835,10 +1836,10 @@ def generate_encoding(instructions,variables,source_stack,opcodes,simplification
         generate_storage_info(instructions,source_stack,opcodes,simplification)
         
         if context_info != {}:
-
+            
             update_info_with_context()
             update_info_with_constancy()
-            
+                        
             update_memory_with_context(memory_order)
             update_memory_with_constancy(memory_order)
             
@@ -2320,8 +2321,11 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     mem_objs = []
     mstore_ins = list(filter(lambda x: x[0][-1].find("mstore")!=-1,memory_order))
 
+    
     modified_variables_userdefins(mstore_ins)
 
+    
+    
     for mem in mstore_ins:
         x = generate_mstore_info(mem)
         mem_objs.append(x)
@@ -2364,7 +2368,7 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     
     # else:
     #     vars_list = recompute_vars_set(new_ss,new_ts,new_user_defins,opcodes_seq["non_inter"])
-
+    
     if context_info != {}:
         new_ts, new_user_defins = modify_json_info_with_constancy(new_ts,new_user_defins)
         
@@ -7163,14 +7167,14 @@ def get_value_constancy_context(variable):
 def modify_json_info_with_constancy(ts,user_defins):
 
     constancy_info = context_info["constancy_context"]
-    
+
     for c in constancy_info: #c is a pair (pos, val)
         if c[1] in context_info["computed_aliasing"]:
             val = c[1]
             new_val = "s("+str(context_info["computed_aliasing"][val][0])+")"
         else:
             new_val = "s("+str(c[0])+")"
-        
+
         old_val = c[1]
 
         for i in range(len(ts)):
@@ -7180,9 +7184,9 @@ def modify_json_info_with_constancy(ts,user_defins):
 
         for u in user_defins:
             inpt_sk = u["inpt_sk"]
-            if old_val in inpt_sk:
-                pos = inpt_sk.index(old_val)
-                new_inpt_sk = inpt_sk[:pos]+[new_val]+inpt_sk[pos+1:]
-                u["inpt_sk"] = new_inpt_sk
-                
+            for i in range(len(inpt_sk)):
+                in_var = inpt_sk[i]
+                if in_var == old_val:
+                    inpt_sk[i] = new_val
+
     return ts, user_defins
