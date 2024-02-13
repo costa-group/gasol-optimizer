@@ -8,8 +8,11 @@ def id_to_asm_bytecode(uf_instrs: Dict[str, Dict[str, Any]], instr_id: str) -> A
     if instr_id in uf_instrs:
         associated_instr = uf_instrs[instr_id]
 
+        # Special case: reconstructing PUSH0 (see sfs_generator/parser_asm.py)
+        if associated_instr["disasm"] == "PUSH0":
+            return AsmBytecode(-1, -1, -1, "PUSH", "0")
         # Special PUSH cases that were transformed to decimal are analyzed separately
-        if associated_instr['disasm'] == "PUSH" or associated_instr['disasm'] == "PUSH data" \
+        elif associated_instr['disasm'] == "PUSH" or associated_instr['disasm'] == "PUSH data" \
                 or associated_instr['disasm'] == "PUSHIMMUTABLE":
             value = hex(int(associated_instr['value'][0]))[2:]
             return AsmBytecode(-1, -1, -1, associated_instr['disasm'], value)

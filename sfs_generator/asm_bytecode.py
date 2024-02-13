@@ -1,6 +1,7 @@
 from typing import Dict, Optional, Union
 import sfs_generator.opcodes as opcodes
 from sfs_generator.utils import get_ins_size, get_push_number_hex
+import global_params.constants as constants
 
 # Assuming the value of asm is hexadecimal base. This way, we ensure the same format is respected
 ASM_Value_T = Optional[str]
@@ -10,6 +11,14 @@ ASM_Jump_T = Optional[str]
 
 # Type for the json representation of the assembly item
 ASM_Json_T = Dict[str, Union[int, str, ASM_Value_T]]
+
+
+def is_push0(disasm: str, value: str) -> bool:
+    """
+    We need to check push0 separately because we need to consider it depending on constants.push0_enabled
+    """
+    return constants.push0_enabled and disasm == "PUSH" and value == "0"
+
 
 class AsmBytecode:
     """
@@ -46,10 +55,14 @@ class AsmBytecode:
         by the corresponding value or jump Type in hexadecimal if any
         :return: a string containing the representation
         """
-        return f"{self.disasm} {str(self.value)}" if self.value is not None and self.disasm != "PUSH0" else f"{self.disasm} {self.jump_type}" \
-            if self.jump_type is not None else self.disasm
+        if is_push0(self.disasm, self.value):
+            return "PUSH0"
+        return f"{self.disasm} {str(self.value)}" if self.value is not None else self.disasm
 
     def to_plain_with_byte_number(self) -> str:
+        if is_push0(self.disasm, self.value):
+            return "PUSH0"
+
         op_name = ''.join([self.disasm, str(get_push_number_hex(self.value))]) if self.disasm == "PUSH" else self.disasm
         op_value = ''.join(['0x', self.value]) if self.disasm == "PUSH" else str(self.value) if self.value is not None else ''
         return f"{op_name} {op_value}" if self.value is not None and self.disasm == "PUSH" else f"{self.disasm} {self.jump_type}" \
@@ -57,7 +70,9 @@ class AsmBytecode:
 
     @property
     def bytes_required(self) -> int:
-        if self.disasm == "PUSH":
+        if is_push0(self.disasm, self.value):
+            return 1
+        elif self.disasm == "PUSH":
             decimal_value = int(self.value, 16)
         else:
             decimal_value = None
@@ -65,9 +80,14 @@ class AsmBytecode:
 
     @property
     def gas_spent(self) -> int:
+        # Special case: if PUSH0 opcode is allowed, we need to measure the gas spent for PUSH 0 as PUSH0
+        if is_push0(self.disasm, self.value):
+            return 2
         return opcodes.get_ins_cost(self.disasm, self.value)
 
     def gas_spent_accesses(self, warm_access: bool, store_changed_original_value: bool) -> int:
+        if is_push0(self.disasm, self.value):
+            return 2
         return opcodes.get_ins_cost(self.disasm, self.value, already=warm_access)
 
     def get_disasm(self) -> str:

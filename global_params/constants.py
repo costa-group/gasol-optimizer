@@ -18,7 +18,7 @@ max_k_swap = 16
 int_limit = 2**256
 
 # Flag to consider PUSH0 opcode in the optimization process
-push0_enabled = False
+push0_enabled = True
 
 
 def append_store_instructions_to_split():

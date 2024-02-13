@@ -9,6 +9,7 @@ from sfs_generator.asm_bytecode import AsmBytecode, ASM_Json_T
 from sfs_generator.asm_contract import AsmContract
 from sfs_generator.asm_json import AsmJSON
 from sfs_generator.utils import isYulKeyword
+import global_params.constants as constants
 
 
 def build_asm_bytecode(instruction : ASM_Json_T, pushlib_values: dict) -> AsmBytecode:
@@ -26,7 +27,12 @@ def build_asm_bytecode(instruction : ASM_Json_T, pushlib_values: dict) -> AsmByt
     source = instruction.get("source", -1)
     jump_type = instruction.get("jumpType", None)
 
-    asm_bytecode = AsmBytecode(begin, end, source, name, value, jump_type)
+    # At this point, we identify PUSH0 instructions, and we create an AsmBytecode as such
+    if constants.push0_enabled and name == 'PUSH' and value == "0":
+        asm_bytecode = AsmBytecode(begin, end, source, "PUSH0", None, jump_type)
+    else:
+        asm_bytecode = AsmBytecode(begin, end, source, name, value, jump_type)
+
     return asm_bytecode
 
 
@@ -174,11 +180,12 @@ def plain_instructions_to_asm_representation(raw_instruction_str : str) -> [ASM_
                 final_op = {"name": op}
             elif op.startswith("PUSH") and op.find("SIZE") != -1:
                 final_op = {"name": op}
-            # This case refers to PUSHx opcodes, that are allowed in the plain representation
+            # PUSH0 is parsed similarly to PUSH 0, and is interpreted as one form or the other depending on the
+            # flag --push0
             elif op.startswith("PUSH0"):
                 val_representation = "0"
-                final_op = {"name": "PUSH0", "value": val_representation}
-                
+                final_op = {"name": "PUSH", "value": val_representation}
+            # This case refers to PUSHx opcodes, that are allowed in the plain representation
             elif re.fullmatch("PUSH([0-9]+)", op) is not None:
                 val = ops[i + 1]
                 # The hex representation omits

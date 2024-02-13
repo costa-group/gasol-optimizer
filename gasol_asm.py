@@ -783,8 +783,8 @@ def parse_encoding_args() -> Namespace:
     basic.add_argument("-direct-tout", dest='direct_timeout', action='store_true',
                        help="Sets the Max-SMT timeout to -tout directly, "
                             "without considering the structure of the block")
-    basic.add_argument("-push0", "--push0", dest='push0_enabled', action='store_true',
-                       help="Enables reasoning for optimizations with PUSH0 opcode.")
+    basic.add_argument("-push0", "--push0", dest='push0_enabled', action='store_false',
+                       help="Assumes PUSH0 opcode cannot be used in the optimizations.")
 
     blocks = ap.add_argument_group('Split block options', 'Options for deciding how to split blocks when optimizing')
 
