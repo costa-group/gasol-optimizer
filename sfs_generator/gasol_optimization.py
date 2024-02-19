@@ -1871,6 +1871,7 @@ def generate_sstore_info(sstore_elem):
     
     obj["gas"] = opcodes.get_ins_cost(instr_name)
     obj["commutative"] = False
+    obj["push"] = False
     obj["storage"] = True
     obj["size"] = get_ins_size(instr_name)
     user_def_counter["SSTORE"]=idx+1
@@ -1918,6 +1919,7 @@ def generate_mstore_info(mstore_elem):
     obj["gas"] = opcodes.get_ins_cost(instr_name)
     obj["size"] = get_ins_size(instr_name)
     obj["commutative"] = False
+    obj["push"] = False
     obj["storage"] = True
     
     if instr_name == "ASSIGNIMMUTABLE":
@@ -2091,6 +2093,7 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     json_dict["current_cost"] = gas
     json_dict["storage_dependences"] = [list(dep) for dep in sto_dep]
     json_dict["memory_dependences"]= [list(dep) for dep in mem_dep]
+    json_dict["dependencies"] = [*json_dict["storage_dependences"], *json_dict["memory_dependences"]]
     json_dict["is_revert"]= True if revert_flag else False
     json_dict["rules_applied"] = rule_applied
     json_dict["rules"] = list(filter(lambda x: x != "", rules_applied))
@@ -2569,6 +2572,7 @@ def generate_userdefname(u_var,funct,args,arity,init=False):
         obj["outpt_sk"] = [u_var]
         obj["gas"] = opcodes.get_ins_cost(instr_name)
         obj["commutative"] = True if instr_name in commutative_bytecodes else False
+        obj["push"] = "PUSH" in instr_name
         obj["storage"] = False #It is true only for MSTORE and SSTORE
         if instr_name in ["PUSH [tag]","PUSH #[$]","PUSH [$]","PUSH data","PUSHIMMUTABLE","PUSHLIB"]:
             obj["value"] = args_aux
@@ -6046,6 +6050,7 @@ def generate_pops(not_used_variables):
         obj["gas"] = opcodes.get_ins_cost("POP")
         obj["size"] = get_ins_size("POP")
         obj["commutative"] = False
+        obj["push"] = False
         obj["storage"] = False #It is true only for MSTORE and SSTORE
 
         pop_instructions.append(obj)
@@ -6067,6 +6072,7 @@ def generate_push_instruction(idx, value, out):
     obj["outpt_sk"] = [out]
     obj["gas"] = opcodes.get_ins_cost("PUSH") if value != 0 or not constants.push0_enabled else opcodes.get_ins_cost("PUSH0")
     obj["commutative"] = False
+    obj["push"] = False
     obj["storage"] = False #It is true only for MSTORE and SSTORE
     obj["size"] = get_ins_size("PUSH",value)
 
