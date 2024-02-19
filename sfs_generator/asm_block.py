@@ -36,7 +36,7 @@ def execute_asm(current_stack: List[str], asm_bytecode: AsmBytecode) -> List[str
             pass
             current_stack.insert(0, f'{instr_name}({joined_operands})')
         elif operands == []:
-            current_stack.insert(0, instr_name)
+            current_stack.insert(0, asm_bytecode.to_plain())
         else:
             joined_operands = ','.join(operands)
             current_stack.insert(0, f'{instr_name}({joined_operands})')
@@ -137,7 +137,7 @@ class AsmBlock:
 
 
     def to_plain(self) -> str:
-        return ' '.join(map(lambda instr: instr.to_plain(), self.instructions))
+        return ' '.join((instr.to_plain() for instr in self.instructions if instr.disasm != "tag"))
 
     def to_plain_with_byte_number(self) -> str:
         return ' '.join(map(lambda instr: instr.to_plain_with_byte_number(), self.instructions))
@@ -221,7 +221,7 @@ class AsmBlock:
 
     @property
     def length(self) -> int:
-        return len(self.instructions)
+        return len([True for instruction in self.instructions if instruction.disasm != 'tag'])
 
     def get_contract_name(self):
         return self.contract_name
