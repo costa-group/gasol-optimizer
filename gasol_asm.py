@@ -26,6 +26,9 @@ from solution_generation.optimize_from_sub_blocks import rebuild_optimized_asm_b
 from sfs_generator.asm_block import AsmBlock, AsmBytecode
 from smt_encoding.block_optimizer import BlockOptimizer, OptimizeOutcome
 from solution_generation.ids2asm import asm_from_ids
+from verification.forves_verification import compare_forves
+from statistics.statistics_from_asm_block import csv_from_asm_block
+
 
 def init():
     global previous_gas
@@ -513,6 +516,13 @@ def optimize_asm_block_asm_format(block: AsmBlock, timeout: int, parsed_args: Na
         statistics_info = generate_statistics_info(sub_block, optimization_outcome, solver_time, optimal_block,
                                                    initial_solver_bound, tout, rules)
 
+        if "solution_found" in statistics_info:
+            statistics_info["forves_checker"] = compare_forves(statistics_info["previous_solution"],
+                                                               statistics_info["solution_found"],
+                                                               "size" if parsed_args.size else "gas")
+        else:
+            statistics_info["forves_checker"] = "true"
+
         csv_statistics.append(statistics_info)
 
         # Only check if the new block is considered if the solver has generated a new one
@@ -550,6 +560,14 @@ def compare_asm_block_asm_format(old_block: AsmBlock, new_block: AsmBlock, parse
 
     return final_comparison and (initial_instructions_new == initial_instructions_old) and \
            final_instructions_new == final_instructions_old, reason
+
+
+def csv_from_asm_blocks(old_contract_blocks: List[AsmBlock], new_contract_blocks: List[AsmBlock],
+                        parsed_args: Namespace) -> List[Dict]:
+    return [csv_from_asm_block(old_contract_block, new_contract_block,
+                               *compare_asm_block_asm_format(old_contract_block, new_contract_block, parsed_args),
+                               compare_forves(old_contract_block.to_plain(), new_contract_block.to_plain()))
+            for old_contract_block, new_contract_block in zip(old_contract_blocks, new_contract_blocks)]
 
 
 def optimize_asm_in_asm_format(file_name, output_file, csv_file, log_file, parsed_args: Namespace, timeout=10):
