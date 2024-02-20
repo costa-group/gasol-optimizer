@@ -156,6 +156,9 @@ class OptimizationParams:
         # Soft constraints
         self.criteria = "size" if parsed_args.size else "length" if parsed_args.length else "gas"
 
+        # Could be adapted
+        self.size_rules_enabled = True
+
         self.direct_soft = parsed_args.direct_soft
         self.at_most = parsed_args.at_most
         self.pushed_once = parsed_args.pushed_once

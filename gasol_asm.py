@@ -130,7 +130,7 @@ def optimize_block(sfs_dict, params: OptimizationParams) -> List[Tuple[AsmBlock,
                 new_bound = min(previous_bound, inferred_bound)
             sfs_block['init_progr_len'] = new_bound
 
-            if params:
+            if params.verbose:
                 print(f"Previous bound: {previous_bound} Inferred bound: {inferred_bound} Final bound: {new_bound}")
 
         # To match previous results, multiply timeout by number of storage instructions
