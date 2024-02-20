@@ -1,12 +1,10 @@
 from smt_encoding.instructions.instruction_factory import InstructionFactory
 from typing import Dict, Any, Tuple, List, Generator
-from argparse import Namespace
-from smt_encoding.complete_encoding.synthesis_encoding_instructions_stack import AssertHard, EncodingForStack
+from smt_encoding.complete_encoding.synthesis_encoding_instructions_stack import EncodingForStack
 from smt_encoding.complete_encoding.synthesis_functions import SynthesisFunctions
 from smt_encoding.instructions.instruction_bounds import InstructionBounds
 from smt_encoding.instructions.instruction_bounds_simple import DumbInstructionBounds
 from smt_encoding.instructions.instruction_bounds_with_dependencies import InstructionBoundsWithDependencies
-from smt_encoding.complete_encoding.synthesis_soft_constraints import AssertSoft
 import global_params.constants as constants
 from smt_encoding.constraints.function import Function, Sort
 from smt_encoding.instructions.encoding_instruction import InstructionSubset, Id_T
@@ -28,14 +26,14 @@ from smt_encoding.complete_encoding.synthesis_soft_constraints import soft_const
     soft_constraints_grouped_by_weight
 from smt_encoding.complete_encoding.synthesis_additional_constraints import fromnop_encoding, \
     each_instruction_is_used_at_least_once, no_output_before_pop, each_function_is_used_at_most_once
-from itertools import chain
+from global_params.options import OptimizationParams
 
 SMS_T = Dict[str, Any]
 
 
 class FullEncoding:
 
-    def __init__(self, sms: SMS_T, flags: Namespace, initial_idx: int = 0):
+    def __init__(self, sms: SMS_T, flags: OptimizationParams, initial_idx: int = 0):
         self._flags = flags
         self._initial_idx = initial_idx
 
@@ -97,7 +95,7 @@ class FullEncoding:
         encoding_function = nop_encoding_empty if self._flags.empty else nop_encoding
         stack_encoding.register_function_for_encoding(nop_instruction, encoding_function)
 
-        if self._flags.pop_basic:
+        if not self._flags.pop_uninterpreted:
             pop_instruction = self._instruction_factory.create_instruction_name("POP")
             basic_instructions.append(pop_instruction)
             encoding_function = pop_encoding_empty if self._flags.empty else pop_encoding
@@ -268,17 +266,17 @@ class FullEncoding:
         else:
             soft_instruction_filter = l_vars_encoding_filter
 
-        if self._flags.size:
+        if self._flags.criteria == "size":
             weight_dict = {instruction.theta_value: min(instruction.size_cost, 5)
                            for instruction in self._instructions if soft_instruction_filter(instruction)}
-        elif self._flags.length:
+        elif self._flags.criteria == "length":
             weight_dict = {instruction.theta_value: 1 if instruction.id != 'NOP' else 0
                            for instruction in self._instructions if soft_instruction_filter(instruction)}
         else:
             weight_dict = {instruction.theta_value: instruction.gas_cost
                            for instruction in self._instructions if soft_instruction_filter(instruction)}
 
-        if self._flags.direct:
+        if self._flags.direct_soft:
             yield from soft_constraints_direct(self._term_factory, weight_dict, self._bounds, "cost")
         else:
             yield from soft_constraints_grouped_by_weight(self._term_factory, self.b0, weight_dict, self._bounds, "cost")
