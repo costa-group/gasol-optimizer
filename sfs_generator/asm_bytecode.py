@@ -57,7 +57,7 @@ class AsmBytecode:
         """
         if is_push0(self.disasm, self.value):
             return "PUSH0"
-        return f"{self.disasm} {str(self.value)}" if self.value is not None else self.disasm
+        return f"{self.disasm} {str(self.value)}" if self.value is not None and "JUMP" not in self.disasm else self.disasm
 
     def to_plain_with_byte_number(self) -> str:
         if is_push0(self.disasm, self.value):
