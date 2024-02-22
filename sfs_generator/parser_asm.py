@@ -120,9 +120,15 @@ def build_asm_contract(cname : str, cinfo : Dict[str, Any]) -> AsmContract:
         else:
             asm_c.set_data_field_with_address(elem, data[elem])
 
-    asm_c.build_static_edges_init()
-    asm_c.build_static_edges_runtime()
+    # asm_c.build_static_edges_init()
+    # asm_c.build_static_edges_runtime()
     return asm_c
+
+
+def parse_json_asm(file_name: str) -> AsmContract:
+    with open(file_name) as f:
+        data = json.load(f)
+    return build_asm_contract("contract", data)
 
 
 def parse_asm(file_name : str) -> AsmJSON:

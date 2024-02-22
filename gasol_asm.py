@@ -16,7 +16,7 @@ import global_params.constants as constants
 import global_params.paths as paths
 import sfs_generator.ir_block as ir_block
 from sfs_generator.gasol_optimization import get_sfs_dict
-from sfs_generator.parser_asm import (parse_asm,
+from sfs_generator.parser_asm import (parse_asm, parse_json_asm,
                                       generate_block_from_plain_instructions,
                                       parse_blocks_from_plain_instructions)
 from sfs_generator.utils import process_blocks_split
@@ -668,6 +668,22 @@ def optimize_asm_in_asm_format(params: OptimizationParams):
         pd.DataFrame(blocks_rows).to_csv(params.blocks_file)
 
 
+def optimize_asm_from_asm_json(params: OptimizationParams):
+    c = parse_json_asm(params.input_file)
+    new_contract, contract_seq_rows, contract_log_dicts, contract_block_rows = optimize_asm_contract(c, params)
+
+    if params.generate_log:
+        with open(params.log_file, "w") as log_f:
+            json.dump(contract_log_dicts, log_f)
+
+    if params.optimization_enabled:
+        with open(params.optimized_file, 'w') as f:
+            f.write(json.dumps(c.to_asm_json()))
+
+        pd.DataFrame(contract_seq_rows).to_csv(params.seqs_file)
+        pd.DataFrame(contract_block_rows).to_csv(params.blocks_file)
+
+
 def optimize_from_sfs(params: OptimizationParams):
     block_name = 'isolated_block_sfs'
 
@@ -729,6 +745,8 @@ def modify_file_names(params: OptimizationParams) -> None:
         if params.input_format == "block":
             output_file = input_file_name + "_optimized.txt"
         elif params.input_format == "sfs":
+            output_file = input_file_name + "_optimized.json"
+        elif params.input_format == "single-asm":
             output_file = input_file_name + "_optimized.json"
         elif params.from_log is not None:
             output_file = input_file_name + "_optimized_from_log.json_solc"
@@ -915,6 +933,8 @@ def main():
         optimize_isolated_asm_block(params)
     elif params.input_format == "sfs":
         optimize_from_sfs(params)
+    elif params.input_format == "single-asm":
+        optimize_asm_from_asm_json(params)
     else:
         optimize_asm_in_asm_format(params)
 

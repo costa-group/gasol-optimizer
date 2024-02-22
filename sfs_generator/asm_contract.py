@@ -190,12 +190,8 @@ class AsmContract:
             elif block.jump_type == "falls_to":
                 block.falls_to = block.get_block_id()+1
                 
-    def to_json(self) -> Dict[str, Any]:
-
-        # If it has no asm field, we just return the contract name with an empty dict tied
-        if not self.has_asm_field:
-            return {self.contract_name : {}}
-
+    def to_asm_json(self) -> Dict[str, Any]:
+        # Converts an ASMContract to the same format as the one produced by solc with option --asm-json
         json_contract = {".code": [instruction.to_json() for block in self.init_code for instruction in block.instructions]}
 
         source_list = self.source_list
@@ -230,7 +226,17 @@ class AsmContract:
 
         json_contract[".data"] = json_data
 
-        return {self.contract_name: {"asm": json_contract}}
+        return json_contract
+
+    def to_json(self):
+        # If it has no asm field, we just return the contract name with an empty dict tied
+        if not self.has_asm_field:
+            return {self.contract_name: {}}
+
+        # We need to surround the format from --asm-json with the contract name and the field asm to keep the same
+        # format as in combined-json asm
+        return {self.contract_name: {"asm": self.to_asm_json()}}
+
 
     def to_plain(self) -> str:
         if not self.has_asm_field:
