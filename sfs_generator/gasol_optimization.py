@@ -4311,7 +4311,7 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
 
         elif len(isz_op) == 1: #ISZ(XOR(X,Y)) = EQ(X,Y)
             isz_instr = isz_op[0]
-
+            out_pt = instr["outpt_sk"][0]
 
             comm_inpt = [instr["inpt_sk"][1], instr["inpt_sk"][0]]
             new_exist = list(filter(lambda x: (x["inpt_sk"] == instr["inpt_sk"] or x["inpt_sk"] == comm_inpt) and x["disasm"] == "EQ", user_def_instrs))
@@ -4326,7 +4326,7 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                 # gas_saved_op+=3
 
                 
-            elif outpt not in tstack and len(list(filter(lambda x: outpt in x["inpt_sk"] and x!= isz_instr, user_def_instrs))) == 0:
+            elif out_pt not in tstack and len(list(filter(lambda x: out_pt in x["inpt_sk"] and x!= isz_instr, user_def_instrs))) == 0:
                 idx = user_def_counter.get("EQ",0)
                 isz_instr["inpt_sk"] = instr["inpt_sk"]
                 isz_instr["id"] = "EQ_"+str(idx)
@@ -4350,8 +4350,9 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
 
 
             # user_def_counter["EQ"]=idx+1
-            rule = msg
+
             msg = "ISZ(XOR(X,Y))"
+            rule = msg
             check_and_print_debug_info(debug, msg)
             
             return True, delete
@@ -4671,7 +4672,7 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                 # update_tstack_userdef(old_var[0], new_var[0],tstack, user_def_instrs)
                 
                 return True, delete
-            
+            return False, []
             
         else:
             return False, []
