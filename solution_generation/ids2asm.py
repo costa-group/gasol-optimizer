@@ -18,7 +18,7 @@ def id_to_asm_bytecode(uf_instrs: Dict[str, Dict[str, Any]], instr_id: str) -> A
             return AsmBytecode(-1, -1, -1, associated_instr['disasm'], value)
         else:
             return AsmBytecode(-1, -1, -1, associated_instr['disasm'],
-                               None if 'value' not in associated_instr else associated_instr['value'][0])
+                               None if 'value' not in associated_instr else str(associated_instr['value'][0]))
 
     else:
         # The id is the instruction itself
