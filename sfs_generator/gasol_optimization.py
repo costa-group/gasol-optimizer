@@ -3974,7 +3974,7 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                 zero_instr = user_def_instrs[index]
                 zero_instr["inpt_sk"] = [instr["inpt_sk"][1]]
 
-                if out not in tstack:
+                if out_var not in tstack:
                     discount_op+=2
 
                 saved_push+=1
