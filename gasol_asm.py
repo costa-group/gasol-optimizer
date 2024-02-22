@@ -558,8 +558,8 @@ def csv_from_asm_blocks(old_contract_blocks: List[AsmBlock], new_contract_blocks
                         params: OptimizationParams) -> List[Dict]:
     return [csv_from_asm_block(old_contract_block, new_contract_block,
                                *compare_asm_block_asm_format(old_contract_block, new_contract_block, params),
-                               compare_forves(old_contract_block.to_plain(), new_contract_block.to_plain()),
-                               params.forves_enabled)
+                               compare_forves(old_contract_block.to_plain(), new_contract_block.to_plain(),
+                                              params.forves_enabled))
             for old_contract_block, new_contract_block in zip(old_contract_blocks, new_contract_blocks)]
 
 
