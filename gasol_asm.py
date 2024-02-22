@@ -3,7 +3,7 @@ import json
 import os
 import shutil
 import sys
-from typing import Tuple, Optional, List, Dict
+from typing import Tuple, Optional, List, Dict, Set
 from copy import deepcopy
 from timeit import default_timer as dtimer
 from argparse import ArgumentParser, Namespace
@@ -23,6 +23,7 @@ from sfs_generator.utils import process_blocks_split
 from verification.sfs_verify import verify_block_from_list_of_sfs, are_equals
 from solution_generation.optimize_from_sub_blocks import rebuild_optimized_asm_block
 from sfs_generator.asm_block import AsmBlock, AsmBytecode
+from sfs_generator.asm_contract import AsmContract
 from smt_encoding.block_optimizer import BlockOptimizer, OptimizeOutcome
 from solution_generation.ids2asm import asm_from_ids
 from verification.forves_verification import compare_forves
@@ -560,35 +561,54 @@ def csv_from_asm_blocks(old_contract_blocks: List[AsmBlock], new_contract_blocks
             for old_contract_block, new_contract_block in zip(old_contract_blocks, new_contract_blocks)]
 
 
-def optimize_asm_in_asm_format(params: OptimizationParams):
-    seqs_rows = []
-    blocks_rows = []
+def optimize_asm_contract(c: AsmContract, params: OptimizationParams) -> Tuple[AsmContract, List[Dict], Dict, List[Dict]]:
+    seq_rows, log_dicts, blocks_rows = [], {}, []
+    new_contract = deepcopy(c)
 
-    asm = parse_asm(params.input_file)
-    log_dicts = {}
-    contracts = []
+    # If it does not have the asm field, then we skip it, as there are no instructions to optimize. Same if a
+    # contract has been specified and current name does not match.
+    contract_name = c.shortened_name
+    init_code = c.init_code
 
-    for c in asm.contracts:
+    print("\nAnalyzing Init Code of: " + contract_name)
+    print("-----------------------------------------\n")
 
-        new_contract = deepcopy(c)
+    init_code_blocks = []
 
-        # If it does not have the asm field, then we skip it, as there are no instructions to optimize. Same if a
-        # contract has been specified and current name does not match.
-        if not c.has_asm_field or (params.contract is not None and c.shortened_name != params.contract):
-            contracts.append(new_contract)
-            continue
+    for old_block in init_code:
+        optimized_block, log_element, csv_statistics = optimize_asm_block_asm_format(old_block, params)
+        seq_rows.extend(csv_statistics)
 
-        contract_name = c.shortened_name
-        init_code = c.init_code
+        eq, reason = compare_asm_block_asm_format(old_block, optimized_block, params)
 
-        print("\nAnalyzing Init Code of: " + contract_name)
-        print("-----------------------------------------\n")
+        if not eq:
+            print("Comparison failed, so initial block is kept")
+            print("\t[REASON]: " + reason)
+            print(old_block.to_plain())
+            print(optimized_block.to_plain())
+            print("")
+            optimized_block = old_block
+            log_element = {}
 
-        init_code_blocks = []
+        log_dicts.update(log_element)
+        init_code_blocks.append(optimized_block)
 
-        for old_block in init_code:
+        # Deployment size is not considered when measuring it
+        update_gas_count(old_block, optimized_block)
+        update_length_count(old_block, optimized_block)
+
+    new_contract.init_code = init_code_blocks
+    blocks_rows.extend(csv_from_asm_blocks(init_code, init_code_blocks, params))
+
+    print("\nAnalyzing Runtime Code of: " + contract_name)
+    print("-----------------------------------------\n")
+    for identifier in c.get_data_ids_with_code():
+        blocks = c.get_run_code(identifier)
+
+        run_code_blocks = []
+        for old_block in blocks:
             optimized_block, log_element, csv_statistics = optimize_asm_block_asm_format(old_block, params)
-            seqs_rows.extend(csv_statistics)
+            seq_rows.extend(csv_statistics)
 
             eq, reason = compare_asm_block_asm_format(old_block, optimized_block, params)
 
@@ -602,47 +622,36 @@ def optimize_asm_in_asm_format(params: OptimizationParams):
                 log_element = {}
 
             log_dicts.update(log_element)
-            init_code_blocks.append(optimized_block)
+            run_code_blocks.append(optimized_block)
 
-            # Deployment size is not considered when measuring it
             update_gas_count(old_block, optimized_block)
             update_length_count(old_block, optimized_block)
+            update_size_count(old_block, optimized_block)
 
-        new_contract.init_code = init_code_blocks
-        blocks_rows.extend(csv_from_asm_blocks(init_code, init_code_blocks, params))
+        blocks_rows.extend(csv_from_asm_blocks(blocks, run_code_blocks, params))
+        new_contract.set_run_code(identifier, run_code_blocks)
+    return new_contract, seq_rows, log_dicts, blocks_rows
 
-        print("\nAnalyzing Runtime Code of: " + contract_name)
-        print("-----------------------------------------\n")
-        for identifier in c.get_data_ids_with_code():
-            blocks = c.get_run_code(identifier)
 
-            run_code_blocks = []
-            for old_block in blocks:
-                optimized_block, log_element, csv_statistics = optimize_asm_block_asm_format(old_block, params)
-                seqs_rows.extend(csv_statistics)
+def optimize_asm_in_asm_format(params: OptimizationParams):
+    seqs_rows = []
+    blocks_rows = []
 
-                eq, reason = compare_asm_block_asm_format(old_block, optimized_block, params)
+    asm = parse_asm(params.input_file)
+    log_dicts = {}
+    contracts = []
 
-                if not eq:
-                    print("Comparison failed, so initial block is kept")
-                    print("\t[REASON]: " + reason)
-                    print(old_block.to_plain())
-                    print(optimized_block.to_plain())
-                    print("")
-                    optimized_block = old_block
-                    log_element = {}
+    for c in asm.contracts:
+        if not c.has_asm_field or (params.contract is not None and c.shortened_name != params.contract):
+            contracts.append(c)
+        else:
+            new_contract, contract_seq_rows, contract_log_dicts, contract_block_rows = optimize_asm_contract(c, params)
+            contracts.append(new_contract)
 
-                log_dicts.update(log_element)
-                run_code_blocks.append(optimized_block)
-
-                update_gas_count(old_block, optimized_block)
-                update_length_count(old_block, optimized_block)
-                update_size_count(old_block, optimized_block)
-
-            blocks_rows.extend(csv_from_asm_blocks(blocks, run_code_blocks, params))
-            new_contract.set_run_code(identifier, run_code_blocks)
-
-        contracts.append(new_contract)
+            # Update the corresponding information
+            log_dicts.update(contract_log_dicts)
+            seqs_rows.extend(contract_seq_rows)
+            blocks_rows.extend(contract_block_rows)
 
     new_asm = deepcopy(asm)
     new_asm.contracts = contracts
@@ -747,16 +756,19 @@ def parse_encoding_args() -> Namespace:
 
     input = ap.add_argument_group('Input options')
 
-    input.add_argument('input_path', help='Path to input file that contains the code to optimize. Can be either asm, '
+    input.add_argument('input_path', help='Path to input file that contains the code to optimize. Can be either asm'
+                                          'either from the --combined-json asm or --json-asm options, '
                                           'plain instructions or a json containing the SFS. The corresponding flag'
                                           'must be enabled')
     group_input = input.add_mutually_exclusive_group()
     group_input.add_argument("-bl", "--block", help="Enable analysis of a single asm block", action="store_true")
     group_input.add_argument("-sfs", "--sfs", dest='sfs', help="Enable analysis of a single SFS", action="store_true")
     group_input.add_argument("-c", "--contract", dest="contract", action='store',
-                             help='Specify the specific contract in the json_solc to be optimized. The name of the '
-                                  'contract must match the name that appears in the solc file. '
+                             help='Specify the specific contract in the json_solc from the combined json to be optimized. '
+                                  'The name of the contract must match the name that appears in the solc file. '
                                   'The remaining contracts are left unchanged.')
+    group_input.add_argument("-single-json", "--single-json", dest='json_asm', action="store_true",
+                             help="Enables analysis of a single contract generated by the --json-asm option.")
 
     output = ap.add_argument_group('Output options')
 

@@ -117,7 +117,8 @@ class OptimizationParams:
         self.input_file = parsed_args.input_path
 
         # Distinguish cases
-        self.input_format = "plain" if parsed_args.block else "sfs" if parsed_args.sfs else "asm"
+        self.input_format = "plain" if parsed_args.block else "sfs" \
+            if parsed_args.sfs else "single-asm" if parsed_args.json_asm else "asm"
         self.contract = parsed_args.contract
         self.seqs_file = parsed_args.seq_csv_path
         self.blocks_file = parsed_args.block_csv_path
