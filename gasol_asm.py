@@ -511,7 +511,8 @@ def optimize_asm_block_asm_format(block: AsmBlock, params: OptimizationParams) -
         if "solution_found" in statistics_info:
             statistics_info["forves_checker"] = compare_forves(statistics_info["previous_solution"],
                                                                statistics_info["solution_found"],
-                                                               "size" if params.criteria == "size" else "gas")
+                                                               "size" if params.criteria == "size" else "gas",
+                                                               params.forves_enabled)
         else:
             statistics_info["forves_checker"] = "true"
 
@@ -557,7 +558,8 @@ def csv_from_asm_blocks(old_contract_blocks: List[AsmBlock], new_contract_blocks
                         params: OptimizationParams) -> List[Dict]:
     return [csv_from_asm_block(old_contract_block, new_contract_block,
                                *compare_asm_block_asm_format(old_contract_block, new_contract_block, params),
-                               compare_forves(old_contract_block.to_plain(), new_contract_block.to_plain()))
+                               compare_forves(old_contract_block.to_plain(), new_contract_block.to_plain()),
+                               params.forves_enabled)
             for old_contract_block, new_contract_block in zip(old_contract_blocks, new_contract_blocks)]
 
 
@@ -598,6 +600,9 @@ def optimize_asm_contract(c: AsmContract, params: OptimizationParams) -> Tuple[A
         update_length_count(old_block, optimized_block)
 
     new_contract.init_code = init_code_blocks
+    if params.forves_enabled:
+        print("Checking optimized basic blocks in init_code with forves...")
+
     blocks_rows.extend(csv_from_asm_blocks(init_code, init_code_blocks, params))
 
     print("\nAnalyzing Runtime Code of: " + contract_name)
@@ -627,6 +632,9 @@ def optimize_asm_contract(c: AsmContract, params: OptimizationParams) -> Tuple[A
             update_gas_count(old_block, optimized_block)
             update_length_count(old_block, optimized_block)
             update_size_count(old_block, optimized_block)
+
+        if params.forves_enabled:
+            print("Checking optimized basic blocks in init_code with forves...")
 
         blocks_rows.extend(csv_from_asm_blocks(blocks, run_code_blocks, params))
         new_contract.set_run_code(identifier, run_code_blocks)
@@ -802,6 +810,9 @@ def parse_encoding_args() -> Namespace:
                         help="Keeps temporary intermediate files. "
                              "These files contain the sfs representation, smt encoding...")
     output.add_argument("-d", "--debug", help="It prints debugging information", dest='debug_flag', action="store_true")
+    output.add_argument("-forves", "--forves", help="Enables the verification via the forves checker",
+                        dest='forves_enabled', action="store_true")
+
 
     log_generation = ap.add_argument_group('Log generation options', 'Options for managing the log generation')
 

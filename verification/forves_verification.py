@@ -90,6 +90,9 @@ def split_bytecode(raw_instruction_str: str) -> List[Union[List[str], str]]:
                 blocks_to_process.append(opcodes)
             blocks_to_process.append(op)
 
+            if op == "ASSIGNIMMUTABLE":
+                i = i + 1
+
         # if it does not start with PUSH, then its an opcode with no operands
         elif not op.startswith("PUSH"):
             final_op = op
@@ -204,7 +207,16 @@ def forves_format(seq1, seq2) -> str:
         print(e, file=sys.stderr)
 
 
-def compare_forves(previous_block: str, new_solution: str, criteria: str = "size"):
+def compare_forves(previous_block: str, new_solution: str, criteria: str = "size", enabled: bool = True):
+    if not enabled:
+        return "disabled"
+
+    forves_exec = Path(paths.project_path).joinpath('bin/forves-checker')
+
+    # Check if the bin for forves is present
+    if not forves_exec.exists():
+        return "missing"
+
     criteria_flag = "all" if criteria == "gas" else "all_size"
     forves_input = forves_format(previous_block, new_solution)
 
@@ -218,7 +230,7 @@ def compare_forves(previous_block: str, new_solution: str, criteria: str = "size
         forves_input = forves_format(previous_block, new_solution)
         f.write(forves_input)
 
-    command = f"{Path(paths.project_path).joinpath('bin/forves-checker')} -i {tmp_file} " \
+    command = f"{forves_exec} -i {tmp_file} " \
               f"-opt_rep 20 -pipeline_rep 20 -opt {criteria_flag} -mu basic -su basic -ms basic -ss basic " \
               f"-ssv_c basic -mem_c po -strg_c po -sha3_c trivial "
 

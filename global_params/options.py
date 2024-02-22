@@ -113,6 +113,8 @@ class OptimizationParams:
         self.optimized_predictor_model = None
         self.bound_model = None
 
+        self.forves_enabled = None
+
     def parse_args(self, parsed_args: Namespace):
         self.input_file = parsed_args.input_path
 
@@ -168,3 +170,5 @@ class OptimizationParams:
 
         self.bound_select = parsed_args.bound_select
         self.opt_select = parsed_args.opt_select
+
+        self.forves_enabled = parsed_args.forves_enabled
