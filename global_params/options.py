@@ -115,6 +115,10 @@ class OptimizationParams:
 
         self.forves_enabled = None
 
+        self.block_name = ""
+        self.block_name_prefix = ""
+        self.dep_mem_info = {}
+
     def parse_args(self, parsed_args: Namespace):
         self.input_file = parsed_args.input_path
 
