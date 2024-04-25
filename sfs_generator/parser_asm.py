@@ -226,9 +226,12 @@ def plain_instructions_to_asm_representation(raw_instruction_str : str) -> [ASM_
 # Conversion from a string containing all different instructions in Assembly format to ASMBlocks representation.
 # See https://github.com/ethereum/solidity/blob/develop/libevmasm/Assembly.cpp on how different assembly
 # items are represented
-def parse_blocks_from_plain_instructions(raw_instructions_str):
+def parse_blocks_from_plain_instructions(raw_instructions_str, cname = "", block_name_prefix = ""):
     instr_list = plain_instructions_to_asm_representation(raw_instructions_str)
-    blocks = build_blocks_from_asm_representation("isolated", "isolated", instr_list, False)
+    if cname == "" and block_name_prefix == "":
+        blocks = build_blocks_from_asm_representation("isolated", "isolated", instr_list, False)
+    else:
+        blocks = build_blocks_from_asm_representation(cname, block_name_prefix, instr_list, False)
     return blocks
 
 

@@ -1,7 +1,7 @@
 GASOL
 =====
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://github.com/costa-group/gasol-optimizer/blob/main/LICENSE)
-![version](https://img.shields.io/badge/version-0.3.0-green)
+![version](https://img.shields.io/badge/version-0.4.1-green)
 
 GASOL is a generic framework that optimizes smart contracts by applying the technique called *super-optimization* that consists in optimizing basic blocks (sequences of EVM instructions). For each basic block, GASOL tries to find a sequence of EVM instructions that produces the same state as the original block, but consumes a smaller amount of gas or decreases the amount of bytes. 
 
@@ -93,6 +93,9 @@ Estimated gas optimized: 6
 
 Estimated initial size in bytes: 5
 Estimated size optimized in bytes: 2
+
+Initial number of instructions: 5
+Final number of instructions: 2
 ```
 
 ### Neural-guided Superoptimization (NGS)

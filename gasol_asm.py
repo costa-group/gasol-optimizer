@@ -298,7 +298,7 @@ def optimize_isolated_asm_block(params: OptimizationParams):
     with open(params.input_file, "r") as f:
         instructions = f.read()
 
-    blocks = parse_blocks_from_plain_instructions(instructions)
+    blocks = parse_blocks_from_plain_instructions(instructions, params.block_name, params.block_name_prefix)
     asm_blocks = []
 
     for old_block in blocks:

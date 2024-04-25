@@ -10,6 +10,7 @@ class OptimizeOutcome(Enum):
     non_optimal = 1
     optimal = 2
     unsat = 3
+    error = 4
 
 class Solver(ABC):
     """
