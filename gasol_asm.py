@@ -933,7 +933,7 @@ def main():
     create_ml_models(params)
 
     # If storage or partition flag are activated, the blocks are split using store instructions
-    if params.split_storage or params.split_partition:
+    if params.split_storage:
         constants.append_store_instructions_to_split()
 
     # Set push0 global variable to the corresponding flag
