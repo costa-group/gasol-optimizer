@@ -783,13 +783,10 @@ def modify_file_names(params: OptimizationParams) -> None:
         params.log_file = input_file_name + ".log"
 
 
-def parse_encoding_args() -> Namespace:
+def options_gasol(ap: ArgumentParser) -> None:
     # Unused options
     # ap.add_argument("-last-constants", "--last-constants", help="It removes the last instructions of a block when they generate a constant value", dest="last_constants", action = "store_true")
     # ap.add_argument("-mem40", "--mem40", help="It assumes that pos 64 in memory is not dependant with variables", action = "store_true")
-
-    ap = ArgumentParser(description='GASOL, the EVM super-optimizer')
-
     input = ap.add_argument_group('Input options')
 
     input.add_argument('input_path', help='Path to input file that contains the code to optimize. Can be either asm'
@@ -909,27 +906,18 @@ def parse_encoding_args() -> Namespace:
     ml_options.add_argument('-opt-model', "--opt-model", action='store_true', dest='opt_select',
                             help="Select which representation model is used for the opt classification")
 
-    parsed_args = ap.parse_args()
 
-    # Additional check: if ufs are used, push instructions must be represented as uninterpreted too
-    if parsed_args.encode_terms == "uninterpreted_uf":
-        parsed_args.push_basic = False
-
-    return parsed_args
+def parse_encoding_args(ap: ArgumentParser):
+    return ap.parse_args()
 
 
-def main():
+def execute_gasol(params: OptimizationParams):
     global previous_gas
     global new_gas
     global previous_size
     global new_size
     global prev_n_instrs
     global new_n_instrs
-
-    init()
-    args = parse_encoding_args()
-    params = OptimizationParams()
-    params.parse_args(args)
 
     create_ml_models(params)
 
@@ -994,5 +982,20 @@ def main():
         print("Initial number of instructions: " + str(new_n_instrs))
 
 
+def main_gasol():
+    # Initialize some global params
+    init()
+    # Parser used by GASOL
+    ap = ArgumentParser(description='GASOL, the EVM super-optimizer')
+    options_gasol(ap)
+    parsed_args = parse_encoding_args(ap)
+
+    # Optimization Params returns the correposponding variables
+    params = OptimizationParams()
+    # We need to parse the arguments
+    params.parse_args(parsed_args)
+    execute_gasol(params)
+
+
 if __name__ == '__main__':
-    main()
+    main_gasol()
