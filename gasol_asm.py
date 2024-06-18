@@ -533,8 +533,11 @@ def optimize_asm_block_asm_format(block: AsmBlock, params: OptimizationParams) -
 
 
 def compare_asm_block_asm_format(old_block: AsmBlock, new_block: AsmBlock, params: OptimizationParams) -> Tuple[bool, str]:
-    new_block.set_block_name("alreadyOptimized_"+new_block.get_block_name())
+    # Change new block name to store the corresponding sfs with the new change
+    original_block_name = new_block.get_block_name()
+    new_block.set_block_name("alreadyOptimized_"+ original_block_name)
     new_sfs_information, _ = compute_original_sfs_with_simplifications(new_block, params)
+    new_block.set_block_name(original_block_name)
 
     new_sfs_dict = new_sfs_information["syrup_contract"]
 
