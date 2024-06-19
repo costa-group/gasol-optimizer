@@ -242,7 +242,7 @@ def optimize_block(sfs_dict, params: OptimizationParams) -> List[Tuple[AsmBlock,
         # We have enabled the optimization process (otherwise, we just generate the intermediate SMT files)
         if params.optimization_enabled:
             optimization_outcome, solver_time, optimized_ids, greedy_ids = search_optimal(sfs_block, params, tout, block_name)
-            optimized_asm = asm_from_ids(sfs_block, optimized_ids)
+            optimized_asm = asm_from_ids(sfs_block, optimized_ids) if optimized_ids is not None else []
             greedy_asm = asm_from_ids(sfs_block, greedy_ids) if greedy_ids is not None else None
 
             # We only determine the best solution if we have enabled previously the greedy algorithm
