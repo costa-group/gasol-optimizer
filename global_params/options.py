@@ -119,6 +119,10 @@ class OptimizationParams:
         self.block_name_prefix = ""
         self.dep_mem_info = {}
 
+        # Greedy extensions
+        self.ub_greedy = None
+        self.greedy = None
+
     def parse_args(self, parsed_args: Namespace):
         self.input_file = parsed_args.input_path
 
@@ -176,3 +180,7 @@ class OptimizationParams:
         self.opt_select = parsed_args.opt_select
 
         self.forves_enabled = parsed_args.forves_enabled
+
+        # Greedy options
+        self.greedy = parsed_args.greedy
+        self.ub_greedy = parsed_args.ub_greedy

@@ -29,6 +29,7 @@ from solution_generation.ids2asm import asm_from_ids
 from verification.forves_verification import compare_forves
 from statistics.statistics_from_asm_block import csv_from_asm_block
 from global_params.options import OptimizationParams
+from greedy.block_generation import greedy_from_json, greedy_standalone
 
 
 def init():
@@ -109,11 +110,106 @@ def compute_original_sfs_with_simplifications(block: AsmBlock, params: Optimizat
     return sfs_dict, subblocks_list
 
 
+# Assume optimized criteria and optimized greedy have returned a valid model
+def compare_best_block(original_seq: List[AsmBytecode], optimized_superopt: List[AsmBytecode],
+                       optimized_greedy: List[AsmBytecode], criterion: str) -> Tuple[List[AsmBytecode], str]:
+    if criterion == 'size':
+        saved_optimized = sum([instr.bytes_required for instr in original_seq]) - sum([instr.bytes_required for instr in optimized_superopt])
+        saved_greedy = sum([instr.bytes_required for instr in original_seq]) - sum([instr.bytes_required for instr in optimized_greedy])
+
+    elif criterion == 'gas':
+        saved_optimized = sum([instr.gas_spent for instr in original_seq]) - sum([instr.gas_spent for instr in optimized_superopt])
+        saved_greedy = sum([instr.gas_spent for instr in original_seq]) - sum([instr.gas_spent for instr in optimized_greedy])
+
+    else:
+        saved_optimized = len(original_seq) - len(optimized_superopt)
+        saved_greedy = len(original_seq) - len(optimized_greedy)
+
+    if saved_optimized <= 0 and saved_greedy <= 0:
+        return optimized_superopt, 'both_worse_or_equal'
+    elif saved_optimized == saved_greedy:
+        return optimized_superopt, 'tie'
+    elif saved_optimized < saved_greedy:
+        return optimized_greedy, 'greedy'
+    else:
+        return optimized_superopt, 'superopt'
+
+
+def search_optimal(sfs_block: Dict, params: OptimizationParams, tout: int,
+                   block_name: str) -> Tuple[OptimizeOutcome, float, List[str], Optional[List[str]]]:
+    """
+    Decides which superoptimization algorithm (or greedy standalone) is applied, using the bound by the greedy if
+    the corresponding option is enabled. Returns the optimization outcome, the time spent in the search, the ids
+    from the optimized sequence and from the greedy algorithm
+    """
+    # Must come before extended json with instr dep and bounds to apply the new ub to the bounds generation
+    if params.ub_greedy and not params.greedy:
+        try:
+            new_data, _, _, greedy_ids, error = greedy_from_json(sfs_block)
+            # Only choose the greedy if the obtained ub is better
+            print("GREEDY IDS BEF", greedy_ids)
+            # Check there is no error in the generated solution (as to consider it for the greedy)
+            if error == 0:
+                # For smt, we are only interested in improving the bound
+                if len(greedy_ids) < sfs_block['init_progr_len']:
+                    sfs_block['init_progr_len'] = len(greedy_ids)
+
+            else:
+                greedy_ids = None
+        except:
+            greedy_ids = None
+    else:
+        greedy_ids = None
+
+    # Greedy standalone configuration
+    if params.greedy:
+        optimization_outcome_str, solver_time, optimized_ids = greedy_standalone(sfs_block)
+        optimization_outcome = OptimizeOutcome.non_optimal if optimization_outcome_str == "non_optimal" else OptimizeOutcome.error
+
+    # Otherwise, SMT superoptimization
+    else:
+        optimizer = BlockOptimizer(block_name, sfs_block, params, tout)
+        optimization_outcome, solver_time, optimized_ids = optimizer.optimize_block()
+
+    return optimization_outcome, solver_time, optimized_ids, greedy_ids
+
+
+def choose_best_solution(original_asm: List[AsmBytecode], optimized_asm: List[AsmBytecode],
+                         greedy_asm: Optional[List[AsmBytecode]], optimization_outcome: OptimizeOutcome,
+                         params: OptimizationParams):
+    chosen_solution_tag = None
+    if params.ub_greedy:
+        criterion = params.criteria
+
+        # Case: no solution found by the superoptimizer and the greedy has found a solution
+        if (optimization_outcome == OptimizeOutcome.no_model or optimization_outcome == OptimizeOutcome.unsat) \
+                and greedy_asm is not None:
+            optimized_asm, chosen_solution_tag = greedy_asm, 'greedy_no_model'
+
+        # Case: both the greedy and the superoptimizer has found no solution
+        elif optimization_outcome == OptimizeOutcome.no_model or optimization_outcome == OptimizeOutcome.unsat:
+            optimized_asm, chosen_solution_tag = [], 'both_worse_or_equal'
+
+        # Case: no solution found by the greedy algorithm but the superoptimizer has found a solution
+        elif greedy_asm is None:
+            optimized_asm, chosen_solution_tag = compare_best_block(original_asm, optimized_asm,
+                                                                    original_asm, criterion)
+
+        # Case: both the greedy and the superoptimizer have returned a sequence
+        else:
+            optimized_asm, chosen_solution_tag = compare_best_block(original_asm, optimized_asm,
+                                                                    greedy_asm, criterion)
+
+    # We just return the corresponding optimization assembly code and the tag indicating in which situation
+    # we have fallen into
+    return optimized_asm, chosen_solution_tag
+
+
 # Given the sequence of bytecodes, the initial stack size, the contract name and the
 # block id, returns the output given by the solver, the name given to that block and current gas associated
 # to that sequence.
 def optimize_block(sfs_dict, params: OptimizationParams) -> List[Tuple[AsmBlock, OptimizeOutcome, float, \
-        List[AsmBytecode], int, int, List[str], List[str]]]:
+        List[AsmBytecode], Optional[str], int, int, List[str], List[str]]]:
     block_solutions = []
     # SFS dict of syrup contract contains all sub-blocks derived from a block after splitting
     for block_name in sfs_dict:
@@ -141,17 +237,24 @@ def optimize_block(sfs_dict, params: OptimizationParams) -> List[Tuple[AsmBlock,
         else:
             tout = params.timeout * (1 + len([True for instr in sfs_block['user_instrs'] if instr["storage"]]))
 
-        optimizer = BlockOptimizer(block_name, sfs_block, params, tout)
         print(f"Optimizing {block_name}... Timeout:{str(tout)}")
 
+        # We have enabled the optimization process (otherwise, we just generate the intermediate SMT files)
         if params.optimization_enabled:
-            optimization_outcome, solver_time, optimized_ids = optimizer.optimize_block()
+            optimization_outcome, solver_time, optimized_ids, greedy_ids = search_optimal(sfs_block, params, tout, block_name)
             optimized_asm = asm_from_ids(sfs_block, optimized_ids)
-            block_solutions.append((original_block, optimization_outcome, solver_time,
-                                    optimized_asm, tout, initial_solver_bound, sfs_block['rules'], optimized_ids))
-        else:
-            optimizer.generate_intermediate_files()
+            greedy_asm = asm_from_ids(sfs_block, greedy_ids) if greedy_ids is not None else None
 
+            # We only determine the best solution if we have enabled previously the greedy algorithm
+            if params.ub_greedy:
+                chosen_seq, chosen_tag = choose_best_solution(original_block.instructions, optimized_asm, greedy_asm, optimization_outcome, params)
+            else:
+                chosen_seq, chosen_tag = optimized_asm, "greedy_not_enabled"
+            block_solutions.append((original_block, optimization_outcome, solver_time,
+                                    chosen_seq, chosen_tag, tout, initial_solver_bound, sfs_block['rules'], optimized_ids))
+        else:
+            optimizer = BlockOptimizer(block_name, sfs_block, params, tout)
+            optimizer.generate_intermediate_files()
     return block_solutions
 
 
@@ -360,7 +463,7 @@ def update_length_count(old_block: AsmBlock, new_block: AsmBlock):
 
 
 def generate_statistics_info(original_block: AsmBlock, outcome: Optional[OptimizeOutcome], solver_time: float,
-                             optimized_block: AsmBlock, initial_bound: int, tout: int, rules: List[str]) -> Dict:
+                             optimized_block: AsmBlock, chosen_tag: Optional[str], initial_bound: int, tout: int, rules: List[str]) -> Dict:
     block_name = original_block.block_name
     original_instr = ' '.join(original_block.instructions_to_optimize_plain())
 
@@ -368,7 +471,7 @@ def generate_statistics_info(original_block: AsmBlock, outcome: Optional[Optimiz
                       "initial_n_instrs": initial_bound, 'initial_estimated_size': original_block.bytes_required,
                       'initial_estimated_gas': original_block.gas_spent, 'rules': ','.join(rules),
                       'initial_length': len(original_block.instructions_to_optimize_plain()),
-                      'saved_length': 0}
+                      'saved_length': 0, 'chosen_block_tag': chosen_tag}
 
     # The outcome of the solver is unsat
     if outcome == OptimizeOutcome.unsat:
@@ -499,13 +602,13 @@ def optimize_asm_block_asm_format(block: AsmBlock, params: OptimizationParams) -
         optimize_block(sfs_dict, params)
         return new_block, {}, []
 
-    for sub_block, optimization_outcome, solver_time, optimized_asm, tout, initial_solver_bound, rules, optimized_log_rep in optimize_block(
+    for sub_block, optimization_outcome, solver_time, optimized_asm, chosen_tag, tout, initial_solver_bound, rules, optimized_log_rep in optimize_block(
             sfs_dict, params):
 
         optimal_block = AsmBlock('optimized', sub_block.block_id, sub_block.block_name, sub_block.is_init_block)
         optimal_block.instructions = optimized_asm
 
-        statistics_info = generate_statistics_info(sub_block, optimization_outcome, solver_time, optimal_block,
+        statistics_info = generate_statistics_info(sub_block, optimization_outcome, solver_time, optimal_block, chosen_tag,
                                                    initial_solver_bound, tout, rules)
 
         if "solution_found" in statistics_info:
@@ -714,14 +817,14 @@ def optimize_from_sfs(params: OptimizationParams):
     sfs_dict = {block_name: sfs_block}
 
     csv_statistics = []
-    for original_block, optimization_outcome, solver_time, optimized_asm, tout, initial_solver_bound, rules, optimized_log_rep \
+    for original_block, optimization_outcome, solver_time, optimized_asm, chosen_tag, tout, initial_solver_bound, rules, optimized_log_rep \
             in optimize_block(sfs_dict, params):
 
         optimal_block = AsmBlock('optimized', original_block.block_id, original_block.block_name,
                                  original_block.is_init_block)
         optimal_block.instructions = optimized_asm
 
-        statistics_info = generate_statistics_info(original_block, optimization_outcome, solver_time, optimal_block,
+        statistics_info = generate_statistics_info(original_block, optimization_outcome, solver_time, optimal_block, chosen_tag,
                                                    initial_solver_bound, tout, rules)
 
         csv_statistics.append(statistics_info)
@@ -833,9 +936,11 @@ def options_gasol(ap: ArgumentParser) -> None:
     log_generation.add_argument("-optimize-from-log", dest='log_path', action='store', metavar="log_file",
                                 help="Generates the same optimized bytecode than the one associated to the log file")
 
-    basic = ap.add_argument_group('Max-SMT solver general options',
-                                  'Basic options for solving the corresponding Max-SMT problem')
+    basic = ap.add_argument_group('SearchOptimal general options',
+                                  'Basic options for solving the corresponding constraint solver')
 
+    basic.add_argument("-ub-greedy", "--ub-greedy", dest='ub_greedy', help='Enables greedy algorithm to predict the upper bound', action='store_true')
+    basic.add_argument('-greedy', '--greedy', dest='greedy', help='Uses greedy directly to generate the results', action='store_true')
     basic.add_argument("-solver", "--solver", help="Choose the solver", choices=["z3", "barcelogic", "oms"],
                        default="oms")
     basic.add_argument("-tout", metavar='timeout', action='store', type=int,
