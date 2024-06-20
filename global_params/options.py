@@ -122,16 +122,34 @@ class OptimizationParams:
         # Greedy extensions
         self.ub_greedy = None
         self.greedy = None
+        self.no_simp = True
+        self.debug_flag = False
 
     def parse_args(self, parsed_args: Namespace):
         self.input_file = parsed_args.input_path
 
         # Distinguish cases
-        self.input_format = "plain" if parsed_args.block else "sfs" \
-            if parsed_args.sfs else "single-asm" if parsed_args.json_asm else "asm"
-        self.contract = parsed_args.contract
-        self.seqs_file = parsed_args.seq_csv_path
-        self.blocks_file = parsed_args.block_csv_path
+        if "block" in parsed_args:
+            self.input_format = "plain" if parsed_args.block else "sfs" \
+                if parsed_args.sfs else "single-asm" if parsed_args.json_asm else "asm"
+        else:
+            self.input_format = "asm"
+
+        if "contract" in parsed_args:
+            self.contract = parsed_args.contract
+        else:
+            self.contract = None
+
+        if "seq_csv_path" in parsed_args:
+            self.seqs_file = parsed_args.seq_csv_path
+        else:
+            self.seqs_file = "seqs.csv"
+
+        if "blocks_file" in parsed_args:
+            self.blocks_file = parsed_args.block_csv_path
+        else:
+            self.blocks_file = "blocks.csv"
+
         self.optimization_enabled = parsed_args.backend
         self.keep_files = parsed_args.intermediate
         self.verbose = parsed_args.debug_flag
@@ -157,7 +175,11 @@ class OptimizationParams:
         # Hard constraints
         self.memory_encoding = parsed_args.memory_encoding
         self.push_basic = parsed_args.push_basic
-        self.pop_uninterpreted = parsed_args.pop_uninterpreted
+
+        if "pop_uninterpreted" in parsed_args:
+            self.pop_uninterpreted = parsed_args.pop_uninterpreted
+        else:
+            self.pop_uninterpreted = not parsed_args.pop_basic
         self.order_bounds = parsed_args.order_bounds
         self.empty = parsed_args.empty
         self.encode_terms = parsed_args.encode_terms
@@ -170,7 +192,11 @@ class OptimizationParams:
         # Could be adapted
         self.size_rules_enabled = True
 
-        self.direct_soft = parsed_args.direct_soft
+        if "direct_soft" in parsed_args:
+            self.direct_soft = parsed_args.direct_soft
+        else:
+            self.direct_soft = parsed_args.direct
+
         self.at_most = parsed_args.at_most
         self.pushed_once = parsed_args.pushed_once
         self.no_output_before_pop = parsed_args.no_output_before_pop
@@ -179,8 +205,17 @@ class OptimizationParams:
         self.bound_select = parsed_args.bound_select
         self.opt_select = parsed_args.opt_select
 
-        self.forves_enabled = parsed_args.forves_enabled
+        if "forves_enabled" in parsed_args:
+            self.forves_enabled = parsed_args.forves_enabled
+        else:
+            self.forves_enabled = False
 
         # Greedy options
         self.greedy = parsed_args.greedy
         self.ub_greedy = parsed_args.ub_greedy
+
+        if "no_simp" in parsed_args:
+            self.no_simp = parsed_args.no_simp
+
+        if "debug_flag" in parsed_args:
+            self.debug_flag = parsed_args.debug_flag
