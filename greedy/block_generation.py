@@ -1256,11 +1256,9 @@ class SMSgreedy:
         return True
 
 
-def greedy_from_json(json_data: Dict[str, Any], verb=True) -> Tuple[Dict[str, Any], SMSgreedy, List[str], List[str], int]:
+def greedy_from_json(json_data: Dict[str, Any], verb=False) -> Tuple[Dict[str, Any], SMSgreedy, List[str], List[str], int]:
     try:
-        print("ENC")
         encoding = SMSgreedy(json_data.copy())
-        print("AFT")
         # print(encoding._var_instr_map)
         # print()
         # print(encoding._opid_instr_map)
@@ -1269,11 +1267,11 @@ def greedy_from_json(json_data: Dict[str, Any], verb=True) -> Tuple[Dict[str, An
         global verbose
         verbose = verb
         (instr, final_no_store) = encoding.target()
-        print("before pre:",encoding._needed_in_stack_map,encoding._initial_stack)
+        # print("before pre:",encoding._needed_in_stack_map,encoding._initial_stack)
 
         (opcodes_ini, opcodeids_ini, solved, initial) = encoding.precompute(encoding._final_stack.copy(),
                                                                             encoding._initial_stack.copy())
-        print("after pre:",encoding._needed_in_stack_map,initial,opcodeids_ini,solved)
+        # print("after pre:",encoding._needed_in_stack_map,initial,opcodeids_ini,solved)
         solved_aux = solved.copy()
         needed_in_stack_aux = encoding._needed_in_stack_map.copy()
         opcodes_ini_aux = opcodes_ini.copy()
