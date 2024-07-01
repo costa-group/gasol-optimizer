@@ -6289,6 +6289,7 @@ def update_storage_sequences(removed_instructions,simplification,max_ss_idx):
     global memory_order
     global storage_dep
     global memory_dep
+    global non_aliasing_disabled
     
     new_storage_order = []
     new_memory_order = []
@@ -6339,11 +6340,23 @@ def update_storage_sequences(removed_instructions,simplification,max_ss_idx):
 
     if storage_order != new_storage_order:
         storage_order = new_storage_order
+
+        modified = False
+        if non_aliasing_disabled:
+            modified = True
+            old_value = non_aliasing_disabled
+            non_aliasing_disabled = not non_aliasing_disabled
+
         if simplification:
             simp = True
             while(simp):
                 simp = simplify_memory(storage_order, memory_order, "storage")
 
+
+        if modified:
+            modified = False
+            non_aliasing_disabled = old_value
+                
         stdep = generate_dependences(storage_order,"storage")
         stdep = simplify_dependences(stdep)
         
@@ -6394,10 +6407,22 @@ def update_storage_sequences(removed_instructions,simplification,max_ss_idx):
             
     if memory_order != new_memory_order:
         memory_order = new_memory_order
+
+        modified = False
+        if non_aliasing_disabled:
+            modified = True
+            old_value = non_aliasing_disabled
+            non_aliasing_disabled = not non_aliasing_disabled
+
         if simplification:
             simp = True
             while(simp):
                 simp = simplify_memory(memory_order, storage_order, "memory")
+
+        if modified:
+            modified = False
+            non_aliasing_disabled = old_value
+                
         memdep = generate_dependences(memory_order,"memory")
         memdep = simplify_dependences(memdep)
         
