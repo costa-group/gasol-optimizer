@@ -29,7 +29,7 @@ from solution_generation.ids2asm import asm_from_ids
 from verification.forves_verification import compare_forves
 from statistics.statistics_from_asm_block import csv_from_asm_block
 from global_params.options import OptimizationParams
-from greedy.block_generation import greedy_from_json, greedy_standalone
+from greedy.block_generation_new import greedy_from_json, greedy_standalone
 
 
 def init():
@@ -142,6 +142,7 @@ def search_optimal(sfs_block: Dict, params: OptimizationParams, tout: int,
     the corresponding option is enabled. Returns the optimization outcome, the time spent in the search, the ids
     from the optimized sequence and from the greedy algorithm
     """
+    print("SEARCH OPTIMAL")
     # Must come before extended json with instr dep and bounds to apply the new ub to the bounds generation
     if params.ub_greedy and not params.greedy:
         try:
@@ -160,10 +161,12 @@ def search_optimal(sfs_block: Dict, params: OptimizationParams, tout: int,
             greedy_ids = None
     else:
         greedy_ids = None
-
+    print("Params.greedy", params.greedy)
     # Greedy standalone configuration
     if params.greedy:
+        print("Entering greedy standalone")
         optimization_outcome_str, solver_time, optimized_ids = greedy_standalone(sfs_block)
+        print("Exiting greedy standalone", optimized_ids)
         optimization_outcome = OptimizeOutcome.non_optimal if optimization_outcome_str == "non_optimal" else OptimizeOutcome.error
 
     # Otherwise, SMT superoptimization
@@ -828,27 +831,7 @@ def optimize_from_sfs(params: OptimizationParams):
                                                    initial_solver_bound, tout, rules)
 
         csv_statistics.append(statistics_info)
-
-        new_sfs_information, _ = compute_original_sfs_with_simplifications(original_block, params)
-        new_sfs_block = new_sfs_information["syrup_contract"][block_name + '_0']
-
-        eq, reason = are_equals(sfs_block, new_sfs_block)
-
-        final_block = original_block
-
-        if not eq:
-            print("Comparison failed, so initial block is kept")
-            print("\t[REASON]: " + reason)
-            print("")
-
-        elif (optimization_outcome == OptimizeOutcome.optimal or optimization_outcome == OptimizeOutcome.optimal) \
-                and block_has_been_optimized(original_block, optimal_block, params.criteria):
-            final_block = deepcopy(original_block)
-            final_block.instructions = optimized_asm
-
-        update_gas_count(original_block, final_block)
-        update_length_count(original_block, final_block)
-        update_size_count(original_block, final_block)
+    print(json.dumps(sfs_block, indent=4))
 
     if params.optimization_enabled:
         pd.DataFrame(csv_statistics).to_csv(params.seqs_file)
@@ -857,9 +840,7 @@ def optimize_from_sfs(params: OptimizationParams):
         print(original_block.to_plain_with_byte_number())
         print("")
         print("Optimized sequence (basic block per line):")
-        print(final_block.to_plain_with_byte_number())
-        with open(params.optimized_file, 'w') as f:
-            f.write(json.dumps(new_sfs_block))
+        print(optimal_block.to_plain_with_byte_number())
 
 
 def modify_file_names(params: OptimizationParams) -> None:

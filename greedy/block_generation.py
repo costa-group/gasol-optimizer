@@ -329,17 +329,16 @@ def needed(p0, p1, var_instr_map):
 class SMSgreedy:
 
     def __init__(self, json_format):
-        self._bs = json_format['max_sk_sz']
         self._user_instr = json_format['user_instrs']
         self._b0 = json_format["init_progr_len"]
         self._initial_stack = json_format['src_ws']
         self._final_stack = json_format['tgt_ws']
-        self._variables = json_format['vars']
-        self._current_cost = json_format['current_cost']
+
         self._mem_order = json_format['memory_dependences']
         self._sto_order = json_format['storage_dependences']
         self._original_instrs = json_format['original_instrs']
         self._var_instr_map = {}
+
         for ins in self._user_instr:
             if len(ins['outpt_sk']) == 1:
                 self._var_instr_map[ins['outpt_sk'][0]] = ins
@@ -1258,17 +1257,18 @@ class SMSgreedy:
 
 
 def greedy_from_json(json_data: Dict[str, Any], verb=False) -> Tuple[Dict[str, Any], SMSgreedy, List[str], List[str], int]:
-    encoding = SMSgreedy(json_data.copy())
-    # print(encoding._var_instr_map)
-    # print()
-    # print(encoding._opid_instr_map)
-    # print(encoding._mem_order)
-    # print(encoding._sto_order)
-    global verbose
-    verbose = verb
     try:
+        encoding = SMSgreedy(json_data.copy())
+        # print(encoding._var_instr_map)
+        # print()
+        # print(encoding._opid_instr_map)
+        # print(encoding._mem_order)
+        # print(encoding._sto_order)
+        global verbose
+        verbose = verb
         (instr, final_no_store) = encoding.target()
         # print("before pre:",encoding._needed_in_stack_map,encoding._initial_stack)
+
         (opcodes_ini, opcodeids_ini, solved, initial) = encoding.precompute(encoding._final_stack.copy(),
                                                                             encoding._initial_stack.copy())
         # print("after pre:",encoding._needed_in_stack_map,initial,opcodeids_ini,solved)
@@ -1303,7 +1303,7 @@ def greedy_from_json(json_data: Dict[str, Any], verb=False) -> Tuple[Dict[str, A
             pass
             # print(name, encoding._b0, encoding._b0)
         error = 0
-    except AssertionError:
+    except Exception:
         # _, _, tb = sys.exc_info()
         # traceback.print_tb(tb)
         # print("Error")
@@ -1337,6 +1337,7 @@ def greedy_standalone(sms: Dict) -> Tuple[str, float, List[str]]:
     """
     usage_start = resource.getrusage(resource.RUSAGE_SELF)
     try:
+        print("AA")
         json_info, _, _, seq_ids, error = greedy_from_json(sms)
         usage_stop = resource.getrusage(resource.RUSAGE_SELF)
     except:
