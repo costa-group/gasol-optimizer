@@ -1908,7 +1908,7 @@ def compute_memory_dependences(simplification):
         old_value = non_aliasing_disabled
         non_aliasing_disabled = not non_aliasing_disabled
 
-    
+        
     if simplification:
         simp = True
         while(simp):
@@ -5476,7 +5476,7 @@ def replace_loads_by_sstores(storage_location, complementary_location, location)
             var = elem[0][0]
             value = elem[0][1]
 
-            if extra_dep_info != {} and len(storage_location[i+1::])>0:
+            if extra_dep_info != {} and extra_dep != [] and len(storage_location[i+1::])>0:
                 l_ins = []
                 dep_pos = get_idx_in_instructions(i,location)
                 subl = storage_location[i+1::]
@@ -5582,7 +5582,8 @@ def remove_store_recursive_dif(storage_location, location):
     else:
         instruction = "mstore"
         extra_dep = extra_dep_info["memory_deps_eqs"] if extra_dep_info != {} else []
-        
+
+    
     i = 0
     finish = False
     
@@ -5593,23 +5594,25 @@ def remove_store_recursive_dif(storage_location, location):
             var = elem[0][0]
 
             eq_rel = []
-            if extra_dep_info != {} and len(storage_location[i+1::])>0:
+            if extra_dep_info != {} and extra_dep != [] and len(storage_location[i+1::])>0:
                 rest = []
                 dep_pos = get_idx_in_instructions(i,location)
                 subl = storage_location[i+1::]
+                
                 for j in range(len(subl)):
                     ins = storage_location[i+1+j]
                     if ins[0][-1].find(instruction)!=-1:
                         dep_pos_load = get_idx_in_instructions(j+i+1, location)
 
-                        l = list(filter(lambda x: x.get_first() == dep_pos and x.get_second() == dep_pos_load,extra_dep))
                         
+                        l = list(filter(lambda x: x.get_first() == dep_pos and x.get_second() == dep_pos_load,extra_dep))
+
                         if len(l) == 1:
                             rest.append(ins)
                             eq_rel.append((elem,ins))
             else:
                 rest = list(filter(lambda x: x[0][0] == var and x[0][-1].find(instruction)!=-1 and x[0][-1] == elem[0][-1], storage_location[i+1::]))
-            
+                
                 # # If instruction is mstore and the next one is mstore8, then i cannot remove any of them. Otherwise, it is
             # # possible if both instructions are dependent
             # rest = list(filter(lambda x: x[0][-1].find(instruction)!=-1 and (elem[0][-1] != "mstore" or x[0][-1] != "mstore8") and
@@ -5624,7 +5627,7 @@ def remove_store_recursive_dif(storage_location, location):
                 for j in range(len(sublist)):
                     dep.append(are_dependent(elem, sublist[j],i,j+i+1, location))
                 # dep = list(map(lambda x: are_dependent(elem, x),sublist)) #It checks for loads and and keccaks betweeen the stores
-
+                
                 #Keccaks are considered in dep list
                 if True not in dep:
                     storage_location.pop(i)
@@ -5740,7 +5743,7 @@ def remove_store_loads(storage_location, location):
 
                 find_potential = False
                 
-                if extra_dep_info != {} and symb_ins[0][-1].find(load_ins)!=-1:
+                if extra_dep_info != {} and extra_dep != [] and symb_ins[0][-1].find(load_ins)!=-1:
                     dep_pos = get_idx_in_instructions(i,location)
                     pos = storage_location.index(symb_ins)
                     dep_pos_load = get_idx_in_instructions(pos, location)
