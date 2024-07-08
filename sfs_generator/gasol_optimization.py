@@ -5092,6 +5092,10 @@ def apply_cond_transformation(instr,user_def_instrs,tstack):
                 discount_op+=1
                 gas_saved_op+=3
 
+                msg = "AND(SHL(X,Y), SHL(X,Z))"
+                rule = msg
+                check_and_print_debug_info(debug, msg)
+
                 return True, delete
             else:
                 return False, []
