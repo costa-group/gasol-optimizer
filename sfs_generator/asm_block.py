@@ -141,6 +141,36 @@ class AsmBlock:
     def to_plain_with_byte_number(self) -> str:
         return ' '.join(map(lambda instr: instr.to_plain_with_byte_number(), self.instructions))
 
+    def instructions_words_abstract(self) -> List[str]:
+        i = 0
+        value2symbolic = dict()
+        instructions_words = []
+
+        for instruction in self.instructions:
+
+            if instruction.disasm == "tag":
+                continue
+
+            # For every instruction with a value associated that is of term push
+            if instruction.disasm.startswith("PUSH") and instruction.disasm != "PUSH" and instruction.value is not None:
+                instr_repr = instruction.to_plain()
+                if instr_repr not in value2symbolic:
+                    value2symbolic[instr_repr] = i
+                    i += 1
+
+                assigned_value = value2symbolic[instr_repr]
+
+                # Annotate the corresponding PUSH as "PUSH*" denoting
+                instructions_words.append("PUSH*")
+                instructions_words.append(str(assigned_value))
+
+            elif instruction.jump_type is not None:
+                instructions_words.append(instruction.disasm)
+            else:
+                instructions_words.extend(instruction.to_plain_with_byte_number().split(' '))
+
+        return instructions_words
+
     def __str__(self):
         content = ""
         content += "Block Id:"+str(self.block_id)+"\n"

@@ -1337,7 +1337,6 @@ def greedy_standalone(sms: Dict) -> Tuple[str, float, List[str]]:
     """
     usage_start = resource.getrusage(resource.RUSAGE_SELF)
     try:
-        print("AA")
         json_info, _, _, seq_ids, error = greedy_from_json(sms)
         usage_stop = resource.getrusage(resource.RUSAGE_SELF)
     except:
