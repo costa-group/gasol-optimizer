@@ -17,9 +17,11 @@ def build_asm_bytecode(instruction : ASM_Json_T, pushlib_values: dict) -> AsmByt
         value = instruction['value']
         if value not in pushlib_values:
             pushlib_values[value] = len(pushlib_values)
+        real_value = value
         value = pushlib_values[value]
     else:
         value = instruction.get("value", None)
+        real_value = value
 
     begin = instruction.get("begin", -1)
     end = instruction.get("end", -1)
@@ -29,9 +31,9 @@ def build_asm_bytecode(instruction : ASM_Json_T, pushlib_values: dict) -> AsmByt
 
     # At this point, we identify PUSH0 instructions, and we create an AsmBytecode as such
     if constants.push0_enabled and name == 'PUSH' and value == "0":
-        asm_bytecode = AsmBytecode(begin, end, source, "PUSH0", None, jump_type)
+        asm_bytecode = AsmBytecode(begin, end, source, "PUSH0", None, jump_type, real_value)
     else:
-        asm_bytecode = AsmBytecode(begin, end, source, name, value, jump_type)
+        asm_bytecode = AsmBytecode(begin, end, source, name, value, jump_type, real_value)
 
     return asm_bytecode
 
@@ -59,6 +61,7 @@ def build_blocks_from_asm_representation(cname : str, block_name_prefix : str, i
             block.add_instruction(asm_bytecode)
             bytecodes.append(block)
             block = AsmBlock(cname, block_id, _generate_block_name_from_id(block_name_prefix, block_id), is_init_code)
+            block._idx2real_value = pushlib_values
             pushlib_values = dict()
             block_id+=1
 
@@ -68,6 +71,7 @@ def build_blocks_from_asm_representation(cname : str, block_name_prefix : str, i
             if block.instructions:
                 bytecodes.append(block)
                 block = AsmBlock(cname, block_id, _generate_block_name_from_id(block_name_prefix, block_id), is_init_code)
+                block._idx2real_value = pushlib_values
                 pushlib_values = dict()
                 block_id += 1
                 
@@ -79,6 +83,7 @@ def build_blocks_from_asm_representation(cname : str, block_name_prefix : str, i
 
     # If last block has any instructions left, it must be added to the bytecode
     if block.instructions:
+        block._idx2real_value = pushlib_values
         bytecodes.append(block)
         
     return bytecodes

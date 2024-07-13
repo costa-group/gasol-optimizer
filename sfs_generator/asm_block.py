@@ -135,7 +135,6 @@ class AsmBlock:
     def to_json(self) -> [ASM_Json_T]:
         return list(map(lambda instr: instr.to_json(), self.instructions))
 
-
     def to_plain(self) -> str:
         return ' '.join((instr.to_plain() for instr in self.instructions if instr.disasm != "tag"))
 

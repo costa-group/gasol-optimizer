@@ -25,13 +25,15 @@ class AsmBytecode:
     Class that represents the assembly format of the bytecode, following the same convention as the Solidity compiler
     """
 
-    def __init__(self, begin: int, end: int, source: int, disasm: str, value: ASM_Value_T, jump_type: ASM_Jump_T = None):
+    def __init__(self, begin: int, end: int, source: int, disasm: str, value: ASM_Value_T, jump_type: ASM_Jump_T = None,
+                 real_value: ASM_Value_T = None):
         self.begin = begin
         self.end = end
         self.source = source
         self.disasm = disasm
         self.value = value
         self.jump_type = jump_type
+        self.real_value = real_value if real_value is not None else value
 
     def to_json(self)-> ASM_Json_T :
         """
@@ -42,6 +44,7 @@ class AsmBytecode:
         json_bytecode = {"begin": self.begin, "end": self.end, "name": self.disasm, "source": self.source}
 
         if self.value is not None:
+            # Substitute by the real value (for push instructions with no numeric value)
             json_bytecode["value"] = self.value
 
         if self.jump_type is not None:
@@ -67,6 +70,19 @@ class AsmBytecode:
         op_value = ''.join(['0x', self.value]) if self.disasm == "PUSH" else str(self.value) if self.value is not None else ''
         return f"{op_name} {op_value}" if self.value is not None and self.disasm == "PUSH" else f"{self.disasm} {self.jump_type}" \
             if self.jump_type is not None else self.disasm
+
+    def to_plain_abstracted(self, value_dict: Dict) -> str:
+        if is_push0(self.disasm, self.real_value):
+            return "PUSH0"
+
+        op_name = ''.join([self.disasm, str(get_push_number_hex(self.real_value))]) if self.disasm == "PUSH" else self.disasm
+
+        op_value = ''.join(['0x', self.real_value]) if self.disasm == "PUSH" \
+            else value_dict.get(self.real_value, str(self.real_value)) if self.value is not None else ''
+
+        return f"{op_name} {op_value}" if self.value is not None else f"{self.disasm}" \
+            if self.jump_type is not None else self.disasm
+
 
     @property
     def bytes_required(self) -> int:
