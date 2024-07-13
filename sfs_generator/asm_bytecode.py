@@ -45,7 +45,7 @@ class AsmBytecode:
 
         if self.value is not None:
             # Substitute by the real value (for push instructions with no numeric value)
-            json_bytecode["value"] = self.value
+            json_bytecode["value"] = self.real_value
 
         if self.jump_type is not None:
             json_bytecode["jumpType"] = self.jump_type
@@ -114,11 +114,11 @@ class AsmBytecode:
     
     
     def __str__(self):
-        return f"{{begin:{str(self.begin)}, end:{str(self.end)}, source:{str(self.source)}, name:{self.disasm}, value:{str(self.value)}, jumpType:{self.jump_type}}}"
+        return f"{{begin:{str(self.begin)}, end:{str(self.end)}, source:{str(self.source)}, name:{self.disasm}, value:{str(self.value)}, real_value:{str(self.real_value)}, jumpType:{self.jump_type}}}"
 
 
     def __repr__(self):
-        return f"{{begin:{str(self.begin)}, end:{str(self.end)}, source:{str(self.source)}, name:{self.disasm}, value:{str(self.value)}, jumpType:{str(self.jump_type)}}}"
+        return f"{{begin:{str(self.begin)}, end:{str(self.end)}, source:{str(self.source)}, name:{self.disasm}, value:{str(self.value)}, real_value:{str(self.real_value)}, jumpType:{str(self.jump_type)}}}"
 
 
     def __eq__(self, other):
