@@ -142,6 +142,10 @@ class AsmBlock:
         return ' '.join(map(lambda instr: instr.to_plain_with_byte_number(), self.instructions))
 
     def instructions_words_abstract(self) -> List[str]:
+        """
+        Returns the list of words, assuming a distinct constant value for the value associated to each pseudo-push
+        (PUSH [tag], PUSHLIB...)
+        """
         i = 0
         value2symbolic = dict()
         instructions_words = []
@@ -152,17 +156,28 @@ class AsmBlock:
                 continue
 
             # For every instruction with a value associated that is of term push
-            if instruction.disasm.startswith("PUSH") and instruction.disasm != "PUSH" and instruction.value is not None:
-                instr_repr = instruction.to_plain()
-                if instr_repr not in value2symbolic:
-                    value2symbolic[instr_repr] = i
-                    i += 1
+            if instruction.disasm.startswith("PUSH") and instruction.disasm != "PUSH":
+                # Case for having an associated value
+                if instruction.value is not None:
+                    instr_repr = instruction.to_plain()
+                    if instr_repr not in value2symbolic:
+                        value2symbolic[instr_repr] = i
+                        i += 1
 
-                assigned_value = value2symbolic[instr_repr]
+                    assigned_value = value2symbolic[instr_repr]
 
-                # Annotate the corresponding PUSH as "PUSH*" denoting
-                instructions_words.append("PUSH*")
-                instructions_words.append(str(assigned_value))
+                    # Annotate the corresponding PUSH as "PUSH*" denoting
+                    instructions_words.append("PUSH*")
+                    instructions_words.append(str(assigned_value))
+
+                # PUSH0 is handled different from the other push instructions, as it is not followed by a value
+                elif instruction.disasm == "PUSH0":
+                    instructions_words.append("PUSH0")
+
+                # Otherwise, we just include a generic value * because its translation must have a value
+                else:
+                    instructions_words.append("PUSH*")
+                    instructions_words.append("*")
 
             elif instruction.jump_type is not None:
                 instructions_words.append(instruction.disasm)
