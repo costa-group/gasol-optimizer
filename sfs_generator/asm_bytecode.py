@@ -25,14 +25,15 @@ class AsmBytecode:
     Class that represents the assembly format of the bytecode, following the same convention as the Solidity compiler
     """
 
-    def __init__(self, begin: int, end: int, source: int, disasm: str, value: ASM_Value_T, jump_type: ASM_Jump_T = None,
-                 real_value: ASM_Value_T = None):
+    def __init__(self, begin: int, end: int, source: int, disasm: str, value: ASM_Value_T,
+                 jump_type: ASM_Jump_T = None, modifier_depth: Optional[int] = None, real_value: ASM_Value_T = None):
         self.begin = begin
         self.end = end
         self.source = source
         self.disasm = disasm
         self.value = value
         self.jump_type = jump_type
+        self.modifier_depth = modifier_depth
         self.real_value = real_value if real_value is not None else value
 
     def to_json(self)-> ASM_Json_T :
@@ -49,6 +50,9 @@ class AsmBytecode:
 
         if self.jump_type is not None:
             json_bytecode["jumpType"] = self.jump_type
+
+        if self.modifier_depth is not None:
+            json_bytecode["modifierDepth"] = self.modifier_depth
 
         return json_bytecode
 

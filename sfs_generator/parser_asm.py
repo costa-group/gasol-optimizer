@@ -27,13 +27,14 @@ def build_asm_bytecode(instruction : ASM_Json_T, pushlib_values: dict) -> AsmByt
     end = instruction.get("end", -1)
     name = instruction.get("name", -1)
     source = instruction.get("source", -1)
+    modifier_depth = instruction.get("modifierDepth", None)
     jump_type = instruction.get("jumpType", None)
 
     # At this point, we identify PUSH0 instructions, and we create an AsmBytecode as such
     if constants.push0_enabled and name == 'PUSH' and value == "0":
-        asm_bytecode = AsmBytecode(begin, end, source, "PUSH0", None, jump_type, real_value)
+        asm_bytecode = AsmBytecode(begin, end, source, "PUSH0", None, jump_type, modifier_depth, real_value)
     else:
-        asm_bytecode = AsmBytecode(begin, end, source, name, value, jump_type, real_value)
+        asm_bytecode = AsmBytecode(begin, end, source, name, value,  jump_type, modifier_depth, real_value)
 
     return asm_bytecode
 
