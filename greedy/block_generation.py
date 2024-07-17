@@ -6,7 +6,6 @@ import sys
 import resource
 from typing import List, Dict, Tuple, Any
 import traceback
-from collections import Counter
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
@@ -16,7 +15,6 @@ output_stack_T = str
 id_T = str
 disasm_T = str
 
-MAX_DEPTH = 16
 
 def get_ops_map(instructions: List[Dict[str, Any]], op: id_T) -> Dict[output_stack_T, id_T]:
     """
@@ -423,122 +421,25 @@ class SMSgreedy:
         for o in self._final_stack:
             self.count_uses_one(o)
 
-    def choose_pop_or_swap(self, final_stack, final_stack_counter: Counter, current_stack,
-                           current_stack_counter: Counter):
-        """
-        Chooses the best option of whether to POP or SWAP an element to its corresponding position
-        POP: the next element in the stack appears in the final stack or must be removed
-        i: swap the position to which it must be moved can also be modified further
-        BREAK: if there are <= copies of the topmost element needed
-        but cannot be placed in their corresponding position
-
-        In case of a tie, we choose POP
-        """
-        topmost_element = current_stack[0]
-
-        # Consider elements such that they can be placed in their final position
-        # and traverse them in reversed order. Consider the limitation of 16 positions
-        i = min(len(final_stack) - 1, relative_pos(MAX_DEPTH, current_stack, final_stack))
-
-        last_idx_moved = max(relative_pos(0, current_stack, final_stack), 0)
-        first_occurrence = None
-
-        while i > last_idx_moved:
-            # Only consider positions in which the corresponding element is not
-            if final_stack[i] == topmost_element:
-
-                # Find the corresponding index in the current stack
-                current_idx = relative_pos(i, final_stack, current_stack)
-                assert current_idx >= 0, "ERROR in choose_pop_or_swap. Current idx < 0"
-                assert current_idx < len(current_stack), f"ERROR in choose_pop_or_swap. Current idx " \
-                                                         f"{current_idx} >= {len(current_stack)} len(current_stack)"
-
-                swapped_element = current_stack[current_idx]
-                # Only consider positions that are not solved yet (i.e. does not contain that element)
-                if swapped_element != topmost_element:
-
-                    # Store the first occurrence
-                    if first_occurrence is None:
-                        first_occurrence = current_idx
-
-                    # If the swapped element also appears in the final stack or is not used at all, then we just
-                    # choose this position
-                    if final_stack_counter[swapped_element] > 0 or self._needed_in_stack_map[swapped_element] == 0:
-                        return current_idx
-            i -= 1
-
-        # Finally, we just check which case we have fallen into
-        # 1: There is a position I can swap to, and I just swap to the deepest
-        if first_occurrence is not None:
-            return first_occurrence
-
-        # 2: We have too many copies of the same element and the topmost one is not
-        # placed in their corresponding position
-        elif self._needed_in_stack_map[topmost_element] < current_stack_counter[topmost_element] and \
-                current_stack[relative_pos(0, current_stack, final_stack)] != topmost_element:
-            return "POP"
-
-        # 3: The element is needed somewhere else, but I cannot access that position
-        else:
-            return "BREAK"
-
-    def precompute(self, final_stack, current_stack):
-        """
-        Given the initial and final stack, starts removing elements and swapping them bas much as possible (i.e. until
-        an operation is forced to be chosen). Returns the list of opcodes, the list of ids, the positions that are solved
-        and the current stack after performing such operations
-        """
+    def precompute(self, final_stack, stack):
         opcode = []
         opcodeids = []
-
-        # Count elements both in current stack and final stack
-        current_stack_counter = Counter(current_stack)
-        final_stack_counter = Counter(current_stack)
-        # Try to perform as much operations as possible
-        while len(current_stack) > 0:
-
-            # Remove elements that are not needed and update needed in stack accordingly
-            if current_stack[0] not in self._needed_in_stack_map or self._needed_in_stack_map[current_stack[0]] == 0:
-                if current_stack[0] in self._needed_in_stack_map:
-                    self._needed_in_stack_map.pop(current_stack[0], None)
-                element = current_stack.pop(0)
+        while len(stack) > 0:
+            if (stack[0] not in self._needed_in_stack_map or self._needed_in_stack_map[stack[0]] == 0):
+                if stack[0] in self._needed_in_stack_map:
+                    self._needed_in_stack_map.pop(stack[0], None)
+                stack.pop(0)
                 opcode += ['POP']
                 opcodeids += ['POP']
-                current_stack_counter[element] -= 1
-                if verbose: print('POP', current_stack, len(current_stack))
-
-            # The topmost element is repeated multiple times in the input stack
-            elif current_stack_counter[current_stack[0]] > 1:
-                chosen_option = self.choose_pop_or_swap(final_stack, final_stack_counter,
-                                                        current_stack, current_stack_counter)
-                if chosen_option == "BREAK":
-                    break
-
-                elif chosen_option == "POP":
-                    # As count_elements > 0, we just need to remove the corresponding element
-                    current_opcode = "POP"
-                    current_stack.pop(0)
-                    current_stack_counter[current_stack[0]] -= 1
-
-                else:
-                    current_opcode = f"SWAP{chosen_option}"
-                    current_stack[0], current_stack[chosen_option] = current_stack[chosen_option], current_stack[0]
-
-                opcode.append(current_opcode)
-                opcodeids.append(current_opcode)
-
-                if verbose: print(current_opcode, current_stack, len(current_stack))
-
+                if verbose: print('POP', stack, len(stack))
             else:
-                if len(current_stack) > len(final_stack) and current_stack[0] in final_stack:
-                    pos = final_stack.index(current_stack[0]) - len(
-                        final_stack)  # position from the end in current_stack
-                elif len(current_stack) <= len(final_stack) and current_stack[0] in final_stack[-len(current_stack):]:
-                    pos = final_stack[-len(current_stack):].index(current_stack[0]) - len(
-                        current_stack)  # position from the end in current_stack
+                if len(stack) > len(final_stack) and stack[0] in final_stack:
+                    pos = final_stack.index(stack[0]) - len(final_stack)  # position from the end in stack
+                elif len(stack) <= len(final_stack) and stack[0] in final_stack[-len(stack):]:
+                    pos = final_stack[-len(stack):].index(stack[0]) - len(stack)  # position from the end in stack
                 else:
                     break
-                pos_in_stack = len(current_stack) + pos  # position in current_stack
+                pos_in_stack = len(stack) + pos  # position in stack
                 assert (pos_in_stack >= 0)
                 if pos_in_stack > 16:
                     break
@@ -547,26 +448,23 @@ class SMSgreedy:
                 if pos_in_stack > 0:
                     opcode += ['SWAP' + str(pos_in_stack)]
                     opcodeids += ['SWAP' + str(pos_in_stack)]
-                    current_stack = [current_stack[pos_in_stack]] + current_stack[1:pos_in_stack] + [
-                        current_stack[0]] + current_stack[pos_in_stack + 1:]
-                    if verbose: print('SWAP' + str(pos_in_stack), current_stack, len(current_stack))
+                    stack = [stack[pos_in_stack]] + stack[1:pos_in_stack] + [stack[0]] + stack[pos_in_stack + 1:]
+                    if verbose: print('SWAP' + str(pos_in_stack), stack, len(stack))
         solved = []
-        i = len(current_stack) - 1
+        i = len(stack) - 1
         j = len(final_stack) - 1
-
-        # Determine which operations are solved and update needed in stack accordingly
         while i >= 0 and j >= 0:
-            if current_stack[i] == final_stack[j]:
+            if stack[i] == final_stack[j]:
                 solved += [j]
-                if current_stack[i] in self._needed_in_stack_map:
-                    assert (self._needed_in_stack_map[current_stack[i]] > 0)
-                    if self._needed_in_stack_map[current_stack[i]] == 1:
-                        self._needed_in_stack_map.pop(current_stack[i], None)
+                if stack[i] in self._needed_in_stack_map:
+                    assert (self._needed_in_stack_map[stack[i]] > 0)
+                    if self._needed_in_stack_map[stack[i]] == 1:
+                        self._needed_in_stack_map.pop(stack[i], None)
                     else:
-                        self._needed_in_stack_map[current_stack[i]] -= 1
+                        self._needed_in_stack_map[stack[i]] -= 1
             i -= 1
             j -= 1
-        return opcode, opcodeids, solved, current_stack
+        return (opcode, opcodeids, solved, stack)
 
     def must_reverse(self, o, inpts, stack, needed_stack):
         if o not in self._var_instr_map:
