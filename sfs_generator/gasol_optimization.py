@@ -1522,6 +1522,7 @@ def compute_binary(expression,level):
 
         if v0 != -1 and v1!=-1:
             vals = [int(v0),int(v1)]
+            expression = [*vals, funct]
             r = True
 
     if r and funct in ["+","-","*","/","^","and","or","xor","%","eq","gt","lt","shl","shr","sar"]:
