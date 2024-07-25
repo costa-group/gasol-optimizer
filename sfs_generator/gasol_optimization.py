@@ -3704,15 +3704,15 @@ def smt_translate_block(rule,file_name,block_name,immutable_dict,simplification=
     
     opcodes = get_opcodes(rule)    
     
-    if extra_opt_info.get("dependences",False):
+    if extra_opt_info.get("dependences",False) and extra_dependences_info:
         process_extra_dependences_info(extra_dependences_info,"memory")
         process_extra_dependences_info(extra_dependences_info,"storage")
         non_aliasing_disabled = extra_opt_info.get("non_aliasing_disabled",False)
         
-    if extra_opt_info.get("useless",False):
+    if extra_opt_info.get("useless",False) and extra_dependences_info:
         process_useless_info(extra_dependences_info)
         
-    if extra_opt_info.get("context",False):        
+    if extra_opt_info.get("context",False) and extra_dependences_info:
         idx = get_stack_variables(rule)
         process_context_info(extra_dependences_info,idx)
         

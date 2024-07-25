@@ -500,7 +500,7 @@ def translateOpcodes30(opcode, value, index_variables):
         instr = v1+" = extcodehash("+v1+")"  
         
     elif opcode == "MCOPY":
-        pass
+        raise NotImplementedError
     else:
         instr = "Error opcodes30: "+opcode
         updated_variables = index_variables
