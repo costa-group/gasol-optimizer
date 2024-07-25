@@ -34,7 +34,7 @@ class OptimizationParams:
         # sfs files or enable the whole pipeline
         self.optimization_enabled = None
 
-        self.dot_generation = True
+        self.dot_generation = False
 
         # Whether to keep the intermediate files generated throughout the
         # optimization process
