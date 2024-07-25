@@ -94,14 +94,15 @@ def generate_dependency_graph_minimum(uninterpreted_instr : List[UninterpretedIn
 
 
 def generate_dependency_graph_only_memory(uninterpreted_instr: List[UninterpretedInstruction],
-                                          order_tuples: List[List[Id_T]]) -> Dict[Id_T, List[Id_T]]:
+                                          order_tuples: List[Tuple[Id_T, Id_T]]) -> Dict[Id_T, List[Id_T]]:
     dependency_graph = {instr.id: [] for instr in uninterpreted_instr}
     # We need to consider also the order given by the tuples
+
     for id1, id2 in order_tuples:
         # Stronger check: if id1 happens before id2 at some point, then we don't consider it in the graph.
         # See test_lb_tight_dependencies in tests/test_instruction_bounds_with_dependencies
-        if not happens_before(id2, id1, dependency_graph, {}):
-            dependency_graph[id2].append(id1)
+        dependency_graph[id2].append(id1)
+
     return dependency_graph
 
 

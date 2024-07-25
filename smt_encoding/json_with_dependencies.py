@@ -1,14 +1,17 @@
 import copy
 
+import global_params.paths
 from smt_encoding.complete_encoding.synthesis_full_encoding import SMS_T
 from smt_encoding.instructions.instruction_factory import InstructionFactory, UninterpretedInstruction
 from smt_encoding.instructions.instruction_bounds_with_dependencies import Id_T, InstructionSubset, \
     generate_lower_bound_dict, generate_first_position_instr_cannot_appear
 from smt_encoding.instructions.instruction_dependencies import generate_dependency_graph_minimum, \
-    generate_dependency_graph_only_instr
+    generate_dependency_graph_only_instr, generate_dependency_graph_only_memory
 from smt_encoding.count_sms_greedy import minsize_from_json
 from typing import List, Tuple, Dict
 from copy import deepcopy
+import networkx as nx
+from pathlib import Path
 
 
 def bounds_from_instructions(instructions : List[UninterpretedInstruction], order_tuples : List[Tuple[Id_T, Id_T]],
@@ -95,3 +98,50 @@ def extended_json_with_minlength(sms: SMS_T) -> SMS_T:
     new_sms['min_length'] = max(min_instr, min_bounds)
 
     return new_sms
+
+
+def digraph_from_deps(instr_deps, color: str = 'black'):
+    """
+    Generates a DiGraph considering the information from successors
+    """
+    graph = nx.DiGraph()
+    for instr_id, next_instrs in instr_deps.items():
+        graph.add_node(instr_id)
+        for successor in next_instrs:
+            graph.add_edge(instr_id, successor, color=color)
+    return graph
+
+
+def generate_dot_graph_from_sms(sms: SMS_T, block_name: str):
+    """
+    Dot graph from sms
+    """
+    uninterpreted_instructions, order_tuples, final_stack, b0 = load_needed_information_from_sms(sms)
+
+    stack_element_to_id_dict: Dict[str, Id_T] = {instruction.output_stack: instruction.id
+                                                 for instruction in uninterpreted_instructions if
+                                                 instruction.output_stack is not None}
+    for ini_stack_var in sms["src_ws"]:
+        stack_element_to_id_dict[ini_stack_var] = ini_stack_var
+
+    instr_dep = generate_dependency_graph_only_instr(uninterpreted_instructions, order_tuples, stack_element_to_id_dict)
+    mem_dep = generate_dependency_graph_only_memory(uninterpreted_instructions, order_tuples)
+    digraph = digraph_from_deps(instr_dep)
+
+    # Add nodes from memory instructions
+    for mem_id, next_mem_ids in mem_dep.items():
+        for next_mem_id in next_mem_ids:
+            digraph.add_edge(mem_id, next_mem_id, color='red')
+
+    # Rename nodes so that they include both the name of the term and the instruction id that produces it
+    renaming_dict = dict()
+    for var_term, id_term in stack_element_to_id_dict.items():
+        if var_term == id_term:
+            renaming_dict[id_term] = f"{var_term}: initial stk"
+        else:
+            renaming_dict[id_term] = f"{var_term}: {id_term}"
+
+    renamed_digraph = nx.relabel_nodes(digraph, renaming_dict)
+
+    Path(global_params.paths.dot_path).mkdir(exist_ok=True, parents=True)
+    nx.nx_agraph.write_dot(renamed_digraph, Path(global_params.paths.dot_path).joinpath(block_name + ".dot"))
