@@ -310,9 +310,11 @@ def add_needed_nostores_in_stack(nostores, torder, opid_instr_map, var_instr_map
         return add_needed_nostores_in_stack(newnostores, torder, opid_instr_map, var_instr_map, mem_order, sto_order)
 
 
-def relative_pos(s1, s2, p):
-    # returns the position p in s2 (from the end) as in s1. It is negative if it does not exist
-    return len(s2) - (len(s1) - p)
+def relative_pos(p, from_list, to_list):
+    """
+    Returns the position p in from_list (from the end) as in to_list. It is negative if there are not enough elements
+    """
+    return len(to_list) - (len(from_list) - p)
 
 
 def needed(p0, p1, var_instr_map):
@@ -425,7 +427,7 @@ class SMSgreedy:
         while len(stack) > 0:
             if (stack[0] not in self._needed_in_stack_map or self._needed_in_stack_map[stack[0]] == 0):
                 if stack[0] in self._needed_in_stack_map:
-                    self._needed_in_stack_map.pop(stack[0], None);
+                    self._needed_in_stack_map.pop(stack[0], None)
                 stack.pop(0)
                 opcode += ['POP']
                 opcodeids += ['POP']
@@ -457,7 +459,7 @@ class SMSgreedy:
                 if stack[i] in self._needed_in_stack_map:
                     assert (self._needed_in_stack_map[stack[i]] > 0)
                     if self._needed_in_stack_map[stack[i]] == 1:
-                        self._needed_in_stack_map.pop(stack[i], None);
+                        self._needed_in_stack_map.pop(stack[i], None)
                     else:
                         self._needed_in_stack_map[stack[i]] -= 1
             i -= 1

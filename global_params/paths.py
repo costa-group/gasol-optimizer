@@ -7,7 +7,7 @@ gasol_path = tmp_path + gasol_folder + "/"
 json_path =  gasol_path + "jsons"
 smt_encoding_path = gasol_path +"smt_encoding/"
 solutions_path = gasol_path +"solutions/"
-
+dot_path = gasol_path + "dot/"
 
 project_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 

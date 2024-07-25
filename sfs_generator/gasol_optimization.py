@@ -2928,7 +2928,6 @@ def generate_userdefname(u_var,funct,args,arity,init=False):
         obj["push"] = "PUSH" in instr_name
         obj["gas"] = opcodes.get_ins_cost(instr_name)
         obj["commutative"] = True if instr_name in commutative_bytecodes else False
-        obj["push"] = "PUSH" in instr_name
         obj["storage"] = False #It is true only for MSTORE and SSTORE
         if instr_name in ["PUSH [tag]","PUSH #[$]","PUSH [$]","PUSH data","PUSHIMMUTABLE","PUSHLIB"]:
             obj["value"] = args_aux
@@ -6800,7 +6799,6 @@ def generate_pops(not_used_variables):
         obj["disasm"] = "POP"
         obj["inpt_sk"] = [v]
         obj["outpt_sk"] = []
-        obj["push"] = False
         obj["gas"] = opcodes.get_ins_cost("POP")
         obj["size"] = get_ins_size("POP")
         obj["commutative"] = False
@@ -6827,7 +6825,6 @@ def generate_push_instruction(idx, value, out):
     obj["outpt_sk"] = [out]
     obj["gas"] = opcodes.get_ins_cost("PUSH") if value != 0 or not constants.push0_enabled else opcodes.get_ins_cost("PUSH0")
     obj["commutative"] = False
-    obj["push"] = False
     obj["storage"] = False #It is true only for MSTORE and SSTORE
     obj["size"] = get_ins_size("PUSH",value)
 

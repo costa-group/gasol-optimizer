@@ -30,6 +30,7 @@ from verification.forves_verification import compare_forves
 from statistics.statistics_from_asm_block import csv_from_asm_block
 from global_params.options import OptimizationParams
 from greedy.block_generation import greedy_from_json, greedy_standalone
+from smt_encoding.json_with_dependencies import generate_dot_graph_from_sms
 
 
 def init():
@@ -239,7 +240,9 @@ def optimize_block(sfs_dict, params: OptimizationParams) -> List[Tuple[AsmBlock,
         print(f"Optimizing {block_name}... Timeout:{str(tout)}")
 
         # We have enabled the optimization process (otherwise, we just generate the intermediate SMT files)
-        if params.optimization_enabled:
+        if params.dot_generation:
+            generate_dot_graph_from_sms(sfs_block, block_name)
+        elif params.optimization_enabled:
             optimization_outcome, solver_time, optimized_ids, greedy_ids = search_optimal(sfs_block, params, tout, block_name)
             optimized_asm = asm_from_ids(sfs_block, optimized_ids) if optimized_ids is not None else []
             greedy_asm = asm_from_ids(sfs_block, greedy_ids) if greedy_ids is not None else None
@@ -902,7 +905,9 @@ def options_gasol(ap: ArgumentParser) -> None:
     output.add_argument("-d", "--debug", help="It prints debugging information", dest='debug_flag', action="store_true")
     output.add_argument("-forves", "--forves", help="Enables the verification via the forves checker",
                         dest='forves_enabled', action="store_true")
-
+    output.add_argument("-dot", "--dot", help="Disables the optimization and generates a dot file for each dependency"
+                                              "graph induced by the instructions. Red edges mark memory dependencies",
+                        action="store_true", dest="dot_generation")
 
     log_generation = ap.add_argument_group('Log generation options', 'Options for managing the log generation')
 
