@@ -34,6 +34,8 @@ class OptimizationParams:
         # sfs files or enable the whole pipeline
         self.optimization_enabled = None
 
+        self.dot_generation = True
+
         # Whether to keep the intermediate files generated throughout the
         # optimization process
         self.keep_files = None
@@ -151,8 +153,10 @@ class OptimizationParams:
             self.blocks_file = "blocks.csv"
 
         self.optimization_enabled = parsed_args.backend
-        self.keep_files = parsed_args.intermediate
+        self.keep_files = parsed_args.intermediate or not parsed_args.backend
         self.verbose = parsed_args.debug_flag
+
+        self.dot_generation = parsed_args.dot_generation
 
         # Log options
         self.generate_log = parsed_args.log
