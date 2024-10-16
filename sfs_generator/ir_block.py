@@ -231,7 +231,7 @@ def translateOpcodes0(opcode,index_variables):
         v1, updated_variables = get_consume_variable(index_variables)
         v2, updated_variables = get_consume_variable(updated_variables)
         v3, updated_variables = get_new_variable(updated_variables)
-        instr = v3+" = " + v1 + "/" + v2
+        instr = f"{v3} = sdiv({v1}, {v2})"
     elif opcode == "MOD":
         v1, updated_variables = get_consume_variable(index_variables)
         v2, updated_variables = get_consume_variable(updated_variables)

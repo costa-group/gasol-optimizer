@@ -1039,6 +1039,19 @@ def get_involved_vars(instr,var):
 
         funct = "sgt"
 
+    elif instr.startswith("sdiv("):
+        instr_new = instr.strip("\n")
+        pos = instr_new.find("sdiv(")
+        arg01 = instr[pos+5:-1]
+        var01 = arg01.split(",")
+        var0 = var01[0].strip()
+        var1 = var01[1].strip()
+        var_list.append(var0)
+        var_list.append(var1)
+
+        funct = "sdiv"
+
+
     elif instr.startswith("byte("):
         instr_new = instr.strip("\n")
         pos = instr_new.find("byte(")
@@ -2694,6 +2707,9 @@ def funct_to_opcode(funct: str) -> Optional[str]:
     elif funct.find("*") != -1:
         instr_name = "MUL"
 
+    elif funct.find("sdiv") != -1:
+        instr_name = "SDIV"
+
     elif funct.find("/") != -1:
         instr_name = "DIV"
 
@@ -3936,14 +3952,14 @@ def apply_transform(instr):
         else:
             return -1
 
-    elif opcode == "DIV":
+    elif opcode == "DIV" or opcode == "SDIV":
         inp_vars = instr["inpt_sk"]
-        if  1 == inp_vars[1]:
+        if 1 == inp_vars[1]:
             saved_push+=1
             gas_saved_op+=5
             
             discount_op+=1
-            rule = "DIV(X,1)"
+            rule = f"{opcode}(X,1)"
             return inp_vars[0]
 
         elif 0 in inp_vars:
@@ -3951,7 +3967,7 @@ def apply_transform(instr):
             gas_saved_op+=5
 
             discount_op+=1
-            rule = "DIV(X,0)"
+            rule = f"{opcode}(X,0)"
             return 0
 
         elif inp_vars[0] == inp_vars[1]:
@@ -3959,7 +3975,7 @@ def apply_transform(instr):
             gas_saved_op+=5
 
             discount_op+=1
-            rule = "DIV(X,X)"
+            rule = f"{opcode}(X,X)"
             return 1
         else:
             return -1
@@ -4132,7 +4148,7 @@ def apply_transform_rules(user_def_instrs,list_vars,tstack):
     modified = False
     for instr in user_def_instrs:
         
-        if instr["disasm"] in ["AND","OR","XOR","ADD","SUB","MUL","DIV","EXP","EQ","GT","LT","SGT","SLT","NOT","ISZERO"]:
+        if instr["disasm"] in ["AND","OR","XOR","ADD","SUB","MUL","DIV","EXP","EQ","GT","LT","SGT","SLT","SDIV","NOT","ISZERO"]:
             r = apply_transform(instr)
 
             if r!=-1:
