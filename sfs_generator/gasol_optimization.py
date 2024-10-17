@@ -12,7 +12,7 @@ import sfs_generator.opcodes as opcodes
 from sfs_generator.utils import (all_integers, find_sublist, get_num_bytes_int,
                                  is_integer, isYulInstructionUpper, get_ins_size,check_and_print_debug_info)
 from typing import Optional
-from smt_encoding.json_with_dependencies import extended_json_with_minlength
+from smt_encoding.json_with_dependencies import extended_json_with_minlength, instr_dependencies
 from typing import Optional, List, Tuple
 import networkx as nx
 
@@ -2289,6 +2289,30 @@ def modified_variables_userdefins(storage_ins):
             storage_ins[pos] = new_ins
     
 
+def extend_mem_deps_with_subterm_relation(json_dict):
+    """
+    Given the generated JSON dict, extends the fields "storage_dependencies", "memory_dependencies" and "dependencies"
+    with the relations of
+    """
+    # We include the subterms dependencies from memory instructions
+    instr_deps = instr_dependencies(json_dict)
+    mem_accesses = [mem_instr["id"] for mem_instr in json_dict["user_instrs"] if mem_instr["storage"] or
+                    "KECCAK" in mem_instr["disasm"] or "LOAD" in mem_instr["disasm"]]
+    instr_deps_graph = nx.from_dict_of_lists(instr_deps, nx.DiGraph)
+
+    for i, access1 in enumerate(mem_accesses):
+        for access2 in mem_accesses[i+1:]:
+            possible_dependency = [access1, access2]
+            if possible_dependency not in json_dict["dependencies"] and nx.has_path(instr_deps_graph, access2, access1):
+                # Dependency to add
+                json_dict["dependencies"].append(possible_dependency)
+                if access2.startswith("MSTORE"):
+                    json_dict["memory_dependences"].append(possible_dependency)
+                else:
+                    json_dict["storage_dependences"].append(possible_dependency)
+
+    return json_dict
+
 
 def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,simplification = True):
     global max_instr_size
@@ -2469,7 +2493,7 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     
     json_dict["original_instrs"] = " ".join(original_ins)
     json_dict = extended_json_with_minlength(json_dict)
-
+    json_dict = extend_mem_deps_with_subterm_relation(json_dict)
 
     # if not simplification:
     #     op = opcodes_seq["non_inter"]
@@ -2498,7 +2522,7 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
         os.mkdir(paths.json_path)
 
     with open(paths.json_path+"/"+ block_nm + "_input.json","w") as json_file:
-        json.dump(json_dict,json_file)
+        json.dump(json_dict, json_file, indent=4)
 
     # print(paths.json_path+"/"+ block_nm + "_input.json")
     rule_applied = False

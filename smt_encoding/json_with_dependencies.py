@@ -85,6 +85,20 @@ def extended_json_with_instr_dep_and_bounds(sms: SMS_T) -> SMS_T:
     return new_sms
 
 
+def instr_dependencies(sms: SMS_T) -> Dict[str, List[str]]:
+    """
+    Generates the dependencies among instructions from a JSON SMS
+    """
+    uninterpreted_instructions, order_tuples, final_stack, b0 = load_needed_information_from_sms(sms)
+
+    stack_element_to_id_dict: Dict[str, Id_T] = {instruction.output_stack: instruction.id
+                                                 for instruction in uninterpreted_instructions if
+                                                 instruction.output_stack is not None}
+
+    instr_dep = generate_dependency_graph_only_instr(uninterpreted_instructions, order_tuples, stack_element_to_id_dict)
+
+    return instr_dep
+
 def minlength_from_json(sms: SMS_T) -> Tuple[int, int]:
     uninterpreted_instructions, order_tuples, final_stack, b0 = load_needed_information_from_sms(sms)
     lb_dict, ub_dict = bounds_from_instructions(uninterpreted_instructions, order_tuples, final_stack, b0)
