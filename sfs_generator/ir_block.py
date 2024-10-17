@@ -231,7 +231,7 @@ def translateOpcodes0(opcode,index_variables):
         v1, updated_variables = get_consume_variable(index_variables)
         v2, updated_variables = get_consume_variable(updated_variables)
         v3, updated_variables = get_new_variable(updated_variables)
-        instr = v3+" = " + v1 + "/" + v2
+        instr = f"{v3} = sdiv({v1}, {v2})"
     elif opcode == "MOD":
         v1, updated_variables = get_consume_variable(index_variables)
         v2, updated_variables = get_consume_variable(updated_variables)
@@ -500,7 +500,7 @@ def translateOpcodes30(opcode, value, index_variables):
         instr = v1+" = extcodehash("+v1+")"  
         
     elif opcode == "MCOPY":
-        pass
+        raise NotImplementedError
     else:
         instr = "Error opcodes30: "+opcode
         updated_variables = index_variables
@@ -1106,7 +1106,7 @@ Main function that build the rbr representation from the CFG of a solidity file.
 -saco_rbr is True if it has to generate the RBR in SACO syntax.
 -exe refers to the number of smart contracts analyzed.
 '''
-def evm2rbr_compiler(file_name = None,block = None, block_id = -1, block_name = "",simplification = True, storage = False, size = False, part = False, pop = False, push = False, revert = False,extra_dependencies_info={},debug_info = False):
+def evm2rbr_compiler(file_name = None,block = None, block_id = -1, block_name = "",simplification = True, storage = False, size = False, part = False, pop = False, push = False, revert = False,extra_dependences_info={},extra_opt_info={},debug_info = False):
     global rbr_blocks
     
     init_globals()
@@ -1128,8 +1128,8 @@ def evm2rbr_compiler(file_name = None,block = None, block_id = -1, block_name = 
         end = dtimer()
         ethir_time = end-begin
         #print("Build RBR: "+str(ethir_time)+"s")
-
-        subblocks = smt_translate_block(rule,file_name,block_name,assignImmutable_dict,simplification,storage, size, part, pop, push,revert,extra_dependencies_info,debug_info)
+    
+        subblocks = smt_translate_block(rule,file_name,block_name,assignImmutable_dict,simplification,storage, size, part, pop, push,revert,extra_dependences_info,extra_opt_info,debug_info)
                 
         return 0, subblocks
         

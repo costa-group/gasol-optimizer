@@ -36,7 +36,7 @@ def execute_asm(current_stack: List[str], asm_bytecode: AsmBytecode) -> List[str
             pass
             current_stack.insert(0, f'{instr_name}({joined_operands})')
         elif operands == []:
-            current_stack.insert(0, instr_name)
+            current_stack.insert(0, asm_bytecode.to_plain())
         else:
             joined_operands = ','.join(operands)
             current_stack.insert(0, f'{instr_name}({joined_operands})')
@@ -135,12 +135,56 @@ class AsmBlock:
     def to_json(self) -> [ASM_Json_T]:
         return list(map(lambda instr: instr.to_json(), self.instructions))
 
-
     def to_plain(self) -> str:
-        return ' '.join(map(lambda instr: instr.to_plain(), self.instructions))
+        return ' '.join((instr.to_plain() for instr in self.instructions if instr.disasm != "tag"))
 
     def to_plain_with_byte_number(self) -> str:
         return ' '.join(map(lambda instr: instr.to_plain_with_byte_number(), self.instructions))
+
+    def instructions_words_abstract(self) -> List[str]:
+        """
+        Returns the list of words, assuming a distinct constant value for the value associated to each pseudo-push
+        (PUSH [tag], PUSHLIB...)
+        """
+        i = 0
+        value2symbolic = dict()
+        instructions_words = []
+
+        for instruction in self.instructions:
+
+            if instruction.disasm == "tag":
+                continue
+
+            # For every instruction with a value associated that is of term push
+            if instruction.disasm.startswith("PUSH") and instruction.disasm != "PUSH":
+                # Case for having an associated value
+                if instruction.value is not None:
+                    instr_repr = instruction.to_plain()
+                    if instr_repr not in value2symbolic:
+                        value2symbolic[instr_repr] = i
+                        i += 1
+
+                    assigned_value = value2symbolic[instr_repr]
+
+                    # Annotate the corresponding PUSH as "PUSH*" denoting
+                    instructions_words.append("PUSH*")
+                    instructions_words.append(str(assigned_value))
+
+                # PUSH0 is handled different from the other push instructions, as it is not followed by a value
+                elif instruction.disasm == "PUSH0":
+                    instructions_words.append("PUSH0")
+
+                # Otherwise, we just include a generic value * because its translation must have a value
+                else:
+                    instructions_words.append("PUSH*")
+                    instructions_words.append("*")
+
+            elif instruction.jump_type is not None:
+                instructions_words.append(instruction.disasm)
+            else:
+                instructions_words.extend(instruction.to_plain_with_byte_number().split(' '))
+
+        return instructions_words
 
     def __str__(self):
         content = ""
@@ -219,9 +263,45 @@ class AsmBlock:
         #     print("Block", self.block_id)
         return total_gas
 
+    def gas_spent_by_storage(self) -> int:
+        stack_size = utils.compute_stack_size(map(lambda x: x.disasm, self.instructions))
+        current_stack = [f's({i})' for i in range(stack_size)]
+        total_gas = 0
+        touched_addresses, touched_slots, touched_slots_store = set(), set(), set()
+        for instruction in self.instructions:
+            stack_top = current_stack[0] if len(current_stack) > 0 else None
+            if instruction.disasm == "SLOAD":
+                assert stack_top is not None
+                # print(instruction.gas_spent_accesses(stack_top in touched_slots, stack_top in touched_slots_store))
+                # print(instruction.disasm, stack_top)
+                total_gas += instruction.gas_spent_accesses(stack_top in touched_slots, False)
+                touched_slots.add(stack_top)
+            elif instruction.disasm == "SSTORE":
+                assert stack_top is not None
+                total_gas += instruction.gas_spent_accesses(stack_top in touched_slots, stack_top in touched_slots_store)
+                # print(instruction.gas_spent_accesses(stack_top in touched_slots, stack_top in touched_slots_store))
+                # print(instruction.disasm, stack_top)
+                touched_slots.add(stack_top)
+                touched_slots_store.add(stack_top)
+            # elif instruction.disasm in ("BALANCE","EXTCODESIZE","EXTCODEHASH", "EXTCODECOPY"):
+            #     assert stack_top is not None
+            #     #total_gas += instruction.gas_spent_accesses(stack_top in touched_addresses, False)
+            #     # print(instruction.gas_spent_accesses(stack_top in touched_slots, stack_top in touched_slots_store))
+            #     # print(instruction.disasm, stack_top)
+            #     touched_addresses.add(stack_top)
+            # else:
+            #     total_gas += instruction.gas_spent
+
+            # Update stack
+            current_stack = execute_asm(current_stack, instruction)
+        # if len(touched_slots) > 0 or len(touched_addresses) > 0:
+        #     print("Block", self.block_id)
+        return total_gas
+    
+
     @property
     def length(self) -> int:
-        return len(self.instructions)
+        return len([True for instruction in self.instructions if instruction.disasm != 'tag'])
 
     def get_contract_name(self):
         return self.contract_name

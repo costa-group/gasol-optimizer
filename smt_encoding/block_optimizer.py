@@ -1,15 +1,16 @@
-from smt_encoding.complete_encoding.synthesis_full_encoding import FullEncoding, SMS_T, Namespace, Sort
+from smt_encoding.complete_encoding.synthesis_full_encoding import FullEncoding, SMS_T, Sort
 from smt_encoding.solver.solver import Solver, OptimizeOutcome
 from smt_encoding.solver.oms_executable import OMSExecutable
 from smt_encoding.solver.z3_executable import Z3Executable
 from typing import List, Tuple
 import global_params.paths as paths
+from global_params.options import OptimizationParams
 import pathlib
 
 
 class BlockOptimizer:
 
-    def __init__(self, block_id: str, sms: SMS_T, flags: Namespace, timeout: int = 10, initial_idx: int = 0):
+    def __init__(self, block_id: str, sms: SMS_T, flags: OptimizationParams, timeout: int = 10, initial_idx: int = 0):
         self._sms = sms
         self._flags = flags
         self._initial_idx = initial_idx
@@ -18,10 +19,10 @@ class BlockOptimizer:
         self._initialize_solver()
 
     def _choose_solver(self) -> Solver:
-        encoding_file = f"{paths.smt_encoding_path}/{self._block_id}_encoding_{self._flags.solver}.smt2"
+        encoding_file = f"{paths.smt_encoding_path}/{self._block_id}_encoding_{self._flags.smt_solver}.smt2"
         self._encoding_file = encoding_file
 
-        if self._flags.solver == "oms":
+        if self._flags.smt_solver == "oms":
             return OMSExecutable(encoding_file)
         else:
             return Z3Executable(encoding_file)
