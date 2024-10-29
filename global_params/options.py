@@ -126,6 +126,13 @@ class OptimizationParams:
         self.greedy = None
         self.no_simp = True
         self.debug_flag = False
+        self.dzn = False
+
+        self.length_bound = False
+        self.gcc_bounds = False
+        self.unary_shrink = False
+        self.binary_shrink = False
+        self.pop_unused = False
 
     def parse_args(self, parsed_args: Namespace):
         self.input_file = parsed_args.input_path
@@ -223,3 +230,10 @@ class OptimizationParams:
 
         if "debug_flag" in parsed_args:
             self.debug_flag = parsed_args.debug_flag
+
+        self.dzn = parsed_args.dzn
+        self.length_bound = parsed_args.length_bound
+        self.gcc_bounds = parsed_args.gcc_bounds
+        self.unary_shrink = parsed_args.unary_shrink
+        self.binary_shrink = parsed_args.binary_shrink
+        self.pop_unused = parsed_args.pop_unused

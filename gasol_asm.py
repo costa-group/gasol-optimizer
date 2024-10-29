@@ -31,7 +31,7 @@ from statistics.statistics_from_asm_block import csv_from_asm_block
 from global_params.options import OptimizationParams
 from greedy.block_generation import greedy_from_json, greedy_standalone
 from smt_encoding.json_with_dependencies import generate_dot_graph_from_sms
-
+from dzn.dzn_api import dzn_optimization_from_sms
 
 def init():
     global previous_gas
@@ -165,6 +165,9 @@ def search_optimal(sfs_block: Dict, params: OptimizationParams, tout: int,
     if params.greedy:
         optimization_outcome_str, solver_time, optimized_ids = greedy_standalone(sfs_block)
         optimization_outcome = OptimizeOutcome.non_optimal if optimization_outcome_str == "non_optimal" else OptimizeOutcome.error
+
+    elif params.dzn:
+        optimization_outcome, solver_time, optimized_ids = dzn_optimization_from_sms(sfs_block, tout, params)
 
     # Otherwise, SMT superoptimization
     else:
@@ -922,6 +925,7 @@ def options_gasol(ap: ArgumentParser) -> None:
 
     basic.add_argument("-ub-greedy", "--ub-greedy", dest='ub_greedy', help='Enables greedy algorithm to predict the upper bound', action='store_true')
     basic.add_argument('-greedy', '--greedy', dest='greedy', help='Uses greedy directly to generate the results', action='store_true')
+    basic.add_argument('-dzn', '--dzn', dest='dzn', help='Superoptimization via a MiniZinc model', action='store_true')
     basic.add_argument("-solver", "--solver", help="Choose the solver", choices=["z3", "barcelogic", "oms"],
                        default="oms")
     basic.add_argument("-tout", metavar='timeout', action='store', type=int,
@@ -994,6 +998,13 @@ def options_gasol(ap: ArgumentParser) -> None:
                             help="Enable bound regression model")
     ml_options.add_argument('-opt-model', "--opt-model", action='store_true', dest='opt_select',
                             help="Select which representation model is used for the opt classification")
+
+    minizinc_options = ap.add_argument_group('Minizinc Options', 'Options for enabling flags in Minizinc')
+    minizinc_options.add_argument('-length-bound', action='store_true', dest='length_bound', help='')
+    minizinc_options.add_argument('-gcc-bounds', action='store_true', dest='gcc_bounds', help='')
+    minizinc_options.add_argument('-unary-shrink', action='store_true', dest='unary_shrink', help='')
+    minizinc_options.add_argument('-binary-shrink', action='store_true', dest='binary_shrink', help='')
+    minizinc_options.add_argument('-pop-unused', action='store_true', dest='pop_unused', help='')
 
 
 def parse_encoding_args(ap: ArgumentParser):

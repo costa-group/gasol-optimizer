@@ -20,3 +20,5 @@ bclt_exec = project_path + "/bin/barcelogic"
 oms_exec = project_path + "/bin/optimathsat"
 
 csv_file = gasol_path + "solutions/statistics.csv"
+
+mzn_path = project_path + "/bin/MiniZincIDE-2.6.4-bundle-linux-x86_64/bin/minizinc"
