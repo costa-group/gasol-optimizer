@@ -8,6 +8,7 @@ import global_params.paths as paths
 from sfs_generator.gasol_optimization import smt_translate_block, generate_subblocks2split
 from sfs_generator.rbr_rule import RBRRule
 from sfs_generator.utils import get_push_number_hex, isYulInstruction
+from split_stack_calculator.split_calculator import Split_calculator, Stack_split
 
 '''
 It initialize the globals variables. 
@@ -1055,6 +1056,7 @@ The stack could be reconstructed as [s(ith)...s(0)].
 def compile_block(instrs,input_stack,block_id):
     global rbr_blocks
     global top_index
+    split_calculator = Split_calculator()
 
     cont = 0
     top_index = 0
@@ -1066,14 +1068,19 @@ def compile_block(instrs,input_stack,block_id):
     rule.set_index_input(input_stack)
     l_instr = instrs
 
+    block_split = Stack_split(block_id, len(instrs), input_stack)
+
     
     while not(finish) and cont< len(l_instr):
         # if l_instr[cont].find("KECCAK")!=-1 and l_instr[cont-1].find("MSTORE")!=-1:
         #     #print("KECCYES")
         index_variables = compile_instr(rule,l_instr[cont],index_variables,[],True)        
+        split_calculator.update_split_block(block_split, cont, index_variables)
         cont+=1
 
     rule.set_fresh_index(top_index)
+
+    split_calculator.finish_stack_split(block_split)
 
     return rule
 

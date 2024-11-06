@@ -10,6 +10,8 @@ from argparse import ArgumentParser, Namespace
 
 import pandas as pd
 
+from split_stack_calculator.split_calculator import Split_calculator
+
 sys.path.append(os.path.dirname(os.path.realpath(__file__)) + "/gasol_ml")
 
 import global_params.constants as constants
@@ -30,8 +32,9 @@ from verification.forves_verification import compare_forves
 from statistics.statistics_from_asm_block import csv_from_asm_block
 from global_params.options import OptimizationParams
 from greedy.block_generation import greedy_from_json, greedy_standalone
-from smt_encoding.json_with_dependencies import generate_dot_graph_from_sms
+from smt_encoding.json_with_dependencies import extended_json_with_instr_dep_and_bounds, extended_json_with_minlength, generate_dot_graph_from_sms
 from dzn.dzn_api import dzn_optimization_from_sms
+
 
 def init():
     global previous_gas
@@ -241,6 +244,15 @@ def optimize_block(sfs_dict, params: OptimizationParams) -> List[Tuple[AsmBlock,
             tout = params.timeout * (1 + len([True for instr in sfs_block['user_instrs'] if instr["storage"]]))
 
         print(f"Optimizing {block_name}... Timeout:{str(tout)}")
+
+        print(block_name)
+
+        sfs_block = extended_json_with_minlength(extended_json_with_instr_dep_and_bounds(sfs_block))
+
+        split_calculator = Split_calculator()
+        split_calculator.calculate_dao_split(sfs_block)
+
+        
 
         # We have enabled the optimization process (otherwise, we just generate the intermediate SMT files)
         if params.dot_generation:
