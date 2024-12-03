@@ -1,7 +1,10 @@
 from collections import defaultdict
+from operator import length_hint
 from typing import Dict, List, Tuple
 
-from numpy._core.defchararray import isdigit
+from dzn.dzn_generation import SMSgreedy
+from pandas.io.common import uses_relative
+
 
 from split_stack_calculator.dag import DAG
 
@@ -25,7 +28,7 @@ class Stack_split:
         self.min_size = 1024
         self.min_pos = None
 
-        print(f"min_pos: {self.min_pos_block} max_pos: {self.max_pos_block}")
+        #print(f"min_pos: {self.min_pos_block} max_pos: {self.max_pos_block}")
 
 
     def update_split_candidate(self, new_pos, new_size) -> None:
@@ -40,42 +43,6 @@ class Stack_split:
     def __repr__(self) -> str:
         return f"id: {self.block_id}, len: {self.length}, min_size: {self.min_size}, min_pos: {self.min_pos}"
 
-
-
-class Dao_split:
-    block_id: str
-    length: int
-    min_pos: int | None
-    min_size: int
-    min_pos_block: int
-    max_pos_block: int
-
-    def __init__(self, block_id, length, input_stack) -> None:
-        self.block_id = block_id
-        self.length = length
-        self.input_stack = input_stack
-
-        quart = length/3
-        self.min_pos_block = quart
-        self.max_pos_block = quart * 2
-        
-        self.min_size = 1024
-        self.min_pos = None
-
-        print(f"min_pos: {self.min_pos_block} max_pos: {self.max_pos_block}")
-
-
-    def update_split_candidate(self, new_pos, new_size) -> None:
-        if (new_pos > self.min_pos_block and new_pos < self.max_pos_block and new_size < self.min_size):
-            self.min_size = new_size 
-            self.min_pos = new_pos 
-    
-    def __str__(self) -> str:
-        return f"id: {self.block_id}, len: {self.length}, min_size: {self.min_size}, min_pos: {self.min_pos}"
-
-
-    def __repr__(self) -> str:
-        return f"id: {self.block_id}, len: {self.length}, min_size: {self.min_size}, min_pos: {self.min_pos}"
 
 '''
     Split calculator is responable of calculating the best position for splitting a block. 
@@ -84,60 +51,168 @@ class Dao_split:
 '''
 class Split_calculator:
     min_split_point_candidate: List[Stack_split] = []
-    dag_split_point_candidate: List[Dao_split] = []
+
+    split_point = ""
+
 
     def update_split_block(self, block: Stack_split, new_pos, new_size) -> None:
         if block.block_id not in self.min_split_point_candidate:
             block.update_split_candidate(new_pos, new_size)
 
     def finish_stack_split(self, block: Stack_split):
-        if block.length > 10 and block.min_pos and block.block_id not in self.min_split_point_candidate: 
+        print(block.length)
+        if block.block_id not in self.min_split_point_candidate: 
             self.min_split_point_candidate.append(block)
-            print(f"Minimal candidate in format block: {block}")
-            print(f"splittocsv: {block.min_pos};{block.length}")
+
 
     def calculate_dao_split(self, sfs_block: Dict) -> None:
 
+        original_code_with_ids, length = self.parse_original_instr(sfs_block["original_instrs"], sfs_block["user_instrs"], sfs_block["src_ws"], sfs_block["tgt_ws"])
 
-        original_code_with_ids = self.parse_original_instr(sfs_block["original_instrs"], sfs_block["user_instrs"], sfs_block["src_ws"])
+        if length < 10:
+            return
 
-        print(original_code_with_ids)
 
-        id_to_pos = defaultdict(list)
+        if original_code_with_ids == []:
+            block = self.min_split_point_candidate[-1]
+            print(f"splittocsv: {block.min_pos};{block.length}")
+            print("no dag split found")
+            return
 
-        for id, pos, siz in original_code_with_ids:
-            id_to_pos[id].append((pos, siz))
+        dag = DAG(sfs_block["instr_dependencies"], original_code_with_ids)
 
-        print(id_to_pos)
 
-        dag = DAG(sfs_block["instr_dependencies"])
+
+
+        quart = length/3
+        min_pos_block = quart
+        max_pos_block = quart * 2
+
+        min_size = 1024
+        min_pos = None
+
+        for instr in dag.reverse:
+            if (dag.id_to_pos[instr][0][0] > min_pos_block and dag.id_to_pos[instr][0][0] < max_pos_block and dag.id_to_pos[instr][0][1] < min_size):
+                min_pos = dag.id_to_pos[instr][0][0]
+                min_size = dag.id_to_pos[instr][0][1]
 
         
+        print(f"min_pos: {min_pos}, min_size: {min_size}")
+        self.split_point = f"splittocsv: {min_pos};{length}"
+
+    def calculate_extended_dao_split(self, sfs_block: Dict) -> None:
+
+        original_code_with_ids, length = self.parse_original_instr(sfs_block["original_instrs"], sfs_block["user_instrs"], sfs_block["src_ws"], sfs_block["tgt_ws"])
 
 
-    def parse_original_instr(self, original_instr: str, user_instr: List[Dict], stack: List[str]) -> List[Tuple[str, int, int]]:
+        if length < 10:
+            return
+
+
+        if original_code_with_ids == []:
+            block = self.min_split_point_candidate[-1]
+            print(f"splittocsv: {block.min_pos};{block.length}")
+            print("no dag split found")
+            return
+
+        dag = DAG(sfs_block["instr_dependencies"], original_code_with_ids, extended=True)
+
+
+        id_to_pos = dag.id_to_pos
+
+
+        quart = length/3
+        min_pos_block = quart
+        max_pos_block = quart * 2
+
+        min_size = 1024
+        min_pos = None
+
+        for instr in dag.reverse:
+            if (id_to_pos[instr][0] > min_pos_block and id_to_pos[instr][0] < max_pos_block and id_to_pos[instr][1] < min_size):
+                min_pos = id_to_pos[instr][0]
+                min_size = id_to_pos[instr][1]
+
+
+        print(f"min_pos: {min_pos}, min_size: {min_size}")
+        self.split_point = f"splittocsv: {min_pos};{length}"
+
+    def parse_original_instr(self, original_instr: str, user_instr: List[Dict], stack: List[str], final_stack: List[str], code_with_ids_and_pos_size=[], pos=0) -> Tuple[List[Tuple[str, int, int]], int]:
+
         original_instr_splitted = original_instr.split(" ")
         stack = stack.copy()
-        code_with_ids_and_pos_size: List[Tuple[str, int, int]] = []
 
         user_instr_dict = defaultdict(list)
 
         for instr in user_instr:
             user_instr_dict[instr["disasm"]].append(instr)
 
-        pos = 0
-
         for i, word in enumerate(original_instr_splitted):
             if word[0].isdigit():
                 continue
 
-            if word.startswith("PUSH"):
+
+            if word.startswith("PUSH0"):
+                if "PUSH0" in user_instr_dict.keys():
+                    push0 = user_instr_dict["PUSH0"][0]
+                    code_with_ids_and_pos_size.append((push0["id"], pos, len(stack)))
+                    stack = push0["outpt_sk"] + stack
+                else:
+                    stack = ["none"] + stack
+
+            elif word.startswith("PUSH") and "[" in original_instr_splitted[i + 1]: # [tag] or any of its derivated values ([$], #[$]...)
+                value = int(original_instr_splitted[i + 2], 10)
+                for push in user_instr_dict[f"PUSH {original_instr_splitted[i + 1]}"]:
+                    if push["value"][0] == value:
+                        code_with_ids_and_pos_size.append((push["id"], pos, len(stack)))
+                        stack = push["outpt_sk"] + stack
+
+
+            elif word.startswith("PUSH") and "data" in original_instr_splitted[i + 1]: # [tag] or any of its derivated values ([$], #[$]...)
+                value = int(original_instr_splitted[i + 2], 16)
+                for push in user_instr_dict[f"PUSH {original_instr_splitted[i + 1]}"]:
+                    if push["value"][0] == value:
+                        code_with_ids_and_pos_size.append((push["id"], pos, len(stack)))
+                        stack = push["outpt_sk"] + stack
+
+            elif word.startswith("PUSH") and len(word) < 8:
                 value = int(original_instr_splitted[i + 1], 16)
+
+                if "PUSH" not in user_instr_dict.keys():
+                    return [], 0
                 
                 for push in user_instr_dict["PUSH"]:
                     if push["value"][0] == value:
                         code_with_ids_and_pos_size.append((push["id"], pos, len(stack)))
                         stack = push["outpt_sk"] + stack
+
+
+            elif word.startswith("KECCAK256"):
+                for kw in user_instr_dict[word]:
+                    kw_input = kw["inpt_sk"] 
+                    st_input = stack[:len(kw["inpt_sk"])]
+                    if kw_input == st_input:
+
+                        original_pos = pos
+                        original_code_with_ids_and_pos_size = code_with_ids_and_pos_size.copy()
+                        original_stack = stack.copy()
+
+
+                        code_with_ids_and_pos_size.append((kw["id"], pos, len(stack)))
+                        stack = stack[len(kw["inpt_sk"]):]
+                        stack = kw["outpt_sk"] + stack
+
+
+                        backtracking, pos = self.parse_original_instr(original_instr[len(" ".join(original_instr_splitted[0:i + 1])) + 1:],user_instr, stack, final_stack, code_with_ids_and_pos_size, pos)
+
+
+                        if len(backtracking) != 0:
+                            return backtracking, pos
+
+                        stack = original_stack
+                        pos = original_pos
+                        code_with_ids_and_pos_size = original_code_with_ids_and_pos_size
+
 
             elif word.startswith("SWAP"):
                 value = int(word.replace("SWAP", ""))
@@ -147,7 +222,12 @@ class Split_calculator:
                 value = int(word.replace("DUP", ""))-1
                 stack = [stack[value]] + stack
 
+            elif word.startswith("POP"):
+                stack = stack[1:]
+
+
             else:
+                temp_stack = stack.copy()
                 for kw in user_instr_dict[word]:
                     if kw["commutative"]:
                         kw_input = set(kw["inpt_sk"])
@@ -157,13 +237,27 @@ class Split_calculator:
                         st_input = stack[:len(kw["inpt_sk"])]
 
                     if kw_input == st_input:
-                        code_with_ids_and_pos_size.append((kw["id"], pos, len(stack)))
-                        stack = stack[len(kw["inpt_sk"]):]
-                        stack = kw["outpt_sk"] + stack
+                        code_with_ids_and_pos_size.append((kw["id"], pos, len(temp_stack)))
+                        temp_stack = temp_stack[len(kw["inpt_sk"]):]
+                        temp_stack = kw["outpt_sk"] + temp_stack
+
+                stack = temp_stack
 
             pos += 1
-        return code_with_ids_and_pos_size
+        
+        if stack == final_stack:
+            return code_with_ids_and_pos_size, pos
+        else:
+            return [], pos
 
 
     def __str__(self) -> str:
-        return f"min: {self.min_split_point_candidate}, dao: {self.dag_split_point_candidate}"
+        return f"min: {self.min_split_point_candidate}, dao:"
+
+    def print_split_point(self):
+        if self.split_point == "":
+            block = self.min_split_point_candidate[-1]
+            print(f"splittocsv: {block.min_pos};{block.length}")
+
+        else:
+            print(self.split_point)

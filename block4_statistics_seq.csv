@@ -1,0 +1,2 @@
+,block_id,previous_solution,timeout,initial_n_instrs,initial_estimated_size,initial_estimated_gas,rules,initial_length,saved_length,chosen_block_tag,solver_time_in_sec,saved_size,saved_gas,model_found,shown_optimal,solution_found,optimized_n_instrs,optimized_length,optimized_estimated_size,optimized_estimated_gas,outcome,forves_checker
+0,isolated_block_0_0,PUSH 80 PUSH 40 MSTORE CALLVALUE DUP1 ISZERO PUSH [tag] 1,4,7,11,20,,7,0,greedy_not_enabled,0.218,0,1,True,True,CALLVALUE PUSH 80 PUSH 40 MSTORE CALLVALUE ISZERO PUSH [tag] 1,7,7,11,19,model,disabled

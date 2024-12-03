@@ -127,6 +127,7 @@ class OptimizationParams:
         self.no_simp = True
         self.debug_flag = False
         self.dzn = False
+        self.minstack = False
 
         self.length_bound = False
         self.gcc_bounds = False
@@ -155,7 +156,7 @@ class OptimizationParams:
             self.seqs_file = "seqs.csv"
 
         if "blocks_file" in parsed_args:
-            self.blocks_file = parsed_args.block_csv_path
+            self.blocks_file = parsed_args.blocks_file
         else:
             self.blocks_file = "blocks.csv"
 
@@ -232,8 +233,10 @@ class OptimizationParams:
             self.debug_flag = parsed_args.debug_flag
 
         self.dzn = parsed_args.dzn
+        self.minstack = parsed_args.minstack
         self.length_bound = parsed_args.length_bound
         self.gcc_bounds = parsed_args.gcc_bounds
         self.unary_shrink = parsed_args.unary_shrink
         self.binary_shrink = parsed_args.binary_shrink
         self.pop_unused = parsed_args.pop_unused
+        self.split_block = parsed_args.split_block

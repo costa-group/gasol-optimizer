@@ -1,0 +1,29 @@
+digraph {
+	ADD_0 [label=ADD_0]
+	MLOAD_0 [label=MLOAD_0]
+	ADD_1 [label=ADD_1]
+	ADD_2 [label=ADD_2]
+	MUL_0 [label=MUL_0]
+	DIV_0 [label=DIV_0]
+	ADD_3 [label=ADD_3]
+	MSTORE_0 [label=MSTORE_0]
+	MSTORE_1 [label=MSTORE_1]
+	PUSH_0 [label=PUSH_0]
+	PUSH_1 [label=PUSH_1]
+	PUSH_2 [label=PUSH_2]
+	PUSH_0 -> ADD_0
+	MLOAD_0 -> ADD_0
+	PUSH_1 -> MLOAD_0
+	MLOAD_0 -> ADD_1
+	ADD_2 -> ADD_1
+	PUSH_0 -> ADD_2
+	MUL_0 -> ADD_2
+	PUSH_0 -> MUL_0
+	DIV_0 -> MUL_0
+	ADD_3 -> DIV_0
+	PUSH_0 -> DIV_0
+	PUSH_2 -> ADD_3
+	PUSH_1 -> MSTORE_0
+	ADD_1 -> MSTORE_0
+	MLOAD_0 -> MSTORE_1
+}

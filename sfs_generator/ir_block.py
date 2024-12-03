@@ -1082,6 +1082,7 @@ def compile_block(instrs,input_stack,block_id):
 
     split_calculator.finish_stack_split(block_split)
 
+
     return rule
 
 

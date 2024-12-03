@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 import json
 import os
+from re import split
 import shutil
 import sys
 from typing import Tuple, Optional, List, Dict, Set
@@ -172,6 +173,9 @@ def search_optimal(sfs_block: Dict, params: OptimizationParams, tout: int,
     elif params.dzn:
         optimization_outcome, solver_time, optimized_ids = dzn_optimization_from_sms(sfs_block, tout, params)
 
+    elif params.minstack:
+        optimization_outcome, solver_time, optimized_ids = dzn_optimization_from_sms(sfs_block, tout, params, "dzn/evmopt-generic-reorder.mzn")
+
     # Otherwise, SMT superoptimization
     else:
         optimizer = BlockOptimizer(block_name, sfs_block, params, tout)
@@ -245,12 +249,19 @@ def optimize_block(sfs_dict, params: OptimizationParams) -> List[Tuple[AsmBlock,
 
         print(f"Optimizing {block_name}... Timeout:{str(tout)}")
 
-        print(block_name)
-
         sfs_block = extended_json_with_minlength(extended_json_with_instr_dep_and_bounds(sfs_block))
 
-        split_calculator = Split_calculator()
-        split_calculator.calculate_dao_split(sfs_block)
+
+        if split_block is not None:
+            split_calculator = Split_calculator()
+            print(split_calculator.min_split_point_candidate)
+            print(split_calculator.split_point)
+            if split_block == "normal":
+                split_calculator.calculate_dao_split(sfs_block)
+            elif split_block == "extended":
+                split_calculator.calculate_extended_dao_split(sfs_block)
+
+            split_calculator.print_split_point()
 
         
 
@@ -909,7 +920,7 @@ def options_gasol(ap: ArgumentParser) -> None:
     output.add_argument("-o", help="Path for storing the optimized code", dest='output_path', action='store')
     output.add_argument("-csv", help="CSV file path for the seqs optimization report", dest='seq_csv_path',
                         action='store')
-    output.add_argument("-block-csv", help="CSV file path for the blocks optimization report", dest='block_csv_path',
+    output.add_argument("-block-csv", help="CSV file path for the blocks optimization report", dest='blocks_file',
                         action='store')
 
     output.add_argument("-backend", "--backend", action="store_false",
@@ -938,6 +949,7 @@ def options_gasol(ap: ArgumentParser) -> None:
     basic.add_argument("-ub-greedy", "--ub-greedy", dest='ub_greedy', help='Enables greedy algorithm to predict the upper bound', action='store_true')
     basic.add_argument('-greedy', '--greedy', dest='greedy', help='Uses greedy directly to generate the results', action='store_true')
     basic.add_argument('-dzn', '--dzn', dest='dzn', help='Superoptimization via a MiniZinc model', action='store_true')
+    basic.add_argument('-minstack', '--minstack', dest='minstack', help='Superoptimization via a MiniZinc model', action='store_true')
     basic.add_argument("-solver", "--solver", help="Choose the solver", choices=["z3", "barcelogic", "oms"],
                        default="oms")
     basic.add_argument("-tout", metavar='timeout', action='store', type=int,
@@ -1019,6 +1031,11 @@ def options_gasol(ap: ArgumentParser) -> None:
     minizinc_options.add_argument('-pop-unused', action='store_true', dest='pop_unused', help='')
 
 
+    split_options = ap.add_argument_group('Split Options', 'Options for deciding where to split the block')
+    split_options.add_argument("-split", help="Choose the split mode", choices=["extended", "normal", "minstack", "none"],
+                      default="none", dest='split_block')
+
+
 def parse_encoding_args(ap: ArgumentParser):
     return ap.parse_args()
 
@@ -1030,8 +1047,11 @@ def execute_gasol(params: OptimizationParams):
     global new_size
     global prev_n_instrs
     global new_n_instrs
+    global split_block
 
     create_ml_models(params)
+
+    split_block = params.split_block
 
     # If storage or partition flag are activated, the blocks are split using store instructions
     if params.split_storage:
@@ -1106,6 +1126,7 @@ def main_gasol():
     params = OptimizationParams()
     # We need to parse the arguments
     params.parse_args(parsed_args)
+
     execute_gasol(params)
 
 

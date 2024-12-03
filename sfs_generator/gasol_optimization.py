@@ -2365,7 +2365,6 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     modified_variables_userdefins(mstore_ins)
 
     
-    
     for mem in mstore_ins:
         x = generate_mstore_info(mem)
         mem_objs.append(x)
@@ -2388,14 +2387,13 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     vars_list = compute_vars_set(new_ss,new_ts)
 
     #Adding sstore seq
-    
+
     if simplification:
         new_user_defins,new_ts = apply_all_simp_rules(all_user_defins,vars_list,new_ts)
         apply_all_comparison(new_user_defins,new_ts)
     else:
         new_user_defins = all_user_defins
 
-    
     new_user_defins1 = update_user_defins(new_ts,new_user_defins)
 
     removed_instructions = list(filter(lambda x: x not in new_user_defins1,new_user_defins))    
@@ -2475,7 +2473,7 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     else:
         new_var_list = []
         new_push_ins = []
-        
+
     json_dict["init_progr_len"] = max_instr_size-discount_op
     json_dict["max_progr_len"] = max_instr_size
     json_dict["max_sk_sz"] = stack_bound #max_sk_sz_idx-len(remove_vars)
@@ -2618,7 +2616,7 @@ def build_userdef_instructions():
     global already_defined_userdef
     global modified_userdef_vals
 
-    
+
     already_defined_userdef = []
     
     u_dict_sort = sorted(u_dict.keys())
@@ -2711,6 +2709,7 @@ def build_userdef_instructions():
                 modified_userdef_vals[u_var] = obj["outpt_sk"][0]
             else:
                 user_defins.append(obj)
+
 
 
 def funct_to_opcode(funct: str) -> Optional[str]:

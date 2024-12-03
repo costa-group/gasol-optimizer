@@ -32,6 +32,8 @@ class SMSgreedy:
         self._original_code_with_ids = json_format['original_code_with_ids'] if 'original_code_with_ids' in json_format else []
         self._lower_bounds = json_format['lower_bounds'] if 'lower_bounds' in json_format else {}
         self._upper_bounds = json_format['upper_bounds'] if 'upper_bounds' in json_format else {}
+        self._original_instr = json_format['original_instrs']
+
 
         # Extra declarations
         self._var2repr = {var: f"s{i}" for i, var in enumerate(self._variables)}
@@ -196,6 +198,8 @@ class SMSgreedy:
             final_registers = [register[1] for register in self._registers]
             print("initial_registers = [ " + make_list(self._var2repr[var] for var in initial_registers) + " ];", file=self._f)
             print("final_registers = [ " + make_list(self._var2repr[var] for var in final_registers) + " ];", file=self._f)
+
+        print(f"%{self._original_instr}", file=self._f) # secuencia, length, size, gas
 
 
 if __name__ == "__main__":

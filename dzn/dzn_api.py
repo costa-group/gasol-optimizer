@@ -100,11 +100,12 @@ def dzn_optimization_from_sms(sms, timeout, bool_flags, model_path="dzn/evmopt-g
 
     flag_str = generate_flags_for_minizinc(bool_flags)
     command = f"{mzn_path} --solver Chuffed --time-limit {timeout*1000} " \
-              f"--output-time --intermediate-solutions {model_path} {flag_str} {tmp_file}"
+              f"--output-time --intermediate-solutions -s {model_path} {flag_str} {tmp_file}"
+    #stats -s needed to run analysis
 
-    # print(f"{minizinc_path} --solver Chuffed --time-limit {timeout*1000} --output-time --intermediate-solutions -s {model_path} {flag_str} {tmp_file}")
+    print(f"Command: {mzn_path} --solver Chuffed --time-limit {timeout*1000} --output-time --intermediate-solutions -s {model_path} {flag_str} {tmp_file}")
     output, total_time = run_and_measure_command(command)
 
-    os.remove(tmp_file)
+    #os.remove(tmp_file)
     solver_ids, optimization_output = process_msg(output)
     return optimization_output, total_time, solver_ids
