@@ -1,0 +1,78 @@
+% Generated FlatZinc statistics:
+%%%mzn-stat: paths=0
+%%%mzn-stat: flatBoolVars=1818
+%%%mzn-stat: flatIntVars=554
+%%%mzn-stat: flatBoolConstraints=1092
+%%%mzn-stat: flatIntConstraints=2003
+%%%mzn-stat: evaluatedReifiedConstraints=1146
+%%%mzn-stat: evaluatedHalfReifiedConstraints=579
+%%%mzn-stat: eliminatedImplications=100
+%%%mzn-stat: method="minimize"
+%%%mzn-stat: flatTime=0.247229
+%%%mzn-stat-end
+                      s0  s1  .   .   .   .   .  
+ 1:P(PUSH_0)          s8  s0  s1  .   .   .   .  
+ 2:U(MLOAD_0)         s3  s0  s1  .   .   .   .  
+ 3:DUP(1)             s3  s3  s0  s1  .   .   .  
+ 4:P(PUSH_1)          s9  s3  s3  s0  s1  .   .  
+ 5:DUP(4)             s0  s9  s3  s3  s0  s1  .  
+ 6:P(PUSH_2)          s10 s0  s9  s3  s3  s0  s1 
+ 7:B(ADD_2)           s7  s9  s3  s3  s0  s1  .  
+ 8:B(DIV_0)           s6  s3  s3  s0  s1  .   .  
+ 9:P(PUSH_1)          s9  s6  s3  s3  s0  s1  .  
+10:B(MUL_0)           s5  s3  s3  s0  s1  .   .  
+11:P(PUSH_1)          s9  s5  s3  s3  s0  s1  .  
+12:B(ADD_1)           s4  s3  s3  s0  s1  .   .  
+13:B(ADD_0)           s2  s3  s0  s1  .   .   .  
+14:SWAP(3)            s1  s3  s0  s2  .   .   .  
+length = 14;
+gas = 46;
+bytes = 19; 
+solution = [P(PUSH_0), U(MLOAD_0), DUP(1), P(PUSH_1), DUP(4), P(PUSH_2), B(ADD_2), B(DIV_0), P(PUSH_1), B(MUL_0), P(PUSH_1), B(ADD_1), B(ADD_0), SWAP(3)]
+% time elapsed: 0.37 s
+----------
+                      s0  s1  .   .   .   .   .  
+ 1:P(PUSH_0)          s8  s0  s1  .   .   .   .  
+ 2:U(MLOAD_0)         s3  s0  s1  .   .   .   .  
+ 3:DUP(1)             s3  s3  s0  s1  .   .   .  
+ 4:P(PUSH_1)          s9  s3  s3  s0  s1  .   .  
+ 5:DUP(4)             s0  s9  s3  s3  s0  s1  .  
+ 6:P(PUSH_2)          s10 s0  s9  s3  s3  s0  s1 
+ 7:B(ADD_2)           s7  s9  s3  s3  s0  s1  .  
+ 8:B(DIV_0)           s6  s3  s3  s0  s1  .   .  
+ 9:P(PUSH_1)          s9  s6  s3  s3  s0  s1  .  
+10:B(MUL_0)           s5  s3  s3  s0  s1  .   .  
+11:P(PUSH_1)          s9  s5  s3  s3  s0  s1  .  
+12:B(ADD_1)           s4  s3  s3  s0  s1  .   .  
+13:B(ADD_0)           s2  s3  s0  s1  .   .   .  
+14:NOP                s2  s3  s0  s1  .   .   .  
+length = 13;
+gas = 43;
+bytes = 18; 
+solution = [P(PUSH_0), U(MLOAD_0), DUP(1), P(PUSH_1), DUP(4), P(PUSH_2), B(ADD_2), B(DIV_0), P(PUSH_1), B(MUL_0), P(PUSH_1), B(ADD_1), B(ADD_0), NOP]
+% time elapsed: 0.37 s
+----------
+==========
+% time elapsed: 0.38 s
+%%%mzn-stat: nodes=528
+%%%mzn-stat: failures=186
+%%%mzn-stat: restarts=2
+%%%mzn-stat: variables=16258
+%%%mzn-stat: intVars=584
+%%%mzn-stat: boolVariables=15672
+%%%mzn-stat: propagators=2107
+%%%mzn-stat: propagations=149488
+%%%mzn-stat: peakDepth=58
+%%%mzn-stat: nogoods=186
+%%%mzn-stat: backjumps=231
+%%%mzn-stat: peakMem=0.00
+%%%mzn-stat: time=0.078
+%%%mzn-stat: initTime=0.052
+%%%mzn-stat: solveTime=0.026
+%%%mzn-stat: objective=13
+%%%mzn-stat: optTime=0.021
+%%%mzn-stat: baseMem=0.00
+%%%mzn-stat: trailMem=0.05
+%%%mzn-stat: randomSeed=1734611579
+%%%mzn-stat: nSolutions=2
+%%%mzn-stat-end

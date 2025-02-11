@@ -1,0 +1,262 @@
+28
+Optimizing isolated_block_0_0... Timeout:6
+[id: 0, len: 28, min_size: 3, min_pos: 10]
+
+extended_reverse:  ['PUSH_2', 'ADD_1', 'MLOAD_1', 'PUSH_4', 'ISZERO_0', 'PUSH_2_1', 'MLOAD_2', 'ISZERO_1', 'ADD_0', 'MLOAD_0', 'PUSH_3', 'PUSH_1', 'PUSH_0', 'MSTORE_1', 'MSTORE_0', 'ADD_2', 'PUSH [tag]_0']
+min_pos: 17, min_size: 4
+splittocsv: 17;30
+Command: /home/nicolas/repos/gasol-optimizer/bin/MiniZincIDE-2.6.4-bundle-linux-x86_64/bin/minizinc --solver Chuffed --time-limit 6000 --output-time --intermediate-solutions -s dzn/evmopt-generic.mzn  /tmp/tmp3odysiqx.dzn
+% Generated FlatZinc statistics:
+%%%mzn-stat: paths=0
+%%%mzn-stat: flatBoolVars=6122
+%%%mzn-stat: flatIntVars=1578
+%%%mzn-stat: flatBoolConstraints=3527
+%%%mzn-stat: flatIntConstraints=6712
+%%%mzn-stat: evaluatedReifiedConstraints=3471
+%%%mzn-stat: evaluatedHalfReifiedConstraints=2511
+%%%mzn-stat: eliminatedImplications=336
+%%%mzn-stat: method="minimize"
+%%%mzn-stat: flatTime=0.205193
+%%%mzn-stat-end
+                      s0  .   .   .   .   .   .   .   .   .  
+ 1:DUP(1)             s0  s0  .   .   .   .   .   .   .   .  
+ 2:P(PUSH [tag]_0)    s1  s0  s0  .   .   .   .   .   .   .  
+ 3:SWAP(2)            s0  s0  s1  .   .   .   .   .   .   .  
+ 4:P(PUSH_1)          s11 s0  s0  s1  .   .   .   .   .   .  
+ 5:DUP(1)             s11 s11 s0  s0  s1  .   .   .   .   .  
+ 6:P(PUSH_4)          s14 s11 s11 s0  s0  s1  .   .   .   .  
+ 7:U(MLOAD_2)         s9  s11 s11 s0  s0  s1  .   .   .   .  
+ 8:SWAP(3)            s0  s11 s11 s9  s0  s1  .   .   .   .  
+ 9:U(MLOAD_0)         s2  s11 s11 s9  s0  s1  .   .   .   .  
+10:DUP(4)             s9  s2  s11 s11 s9  s0  s1  .   .   .  
+11:S(MSTORE_0)        s11 s11 s9  s0  s1  .   .   .   .   .  
+12:DUP(4)             s0  s11 s11 s9  s0  s1  .   .   .   .  
+13:DUP(4)             s9  s0  s11 s11 s9  s0  s1  .   .   .  
+14:P(PUSH_3)          s13 s9  s0  s11 s11 s9  s0  s1  .   .  
+15:B(ADD_2)           s8  s0  s11 s11 s9  s0  s1  .   .   .  
+16:SWAP(3)            s11 s0  s11 s8  s9  s0  s1  .   .   .  
+17:SWAP(1)            s0  s11 s11 s8  s9  s0  s1  .   .   .  
+18:P(PUSH_2)          s12 s0  s11 s11 s8  s9  s0  s1  .   .  
+19:B(ADD_1)           s4  s11 s11 s8  s9  s0  s1  .   .   .  
+20:U(MLOAD_1)         s5  s11 s11 s8  s9  s0  s1  .   .   .  
+21:U(ISZERO_0)        s6  s11 s11 s8  s9  s0  s1  .   .   .  
+22:U(ISZERO_1)        s7  s11 s11 s8  s9  s0  s1  .   .   .  
+23:P(PUSH_0)          s10 s7  s11 s11 s8  s9  s0  s1  .   .  
+24:SWAP(1)            s7  s10 s11 s11 s8  s9  s0  s1  .   .  
+25:DUP(6)             s9  s7  s10 s11 s11 s8  s9  s0  s1  .  
+26:P(PUSH_2)          s12 s9  s7  s10 s11 s11 s8  s9  s0  s1 
+27:B(ADD_0)           s3  s7  s10 s11 s11 s8  s9  s0  s1  .  
+28:S(MSTORE_1)        s10 s11 s11 s8  s9  s0  s1  .   .   .  
+length = 28;
+gas = 84;
+bytes = 36; 
+solution = [DUP(1), P(PUSH [tag]_0), SWAP(2), P(PUSH_1), DUP(1), P(PUSH_4), U(MLOAD_2), SWAP(3), U(MLOAD_0), DUP(4), S(MSTORE_0), DUP(4), DUP(4), P(PUSH_3), B(ADD_2), SWAP(3), SWAP(1), P(PUSH_2), B(ADD_1), U(MLOAD_1), U(ISZERO_0), U(ISZERO_1), P(PUSH_0), SWAP(1), DUP(6), P(PUSH_2), B(ADD_0), S(MSTORE_1)]
+% time elapsed: 0.46 s
+----------
+                      s0  .   .   .   .   .   .   .   .   .  
+ 1:P(PUSH_4)          s14 s0  .   .   .   .   .   .   .   .  
+ 2:U(MLOAD_2)         s9  s0  .   .   .   .   .   .   .   .  
+ 3:DUP(1)             s9  s9  s0  .   .   .   .   .   .   .  
+ 4:P(PUSH_0)          s10 s9  s9  s0  .   .   .   .   .   .  
+ 5:P(PUSH_1)          s11 s10 s9  s9  s0  .   .   .   .   .  
+ 6:P(PUSH_1)          s11 s11 s10 s9  s9  s0  .   .   .   .  
+ 7:P(PUSH [tag]_0)    s1  s11 s11 s10 s9  s9  s0  .   .   .  
+ 8:DUP(7)             s0  s1  s11 s11 s10 s9  s9  s0  .   .  
+ 9:U(MLOAD_0)         s2  s1  s11 s11 s10 s9  s9  s0  .   .  
+10:DUP(7)             s9  s2  s1  s11 s11 s10 s9  s9  s0  .  
+11:S(MSTORE_0)        s1  s11 s11 s10 s9  s9  s0  .   .   .  
+12:DUP(7)             s0  s1  s11 s11 s10 s9  s9  s0  .   .  
+13:P(PUSH_2)          s12 s0  s1  s11 s11 s10 s9  s9  s0  .  
+14:B(ADD_1)           s4  s1  s11 s11 s10 s9  s9  s0  .   .  
+15:U(MLOAD_1)         s5  s1  s11 s11 s10 s9  s9  s0  .   .  
+16:U(ISZERO_0)        s6  s1  s11 s11 s10 s9  s9  s0  .   .  
+17:U(ISZERO_1)        s7  s1  s11 s11 s10 s9  s9  s0  .   .  
+18:DUP(7)             s9  s7  s1  s11 s11 s10 s9  s9  s0  .  
+19:P(PUSH_3)          s13 s9  s7  s1  s11 s11 s10 s9  s9  s0 
+20:B(ADD_2)           s8  s7  s1  s11 s11 s10 s9  s9  s0  .  
+21:SWAP(8)            s0  s7  s1  s11 s11 s10 s9  s9  s8  .  
+22:SWAP(7)            s9  s7  s1  s11 s11 s10 s9  s0  s8  .  
+23:P(PUSH_2)          s12 s9  s7  s1  s11 s11 s10 s9  s0  s8 
+24:B(ADD_0)           s3  s7  s1  s11 s11 s10 s9  s0  s8  .  
+25:S(MSTORE_1)        s1  s11 s11 s10 s9  s0  s8  .   .   .  
+26:SWAP(6)            s8  s11 s11 s10 s9  s0  s1  .   .   .  
+27:SWAP(3)            s10 s11 s11 s8  s9  s0  s1  .   .   .  
+28:NOP                s10 s11 s11 s8  s9  s0  s1  .   .   .  
+length = 27;
+gas = 81;
+bytes = 36; 
+solution = [P(PUSH_4), U(MLOAD_2), DUP(1), P(PUSH_0), P(PUSH_1), P(PUSH_1), P(PUSH [tag]_0), DUP(7), U(MLOAD_0), DUP(7), S(MSTORE_0), DUP(7), P(PUSH_2), B(ADD_1), U(MLOAD_1), U(ISZERO_0), U(ISZERO_1), DUP(7), P(PUSH_3), B(ADD_2), SWAP(8), SWAP(7), P(PUSH_2), B(ADD_0), S(MSTORE_1), SWAP(6), SWAP(3), NOP]
+% time elapsed: 0.88 s
+----------
+                      s0  .   .   .   .   .   .   .   .   .  
+ 1:DUP(1)             s0  s0  .   .   .   .   .   .   .   .  
+ 2:P(PUSH [tag]_0)    s1  s0  s0  .   .   .   .   .   .   .  
+ 3:SWAP(2)            s0  s0  s1  .   .   .   .   .   .   .  
+ 4:P(PUSH_4)          s14 s0  s0  s1  .   .   .   .   .   .  
+ 5:U(MLOAD_2)         s9  s0  s0  s1  .   .   .   .   .   .  
+ 6:P(PUSH_1)          s11 s9  s0  s0  s1  .   .   .   .   .  
+ 7:DUP(1)             s11 s11 s9  s0  s0  s1  .   .   .   .  
+ 8:P(PUSH_0)          s10 s11 s11 s9  s0  s0  s1  .   .   .  
+ 9:DUP(4)             s9  s10 s11 s11 s9  s0  s0  s1  .   .  
+10:SWAP(5)            s0  s10 s11 s11 s9  s9  s0  s1  .   .  
+11:DUP(7)             s0  s0  s10 s11 s11 s9  s9  s0  s1  .  
+12:U(MLOAD_0)         s2  s0  s10 s11 s11 s9  s9  s0  s1  .  
+13:DUP(6)             s9  s2  s0  s10 s11 s11 s9  s9  s0  s1 
+14:S(MSTORE_0)        s0  s10 s11 s11 s9  s9  s0  s1  .   .  
+15:P(PUSH_2)          s12 s0  s10 s11 s11 s9  s9  s0  s1  .  
+16:B(ADD_1)           s4  s10 s11 s11 s9  s9  s0  s1  .   .  
+17:U(MLOAD_1)         s5  s10 s11 s11 s9  s9  s0  s1  .   .  
+18:U(ISZERO_0)        s6  s10 s11 s11 s9  s9  s0  s1  .   .  
+19:U(ISZERO_1)        s7  s10 s11 s11 s9  s9  s0  s1  .   .  
+20:DUP(6)             s9  s7  s10 s11 s11 s9  s9  s0  s1  .  
+21:P(PUSH_3)          s13 s9  s7  s10 s11 s11 s9  s9  s0  s1 
+22:B(ADD_2)           s8  s7  s10 s11 s11 s9  s9  s0  s1  .  
+23:SWAP(5)            s9  s7  s10 s11 s11 s8  s9  s0  s1  .  
+24:P(PUSH_2)          s12 s9  s7  s10 s11 s11 s8  s9  s0  s1 
+25:B(ADD_0)           s3  s7  s10 s11 s11 s8  s9  s0  s1  .  
+26:S(MSTORE_1)        s10 s11 s11 s8  s9  s0  s1  .   .   .  
+27:NOP                s10 s11 s11 s8  s9  s0  s1  .   .   .  
+28:NOP                s10 s11 s11 s8  s9  s0  s1  .   .   .  
+length = 26;
+gas = 78;
+bytes = 34; 
+solution = [DUP(1), P(PUSH [tag]_0), SWAP(2), P(PUSH_4), U(MLOAD_2), P(PUSH_1), DUP(1), P(PUSH_0), DUP(4), SWAP(5), DUP(7), U(MLOAD_0), DUP(6), S(MSTORE_0), P(PUSH_2), B(ADD_1), U(MLOAD_1), U(ISZERO_0), U(ISZERO_1), DUP(6), P(PUSH_3), B(ADD_2), SWAP(5), P(PUSH_2), B(ADD_0), S(MSTORE_1), NOP, NOP]
+% time elapsed: 0.96 s
+----------
+                      s0  .   .   .   .   .   .   .   .   .  
+ 1:DUP(1)             s0  s0  .   .   .   .   .   .   .   .  
+ 2:P(PUSH_4)          s14 s0  s0  .   .   .   .   .   .   .  
+ 3:U(MLOAD_2)         s9  s0  s0  .   .   .   .   .   .   .  
+ 4:DUP(1)             s9  s9  s0  s0  .   .   .   .   .   .  
+ 5:P(PUSH_3)          s13 s9  s9  s0  s0  .   .   .   .   .  
+ 6:B(ADD_2)           s8  s9  s0  s0  .   .   .   .   .   .  
+ 7:P(PUSH_1)          s11 s8  s9  s0  s0  .   .   .   .   .  
+ 8:DUP(1)             s11 s11 s8  s9  s0  s0  .   .   .   .  
+ 9:P(PUSH_0)          s10 s11 s11 s8  s9  s0  s0  .   .   .  
+10:P(PUSH [tag]_0)    s1  s10 s11 s11 s8  s9  s0  s0  .   .  
+11:SWAP(7)            s0  s10 s11 s11 s8  s9  s0  s1  .   .  
+12:DUP(6)             s9  s0  s10 s11 s11 s8  s9  s0  s1  .  
+13:DUP(8)             s0  s9  s0  s10 s11 s11 s8  s9  s0  s1 
+14:U(MLOAD_0)         s2  s9  s0  s10 s11 s11 s8  s9  s0  s1 
+15:SWAP(1)            s9  s2  s0  s10 s11 s11 s8  s9  s0  s1 
+16:S(MSTORE_0)        s0  s10 s11 s11 s8  s9  s0  s1  .   .  
+17:P(PUSH_2)          s12 s0  s10 s11 s11 s8  s9  s0  s1  .  
+18:B(ADD_1)           s4  s10 s11 s11 s8  s9  s0  s1  .   .  
+19:U(MLOAD_1)         s5  s10 s11 s11 s8  s9  s0  s1  .   .  
+20:U(ISZERO_0)        s6  s10 s11 s11 s8  s9  s0  s1  .   .  
+21:U(ISZERO_1)        s7  s10 s11 s11 s8  s9  s0  s1  .   .  
+22:DUP(6)             s9  s7  s10 s11 s11 s8  s9  s0  s1  .  
+23:P(PUSH_2)          s12 s9  s7  s10 s11 s11 s8  s9  s0  s1 
+24:B(ADD_0)           s3  s7  s10 s11 s11 s8  s9  s0  s1  .  
+25:S(MSTORE_1)        s10 s11 s11 s8  s9  s0  s1  .   .   .  
+26:NOP                s10 s11 s11 s8  s9  s0  s1  .   .   .  
+27:NOP                s10 s11 s11 s8  s9  s0  s1  .   .   .  
+28:NOP                s10 s11 s11 s8  s9  s0  s1  .   .   .  
+length = 25;
+gas = 75;
+bytes = 33; 
+solution = [DUP(1), P(PUSH_4), U(MLOAD_2), DUP(1), P(PUSH_3), B(ADD_2), P(PUSH_1), DUP(1), P(PUSH_0), P(PUSH [tag]_0), SWAP(7), DUP(6), DUP(8), U(MLOAD_0), SWAP(1), S(MSTORE_0), P(PUSH_2), B(ADD_1), U(MLOAD_1), U(ISZERO_0), U(ISZERO_1), DUP(6), P(PUSH_2), B(ADD_0), S(MSTORE_1), NOP, NOP, NOP]
+% time elapsed: 0.98 s
+----------
+                      s0  .   .   .   .   .   .   .   .   .  
+ 1:DUP(1)             s0  s0  .   .   .   .   .   .   .   .  
+ 2:P(PUSH_4)          s14 s0  s0  .   .   .   .   .   .   .  
+ 3:U(MLOAD_2)         s9  s0  s0  .   .   .   .   .   .   .  
+ 4:DUP(1)             s9  s9  s0  s0  .   .   .   .   .   .  
+ 5:P(PUSH_3)          s13 s9  s9  s0  s0  .   .   .   .   .  
+ 6:B(ADD_2)           s8  s9  s0  s0  .   .   .   .   .   .  
+ 7:P(PUSH_1)          s11 s8  s9  s0  s0  .   .   .   .   .  
+ 8:DUP(1)             s11 s11 s8  s9  s0  s0  .   .   .   .  
+ 9:P(PUSH [tag]_0)    s1  s11 s11 s8  s9  s0  s0  .   .   .  
+10:SWAP(6)            s0  s11 s11 s8  s9  s0  s1  .   .   .  
+11:U(MLOAD_0)         s2  s11 s11 s8  s9  s0  s1  .   .   .  
+12:DUP(5)             s9  s2  s11 s11 s8  s9  s0  s1  .   .  
+13:S(MSTORE_0)        s11 s11 s8  s9  s0  s1  .   .   .   .  
+14:P(PUSH_0)          s10 s11 s11 s8  s9  s0  s1  .   .   .  
+15:DUP(6)             s0  s10 s11 s11 s8  s9  s0  s1  .   .  
+16:P(PUSH_2)          s12 s0  s10 s11 s11 s8  s9  s0  s1  .  
+17:B(ADD_1)           s4  s10 s11 s11 s8  s9  s0  s1  .   .  
+18:U(MLOAD_1)         s5  s10 s11 s11 s8  s9  s0  s1  .   .  
+19:U(ISZERO_0)        s6  s10 s11 s11 s8  s9  s0  s1  .   .  
+20:U(ISZERO_1)        s7  s10 s11 s11 s8  s9  s0  s1  .   .  
+21:DUP(6)             s9  s7  s10 s11 s11 s8  s9  s0  s1  .  
+22:P(PUSH_2)          s12 s9  s7  s10 s11 s11 s8  s9  s0  s1 
+23:B(ADD_0)           s3  s7  s10 s11 s11 s8  s9  s0  s1  .  
+24:S(MSTORE_1)        s10 s11 s11 s8  s9  s0  s1  .   .   .  
+25:NOP                s10 s11 s11 s8  s9  s0  s1  .   .   .  
+26:NOP                s10 s11 s11 s8  s9  s0  s1  .   .   .  
+27:NOP                s10 s11 s11 s8  s9  s0  s1  .   .   .  
+28:NOP                s10 s11 s11 s8  s9  s0  s1  .   .   .  
+length = 24;
+gas = 72;
+bytes = 32; 
+solution = [DUP(1), P(PUSH_4), U(MLOAD_2), DUP(1), P(PUSH_3), B(ADD_2), P(PUSH_1), DUP(1), P(PUSH [tag]_0), SWAP(6), U(MLOAD_0), DUP(5), S(MSTORE_0), P(PUSH_0), DUP(6), P(PUSH_2), B(ADD_1), U(MLOAD_1), U(ISZERO_0), U(ISZERO_1), DUP(6), P(PUSH_2), B(ADD_0), S(MSTORE_1), NOP, NOP, NOP, NOP]
+% time elapsed: 1.07 s
+----------
+==========
+% time elapsed: 1.41 s
+%%%mzn-stat: nodes=21948
+%%%mzn-stat: failures=8040
+%%%mzn-stat: restarts=5
+%%%mzn-stat: variables=54971
+%%%mzn-stat: intVars=1820
+%%%mzn-stat: boolVariables=53149
+%%%mzn-stat: propagators=6967
+%%%mzn-stat: propagations=12806749
+%%%mzn-stat: peakDepth=341
+%%%mzn-stat: nogoods=8040
+%%%mzn-stat: backjumps=12264
+%%%mzn-stat: peakMem=0.00
+%%%mzn-stat: time=1.115
+%%%mzn-stat: initTime=0.079
+%%%mzn-stat: solveTime=1.036
+%%%mzn-stat: objective=24
+%%%mzn-stat: optTime=0.702
+%%%mzn-stat: baseMem=0.00
+%%%mzn-stat: trailMem=0.19
+%%%mzn-stat: randomSeed=1734695750
+%%%mzn-stat: nSolutions=5
+%%%mzn-stat-end
+
+{U(MLOAD_0), U(MLOAD_1), U(ISZERO_0), U(ISZERO_1), U(MLOAD_2), B(ADD_0), B(ADD_1), B(ADD_2), P(PUSH [tag]_0), P(PUSH_0), P(PUSH_1), P(PUSH_2), P(PUSH_3), P(PUSH_4), S(MSTORE_0), S(MSTORE_1), DUP(1), DUP(2), DUP(3), DUP(4), DUP(5), DUP(6), DUP(7), DUP(8), DUP(9), DUP(10), SWAP(1), SWAP(2), SWAP(3), SWAP(4), SWAP(5), SWAP(6), SWAP(7), SWAP(8), SWAP(9), POP, NOP}
+uses: [0, 3, 1, 1, 1, 1, 1, 1, 1, 1, 4, 1, 2, 2, 1, 1]
+creates: [., s2, s5, s6, s7, s9, s3, s4, s8, s1, s10, s11, s12, s13, s14, ., ., ., ., ., ., ., ., ., ., ., ., ., ., ., ., ., ., ., ., ., ., .]
+creator: [U(MLOAD_0), U(MLOAD_1), U(ISZERO_0), U(ISZERO_1), U(MLOAD_2), B(ADD_0), B(ADD_1), B(ADD_2), P(PUSH [tag]_0), P(PUSH_0), P(PUSH_1), P(PUSH_2), P(PUSH_3), P(PUSH_4)]
+maxdups = 7 maxpops = 0 uses: 22 null = 0 unused: {} creates something: 14 startlength: 1
+lcount: [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+ucount: [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 12, 12, 12, 12, 12, 12, 12, 12, 12, 0, 12]
+MLOAD_1 -> s4:U -> B(ADD_1)
+ISZERO_0 -> s5:U -> U(MLOAD_1)
+ISZERO_1 -> s6:U -> U(ISZERO_0)
+MLOAD_2 -> s14:U -> P(PUSH_4)
+ADD_0 -> s12:2Z -> P(PUSH_2)
+ADD_1 -> s12:2Z -> P(PUSH_2)
+ADD_2 -> s13:2Z -> P(PUSH_3)
+MSTORE_1 -> s3:1N -> B(ADD_0)
+WARNING: the --time-out flag has recently been changed.The time-out is now provided in milliseconds instead of seconds
+
+['DUP1', 'PUSH_4', 'MLOAD_2', 'DUP1', 'PUSH_3', 'ADD_2', 'PUSH_1', 'DUP1', 'PUSH [tag]_0', 'SWAP6', 'MLOAD_0', 'DUP5', 'MSTORE_0', 'PUSH_0', 'DUP6', 'PUSH_2', 'ADD_1', 'MLOAD_1', 'ISZERO_0', 'ISZERO_1', 'DUP6', 'PUSH_2', 'ADD_0', 'MSTORE_1']
+24
+28
+
+Initial sequence (basic block per line):
+PUSH1 0x40 MLOAD PUSH [tag] SWAP2 SWAP1 PUSH0 PUSH1 0xa0 DUP3 ADD SWAP1 POP DUP3 MLOAD DUP3 MSTORE PUSH1 0x20 DUP4 ADD MLOAD ISZERO ISZERO PUSH1 0x20 DUP4 ADD MSTORE PUSH1 0x1 PUSH1 0x1 PUSH1 0x70
+
+Optimized sequence (basic block per line):
+DUP1 PUSH1 0x40 MLOAD DUP1 PUSH1 0xa0 ADD PUSH1 0x1 DUP1 PUSH [tag] SWAP6 MLOAD DUP5 MSTORE PUSH1 0x70 DUP6 PUSH1 0x20 ADD MLOAD ISZERO ISZERO DUP6 PUSH1 0x20 ADD MSTORE
+
+Total time: 1.49 s
+
+Intermediate files stored at /tmp/gasol_62dff7b5140d43e7a39cf42056a0d3dc/
+
+Optimized code stored in block3_1_optimized.json_solc
+Optimality results stored in block3_1_statistics_seq.csv
+
+Estimated initial gas: 82
+Estimated gas optimized: 72
+
+Estimated initial size in bytes: 37
+Estimated size optimized in bytes: 32
+
+Initial number of instructions: 28
+Final number of instructions: 24

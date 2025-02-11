@@ -1,0 +1,68 @@
+% Generated FlatZinc statistics:
+%%%mzn-stat: paths=0
+%%%mzn-stat: flatBoolVars=765
+%%%mzn-stat: flatIntVars=288
+%%%mzn-stat: flatBoolConstraints=438
+%%%mzn-stat: flatIntConstraints=916
+%%%mzn-stat: evaluatedReifiedConstraints=525
+%%%mzn-stat: evaluatedHalfReifiedConstraints=222
+%%%mzn-stat: eliminatedImplications=45
+%%%mzn-stat: method="minimize"
+%%%mzn-stat: flatTime=0.185958
+%%%mzn-stat-end
+                      s0 s1 .  .  . 
+ 1:P(PUSH_0)          s2 s0 s1 .  . 
+ 2:P(PUSH0_1)         s3 s2 s0 s1 . 
+ 3:SWAP(1)            s2 s3 s0 s1 . 
+ 4:SWAP(3)            s1 s3 s0 s2 . 
+ 5:P(PUSH0_1)         s3 s1 s3 s0 s2
+ 6:S(MSTORE_1)        s3 s0 s2 .  . 
+ 7:P(PUSH_2)          s4 s3 s0 s2 . 
+ 8:P(PUSH_0)          s2 s4 s3 s0 s2
+ 9:S(MSTORE_0)        s3 s0 s2 .  . 
+length = 9;
+gas = 25;
+bytes = 14; 
+solution = [P(PUSH_0), P(PUSH0_1), SWAP(1), SWAP(3), P(PUSH0_1), S(MSTORE_1), P(PUSH_2), P(PUSH_0), S(MSTORE_0)]
+% time elapsed: 0.24 s
+----------
+                      s0 s1 .  .  . 
+ 1:P(PUSH0_1)         s3 s0 s1 .  . 
+ 2:P(PUSH_2)          s4 s3 s0 s1 . 
+ 3:P(PUSH_0)          s2 s4 s3 s0 s1
+ 4:S(MSTORE_0)        s3 s0 s1 .  . 
+ 5:P(PUSH_0)          s2 s3 s0 s1 . 
+ 6:SWAP(3)            s1 s3 s0 s2 . 
+ 7:P(PUSH0_1)         s3 s1 s3 s0 s2
+ 8:S(MSTORE_1)        s3 s0 s2 .  . 
+ 9:NOP                s3 s0 s2 .  . 
+length = 8;
+gas = 22;
+bytes = 13; 
+solution = [P(PUSH0_1), P(PUSH_2), P(PUSH_0), S(MSTORE_0), P(PUSH_0), SWAP(3), P(PUSH0_1), S(MSTORE_1), NOP]
+% time elapsed: 0.25 s
+----------
+==========
+% time elapsed: 0.25 s
+%%%mzn-stat: nodes=454
+%%%mzn-stat: failures=198
+%%%mzn-stat: restarts=2
+%%%mzn-stat: variables=5646
+%%%mzn-stat: intVars=327
+%%%mzn-stat: boolVariables=5317
+%%%mzn-stat: propagators=1004
+%%%mzn-stat: propagations=89544
+%%%mzn-stat: peakDepth=32
+%%%mzn-stat: nogoods=198
+%%%mzn-stat: backjumps=194
+%%%mzn-stat: peakMem=0.00
+%%%mzn-stat: time=0.032
+%%%mzn-stat: initTime=0.019
+%%%mzn-stat: solveTime=0.013
+%%%mzn-stat: objective=8
+%%%mzn-stat: optTime=0.010
+%%%mzn-stat: baseMem=0.00
+%%%mzn-stat: trailMem=0.02
+%%%mzn-stat: randomSeed=1734616189
+%%%mzn-stat: nSolutions=2
+%%%mzn-stat-end

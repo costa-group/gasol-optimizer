@@ -1,0 +1,628 @@
+############################### BLOCK 1 ###################################
+Initial instr: 32
+
+block1.txt -> /tmp/tmp2embqbvo.dzn
+
+initial = [s0,  s1]
+final = [s2, s1, s0, s0, s1, s2, s0, s0, s1, s3]
+
+instr: 29
+time: 5.766
+not optimal
+
+P(PUSH_1), U(MLOAD_0), SWAP(2), SWAP(1), DUP(1), DUP(4), P(PUSH_0), B(ADD_0), DUP(4), DUP(4), P(PUSH_0), DUP(6), P(PUSH_2), B(ADD_3), B(DIV_0), P(PUSH_0), B(MUL_0), P(PUSH_0), B(ADD_2), DUP(8), B(ADD_1), P(PUSH_1), S(MSTORE_0), DUP(5), DUP(6), DUP(9), S(MSTORE_1), DUP(7), DUP(5)
+
+*******************************************************
+
+block1_1.txt -> /tmp/tmpv5b2dpnc.dzn
+
+initial = [s0,  s1]
+final = [s2,  s1,  s0,  s3]
+
+instr 14
+time: 0.067
+optimal
+
+P(PUSH_0), U(MLOAD_0), SWAP(2), P(PUSH_1), DUP(3), P(PUSH_2), B(ADD_2), B(DIV_0), P(PUSH_1), B(MUL_0), P(PUSH_1), B(ADD_1), DUP(4), B(ADD_0)
+
+*******************************************************
+
+block1_2.txt -> /tmp/tmp_7ticj2b.dzn
+
+initial =  [s0, s1, s3, s4]
+final = [s2, s1, s3, s3, s1, s2, s3, s3, s1, s4]
+
+instr: 15
+time: 0.410 
+optimal
+
+P(PUSH_1), S(MSTORE_0), SWAP(1), DUP(1), DUP(4), S(MSTORE_1), DUP(1), DUP(4), P(PUSH_0), B(ADD_0), DUP(4), DUP(4), DUP(1), DUP(7), DUP(5)
+
+*******************************************************
+
+renaming:
+    s2 -> s0
+    s1 -> s1
+    s0 -> s3
+    s3 -> s4
+
+
+total instr: 29
+total time: 0.477
+
+Comparison of both sequences
+
+P(PUSH_1), U(MLOAD_0), SWAP(2), SWAP(1), DUP(1), DUP(4), P(PUSH_0), B(ADD_0), DUP(4), DUP(4), P(PUSH_0), DUP(6), P(PUSH_2), B(ADD_3), B(DIV_0), P(PUSH_0), B(MUL_0), P(PUSH_0), B(ADD_2), DUP(8), B(ADD_1), P(PUSH_1), S(MSTORE_0), DUP(5), DUP(6), DUP(9), S(MSTORE_1), DUP(7), DUP(5)
+P(PUSH_0), U(MLOAD_0), SWAP(2), P(PUSH_1), DUP(3), P(PUSH_2), B(ADD_2), B(DIV_0), P(PUSH_1), B(MUL_0), P(PUSH_1), B(ADD_1), DUP(4), B(ADD_0), P(PUSH_1), S(MSTORE_0), SWAP(1), DUP(1), DUP(4), S(MSTORE_1), DUP(1), DUP(4), P(PUSH_0), B(ADD_0), DUP(4), DUP(4), DUP(1), DUP(7), DUP(5)
+
+*******************************************************
+
+block1_1_notordered:
+
+initial = [s0,  s1]
+final = [s2,  s3,  s0,  s1]
+
+instr 13
+time: 0.078
+optimal
+
+P(PUSH_0), U(MLOAD_0), DUP(1), P(PUSH_1), DUP(4), P(PUSH_2), B(ADD_2), B(DIV_0), P(PUSH_1), B(MUL_0), P(PUSH_1), B(ADD_1), B(ADD_0)
+
+*******************************************************
+
+block1_2_notordered:
+
+
+initial = [s2,  s3,  s0,  s1]
+final = [s2, s1, s3, s3, s1, s2, s3, s3, s1, s4]
+
+instr: 16
+time: 1.127
+optimal
+
+P(PUSH_1), S(MSTORE_0), SWAP(2), SWAP(1), DUP(1), DUP(4), DUP(3), DUP(6), S(MSTORE_1), P(PUSH_0), B(ADD_0), DUP(4), DUP(4), DUP(5), DUP(7), DUP(5)
+
+*******************************************************
+
+total instr: 29 - Same number of instructions
+total time: 1.205
+
+Comparison of all sequences:
+
+simple concat:  P(PUSH_0), U(MLOAD_0), SWAP(2), P(PUSH_1), DUP(3), P(PUSH_2), B(ADD_2), B(DIV_0), P(PUSH_1), B(MUL_0), P(PUSH_1), B(ADD_1), DUP(4), B(ADD_0), P(PUSH_1), S(MSTORE_0), SWAP(1), DUP(1), DUP(4), S(MSTORE_1), DUP(1), DUP(4), P(PUSH_0), B(ADD_0), DUP(4), DUP(4), DUP(1), DUP(7), DUP(5)
+no_order:       P(PUSH_0), U(MLOAD_0), DUP(1), P(PUSH_1), DUP(4), P(PUSH_2), B(ADD_2), B(DIV_0), P(PUSH_1), B(MUL_0), P(PUSH_1), B(ADD_1), B(ADD_0), P(PUSH_1), S(MSTORE_0), SWAP(2), SWAP(1), DUP(1), DUP(4), DUP(3), DUP(6), S(MSTORE_1), P(PUSH_0), B(ADD_0), DUP(4), DUP(4), DUP(5), DUP(7), DUP(5)
+initial:        P(PUSH_1), U(MLOAD_0), SWAP(2), SWAP(1), DUP(1), DUP(4), P(PUSH_0), B(ADD_0), DUP(4), DUP(4), P(PUSH_0), DUP(6), P(PUSH_2), B(ADD_3), B(DIV_0), P(PUSH_0), B(MUL_0), P(PUSH_0), B(ADD_2), DUP(8), B(ADD_1), P(PUSH_1), S(MSTORE_0), DUP(5), DUP(6), DUP(9), S(MSTORE_1), DUP(7), DUP(5)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+############################### BLOCK 2 ###################################
+
+Initial instr: 21
+
+block2 -> /tmp/tmpibbodw70.dzn
+python3 ../gasol_asm.py  -bl blocks/block2.txt --dzn --intermediate -split extended > exec/block2.txt
+
+
+initial = [s0, s1, s2]
+final = [s2, s4, s2]
+
+instr: 18
+time: 0.135
+optimal
+
+SWAP(1), P(PUSH0_0), S(MSTORE_1), P(PUSH_3), P(PUSH_2), S(MSTORE_0), P(PUSH_1), P(PUSH0_0), B(KECCAK256_1), P(PUSH_2), S(MSTORE_2), P(PUSH0_0), S(MSTORE_3), P(PUSH_1), P(PUSH0_0), B(KECCAK256_0), U(SLOAD_0), DUP(2)
+
+*******************************************************
+
+block1_1.txt -> /tmp/tmppfodqc7_.dzn
+python3 ../gasol_asm.py  -bl blocks/block2_1.txt --dzn --intermediate -split extended > exec/block2_1.txt
+
+initial = [s0,  s1]
+final = [s2, s0, s3]
+instr 8
+time: 0.022
+optimal
+
+
+P(PUSH_0), P(PUSH0_1), SWAP(3), P(PUSH0_1), S(MSTORE_1), P(PUSH_2), P(PUSH_0), S(MSTORE_0)
+
+*******************************************************
+
+block1_2.txt -> /tmp/tmpqjhojj75.dzn
+python3 ../gasol_asm.py  -bl blocks/block2_2.txt --dzn --intermediate -split extended > exec/block2_2.txt
+
+initial =  [s0, s1, s2, s3]
+final = [s3, s5, s3]
+
+instr: 12
+time: 0.150
+optimal
+
+P(PUSH_1), S(MSTORE_0), SWAP(1), DUP(1), DUP(4), S(MSTORE_1), DUP(1), DUP(4), P(PUSH_0), B(ADD_0), DUP(4), DUP(4), DUP(1), DUP(7), DUP(5)
+
+*******************************************************
+
+
+
+renaming:
+
+    comp    hlf1    hlf2
+    s0      s0      s1
+    s1      s1
+    s2      sx      s3
+    s4              s5
+            s2      s0
+            s3      s2
+
+
+total instr: 20 - more than the original
+total time: 0.172 - longer than original
+
+Comparison of both sequences
+
+complete:       SWAP(1), P(PUSH0_0), S(MSTORE_1), P(PUSH_3), P(PUSH_2), S(MSTORE_0), P(PUSH_1), P(PUSH0_0), B(KECCAK256_1), P(PUSH_2), S(MSTORE_2), P(PUSH0_0), S(MSTORE_3), P(PUSH_1), P(PUSH0_0), B(KECCAK256_0), U(SLOAD_0), DUP(2)
+simple concat:  P(PUSH_0), P(PUSH0_1), SWAP(3), P(PUSH0_1), S(MSTORE_1), P(PUSH_2), P(PUSH_0), S(MSTORE_0) P(PUSH_1), S(MSTORE_0), SWAP(1), DUP(1), DUP(4), S(MSTORE_1), DUP(1), DUP(4), P(PUSH_0), B(ADD_0), DUP(4), DUP(4), DUP(1), DUP(7), DUP(5)
+
+
+
+block2_1_not_ordered : 
+
+/home/nicolas/repos/gasol-optimizer/bin/MiniZincIDE-2.6.4-bundle-linux-x86_64/bin/minizinc --solver Chuffed --time-limit 6000 --output-time --intermediate-solutions -s dzn/evmopt-generic-reorder.mzn dzns/block2_1.dzn > exec/block2_1_notordered.txt
+
+initial = [s0,  s1]
+final = [s3, s0, s2]
+instr 8
+time: 0.032
+optimal
+
+P(PUSH0_1), P(PUSH_2), P(PUSH_0), S(MSTORE_0), P(PUSH_0), SWAP(3), P(PUSH0_1), S(MSTORE_1)
+
+*******************************************************
+
+block2_2_not_ordered : 
+/home/nicolas/repos/gasol-optimizer/bin/MiniZincIDE-2.6.4-bundle-linux-x86_64/bin/minizinc --solver Chuffed --time-limit 6000 --output-time --intermediate-solutions -s dzn/evmopt-generic-reorder.mzn dzns/block2_2.dzn > exec/block2_2_notordered.txt
+
+initial =  [s2, s1, s0, s3]
+final = [s3, s5, s3]
+
+instr: 12
+time: 0.107
+optimal
+
+SWAP(1), DUP(2), P(PUSH_0), DUP(4), B(KECCAK256_1), P(PUSH_0), SWAP(5), S(MSTORE_0), S(MSTORE_1), B(KECCAK256_0), U(SLOAD_0), DUP(2)
+
+*******************************************************
+
+total instr: 20 - same instr as the divided but more than the complete
+total time: 1.139 - less than the devided but more than the complete
+
+Comparison of all sequences:
+
+simple concat:  P(PUSH_0), P(PUSH0_1), SWAP(3), P(PUSH0_1), S(MSTORE_1), P(PUSH_2), P(PUSH_0), S(MSTORE_0) P(PUSH_1), S(MSTORE_0), SWAP(1), DUP(1), DUP(4), S(MSTORE_1), DUP(1), DUP(4), P(PUSH_0), B(ADD_0), DUP(4), DUP(4), DUP(1), DUP(7), DUP(5)
+no_order:       P(PUSH0_1), P(PUSH_2), P(PUSH_0), S(MSTORE_0), P(PUSH_0), SWAP(3), P(PUSH0_1), S(MSTORE_1), SWAP(1), DUP(2), P(PUSH_0), DUP(4), B(KECCAK256_1), P(PUSH_0), SWAP(5), S(MSTORE_0), S(MSTORE_1), B(KECCAK256_0), U(SLOAD_0), DUP(2)
+initial:        SWAP(1), P(PUSH0_0), S(MSTORE_1), P(PUSH_3), P(PUSH_2), S(MSTORE_0), P(PUSH_1), P(PUSH0_0), B(KECCAK256_1), P(PUSH_2), S(MSTORE_2), P(PUSH0_0), S(MSTORE_3), P(PUSH_1), P(PUSH0_0), B(KECCAK256_0), U(SLOAD_0), DUP(2)
+
+
+
+
+
+
+
+
+
+
+
+
+
+############################### BLOCK 3 ###################################
+
+Initial instr: 67
+
+block3 -> /tmp/tmp4de40gv0.dzn
+python3 ../gasol_asm.py  -bl blocks/block3.txt --dzn --intermediate -split extended > exec/block3.txt
+
+
+initial = [s0]
+final = [s10, s19]
+
+instr: 61
+time: 11.734
+not optimal
+
+P(PUSH_0), U(MLOAD_4), P(PUSH_6), DUP(3), P(PUSH_4), SWAP(4), SWAP(4), DUP(5), DUP(5), DUP(6), DUP(8), DUP(8), DUP(10), U(MLOAD_5), P(PUSH_1), P(PUSH_1), P(PUSH_2), B(SHL_0), B(SUB_0), SWAP(4), P(PUSH_7), B(ADD_6), SWAP(11), SWAP(2), S(MSTORE_0), P(PUSH_8), B(ADD_8), U(MLOAD_0), U(ISZERO_0), U(ISZERO_1), DUP(9), P(PUSH_8), B(ADD_7), S(MSTORE_1), P(PUSH_0), B(ADD_1), U(MLOAD_1), B(AND_0), SWAP(1), P(PUSH_0), B(ADD_0), S(MSTORE_2), P(PUSH_3), B(ADD_3), U(MLOAD_2), B(AND_1), DUP(4), P(PUSH_3), B(ADD_2), S(MSTORE_3), P(PUSH_5), B(ADD_5), U(MLOAD_3), B(AND_2), SWAP(1), P(PUSH [tag]_0), SWAP(2), SWAP(1), P(PUSH_5), B(ADD_4), S(MSTORE_4)
+
+*******************************************************
+
+block3_1.txt -> /tmp/tmp3odysiqx.dzn
+python3 ../gasol_asm.py  -bl blocks/block3_1.txt --dzn --intermediate -split extended > exec/block3_1.txt
+
+initial = [s0]
+final = [s10, s11, s11, s8,  s9,  s0,  s1]
+instr: 24
+time: 1.115
+optimal
+
+
+DUP(1), P(PUSH_4), U(MLOAD_2), DUP(1), P(PUSH_3), B(ADD_2), P(PUSH_1), DUP(1), P(PUSH [tag]_0), SWAP(6), U(MLOAD_0), DUP(5), S(MSTORE_0), P(PUSH_0), DUP(6), P(PUSH_2), B(ADD_1), U(MLOAD_1), U(ISZERO_0), U(ISZERO_1), DUP(6), P(PUSH_2), B(ADD_0), S(MSTORE_1)
+
+*******************************************************
+
+block3_2.txt -> /tmp/tmp2ugqtt_1.dzn
+python3 ../gasol_asm.py  -bl blocks/block3_2.txt --dzn --intermediate -split extended > exec/block3_2.txt
+
+initial =  [s0,  s1,  s12, s14, s15, s16, s17]
+final = [s17, s14]
+
+instr: 33
+time: 7.831
+not optimal
+
+B(SHL_0), B(SUB_0), DUP(4), SWAP(4), P(PUSH_4), B(ADD_5), U(MLOAD_0), B(AND_2), DUP(3), P(PUSH_4), B(ADD_4), S(MSTORE_0), SWAP(3), SWAP(2), P(PUSH_1), DUP(2), P(PUSH_0), B(ADD_1), U(MLOAD_1), B(AND_0), DUP(3), P(PUSH_0), B(ADD_0), S(MSTORE_1), P(PUSH_2), B(ADD_3), U(MLOAD_2), P(PUSH_3), B(AND_1), SWAP(1), P(PUSH_2), B(ADD_2), S(MSTORE_2)
+
+*******************************************************
+
+renaming:
+
+    comp    hlf1    hlf2
+    s0      s0      s16
+    s10     s1      s17
+    s19     s8      s14
+            s10     s0
+            s11     s1, s12
+            s9      s15
+
+
+total instr: 57 - less than original
+total time: 8.946 - shorter than original
+
+Comparison of both sequences
+
+complete:       P(PUSH_0), U(MLOAD_4), P(PUSH_6), DUP(3), P(PUSH_4), SWAP(4), SWAP(4), DUP(5), DUP(5), DUP(6), DUP(8), DUP(8), DUP(10), U(MLOAD_5), P(PUSH_1), P(PUSH_1), P(PUSH_2), B(SHL_0), B(SUB_0), SWAP(4), P(PUSH_7), B(ADD_6), SWAP(11), SWAP(2), S(MSTORE_0), P(PUSH_8), B(ADD_8), U(MLOAD_0), U(ISZERO_0), U(ISZERO_1), DUP(9), P(PUSH_8), B(ADD_7), S(MSTORE_1), P(PUSH_0), B(ADD_1), U(MLOAD_1), B(AND_0), SWAP(1), P(PUSH_0), B(ADD_0), S(MSTORE_2), P(PUSH_3), B(ADD_3), U(MLOAD_2), B(AND_1), DUP(4), P(PUSH_3), B(ADD_2), S(MSTORE_3), P(PUSH_5), B(ADD_5), U(MLOAD_3), B(AND_2), SWAP(1), P(PUSH [tag]_0), SWAP(2), SWAP(1), P(PUSH_5), B(ADD_4), S(MSTORE_4)
+simple concat:  DUP(1), P(PUSH_4), U(MLOAD_2), DUP(1), P(PUSH_3), B(ADD_2), P(PUSH_1), DUP(1), P(PUSH [tag]_0), SWAP(6), U(MLOAD_0), DUP(5), S(MSTORE_0), P(PUSH_0), DUP(6), P(PUSH_2), B(ADD_1), U(MLOAD_1), U(ISZERO_0), U(ISZERO_1), DUP(6), P(PUSH_2), B(ADD_0), S(MSTORE_1), B(SHL_0), B(SUB_0), DUP(4), SWAP(4), P(PUSH_4), B(ADD_5), U(MLOAD_0), B(AND_2), DUP(3), P(PUSH_4), B(ADD_4), S(MSTORE_0), SWAP(3), SWAP(2), P(PUSH_1), DUP(2), P(PUSH_0), B(ADD_1), U(MLOAD_1), B(AND_0), DUP(3), P(PUSH_0), B(ADD_0), S(MSTORE_1), P(PUSH_2), B(ADD_3), U(MLOAD_2), P(PUSH_3), B(AND_1), SWAP(1), P(PUSH_2), B(ADD_2), S(MSTORE_2)
+
+*******************************************************
+
+block3_1_ordered : 
+
+/home/nicolas/repos/gasol-optimizer/bin/MiniZincIDE-2.6.4-bundle-linux-x86_64/bin/minizinc --solver Chuffed --time-limit 6000 --output-time --intermediate-solutions -s dzn/evmopt-generic.mzn dzns/block3_1_ordered.dzn > exec/block2_1_ordered.txt
+
+initial = [s0]
+final = [s10, s11, s8,  s9,  s0,  s1]
+instr 32
+time: 0.742
+optimal
+
+DUP(1), P(PUSH_4), U(MLOAD_2), DUP(1), P(PUSH [tag]_0), SWAP(4), U(MLOAD_0), DUP(2), S(MSTORE_0), P(PUSH_3), B(ADD_2), P(PUSH_1), DUP(4), P(PUSH_2), B(ADD_1), U(MLOAD_1), U(ISZERO_0), U(ISZERO_1), DUP(4), P(PUSH_2), B(ADD_0), S(MSTORE_1), P(PUSH_0)
+
+*******************************************************
+
+block3_2_ordered : 
+
+/home/nicolas/repos/gasol-optimizer/bin/MiniZincIDE-2.6.4-bundle-linux-x86_64/bin/minizinc --solver Chuffed --time-limit 6000 --output-time --intermediate-solutions -s dzn/evmopt-generic.mzn dzns/block3_2_ordered.dzn > exec/block3_2_ordered.txt
+
+initial = [s0  s1  s14 s15 s16 s17]
+final = [s17 s14]
+instr 35
+time: 9.824
+not optimal
+
+DUP(2), SWAP(1), B(SHL_0), B(SUB_0), DUP(4), P(PUSH_4), B(ADD_5), U(MLOAD_0), B(AND_2), DUP(3), P(PUSH_4), B(ADD_4), S(MSTORE_0), P(PUSH_3), P(PUSH_1), DUP(5), P(PUSH_0), B(ADD_1), U(MLOAD_1), B(AND_0), DUP(4), P(PUSH_0), B(ADD_0), S(MSTORE_1), SWAP(1), SWAP(4), SWAP(3), P(PUSH_2), B(ADD_3), U(MLOAD_2), B(AND_1), SWAP(1), P(PUSH_2), B(ADD_2), S(MSTORE_2)
+
+
+*******************************************************
+ordered comparison
+
+total instr: 67 - worst in every case
+total time: 10.566
+
+Comparison of all sequences:
+
+simple concat:  DUP(1), P(PUSH_4), U(MLOAD_2), DUP(1), P(PUSH_3), B(ADD_2), P(PUSH_1), DUP(1), P(PUSH [tag]_0), SWAP(6), U(MLOAD_0), DUP(5), S(MSTORE_0), P(PUSH_0), DUP(6), P(PUSH_2), B(ADD_1), U(MLOAD_1), U(ISZERO_0), U(ISZERO_1), DUP(6), P(PUSH_2), B(ADD_0), S(MSTORE_1), B(SHL_0), B(SUB_0), DUP(4), SWAP(4), P(PUSH_4), B(ADD_5), U(MLOAD_0), B(AND_2), DUP(3), P(PUSH_4), B(ADD_4), S(MSTORE_0), SWAP(3), SWAP(2), P(PUSH_1), DUP(2), P(PUSH_0), B(ADD_1), U(MLOAD_1), B(AND_0), DUP(3), P(PUSH_0), B(ADD_0), S(MSTORE_1), P(PUSH_2), B(ADD_3), U(MLOAD_2), P(PUSH_3), B(AND_1), SWAP(1), P(PUSH_2), B(ADD_2), S(MSTORE_2)
+ordered:        DUP(1), P(PUSH_4), U(MLOAD_2), DUP(1), P(PUSH [tag]_0), SWAP(4), U(MLOAD_0), DUP(2), S(MSTORE_0), P(PUSH_3), B(ADD_2), P(PUSH_1), DUP(4), P(PUSH_2), B(ADD_1), U(MLOAD_1), U(ISZERO_0), U(ISZERO_1), DUP(4), P(PUSH_2), B(ADD_0), S(MSTORE_1), P(PUSH_0), DUP(2), SWAP(1), B(SHL_0), B(SUB_0), DUP(4), P(PUSH_4), B(ADD_5), U(MLOAD_0), B(AND_2), DUP(3), P(PUSH_4), B(ADD_4), S(MSTORE_0), P(PUSH_3), P(PUSH_1), DUP(5), P(PUSH_0), B(ADD_1), U(MLOAD_1), B(AND_0), DUP(4), P(PUSH_0), B(ADD_0), S(MSTORE_1), SWAP(1), SWAP(4), SWAP(3), P(PUSH_2), B(ADD_3), U(MLOAD_2), B(AND_1), SWAP(1), P(PUSH_2), B(ADD_2), S(MSTORE_2)
+initial:        P(PUSH_1), U(MLOAD_0), SWAP(2), SWAP(1), DUP(1), DUP(4), P(PUSH_0), B(ADD_0), DUP(4), DUP(4), P(PUSH_0), DUP(6), P(PUSH_2), B(ADD_3), B(DIV_0), P(PUSH_0), B(MUL_0), P(PUSH_0), B(ADD_2), DUP(8), B(ADD_1), P(PUSH_1), S(MSTORE_0), DUP(5), DUP(6), DUP(9), S(MSTORE_1), DUP(7), DUP(5)
+
+*******************************************************
+
+block3_1_not_ordered : 
+
+/home/nicolas/repos/gasol-optimizer/bin/MiniZincIDE-2.6.4-bundle-linux-x86_64/bin/minizinc --solver Chuffed --time-limit 15000 --output-time --intermediate-solutions -s dzn/evmopt-generic-reorder.mzn dzns/block3_1.dzn > exec/block3_1_notordered.txt
+
+initial = [s0]
+final = [s8,  s11, s10, s1,  s9,  s0]
+instr 22
+time: 11.198
+optimal
+
+P(PUSH_4), U(MLOAD_2), P(PUSH [tag]_0), P(PUSH_0), P(PUSH_1), DUP(4), DUP(6), DUP(7), U(MLOAD_0), DUP(3), S(MSTORE_0), P(PUSH_2), B(ADD_1), U(MLOAD_1), U(ISZERO_0), U(ISZERO_1), DUP(6), P(PUSH_2), B(ADD_0), S(MSTORE_1), P(PUSH_3), B(ADD_2)
+
+*******************************************************
+
+block3_2_not_ordered : 
+/home/nicolas/repos/gasol-optimizer/bin/MiniZincIDE-2.6.4-bundle-linux-x86_64/bin/minizinc --solver Chuffed --time-limit 6000 --output-time --intermediate-solutions -s dzn/evmopt-generic.mzn dzns/block3_2.dzn > exec/block3_2_notordered.txt
+
+initial =  [s14,  s1, s0, s17,  s15,  s16]
+final = [s17, s14]
+
+instr: 34
+time: 5.803
+not optimal
+
+B(SHL_0), B(SUB_0), P(PUSH_1), DUP(5), P(PUSH_3), SWAP(4), SWAP(7), SWAP(6), SWAP(3), DUP(2), P(PUSH_4), B(ADD_5), U(MLOAD_0), B(AND_2), DUP(6), P(PUSH_4), B(ADD_4), S(MSTORE_0), P(PUSH_0), B(ADD_1), U(MLOAD_1), B(AND_0), DUP(4), P(PUSH_0), B(ADD_0), S(MSTORE_1), P(PUSH_2), B(ADD_3), U(MLOAD_2), B(AND_1), SWAP(1), P(PUSH_2), B(ADD_2), S(MSTORE_2)
+
+*******************************************************
+
+total instr: 56   - better than all cases
+total time: 17.001 -worst than all cases
+
+Comparison of all sequences:
+
+simple concat:  DUP(1), P(PUSH_4), U(MLOAD_2), DUP(1), P(PUSH_3), B(ADD_2), P(PUSH_1), DUP(1), P(PUSH [tag]_0), SWAP(6), U(MLOAD_0), DUP(5), S(MSTORE_0), P(PUSH_0), DUP(6), P(PUSH_2), B(ADD_1), U(MLOAD_1), U(ISZERO_0), U(ISZERO_1), DUP(6), P(PUSH_2), B(ADD_0), S(MSTORE_1), B(SHL_0), B(SUB_0), DUP(4), SWAP(4), P(PUSH_4), B(ADD_5), U(MLOAD_0), B(AND_2), DUP(3), P(PUSH_4), B(ADD_4), S(MSTORE_0), SWAP(3), SWAP(2), P(PUSH_1), DUP(2), P(PUSH_0), B(ADD_1), U(MLOAD_1), B(AND_0), DUP(3), P(PUSH_0), B(ADD_0), S(MSTORE_1), P(PUSH_2), B(ADD_3), U(MLOAD_2), P(PUSH_3), B(AND_1), SWAP(1), P(PUSH_2), B(ADD_2), S(MSTORE_2)
+not_ordered:    P(PUSH_4), U(MLOAD_2), P(PUSH [tag]_0), P(PUSH_0), P(PUSH_1), DUP(4), DUP(6), DUP(7), U(MLOAD_0), DUP(3), S(MSTORE_0), P(PUSH_2), B(ADD_1), U(MLOAD_1), U(ISZERO_0), U(ISZERO_1), DUP(6), P(PUSH_2), B(ADD_0), S(MSTORE_1), P(PUSH_3), B(ADD_2) B(SHL_0), B(SUB_0), P(PUSH_1), DUP(5), P(PUSH_3), SWAP(4), SWAP(7), SWAP(6), SWAP(3), DUP(2), P(PUSH_4), B(ADD_5), U(MLOAD_0), B(AND_2), DUP(6), P(PUSH_4), B(ADD_4), S(MSTORE_0), P(PUSH_0), B(ADD_1), U(MLOAD_1), B(AND_0), DUP(4), P(PUSH_0), B(ADD_0), S(MSTORE_1), P(PUSH_2), B(ADD_3), U(MLOAD_2), B(AND_1), SWAP(1), P(PUSH_2), B(ADD_2), S(MSTORE_2)
+initial:        P(PUSH_1), U(MLOAD_0), SWAP(2), SWAP(1), DUP(1), DUP(4), P(PUSH_0), B(ADD_0), DUP(4), DUP(4), P(PUSH_0), DUP(6), P(PUSH_2), B(ADD_3), B(DIV_0), P(PUSH_0), B(MUL_0), P(PUSH_0), B(ADD_2), DUP(8), B(ADD_1), P(PUSH_1), S(MSTORE_0), DUP(5), DUP(6), DUP(9), S(MSTORE_1), DUP(7), DUP(5)
+
+
+
+
+
+
+
+
+
+############################### BLOCK 4 ###################################
+
+Initial instr: 35
+
+block4 -> /tmp/tmpm8lorins.dzn
+python3 ../gasol_asm.py  -bl blocks/block4.txt --dzn --intermediate -split extended > exec/block4.txt
+
+
+initial = [ s0,  s1,  s7,  s10, s11, s12]
+final = [s13, s14, s0,  s1,  s7,  s10, s11, s12]
+
+instr: 32
+time: 5.912
+optimal: yes
+
+
+sequence:
+P(PUSH_1), U(MLOAD_0), P(PUSH_3), P(PUSH_2), B(SHL_0), DUP(2), S(MSTORE_0), P(PUSH_0), B(ADD_0), P(PUSH_7), P(PUSH_6), B(SHL_1), DUP(2), P(PUSH_9), DUP(4), P(PUSH_1), DUP(6), DUP(13), DUP(8), S(MSTORE_1), P(PUSH_4), B(ADD_1), S(MSTORE_2), P(PUSH_1), B(ADD_2), S(MSTORE_3), P(PUSH_5), B(ADD_3), S(MSTORE_4), P(PUSH_8), B(ADD_4), P(PUSH [tag]_0), NOP, NOP, NOP
+
+*******************************************************
+
+block4_1.txt -> /tmp/tmp5alh826v.dzn
+python3 ../gasol_asm.py  -bl blocks/block4_1.txt --dzn --intermediate -split extended > exec/block4_1.txt
+
+initial = [ s0,  s1,  s5,  s6,  s7,  s8]
+final = [ s9,  s2,  s0,  s1,  s5,  s6,  s7,  s8]
+instr: 21
+time: 0.563
+optimal: yes
+
+sequence:
+P(PUSH_5), U(MLOAD_0), P(PUSH_2), P(PUSH_1), B(SHL_0), DUP(2), S(MSTORE_0), P(PUSH_4), B(ADD_2), P(PUSH_5), DUP(2), DUP(9), DUP(4), S(MSTORE_1), P(PUSH_3), B(ADD_1), S(MSTORE_2), DUP(1), P(PUSH_0), B(ADD_0), SWAP(1), NOP
+
+*******************************************************
+
+block4_2.txt -> /tmp/tmpl0k3__sf.dzn
+python3 ../gasol_asm.py  -bl blocks/block4_2.txt --dzn --intermediate -split extended > exec/block4_2.txt
+
+initial =  [s0]
+final = [s1]
+
+instr: 13
+time: 0.028
+optimal: yes
+
+sequence:
+P(PUSH_4), DUP(2), P(PUSH_0), B(ADD_0), S(MSTORE_0), P(PUSH_3), P(PUSH_2), B(SHL_0), P(PUSH [tag]_0), SWAP(2), P(PUSH_1), B(ADD_1), S(MSTORE_1)
+
+*******************************************************
+
+renaming:
+
+    comp    hlf1    hlf2
+    s0      s0      
+    s1      s1      
+    s7      s5      
+    s10     s6      
+    s11     s7      
+    s12     s8      
+            s9      s0
+    s13             s1
+    s14     s2      
+
+
+total instr: 34 - more than original
+total time: 0.591 - much less than original
+
+Comparison of both sequences
+
+complete:       P(PUSH_1), U(MLOAD_0), P(PUSH_3), P(PUSH_2), B(SHL_0), DUP(2), S(MSTORE_0), P(PUSH_0), B(ADD_0), P(PUSH_7), P(PUSH_6), B(SHL_1), DUP(2), P(PUSH_9), DUP(4), P(PUSH_1), DUP(6), DUP(13), DUP(8), S(MSTORE_1), P(PUSH_4), B(ADD_1), S(MSTORE_2), P(PUSH_1), B(ADD_2), S(MSTORE_3), P(PUSH_5), B(ADD_3), S(MSTORE_4), P(PUSH_8), B(ADD_4), P(PUSH [tag]_0)
+simple concat:  P(PUSH_5), U(MLOAD_0), P(PUSH_2), P(PUSH_1), B(SHL_0), DUP(2), S(MSTORE_0), P(PUSH_4), B(ADD_2), P(PUSH_5), DUP(2), DUP(9), DUP(4), S(MSTORE_1), P(PUSH_3), B(ADD_1), S(MSTORE_2), DUP(1), P(PUSH_0), B(ADD_0), SWAP(1), P(PUSH_4), DUP(2), P(PUSH_0), B(ADD_0), S(MSTORE_0), P(PUSH_3), P(PUSH_2), B(SHL_0), P(PUSH [tag]_0), SWAP(2), P(PUSH_1), B(ADD_1), S(MSTORE_1)
+
+*******************************************************
+
+block4_1_not_ordered : 
+
+/home/nicolas/repos/gasol-optimizer/bin/MiniZincIDE-2.6.4-bundle-linux-x86_64/bin/minizinc --solver Chuffed --time-limit 15000 --output-time --intermediate-solutions -s dzn/evmopt-generic-reorder.mzn dzns/block4_1.dzn > exec/block4_1_notordered.txt
+
+initial = [ s0,  s1,  s5,  s6,  s7,  s8]
+final = [ s2,  s9,  s0,  s1,  s5,  s6,  s7,  s8]
+instr: 20
+time: 0.970
+optimal: yes
+
+sequence:
+P(PUSH_5), U(MLOAD_0), P(PUSH_2), P(PUSH_1), B(SHL_0), DUP(2), S(MSTORE_0), P(PUSH_4), B(ADD_2), DUP(1), P(PUSH_0), B(ADD_0), P(PUSH_5), DUP(9), DUP(4), S(MSTORE_1), DUP(3), P(PUSH_3), B(ADD_1), S(MSTORE_2), NOP, NOP
+
+*******************************************************
+
+block4_2_not_ordered : 
+/home/nicolas/repos/gasol-optimizer/bin/MiniZincIDE-2.6.4-bundle-linux-x86_64/bin/minizinc --solver Chuffed --time-limit 6000 --output-time --intermediate-solutions -s dzn/evmopt-generic.mzn dzns/block4_2.dzn > exec/block4_2_notordered.txt
+
+initial =  [s0 ]
+final = [s1 ]
+instr: 13
+time:0.035
+optimal:  yes
+
+sequence:
+P(PUSH_4), DUP(2), P(PUSH_0), B(ADD_0), S(MSTORE_0), P(PUSH_3), P(PUSH_2), B(SHL_0), P(PUSH [tag]_0), SWAP(2), P(PUSH_1), B(ADD_1), S(MSTORE_1)
+
+*******************************************************
+
+total instr: 33 - more than original but less than divided
+total time: 1.005 -less than oriignal more than divided
+
+Comparison of all sequences:
+
+complete:       P(PUSH_1), U(MLOAD_0), P(PUSH_3), P(PUSH_2), B(SHL_0), DUP(2), S(MSTORE_0), P(PUSH_0), B(ADD_0), P(PUSH_7), P(PUSH_6), B(SHL_1), DUP(2), P(PUSH_9), DUP(4), P(PUSH_1), DUP(6), DUP(13), DUP(8), S(MSTORE_1), P(PUSH_4), B(ADD_1), S(MSTORE_2), P(PUSH_1), B(ADD_2), S(MSTORE_3), P(PUSH_5), B(ADD_3), S(MSTORE_4), P(PUSH_8), B(ADD_4), P(PUSH [tag]_0)
+not_ordered:    P(PUSH_5), U(MLOAD_0), P(PUSH_2), P(PUSH_1), B(SHL_0), DUP(2), S(MSTORE_0), P(PUSH_4), B(ADD_2), DUP(1), P(PUSH_0), B(ADD_0), P(PUSH_5), DUP(9), DUP(4), S(MSTORE_1), DUP(3), P(PUSH_3), B(ADD_1), S(MSTORE_2), P(PUSH_4), DUP(2), P(PUSH_0), B(ADD_0), S(MSTORE_0), P(PUSH_3), P(PUSH_2), B(SHL_0), P(PUSH [tag]_0), SWAP(2), P(PUSH_1), B(ADD_1), S(MSTORE_1)
+simple concat:  P(PUSH_5), U(MLOAD_0), P(PUSH_2), P(PUSH_1), B(SHL_0), DUP(2), S(MSTORE_0), P(PUSH_4), B(ADD_2), P(PUSH_5), DUP(2), DUP(9), DUP(4), S(MSTORE_1), P(PUSH_3), B(ADD_1), S(MSTORE_2), DUP(1), P(PUSH_0), B(ADD_0), SWAP(1), P(PUSH_4), DUP(2), P(PUSH_0), B(ADD_0), S(MSTORE_0), P(PUSH_3), P(PUSH_2), B(SHL_0), P(PUSH [tag]_0), SWAP(2), P(PUSH_1), B(ADD_1), S(MSTORE_1)
+
+
+
+
+
+
+
+
+
+
+############################### BLOCK 5 ###################################
+
+Initial instr: 40
+
+block4 -> /tmp/tmpq044j15w.dzn
+python3 ../gasol_asm.py  -bl blocks/block5.txt --dzn --intermediate -split extended > exec/block5.txt
+
+
+initial = [ s0,  s1,  s9,  s13, s16, s17, s18, s19, s20, s21, s2,  s3]
+final = [ s4, s5,  s0,  s1,  s9,  s13, s16, s17, s18, s19, s20, s21, s2,  s3]
+
+instr: 38
+time: 13.826
+optimal: no
+
+
+sequence:
+P(PUSH_2), U(MLOAD_0), P(PUSH_4), P(PUSH_3), B(SHL_0), DUP(2), S(MSTORE_0), P(PUSH_1), B(ADD_1), DUP(13), DUP(2), P(PUSH_11), DUP(2), P(PUSH_10), DUP(2), P(PUSH_2), P(PUSH_9), P(PUSH_8), B(SHL_1), SWAP(7), DUP(5), S(MSTORE_1), DUP(6), P(PUSH_5), B(ADD_2), S(MSTORE_2), P(PUSH_2), B(ADD_3), S(MSTORE_3), P(PUSH_6), B(ADD_4), S(MSTORE_4), P(PUSH_7), B(ADD_5), S(MSTORE_5), P(PUSH_0), B(ADD_0), P(PUSH [tag]_0), NOP, NOP
+
+*******************************************************
+
+block5_1.txt -> /tmp/tmpkbvlnzms.dzn
+python3 ../gasol_asm.py  -bl blocks/block5_1.txt --dzn --intermediate -split extended > exec/block5_1.txt
+
+initial = [ s0,  s1,  s7,  s11, s12, s13, s14, s15, s16, s17, s2,  s3]
+final = [s18, s4,  s6,  s0,  s1,  s7,  s11, s12, s13, s14, s15, s16, s17, s2,  s3]
+instr: 27
+time: 2.878
+optimal: yes
+
+sequence:
+P(PUSH_0), P(PUSH_2), U(MLOAD_0), P(PUSH_5), P(PUSH_4), B(SHL_0), DUP(2), S(MSTORE_0), P(PUSH_1), B(ADD_0), DUP(1), P(PUSH_3), B(ADD_1), SWAP(2), P(PUSH_2), DUP(16), DUP(4), S(MSTORE_1), DUP(3), P(PUSH_6), B(ADD_2), S(MSTORE_2), P(PUSH_7), DUP(3), P(PUSH_2), B(ADD_3), S(MSTORE_3), NOP
+
+*******************************************************
+
+block4_2.txt -> /tmp/tmpj7ujaqb1.dzn
+python3 ../gasol_asm.py  -bl blocks/block5_2.txt --dzn --intermediate -split extended > exec/block5_2.txt
+
+initial =  [ s0, s1]
+final = [ s2 ]
+
+instr: 12
+time: 0.032
+optimal: yes
+
+sequence:
+DUP(2), P(PUSH_0), B(ADD_0), S(MSTORE_0), P(PUSH_3), P(PUSH_2), B(SHL_0), P(PUSH [tag]_0), SWAP(2), P(PUSH_1), B(ADD_1), S(MSTORE_1)
+
+*******************************************************
+
+renaming:
+
+    comp    hlf1    hlf2
+    s0      s0      
+    s1      s1      
+            s18     s0
+            s4      s1
+    s4              s2
+    s5      s6      
+    s9      s7      
+    s13     s11      
+    s16     s12     
+    s17     s13      
+    s18     s14      
+    s19     s15     
+    s20     s16     
+    s21     s17     
+    s2      s2     
+    s3      s3      
+
+
+total instr: 39 -more than original
+total time: 2.910
+
+Comparison of both sequences
+
+complete:       P(PUSH_2), U(MLOAD_0), P(PUSH_4), P(PUSH_3), B(SHL_0), DUP(2), S(MSTORE_0), P(PUSH_1), B(ADD_1), DUP(13), DUP(2), P(PUSH_11), DUP(2), P(PUSH_10), DUP(2), P(PUSH_2), P(PUSH_9), P(PUSH_8), B(SHL_1), SWAP(7), DUP(5), S(MSTORE_1), DUP(6), P(PUSH_5), B(ADD_2), S(MSTORE_2), P(PUSH_2), B(ADD_3), S(MSTORE_3), P(PUSH_6), B(ADD_4), S(MSTORE_4), P(PUSH_7), B(ADD_5), S(MSTORE_5), P(PUSH_0), B(ADD_0), P(PUSH [tag]_0)
+simple concat:  P(PUSH_0), P(PUSH_2), U(MLOAD_0), P(PUSH_5), P(PUSH_4), B(SHL_0), DUP(2), S(MSTORE_0), P(PUSH_1), B(ADD_0), DUP(1), P(PUSH_3), B(ADD_1), SWAP(2), P(PUSH_2), DUP(16), DUP(4), S(MSTORE_1), DUP(3), P(PUSH_6), B(ADD_2), S(MSTORE_2), P(PUSH_7), DUP(3), P(PUSH_2), B(ADD_3), S(MSTORE_3), DUP(2), P(PUSH_0), B(ADD_0), S(MSTORE_0), P(PUSH_3), P(PUSH_2), B(SHL_0), P(PUSH [tag]_0), SWAP(2), P(PUSH_1), B(ADD_1), S(MSTORE_1)
+
+*******************************************************
+
+block5_1_not_ordered : 
+
+/home/nicolas/repos/gasol-optimizer/bin/MiniZincIDE-2.6.4-bundle-linux-x86_64/bin/minizinc --solver Chuffed --time-limit 15000 --output-time --intermediate-solutions -s dzn/evmopt-generic-reorder.mzn dzns/block5_1.dzn > exec/block5_1_notordered.txt
+
+initial = [ s0,  s1,  s7,  s11, s12, s13, s14, s15, s16, s17, s2,  s3]
+final = [s6,  s18, s4,  s0,  s1,  s7,  s11, s12, s13, s14, s15, s16, s17, s2,  s3] %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% ATENCION %%%%%%%%%%%%%%%
+
+el s6 está descolocado ¿que hacemos?
+- tenerlo encuenta de alguna manera en el dzn. -- Por alguna razón sale que es unsatisfiable
+- echarlo para atras con instrucciones y tener el dzn igual que antes
+
+instr: 26
+time: 6.093
+optimal: yes
+
+sequence:
+P(PUSH_2), U(MLOAD_0), P(PUSH_5), P(PUSH_4), B(SHL_0), DUP(2), S(MSTORE_0), P(PUSH_1), B(ADD_0), P(PUSH_0), DUP(2), DUP(15), DUP(4), S(MSTORE_1), P(PUSH_3), B(ADD_1), P(PUSH_2), DUP(4), P(PUSH_6), B(ADD_2), S(MSTORE_2), P(PUSH_7), DUP(4), P(PUSH_2), B(ADD_3), S(MSTORE_3), NOP, NOP
+
+*******************************************************
+
+block4_2_not_ordered : 
+/home/nicolas/repos/gasol-optimizer/bin/MiniZincIDE-2.6.4-bundle-linux-x86_64/bin/minizinc --solver Chuffed --time-limit 6000 --output-time --intermediate-solutions -s dzn/evmopt-generic.mzn dzns/block5_2_notordered.dzn > exec/block5_2_notordered.txt
+
+initial =  [ s0, s1 ]
+final = [ s2 ]
+
+instr: 12
+time: 0.032
+optimal: yes
+
+sequence:
+DUP(2), P(PUSH_0), B(ADD_0), S(MSTORE_0), P(PUSH_3), P(PUSH_2), B(SHL_0), P(PUSH [tag]_0), SWAP(2), P(PUSH_1), B(ADD_1), S(MSTORE_1)
+
+*******************************************************
+
+total instr: 40 - accounting for moving s6 more than original
+total time: 6.125
+
+Comparison of all sequences:
+
+complete:       P(PUSH_2), U(MLOAD_0), P(PUSH_4), P(PUSH_3), B(SHL_0), DUP(2), S(MSTORE_0), P(PUSH_1), B(ADD_1), DUP(13), DUP(2), P(PUSH_11), DUP(2), P(PUSH_10), DUP(2), P(PUSH_2), P(PUSH_9), P(PUSH_8), B(SHL_1), SWAP(7), DUP(5), S(MSTORE_1), DUP(6), P(PUSH_5), B(ADD_2), S(MSTORE_2), P(PUSH_2), B(ADD_3), S(MSTORE_3), P(PUSH_6), B(ADD_4), S(MSTORE_4), P(PUSH_7), B(ADD_5), S(MSTORE_5), P(PUSH_0), B(ADD_0), P(PUSH [tag]_0)
+not_ordered:    P(PUSH_2), U(MLOAD_0), P(PUSH_5), P(PUSH_4), B(SHL_0), DUP(2), S(MSTORE_0), P(PUSH_1), B(ADD_0), P(PUSH_0), DUP(2), DUP(15), DUP(4), S(MSTORE_1), P(PUSH_3), B(ADD_1), P(PUSH_2), DUP(4), P(PUSH_6), B(ADD_2), S(MSTORE_2), P(PUSH_7), DUP(4), P(PUSH_2), B(ADD_3), S(MSTORE_3), DUP(2), P(PUSH_0), B(ADD_0), S(MSTORE_0), P(PUSH_3), P(PUSH_2), B(SHL_0), P(PUSH [tag]_0), SWAP(2), P(PUSH_1), B(ADD_1), S(MSTORE_1)
+simple concat:  P(PUSH_0), P(PUSH_2), U(MLOAD_0), P(PUSH_5), P(PUSH_4), B(SHL_0), DUP(2), S(MSTORE_0), P(PUSH_1), B(ADD_0), DUP(1), P(PUSH_3), B(ADD_1), SWAP(2), P(PUSH_2), DUP(16), DUP(4), S(MSTORE_1), DUP(3), P(PUSH_6), B(ADD_2), S(MSTORE_2), P(PUSH_7), DUP(3), P(PUSH_2), B(ADD_3), S(MSTORE_3), DUP(2), P(PUSH_0), B(ADD_0), S(MSTORE_0), P(PUSH_3), P(PUSH_2), B(SHL_0), P(PUSH [tag]_0), SWAP(2), P(PUSH_1), B(ADD_1), S(MSTORE_1)

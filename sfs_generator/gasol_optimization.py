@@ -6,6 +6,8 @@ from timeit import default_timer as dtimer
 import re
 import traceback
 
+from pandas import option_context
+
 import global_params.constants as constants
 import global_params.paths as paths
 import sfs_generator.opcodes as opcodes
@@ -16,6 +18,8 @@ from smt_encoding.json_with_dependencies import extended_json_with_minlength, in
 from typing import Optional, List, Tuple
 import networkx as nx
 
+from split_stack_calculator.split_calculator import Split_calculator, Stack_split
+
 terminate_block = ["ASSERTFAIL","RETURN","REVERT","SUICIDE","STOP"]
 
 pre_defined_functions = ["PUSH","POP","SWAP","DUP"]
@@ -24,7 +28,7 @@ zero_ary = ["origin","caller","callvalue","address","number","gasprice","difficu
 
 commutative_bytecodes = ["ADD","MUL","EQ","AND","OR","XOR"]
 
-max_bound = 22
+max_bound = 20
 
 global original_opcodes
 original_opcodes = []
@@ -484,7 +488,9 @@ def get_encoding_init_block(instructions,source_stack):
     return init_info
 
 
-
+'''
+Using the RBR instructions the s_dict (stack_dict??) is contstructed 
+'''
 def search_for_value(var, instructions,source_stack,evaluate = True):
     global s_counter
     global s_dict
@@ -503,7 +509,7 @@ def search_for_value_aux(var, instructions,source_stack,level,evaluate = True):
     i = 0
     found = False
     vars_instr = " "
-    
+
     while(i<len(instructions) and not(found)):
 
         instr = instructions[i]
@@ -524,7 +530,7 @@ def search_for_value_aux(var, instructions,source_stack,level,evaluate = True):
     if len(new_vars) == 1:
         
         in_sourcestack = contained_in_source_stack(new_vars[0],instructions[i:],source_stack)
-    
+
         if in_sourcestack or is_integer(new_vars[0])!=-1:
             if is_integer(new_vars[0])!=-1:
                 val = int(new_vars[0])
@@ -1869,8 +1875,8 @@ def generate_encoding(instructions,variables,source_stack,opcodes,simplification
         memory_order = []
         storage_order = []
 
-    # print(u_dict)
-    # print(variable_content)
+    # print("variable_content: ", variable_content)
+    # print("u_dict: ", u_dict)
     # raise Exception
         
 def compute_memory_dependences(simplification):
@@ -2321,7 +2327,6 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     global rule_applied
     global rules_applied
     split_by = False
-
 
     
     max_ss_idx = compute_max_idx(max_ss_idx1,ss)
@@ -3234,6 +3239,8 @@ def generate_subblocks(rule,list_subblocks,isolated,sub_block_name,simplificatio
         seq = range(ts_idx,-1,-1)
         target_stack = list(map(lambda x: "s("+str(x)+")",seq))
 
+        # target_stack = target_stack[1:]
+
         new_nexts, pops2remove = translate_subblock(rule,block,source_stack,target_stack,source_stack_idx,i,list_subblocks[i+1],sub_block_name,simplification,pops2remove)
 
         if new_nexts == []:
@@ -3696,7 +3703,7 @@ def compute_max_program_len(opcodes, num_guard,block = None):
     return len(new_opcodes)
     
 
-def smt_translate_block(rule,file_name,block_name,immutable_dict,simplification=True,storage = False, size = False, part = False, pop = False, push = False, revert = False,extra_dependences_info={},extra_opt_info= {}, debug_info = False):
+def smt_translate_block(rule,file_name,block_name,immutable_dict,simplification=True,storage = False, size = False, part = False, pop = False, push = False, revert = False,extra_dependences_info={},extra_opt_info= {}, debug_info = False, split_mode = None):
     global s_counter
     global max_instr_size
     global int_not0
@@ -3719,6 +3726,7 @@ def smt_translate_block(rule,file_name,block_name,immutable_dict,simplification=
     if storage:
         split_sto = True
         constants.append_store_instructions_to_split()
+
 
     size_flag = size
     pop_flag = pop
@@ -3766,10 +3774,14 @@ def smt_translate_block(rule,file_name,block_name,immutable_dict,simplification=
 
         original_ins = ops
 
-        if part:
-            if len(opcodes) > max_bound and not split_sto:
+        if part or split_mode != "none":
+            if len(opcodes) >= max_bound and not split_sto:
                 stores_pos = compute_position_stores(opcodes)
                 where2split = split_by_numbers(stores_pos)
+
+                if split_mode != "none":
+                    split_calculator = Split_calculator()
+                    where2split = [split_calculator.min_split_point_candidate[-1].min_pos]
 
                 if where2split == []:
                     subblocks = [opcodes]
@@ -3784,6 +3796,7 @@ def smt_translate_block(rule,file_name,block_name,immutable_dict,simplification=
         else:
             subblocks = [opcodes]
             translate_block(rule,instructions,opcodes,True,block_name,simplification)
+
     else: #we need to split the blocks into subblocks
         r = False
         new_instructions = []
@@ -7009,7 +7022,6 @@ def compute_vars(tstack, sstack, userdef_ins):
     # for v in visited:
     #     if v in sstack and v not in tstack:
     #         total_vars+=1
-            
 
     for v in sstack:
         is_input = list(filter(lambda x: v in x["inpt_sk"], userdef_ins))
@@ -7019,6 +7031,7 @@ def compute_vars(tstack, sstack, userdef_ins):
             total_vars+=tstack.count(v)-(len(is_input)-1)
 
     max_stacks = max(len(sstack), len(tstack))
+
             
     return max(max_stacks,total_vars)
         
@@ -7105,7 +7118,7 @@ def is_atomic(var,sstack):
         return False
 
     
-def generate_subblocks2split(rule,part,split_sto):
+def generate_subblocks2split(rule,part,split_sto,split_mode=None):
 
     instructions = filter_opcodes(rule)
     opcodes = get_opcodes(rule)    
@@ -7116,10 +7129,14 @@ def generate_subblocks2split(rule,part,split_sto):
 
         original_ins = ops
 
-        if part:
+        if part or split_mode is not None:
             if len(opcodes) > max_bound and not split_sto:
                 stores_pos = compute_position_stores(opcodes)
                 where2split = split_by_numbers(stores_pos)
+
+                if split_mode is not None:
+                    split_calculator = Split_calculator()
+                    where2split = [split_calculator.min_split_point_candidate[-1].min_pos]
 
                 if where2split == []:
                     subblocks = [opcodes]

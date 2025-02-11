@@ -1,0 +1,240 @@
+23
+Optimizing isolated_block_0_0... Timeout:10
+[id: 0, len: 23, min_size: 3, min_pos: 8]
+
+extended_reverse:  ['PUSH0_0', 'PUSH_1', 'PUSH_2', 'KECCAK256_1', 'PUSH_3', 'KECCAK256_0', 'MSTORE_3', 'MSTORE_2', 'MSTORE_1', 'MSTORE_0', 'SLOAD_0']
+min_pos: 9, min_size: 4
+splittocsv: 9;21
+Command: /home/nicolas/repos/gasol-optimizer/bin/MiniZincIDE-2.6.4-bundle-linux-x86_64/bin/minizinc --solver Chuffed --time-limit 10000 --output-time --intermediate-solutions -s dzn/evmopt-generic.mzn  /tmp/tmpibbodw70.dzn
+% Generated FlatZinc statistics:
+%%%mzn-stat: paths=0
+%%%mzn-stat: flatBoolVars=3674
+%%%mzn-stat: flatIntVars=981
+%%%mzn-stat: flatBoolConstraints=2148
+%%%mzn-stat: flatIntConstraints=4036
+%%%mzn-stat: evaluatedReifiedConstraints=2178
+%%%mzn-stat: evaluatedHalfReifiedConstraints=1318
+%%%mzn-stat: eliminatedImplications=162
+%%%mzn-stat: method="minimize"
+%%%mzn-stat: flatTime=0.28374
+%%%mzn-stat-end
+                      s0 s1 s2 .  .  .  . 
+ 1:DUP(3)             s2 s0 s1 s2 .  .  . 
+ 2:SWAP(2)            s1 s0 s2 s2 .  .  . 
+ 3:P(PUSH0_0)         s6 s1 s0 s2 s2 .  . 
+ 4:S(MSTORE_1)        s0 s2 s2 .  .  .  . 
+ 5:SWAP(2)            s2 s2 s0 .  .  .  . 
+ 6:SWAP(2)            s0 s2 s2 .  .  .  . 
+ 7:P(PUSH_3)          s9 s0 s2 s2 .  .  . 
+ 8:P(PUSH_2)          s8 s9 s0 s2 s2 .  . 
+ 9:S(MSTORE_0)        s0 s2 s2 .  .  .  . 
+10:P(PUSH_1)          s7 s0 s2 s2 .  .  . 
+11:P(PUSH0_0)         s6 s7 s0 s2 s2 .  . 
+12:B(KECCAK256_1)     s5 s0 s2 s2 .  .  . 
+13:P(PUSH_2)          s8 s5 s0 s2 s2 .  . 
+14:S(MSTORE_2)        s0 s2 s2 .  .  .  . 
+15:P(PUSH0_0)         s6 s0 s2 s2 .  .  . 
+16:S(MSTORE_3)        s2 s2 .  .  .  .  . 
+17:P(PUSH_1)          s7 s2 s2 .  .  .  . 
+18:P(PUSH0_0)         s6 s7 s2 s2 .  .  . 
+19:B(KECCAK256_0)     s3 s2 s2 .  .  .  . 
+20:U(SLOAD_0)         s4 s2 s2 .  .  .  . 
+21:SWAP(1)            s2 s4 s2 .  .  .  . 
+22:SWAP(2)            s2 s4 s2 .  .  .  . 
+23:NOP                s2 s4 s2 .  .  .  . 
+length = 22;
+gas = 2213;
+bytes = 31; 
+solution = [DUP(3), SWAP(2), P(PUSH0_0), S(MSTORE_1), SWAP(2), SWAP(2), P(PUSH_3), P(PUSH_2), S(MSTORE_0), P(PUSH_1), P(PUSH0_0), B(KECCAK256_1), P(PUSH_2), S(MSTORE_2), P(PUSH0_0), S(MSTORE_3), P(PUSH_1), P(PUSH0_0), B(KECCAK256_0), U(SLOAD_0), SWAP(1), SWAP(2), NOP]
+% time elapsed: 0.48 s
+----------
+                      s0 s1 s2 .  .  .  . 
+ 1:SWAP(1)            s1 s0 s2 .  .  .  . 
+ 2:P(PUSH0_0)         s6 s1 s0 s2 .  .  . 
+ 3:S(MSTORE_1)        s0 s2 .  .  .  .  . 
+ 4:DUP(2)             s2 s0 s2 .  .  .  . 
+ 5:SWAP(2)            s2 s0 s2 .  .  .  . 
+ 6:SWAP(1)            s0 s2 s2 .  .  .  . 
+ 7:P(PUSH_3)          s9 s0 s2 s2 .  .  . 
+ 8:P(PUSH_2)          s8 s9 s0 s2 s2 .  . 
+ 9:S(MSTORE_0)        s0 s2 s2 .  .  .  . 
+10:P(PUSH_1)          s7 s0 s2 s2 .  .  . 
+11:P(PUSH0_0)         s6 s7 s0 s2 s2 .  . 
+12:B(KECCAK256_1)     s5 s0 s2 s2 .  .  . 
+13:P(PUSH_2)          s8 s5 s0 s2 s2 .  . 
+14:S(MSTORE_2)        s0 s2 s2 .  .  .  . 
+15:P(PUSH0_0)         s6 s0 s2 s2 .  .  . 
+16:S(MSTORE_3)        s2 s2 .  .  .  .  . 
+17:P(PUSH_1)          s7 s2 s2 .  .  .  . 
+18:P(PUSH0_0)         s6 s7 s2 s2 .  .  . 
+19:B(KECCAK256_0)     s3 s2 s2 .  .  .  . 
+20:U(SLOAD_0)         s4 s2 s2 .  .  .  . 
+21:SWAP(1)            s2 s4 s2 .  .  .  . 
+22:NOP                s2 s4 s2 .  .  .  . 
+23:NOP                s2 s4 s2 .  .  .  . 
+length = 21;
+gas = 2210;
+bytes = 30; 
+solution = [SWAP(1), P(PUSH0_0), S(MSTORE_1), DUP(2), SWAP(2), SWAP(1), P(PUSH_3), P(PUSH_2), S(MSTORE_0), P(PUSH_1), P(PUSH0_0), B(KECCAK256_1), P(PUSH_2), S(MSTORE_2), P(PUSH0_0), S(MSTORE_3), P(PUSH_1), P(PUSH0_0), B(KECCAK256_0), U(SLOAD_0), SWAP(1), NOP, NOP]
+% time elapsed: 0.48 s
+----------
+                      s0 s1 s2 .  .  .  . 
+ 1:SWAP(2)            s2 s1 s0 .  .  .  . 
+ 2:SWAP(1)            s1 s2 s0 .  .  .  . 
+ 3:P(PUSH0_0)         s6 s1 s2 s0 .  .  . 
+ 4:S(MSTORE_1)        s2 s0 .  .  .  .  . 
+ 5:SWAP(1)            s0 s2 .  .  .  .  . 
+ 6:P(PUSH_3)          s9 s0 s2 .  .  .  . 
+ 7:P(PUSH_2)          s8 s9 s0 s2 .  .  . 
+ 8:S(MSTORE_0)        s0 s2 .  .  .  .  . 
+ 9:P(PUSH_1)          s7 s0 s2 .  .  .  . 
+10:P(PUSH0_0)         s6 s7 s0 s2 .  .  . 
+11:B(KECCAK256_1)     s5 s0 s2 .  .  .  . 
+12:P(PUSH_2)          s8 s5 s0 s2 .  .  . 
+13:S(MSTORE_2)        s0 s2 .  .  .  .  . 
+14:P(PUSH0_0)         s6 s0 s2 .  .  .  . 
+15:S(MSTORE_3)        s2 .  .  .  .  .  . 
+16:P(PUSH_1)          s7 s2 .  .  .  .  . 
+17:P(PUSH0_0)         s6 s7 s2 .  .  .  . 
+18:B(KECCAK256_0)     s3 s2 .  .  .  .  . 
+19:U(SLOAD_0)         s4 s2 .  .  .  .  . 
+20:DUP(2)             s2 s4 s2 .  .  .  . 
+21:NOP                s2 s4 s2 .  .  .  . 
+22:NOP                s2 s4 s2 .  .  .  . 
+23:NOP                s2 s4 s2 .  .  .  . 
+length = 20;
+gas = 2207;
+bytes = 29; 
+solution = [SWAP(2), SWAP(1), P(PUSH0_0), S(MSTORE_1), SWAP(1), P(PUSH_3), P(PUSH_2), S(MSTORE_0), P(PUSH_1), P(PUSH0_0), B(KECCAK256_1), P(PUSH_2), S(MSTORE_2), P(PUSH0_0), S(MSTORE_3), P(PUSH_1), P(PUSH0_0), B(KECCAK256_0), U(SLOAD_0), DUP(2), NOP, NOP, NOP]
+% time elapsed: 0.49 s
+----------
+                      s0 s1 s2 .  .  .  . 
+ 1:DUP(3)             s2 s0 s1 s2 .  .  . 
+ 2:SWAP(2)            s1 s0 s2 s2 .  .  . 
+ 3:P(PUSH_3)          s9 s1 s0 s2 s2 .  . 
+ 4:P(PUSH_2)          s8 s9 s1 s0 s2 s2 . 
+ 5:S(MSTORE_0)        s1 s0 s2 s2 .  .  . 
+ 6:P(PUSH0_0)         s6 s1 s0 s2 s2 .  . 
+ 7:S(MSTORE_1)        s0 s2 s2 .  .  .  . 
+ 8:P(PUSH_1)          s7 s0 s2 s2 .  .  . 
+ 9:P(PUSH0_0)         s6 s7 s0 s2 s2 .  . 
+10:B(KECCAK256_1)     s5 s0 s2 s2 .  .  . 
+11:P(PUSH_2)          s8 s5 s0 s2 s2 .  . 
+12:S(MSTORE_2)        s0 s2 s2 .  .  .  . 
+13:P(PUSH0_0)         s6 s0 s2 s2 .  .  . 
+14:S(MSTORE_3)        s2 s2 .  .  .  .  . 
+15:P(PUSH_1)          s7 s2 s2 .  .  .  . 
+16:P(PUSH0_0)         s6 s7 s2 s2 .  .  . 
+17:B(KECCAK256_0)     s3 s2 s2 .  .  .  . 
+18:U(SLOAD_0)         s4 s2 s2 .  .  .  . 
+19:SWAP(1)            s2 s4 s2 .  .  .  . 
+20:NOP                s2 s4 s2 .  .  .  . 
+21:NOP                s2 s4 s2 .  .  .  . 
+22:NOP                s2 s4 s2 .  .  .  . 
+23:NOP                s2 s4 s2 .  .  .  . 
+length = 19;
+gas = 2204;
+bytes = 28; 
+solution = [DUP(3), SWAP(2), P(PUSH_3), P(PUSH_2), S(MSTORE_0), P(PUSH0_0), S(MSTORE_1), P(PUSH_1), P(PUSH0_0), B(KECCAK256_1), P(PUSH_2), S(MSTORE_2), P(PUSH0_0), S(MSTORE_3), P(PUSH_1), P(PUSH0_0), B(KECCAK256_0), U(SLOAD_0), SWAP(1), NOP, NOP, NOP, NOP]
+% time elapsed: 0.50 s
+----------
+                      s0 s1 s2 .  .  .  . 
+ 1:SWAP(1)            s1 s0 s2 .  .  .  . 
+ 2:P(PUSH0_0)         s6 s1 s0 s2 .  .  . 
+ 3:S(MSTORE_1)        s0 s2 .  .  .  .  . 
+ 4:P(PUSH_3)          s9 s0 s2 .  .  .  . 
+ 5:P(PUSH_2)          s8 s9 s0 s2 .  .  . 
+ 6:S(MSTORE_0)        s0 s2 .  .  .  .  . 
+ 7:P(PUSH_1)          s7 s0 s2 .  .  .  . 
+ 8:P(PUSH0_0)         s6 s7 s0 s2 .  .  . 
+ 9:B(KECCAK256_1)     s5 s0 s2 .  .  .  . 
+10:P(PUSH_2)          s8 s5 s0 s2 .  .  . 
+11:S(MSTORE_2)        s0 s2 .  .  .  .  . 
+12:P(PUSH0_0)         s6 s0 s2 .  .  .  . 
+13:S(MSTORE_3)        s2 .  .  .  .  .  . 
+14:P(PUSH_1)          s7 s2 .  .  .  .  . 
+15:P(PUSH0_0)         s6 s7 s2 .  .  .  . 
+16:B(KECCAK256_0)     s3 s2 .  .  .  .  . 
+17:U(SLOAD_0)         s4 s2 .  .  .  .  . 
+18:DUP(2)             s2 s4 s2 .  .  .  . 
+19:NOP                s2 s4 s2 .  .  .  . 
+20:NOP                s2 s4 s2 .  .  .  . 
+21:NOP                s2 s4 s2 .  .  .  . 
+22:NOP                s2 s4 s2 .  .  .  . 
+23:NOP                s2 s4 s2 .  .  .  . 
+length = 18;
+gas = 2201;
+bytes = 27; 
+solution = [SWAP(1), P(PUSH0_0), S(MSTORE_1), P(PUSH_3), P(PUSH_2), S(MSTORE_0), P(PUSH_1), P(PUSH0_0), B(KECCAK256_1), P(PUSH_2), S(MSTORE_2), P(PUSH0_0), S(MSTORE_3), P(PUSH_1), P(PUSH0_0), B(KECCAK256_0), U(SLOAD_0), DUP(2), NOP, NOP, NOP, NOP, NOP]
+% time elapsed: 0.50 s
+----------
+==========
+% time elapsed: 0.51 s
+%%%mzn-stat: nodes=1674
+%%%mzn-stat: failures=248
+%%%mzn-stat: restarts=5
+%%%mzn-stat: variables=28391
+%%%mzn-stat: intVars=1109
+%%%mzn-stat: boolVariables=27280
+%%%mzn-stat: propagators=3876
+%%%mzn-stat: propagations=287536
+%%%mzn-stat: peakDepth=187
+%%%mzn-stat: nogoods=248
+%%%mzn-stat: backjumps=555
+%%%mzn-stat: peakMem=0.00
+%%%mzn-stat: time=0.135
+%%%mzn-stat: initTime=0.085
+%%%mzn-stat: solveTime=0.050
+%%%mzn-stat: objective=18
+%%%mzn-stat: optTime=0.049
+%%%mzn-stat: baseMem=0.00
+%%%mzn-stat: trailMem=0.94
+%%%mzn-stat: randomSeed=1734614581
+%%%mzn-stat: nSolutions=5
+%%%mzn-stat-end
+
+{U(SLOAD_0), B(KECCAK256_0), B(KECCAK256_1), P(PUSH0_0), P(PUSH_1), P(PUSH_2), P(PUSH_3), S(MSTORE_0), S(MSTORE_1), S(MSTORE_2), S(MSTORE_3), DUP(1), DUP(2), DUP(3), DUP(4), DUP(5), DUP(6), DUP(7), SWAP(1), SWAP(2), SWAP(3), SWAP(4), SWAP(5), SWAP(6), POP, NOP}
+uses: [0, 1, 1, 2, 1, 1, 1, 4, 2, 2, 1]
+creates: [., s4, s3, s5, s6, s7, s8, s9, ., ., ., ., ., ., ., ., ., ., ., ., ., ., ., ., ., ., .]
+creator: [U(SLOAD_0), B(KECCAK256_0), B(KECCAK256_1), P(PUSH0_0), P(PUSH_1), P(PUSH_2), P(PUSH_3)]
+maxdups = 6 maxpops = 0 uses: 16 null = 0 unused: {} creates something: 7 startlength: 3
+lcount: [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+ucount: [0, 1, 1, 1, 4, 2, 2, 1, 1, 1, 1, 1, 6, 6, 6, 6, 6, 6, 6, 12, 12, 12, 12, 12, 12, 0, 12]
+SLOAD_0 -> s3:U -> B(KECCAK256_0)
+KECCAK256_0 -> s6:1Z -> P(PUSH0_0)
+KECCAK256_0 -> s7:12 -> P(PUSH_1)
+KECCAK256_1 -> s6:1Z -> P(PUSH0_0)
+KECCAK256_1 -> s7:12 -> P(PUSH_1)
+MSTORE_0 -> s8:1Z -> P(PUSH_2)
+MSTORE_0 -> s9:12 -> P(PUSH_3)
+MSTORE_1 -> s6:1Z -> P(PUSH0_0)
+MSTORE_2 -> s8:1Z -> P(PUSH_2)
+MSTORE_2 -> s5:12 -> B(KECCAK256_1)
+MSTORE_3 -> s6:1Z -> P(PUSH0_0)
+WARNING: the --time-out flag has recently been changed.The time-out is now provided in milliseconds instead of seconds
+
+['SWAP1', 'PUSH0_0', 'MSTORE_1', 'PUSH_3', 'PUSH_2', 'MSTORE_0', 'PUSH_1', 'PUSH0_0', 'KECCAK256_1', 'PUSH_2', 'MSTORE_2', 'PUSH0_0', 'MSTORE_3', 'PUSH_1', 'PUSH0_0', 'KECCAK256_0', 'SLOAD_0', 'DUP2']
+18
+23
+
+Initial sequence (basic block per line):
+PUSH1 0x1 PUSH1 0x20 SWAP1 DUP2 MSTORE PUSH0 SWAP3 DUP4 MSTORE PUSH1 0x40 DUP1 DUP5 KECCAK256 SWAP1 SWAP2 MSTORE SWAP1 DUP3 MSTORE SWAP1 KECCAK256 SLOAD DUP2
+
+Optimized sequence (basic block per line):
+SWAP1 PUSH0 MSTORE PUSH1 0x1 PUSH1 0x20 MSTORE PUSH1 0x40 PUSH0 KECCAK256 PUSH1 0x20 MSTORE PUSH0 MSTORE PUSH1 0x40 PUSH0 KECCAK256 SLOAD DUP2
+
+Total time: 0.64 s
+
+Intermediate files stored at /tmp/gasol_5b04b198cdfa41f1b438bde2a517e875/
+
+Optimized code stored in block2_optimized.json_solc
+Optimality results stored in block2_statistics_seq.csv
+
+Estimated initial gas: 2219
+Estimated gas optimized: 2201
+
+Estimated initial size in bytes: 26
+Estimated size optimized in bytes: 23
+
+Initial number of instructions: 23
+Final number of instructions: 18

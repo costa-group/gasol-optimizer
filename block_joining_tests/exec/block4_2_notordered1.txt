@@ -1,0 +1,68 @@
+% Generated FlatZinc statistics:
+%%%mzn-stat: paths=0
+%%%mzn-stat: flatBoolVars=6953
+%%%mzn-stat: flatIntVars=1731
+%%%mzn-stat: flatBoolConstraints=3886
+%%%mzn-stat: flatIntConstraints=7631
+%%%mzn-stat: evaluatedReifiedConstraints=4366
+%%%mzn-stat: evaluatedHalfReifiedConstraints=2712
+%%%mzn-stat: eliminatedImplications=525
+%%%mzn-stat: method="minimize"
+%%%mzn-stat: flatTime=0.442253
+%%%mzn-stat-end
+                      s102 s0   s100 s101 s105 s106 s107 s108 .    .    .    .    .    .    .    .    .    .    .    .   
+ 1:P(PUSH_3)          s8   s102 s0   s100 s101 s105 s106 s107 s108 .    .    .    .    .    .    .    .    .    .    .   
+ 2:P(PUSH_2)          s7   s8   s102 s0   s100 s101 s105 s106 s107 s108 .    .    .    .    .    .    .    .    .    .   
+ 3:B(SHL_0)           s4   s102 s0   s100 s101 s105 s106 s107 s108 .    .    .    .    .    .    .    .    .    .    .   
+ 4:P(PUSH_4)          s9   s4   s102 s0   s100 s101 s105 s106 s107 s108 .    .    .    .    .    .    .    .    .    .   
+ 5:DUP(4)             s0   s9   s4   s102 s0   s100 s101 s105 s106 s107 s108 .    .    .    .    .    .    .    .    .   
+ 6:P(PUSH_0)          s5   s0   s9   s4   s102 s0   s100 s101 s105 s106 s107 s108 .    .    .    .    .    .    .    .   
+ 7:B(ADD_0)           s2   s9   s4   s102 s0   s100 s101 s105 s106 s107 s108 .    .    .    .    .    .    .    .    .   
+ 8:S(MSTORE_0)        s4   s102 s0   s100 s101 s105 s106 s107 s108 .    .    .    .    .    .    .    .    .    .    .   
+ 9:P(PUSH [tag]_0)    s1   s4   s102 s0   s100 s101 s105 s106 s107 s108 .    .    .    .    .    .    .    .    .    .   
+10:SWAP(3)            s0   s4   s102 s1   s100 s101 s105 s106 s107 s108 .    .    .    .    .    .    .    .    .    .   
+11:P(PUSH_1)          s6   s0   s4   s102 s1   s100 s101 s105 s106 s107 s108 .    .    .    .    .    .    .    .    .   
+12:B(ADD_1)           s3   s4   s102 s1   s100 s101 s105 s106 s107 s108 .    .    .    .    .    .    .    .    .    .   
+13:S(MSTORE_1)        s102 s1   s100 s101 s105 s106 s107 s108 .    .    .    .    .    .    .    .    .    .    .    .   
+14:SWAP(1)            s1   s102 s100 s101 s105 s106 s107 s108 .    .    .    .    .    .    .    .    .    .    .    .   
+15:NOP                s1   s102 s100 s101 s105 s106 s107 s108 .    .    .    .    .    .    .    .    .    .    .    .   
+16:NOP                s1   s102 s100 s101 s105 s106 s107 s108 .    .    .    .    .    .    .    .    .    .    .    .   
+17:NOP                s1   s102 s100 s101 s105 s106 s107 s108 .    .    .    .    .    .    .    .    .    .    .    .   
+18:NOP                s1   s102 s100 s101 s105 s106 s107 s108 .    .    .    .    .    .    .    .    .    .    .    .   
+19:NOP                s1   s102 s100 s101 s105 s106 s107 s108 .    .    .    .    .    .    .    .    .    .    .    .   
+20:NOP                s1   s102 s100 s101 s105 s106 s107 s108 .    .    .    .    .    .    .    .    .    .    .    .   
+21:NOP                s1   s102 s100 s101 s105 s106 s107 s108 .    .    .    .    .    .    .    .    .    .    .    .   
+22:NOP                s1   s102 s100 s101 s105 s106 s107 s108 .    .    .    .    .    .    .    .    .    .    .    .   
+23:NOP                s1   s102 s100 s101 s105 s106 s107 s108 .    .    .    .    .    .    .    .    .    .    .    .   
+24:NOP                s1   s102 s100 s101 s105 s106 s107 s108 .    .    .    .    .    .    .    .    .    .    .    .   
+25:NOP                s1   s102 s100 s101 s105 s106 s107 s108 .    .    .    .    .    .    .    .    .    .    .    .   
+length = 14;
+gas = 42;
+bytes = 40; 
+solution = [P(PUSH_3), P(PUSH_2), B(SHL_0), P(PUSH_4), DUP(4), P(PUSH_0), B(ADD_0), S(MSTORE_0), P(PUSH [tag]_0), SWAP(3), P(PUSH_1), B(ADD_1), S(MSTORE_1), SWAP(1), NOP, NOP, NOP, NOP, NOP, NOP, NOP, NOP, NOP, NOP, NOP]
+% time elapsed: 1.58 s
+----------
+==========
+% time elapsed: 1.64 s
+%%%mzn-stat: nodes=6690
+%%%mzn-stat: failures=4642
+%%%mzn-stat: restarts=1
+%%%mzn-stat: variables=72259
+%%%mzn-stat: intVars=1900
+%%%mzn-stat: boolVariables=70357
+%%%mzn-stat: propagators=9920
+%%%mzn-stat: propagations=8030379
+%%%mzn-stat: peakDepth=194
+%%%mzn-stat: nogoods=4642
+%%%mzn-stat: backjumps=1853
+%%%mzn-stat: peakMem=0.00
+%%%mzn-stat: time=1.028
+%%%mzn-stat: initTime=0.187
+%%%mzn-stat: solveTime=0.841
+%%%mzn-stat: objective=14
+%%%mzn-stat: optTime=0.794
+%%%mzn-stat: baseMem=0.00
+%%%mzn-stat: trailMem=0.19
+%%%mzn-stat: randomSeed=1738670839
+%%%mzn-stat: nSolutions=1
+%%%mzn-stat-end

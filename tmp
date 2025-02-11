@@ -1,0 +1,126 @@
+40
+Optimizing isolated_block_0_0... Timeout:4
+Command: /home/nicolas/repos/gasol-optimizer/bin/MiniZincIDE-2.6.4-bundle-linux-x86_64/bin/minizinc --solver Chuffed --time-limit 4000 --output-time --intermediate-solutions -s dzn/evmopt-generic.mzn  /tmp/tmp2tgknjtb.dzn
+% Generated FlatZinc statistics:
+%%%mzn-stat: paths=0
+%%%mzn-stat: flatBoolVars=4010
+%%%mzn-stat: flatIntVars=991
+%%%mzn-stat: flatBoolConstraints=2190
+%%%mzn-stat: flatIntConstraints=4424
+%%%mzn-stat: evaluatedReifiedConstraints=2587
+%%%mzn-stat: evaluatedHalfReifiedConstraints=1458
+%%%mzn-stat: eliminatedImplications=304
+%%%mzn-stat: method="minimize"
+%%%mzn-stat: flatTime=0.479265
+%%%mzn-stat-end
+                      s0  s1  s6  s9  s10 s11 s12 s13 s14 s15 s2  s3  .   .   .   .   .  
+ 1:DUP(12)            s3  s0  s1  s6  s9  s10 s11 s12 s13 s14 s15 s2  s3  .   .   .   .  
+ 2:P(PUSH_1)          s17 s3  s0  s1  s6  s9  s10 s11 s12 s13 s14 s15 s2  s3  .   .   .  
+ 3:U(MLOAD_0)         s5  s3  s0  s1  s6  s9  s10 s11 s12 s13 s14 s15 s2  s3  .   .   .  
+ 4:DUP(1)             s5  s5  s3  s0  s1  s6  s9  s10 s11 s12 s13 s14 s15 s2  s3  .   .  
+ 5:P(PUSH_0)          s16 s5  s5  s3  s0  s1  s6  s9  s10 s11 s12 s13 s14 s15 s2  s3  .  
+ 6:B(ADD_0)           s4  s5  s3  s0  s1  s6  s9  s10 s11 s12 s13 s14 s15 s2  s3  .   .  
+ 7:P(PUSH_4)          s20 s4  s5  s3  s0  s1  s6  s9  s10 s11 s12 s13 s14 s15 s2  s3  .  
+ 8:P(PUSH_3)          s19 s20 s4  s5  s3  s0  s1  s6  s9  s10 s11 s12 s13 s14 s15 s2  s3 
+ 9:B(SHL_0)           s8  s4  s5  s3  s0  s1  s6  s9  s10 s11 s12 s13 s14 s15 s2  s3  .  
+10:DUP(2)             s4  s8  s4  s5  s3  s0  s1  s6  s9  s10 s11 s12 s13 s14 s15 s2  s3 
+11:SWAP(4)            s3  s8  s4  s5  s4  s0  s1  s6  s9  s10 s11 s12 s13 s14 s15 s2  s3 
+12:SWAP(3)            s5  s8  s4  s3  s4  s0  s1  s6  s9  s10 s11 s12 s13 s14 s15 s2  s3 
+13:S(MSTORE_0)        s4  s3  s4  s0  s1  s6  s9  s10 s11 s12 s13 s14 s15 s2  s3  .   .  
+14:P(PUSH_2)          s18 s4  s3  s4  s0  s1  s6  s9  s10 s11 s12 s13 s14 s15 s2  s3  .  
+15:B(ADD_1)           s7  s3  s4  s0  s1  s6  s9  s10 s11 s12 s13 s14 s15 s2  s3  .   .  
+16:SWAP(2)            s4  s3  s7  s0  s1  s6  s9  s10 s11 s12 s13 s14 s15 s2  s3  .   .  
+length = 16;
+gas = 48;
+bytes = 24; 
+solution = [DUP(12), P(PUSH_1), U(MLOAD_0), DUP(1), P(PUSH_0), B(ADD_0), P(PUSH_4), P(PUSH_3), B(SHL_0), DUP(2), SWAP(4), SWAP(3), S(MSTORE_0), P(PUSH_2), B(ADD_1), SWAP(2)]
+% time elapsed: 1.11 s
+----------
+                      s0  s1  s6  s9  s10 s11 s12 s13 s14 s15 s2  s3  .   .   .   .   .  
+ 1:P(PUSH_4)          s20 s0  s1  s6  s9  s10 s11 s12 s13 s14 s15 s2  s3  .   .   .   .  
+ 2:P(PUSH_3)          s19 s20 s0  s1  s6  s9  s10 s11 s12 s13 s14 s15 s2  s3  .   .   .  
+ 3:B(SHL_0)           s8  s0  s1  s6  s9  s10 s11 s12 s13 s14 s15 s2  s3  .   .   .   .  
+ 4:P(PUSH_1)          s17 s8  s0  s1  s6  s9  s10 s11 s12 s13 s14 s15 s2  s3  .   .   .  
+ 5:U(MLOAD_0)         s5  s8  s0  s1  s6  s9  s10 s11 s12 s13 s14 s15 s2  s3  .   .   .  
+ 6:DUP(1)             s5  s5  s8  s0  s1  s6  s9  s10 s11 s12 s13 s14 s15 s2  s3  .   .  
+ 7:P(PUSH_0)          s16 s5  s5  s8  s0  s1  s6  s9  s10 s11 s12 s13 s14 s15 s2  s3  .  
+ 8:B(ADD_0)           s4  s5  s8  s0  s1  s6  s9  s10 s11 s12 s13 s14 s15 s2  s3  .   .  
+ 9:DUP(1)             s4  s4  s5  s8  s0  s1  s6  s9  s10 s11 s12 s13 s14 s15 s2  s3  .  
+10:P(PUSH_2)          s18 s4  s4  s5  s8  s0  s1  s6  s9  s10 s11 s12 s13 s14 s15 s2  s3 
+11:B(ADD_1)           s7  s4  s5  s8  s0  s1  s6  s9  s10 s11 s12 s13 s14 s15 s2  s3  .  
+12:SWAP(3)            s8  s4  s5  s7  s0  s1  s6  s9  s10 s11 s12 s13 s14 s15 s2  s3  .  
+13:DUP(16)            s3  s8  s4  s5  s7  s0  s1  s6  s9  s10 s11 s12 s13 s14 s15 s2  s3 
+14:SWAP(3)            s5  s8  s4  s3  s7  s0  s1  s6  s9  s10 s11 s12 s13 s14 s15 s2  s3 
+15:S(MSTORE_0)        s4  s3  s7  s0  s1  s6  s9  s10 s11 s12 s13 s14 s15 s2  s3  .   .  
+16:NOP                s4  s3  s7  s0  s1  s6  s9  s10 s11 s12 s13 s14 s15 s2  s3  .   .  
+length = 15;
+gas = 45;
+bytes = 23; 
+solution = [P(PUSH_4), P(PUSH_3), B(SHL_0), P(PUSH_1), U(MLOAD_0), DUP(1), P(PUSH_0), B(ADD_0), DUP(1), P(PUSH_2), B(ADD_1), SWAP(3), DUP(16), SWAP(3), S(MSTORE_0), NOP]
+% time elapsed: 1.46 s
+----------
+                      s0  s1  s6  s9  s10 s11 s12 s13 s14 s15 s2  s3  .   .   .   .   .  
+ 1:P(PUSH_1)          s17 s0  s1  s6  s9  s10 s11 s12 s13 s14 s15 s2  s3  .   .   .   .  
+ 2:U(MLOAD_0)         s5  s0  s1  s6  s9  s10 s11 s12 s13 s14 s15 s2  s3  .   .   .   .  
+ 3:P(PUSH_4)          s20 s5  s0  s1  s6  s9  s10 s11 s12 s13 s14 s15 s2  s3  .   .   .  
+ 4:P(PUSH_3)          s19 s20 s5  s0  s1  s6  s9  s10 s11 s12 s13 s14 s15 s2  s3  .   .  
+ 5:B(SHL_0)           s8  s5  s0  s1  s6  s9  s10 s11 s12 s13 s14 s15 s2  s3  .   .   .  
+ 6:DUP(2)             s5  s8  s5  s0  s1  s6  s9  s10 s11 s12 s13 s14 s15 s2  s3  .   .  
+ 7:S(MSTORE_0)        s5  s0  s1  s6  s9  s10 s11 s12 s13 s14 s15 s2  s3  .   .   .   .  
+ 8:P(PUSH_0)          s16 s5  s0  s1  s6  s9  s10 s11 s12 s13 s14 s15 s2  s3  .   .   .  
+ 9:B(ADD_0)           s4  s0  s1  s6  s9  s10 s11 s12 s13 s14 s15 s2  s3  .   .   .   .  
+10:DUP(13)            s3  s4  s0  s1  s6  s9  s10 s11 s12 s13 s14 s15 s2  s3  .   .   .  
+11:DUP(2)             s4  s3  s4  s0  s1  s6  s9  s10 s11 s12 s13 s14 s15 s2  s3  .   .  
+12:P(PUSH_2)          s18 s4  s3  s4  s0  s1  s6  s9  s10 s11 s12 s13 s14 s15 s2  s3  .  
+13:B(ADD_1)           s7  s3  s4  s0  s1  s6  s9  s10 s11 s12 s13 s14 s15 s2  s3  .   .  
+14:SWAP(2)            s4  s3  s7  s0  s1  s6  s9  s10 s11 s12 s13 s14 s15 s2  s3  .   .  
+15:NOP                s4  s3  s7  s0  s1  s6  s9  s10 s11 s12 s13 s14 s15 s2  s3  .   .  
+16:NOP                s4  s3  s7  s0  s1  s6  s9  s10 s11 s12 s13 s14 s15 s2  s3  .   .  
+length = 14;
+gas = 42;
+bytes = 22; 
+solution = [P(PUSH_1), U(MLOAD_0), P(PUSH_4), P(PUSH_3), B(SHL_0), DUP(2), S(MSTORE_0), P(PUSH_0), B(ADD_0), DUP(13), DUP(2), P(PUSH_2), B(ADD_1), SWAP(2), NOP, NOP]
+% time elapsed: 1.60 s
+----------
+==========
+% time elapsed: 1.62 s
+%%%mzn-stat: nodes=5136
+%%%mzn-stat: failures=1726
+%%%mzn-stat: restarts=3
+%%%mzn-stat: variables=46387
+%%%mzn-stat: intVars=1090
+%%%mzn-stat: boolVariables=45295
+%%%mzn-stat: propagators=5456
+%%%mzn-stat: propagations=3415929
+%%%mzn-stat: peakDepth=355
+%%%mzn-stat: nogoods=1726
+%%%mzn-stat: backjumps=3102
+%%%mzn-stat: peakMem=0.00
+%%%mzn-stat: time=0.958
+%%%mzn-stat: initTime=0.186
+%%%mzn-stat: solveTime=0.772
+%%%mzn-stat: objective=14
+%%%mzn-stat: optTime=0.771
+%%%mzn-stat: baseMem=0.00
+%%%mzn-stat: trailMem=0.12
+%%%mzn-stat: randomSeed=1738926042
+%%%mzn-stat: nSolutions=3
+%%%mzn-stat-end
+
+{U(MLOAD_0), B(ADD_0), B(ADD_1), B(SHL_0), P(PUSH_0), P(PUSH_1), P(PUSH_2), P(PUSH_3), P(PUSH_4), S(MSTORE_0), DUP(1), DUP(2), DUP(3), DUP(4), DUP(5), DUP(6), DUP(7), DUP(8), DUP(9), DUP(10), DUP(11), DUP(12), DUP(13), DUP(14), DUP(15), DUP(16), SWAP(1), SWAP(2), SWAP(3), SWAP(4), SWAP(5), SWAP(6), SWAP(7), SWAP(8), SWAP(9), SWAP(10), SWAP(11), SWAP(12), SWAP(13), SWAP(14), SWAP(15), SWAP(16), POP, NOP}
+uses: [0, 1, 1, 1, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+creates: [., s5, s4, s7, s8, s16, s17, s18, s19, s20, ., ., ., ., ., ., ., ., ., ., ., ., ., ., ., ., ., ., ., ., ., ., ., ., ., ., ., ., ., ., ., ., ., ., .]
+creator: [U(MLOAD_0), B(ADD_0), B(ADD_1), B(SHL_0), P(PUSH_0), P(PUSH_1), P(PUSH_2), P(PUSH_3), P(PUSH_4)]
+maxdups = 3 maxpops = 0 uses: 24 null = 0 unused: {} creates something: 9 startlength: 12
+lcount: [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+ucount: [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 0, 6]
+MLOAD_0 -> s17:U -> P(PUSH_1)
+ADD_0 -> s16:1Z -> P(PUSH_0)
+ADD_1 -> s18:1Z -> P(PUSH_2)
+SHL_0 -> s19:1Z -> P(PUSH_3)
+SHL_0 -> s20:12 -> P(PUSH_4)
+WARNING: the --time-out flag has recently been changed.The time-out is now provided in milliseconds instead of seconds
+
+['PUSH_1', 'MLOAD_0', 'PUSH_4', 'PUSH_3', 'SHL_0', 'DUP2', 'MSTORE_0', 'PUSH_0', 'ADD_0', 'DUP13', 'DUP2', 'PUSH_2', 'ADD_1', 'SWAP2']
+Optimizing isolated_block_0_1... Timeout:10
+Command: /home/nicolas/repos/gasol-optimizer/bin/MiniZincIDE-2.6.4-bundle-linux-x86_64/bin/minizinc --solver Chuffed --time-limit 10000 --output-time --intermediate-solutions -s dzn/evmopt-generic.mzn  /tmp/tmp77dg93qv.dzn

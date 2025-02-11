@@ -1,0 +1,220 @@
+35
+Optimizing isolated_block_0_0... Timeout:8
+[id: 0, len: 35, min_size: 3, min_pos: 20]
+
+extended_reverse:  ['PUSH_2', 'PUSH_0', 'PUSH_4', 'ADD_3', 'ADD_1', 'SHL_0', 'ADD_5', 'PUSH_3', 'MLOAD_2', 'PUSH_2_1', 'PUSH_1', 'MLOAD_1', 'PUSH_0_1', 'SUB_0', 'MLOAD_0', 'PUSH_4_1', 'AND_1', 'ADD_2', 'AND_0', 'ADD_0', 'AND_2', 'ADD_4', 'MSTORE_2', 'MSTORE_1', 'MSTORE_0']
+min_pos: 22, min_size: 4
+splittocsv: 22;37
+Command: /home/nicolas/repos/gasol-optimizer/bin/MiniZincIDE-2.6.4-bundle-linux-x86_64/bin/minizinc --solver Chuffed --time-limit 8000 --output-time --intermediate-solutions -s dzn/evmopt-generic.mzn  /tmp/tmp2ugqtt_1.dzn
+% Generated FlatZinc statistics:
+%%%mzn-stat: paths=0
+%%%mzn-stat: flatBoolVars=12224
+%%%mzn-stat: flatIntVars=2655
+%%%mzn-stat: flatBoolConstraints=7010
+%%%mzn-stat: flatIntConstraints=13292
+%%%mzn-stat: evaluatedReifiedConstraints=6777
+%%%mzn-stat: evaluatedHalfReifiedConstraints=5587
+%%%mzn-stat: eliminatedImplications=735
+%%%mzn-stat: method="minimize"
+%%%mzn-stat: flatTime=0.348098
+%%%mzn-stat-end
+                      s0  s1  s12 s14 s15 s16 s17 .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+ 1:B(SHL_0)           s4  s12 s14 s15 s16 s17 .   .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+ 2:B(SUB_0)           s3  s14 s15 s16 s17 .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+ 3:SWAP(1)            s14 s3  s15 s16 s17 .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+ 4:DUP(3)             s15 s14 s3  s15 s16 s17 .   .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+ 5:P(PUSH_1)          s22 s15 s14 s3  s15 s16 s17 .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+ 6:DUP(6)             s16 s22 s15 s14 s3  s15 s16 s17 .   .   .   .   .   .   .   .   .   .   .   .   .  
+ 7:P(PUSH_3)          s24 s16 s22 s15 s14 s3  s15 s16 s17 .   .   .   .   .   .   .   .   .   .   .   .  
+ 8:SWAP(5)            s3  s16 s22 s15 s14 s24 s15 s16 s17 .   .   .   .   .   .   .   .   .   .   .   .  
+ 9:DUP(8)             s16 s3  s16 s22 s15 s14 s24 s15 s16 s17 .   .   .   .   .   .   .   .   .   .   .  
+10:P(PUSH_4)          s25 s16 s3  s16 s22 s15 s14 s24 s15 s16 s17 .   .   .   .   .   .   .   .   .   .  
+11:B(ADD_5)           s20 s3  s16 s22 s15 s14 s24 s15 s16 s17 .   .   .   .   .   .   .   .   .   .   .  
+12:U(MLOAD_0)         s2  s3  s16 s22 s15 s14 s24 s15 s16 s17 .   .   .   .   .   .   .   .   .   .   .  
+13:B(AND_2)           s19 s16 s22 s15 s14 s24 s15 s16 s17 .   .   .   .   .   .   .   .   .   .   .   .  
+14:DUP(7)             s15 s19 s16 s22 s15 s14 s24 s15 s16 s17 .   .   .   .   .   .   .   .   .   .   .  
+15:P(PUSH_4)          s25 s15 s19 s16 s22 s15 s14 s24 s15 s16 s17 .   .   .   .   .   .   .   .   .   .  
+16:B(ADD_4)           s18 s19 s16 s22 s15 s14 s24 s15 s16 s17 .   .   .   .   .   .   .   .   .   .   .  
+17:S(MSTORE_0)        s16 s22 s15 s14 s24 s15 s16 s17 .   .   .   .   .   .   .   .   .   .   .   .   .  
+18:P(PUSH_0)          s21 s16 s22 s15 s14 s24 s15 s16 s17 .   .   .   .   .   .   .   .   .   .   .   .  
+19:B(ADD_1)           s7  s22 s15 s14 s24 s15 s16 s17 .   .   .   .   .   .   .   .   .   .   .   .   .  
+20:U(MLOAD_1)         s8  s22 s15 s14 s24 s15 s16 s17 .   .   .   .   .   .   .   .   .   .   .   .   .  
+21:B(AND_0)           s6  s15 s14 s24 s15 s16 s17 .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+22:SWAP(1)            s15 s6  s14 s24 s15 s16 s17 .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+23:P(PUSH_0)          s21 s15 s6  s14 s24 s15 s16 s17 .   .   .   .   .   .   .   .   .   .   .   .   .  
+24:B(ADD_0)           s5  s6  s14 s24 s15 s16 s17 .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+25:S(MSTORE_1)        s14 s24 s15 s16 s17 .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+26:SWAP(3)            s16 s24 s15 s14 s17 .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+27:P(PUSH_2)          s23 s16 s24 s15 s14 s17 .   .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+28:B(ADD_3)           s11 s24 s15 s14 s17 .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+29:U(MLOAD_2)         s13 s24 s15 s14 s17 .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+30:B(AND_1)           s10 s15 s14 s17 .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+31:SWAP(1)            s15 s10 s14 s17 .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+32:P(PUSH_2)          s23 s15 s10 s14 s17 .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+33:B(ADD_2)           s9  s10 s14 s17 .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+34:S(MSTORE_2)        s14 s17 .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+35:SWAP(1)            s17 s14 .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+length = 35;
+gas = 105;
+bytes = 51; 
+solution = [B(SHL_0), B(SUB_0), SWAP(1), DUP(3), P(PUSH_1), DUP(6), P(PUSH_3), SWAP(5), DUP(8), P(PUSH_4), B(ADD_5), U(MLOAD_0), B(AND_2), DUP(7), P(PUSH_4), B(ADD_4), S(MSTORE_0), P(PUSH_0), B(ADD_1), U(MLOAD_1), B(AND_0), SWAP(1), P(PUSH_0), B(ADD_0), S(MSTORE_1), SWAP(3), P(PUSH_2), B(ADD_3), U(MLOAD_2), B(AND_1), SWAP(1), P(PUSH_2), B(ADD_2), S(MSTORE_2), SWAP(1)]
+% time elapsed: 2.61 s
+----------
+                      s0  s1  s12 s14 s15 s16 s17 .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+ 1:B(SHL_0)           s4  s12 s14 s15 s16 s17 .   .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+ 2:B(SUB_0)           s3  s14 s15 s16 s17 .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+ 3:P(PUSH_1)          s22 s3  s14 s15 s16 s17 .   .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+ 4:DUP(5)             s16 s22 s3  s14 s15 s16 s17 .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+ 5:P(PUSH_3)          s24 s16 s22 s3  s14 s15 s16 s17 .   .   .   .   .   .   .   .   .   .   .   .   .  
+ 6:SWAP(4)            s14 s16 s22 s3  s24 s15 s16 s17 .   .   .   .   .   .   .   .   .   .   .   .   .  
+ 7:SWAP(7)            s17 s16 s22 s3  s24 s15 s16 s14 .   .   .   .   .   .   .   .   .   .   .   .   .  
+ 8:SWAP(6)            s16 s16 s22 s3  s24 s15 s17 s14 .   .   .   .   .   .   .   .   .   .   .   .   .  
+ 9:SWAP(3)            s3  s16 s22 s16 s24 s15 s17 s14 .   .   .   .   .   .   .   .   .   .   .   .   .  
+10:DUP(2)             s16 s3  s16 s22 s16 s24 s15 s17 s14 .   .   .   .   .   .   .   .   .   .   .   .  
+11:P(PUSH_4)          s25 s16 s3  s16 s22 s16 s24 s15 s17 s14 .   .   .   .   .   .   .   .   .   .   .  
+12:B(ADD_5)           s20 s3  s16 s22 s16 s24 s15 s17 s14 .   .   .   .   .   .   .   .   .   .   .   .  
+13:U(MLOAD_0)         s2  s3  s16 s22 s16 s24 s15 s17 s14 .   .   .   .   .   .   .   .   .   .   .   .  
+14:B(AND_2)           s19 s16 s22 s16 s24 s15 s17 s14 .   .   .   .   .   .   .   .   .   .   .   .   .  
+15:DUP(6)             s15 s19 s16 s22 s16 s24 s15 s17 s14 .   .   .   .   .   .   .   .   .   .   .   .  
+16:P(PUSH_4)          s25 s15 s19 s16 s22 s16 s24 s15 s17 s14 .   .   .   .   .   .   .   .   .   .   .  
+17:B(ADD_4)           s18 s19 s16 s22 s16 s24 s15 s17 s14 .   .   .   .   .   .   .   .   .   .   .   .  
+18:S(MSTORE_0)        s16 s22 s16 s24 s15 s17 s14 .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+19:P(PUSH_0)          s21 s16 s22 s16 s24 s15 s17 s14 .   .   .   .   .   .   .   .   .   .   .   .   .  
+20:B(ADD_1)           s7  s22 s16 s24 s15 s17 s14 .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+21:U(MLOAD_1)         s8  s22 s16 s24 s15 s17 s14 .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+22:B(AND_0)           s6  s16 s24 s15 s17 s14 .   .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+23:DUP(4)             s15 s6  s16 s24 s15 s17 s14 .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+24:P(PUSH_0)          s21 s15 s6  s16 s24 s15 s17 s14 .   .   .   .   .   .   .   .   .   .   .   .   .  
+25:B(ADD_0)           s5  s6  s16 s24 s15 s17 s14 .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+26:S(MSTORE_1)        s16 s24 s15 s17 s14 .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+27:P(PUSH_2)          s23 s16 s24 s15 s17 s14 .   .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+28:B(ADD_3)           s11 s24 s15 s17 s14 .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+29:U(MLOAD_2)         s13 s24 s15 s17 s14 .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+30:B(AND_1)           s10 s15 s17 s14 .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+31:SWAP(1)            s15 s10 s17 s14 .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+32:P(PUSH_2)          s23 s15 s10 s17 s14 .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+33:B(ADD_2)           s9  s10 s17 s14 .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+34:S(MSTORE_2)        s17 s14 .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+35:NOP                s17 s14 .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+length = 34;
+gas = 102;
+bytes = 50; 
+solution = [B(SHL_0), B(SUB_0), P(PUSH_1), DUP(5), P(PUSH_3), SWAP(4), SWAP(7), SWAP(6), SWAP(3), DUP(2), P(PUSH_4), B(ADD_5), U(MLOAD_0), B(AND_2), DUP(6), P(PUSH_4), B(ADD_4), S(MSTORE_0), P(PUSH_0), B(ADD_1), U(MLOAD_1), B(AND_0), DUP(4), P(PUSH_0), B(ADD_0), S(MSTORE_1), P(PUSH_2), B(ADD_3), U(MLOAD_2), B(AND_1), SWAP(1), P(PUSH_2), B(ADD_2), S(MSTORE_2), NOP]
+% time elapsed: 3.09 s
+----------
+                      s0  s1  s12 s14 s15 s16 s17 .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+ 1:B(SHL_0)           s4  s12 s14 s15 s16 s17 .   .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+ 2:B(SUB_0)           s3  s14 s15 s16 s17 .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+ 3:DUP(4)             s16 s3  s14 s15 s16 s17 .   .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+ 4:SWAP(4)            s16 s3  s14 s15 s16 s17 .   .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+ 5:P(PUSH_4)          s25 s16 s3  s14 s15 s16 s17 .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+ 6:B(ADD_5)           s20 s3  s14 s15 s16 s17 .   .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+ 7:U(MLOAD_0)         s2  s3  s14 s15 s16 s17 .   .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+ 8:B(AND_2)           s19 s14 s15 s16 s17 .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+ 9:DUP(3)             s15 s19 s14 s15 s16 s17 .   .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+10:P(PUSH_4)          s25 s15 s19 s14 s15 s16 s17 .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+11:B(ADD_4)           s18 s19 s14 s15 s16 s17 .   .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+12:S(MSTORE_0)        s14 s15 s16 s17 .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+13:SWAP(3)            s17 s15 s16 s14 .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+14:SWAP(2)            s16 s15 s17 s14 .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+15:P(PUSH_1)          s22 s16 s15 s17 s14 .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+16:DUP(2)             s16 s22 s16 s15 s17 s14 .   .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+17:P(PUSH_0)          s21 s16 s22 s16 s15 s17 s14 .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+18:B(ADD_1)           s7  s22 s16 s15 s17 s14 .   .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+19:U(MLOAD_1)         s8  s22 s16 s15 s17 s14 .   .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+20:B(AND_0)           s6  s16 s15 s17 s14 .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+21:DUP(3)             s15 s6  s16 s15 s17 s14 .   .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+22:P(PUSH_0)          s21 s15 s6  s16 s15 s17 s14 .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+23:B(ADD_0)           s5  s6  s16 s15 s17 s14 .   .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+24:S(MSTORE_1)        s16 s15 s17 s14 .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+25:P(PUSH_2)          s23 s16 s15 s17 s14 .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+26:B(ADD_3)           s11 s15 s17 s14 .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+27:U(MLOAD_2)         s13 s15 s17 s14 .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+28:P(PUSH_3)          s24 s13 s15 s17 s14 .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+29:B(AND_1)           s10 s15 s17 s14 .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+30:SWAP(1)            s15 s10 s17 s14 .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+31:P(PUSH_2)          s23 s15 s10 s17 s14 .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+32:B(ADD_2)           s9  s10 s17 s14 .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+33:S(MSTORE_2)        s17 s14 .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+34:NOP                s17 s14 .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+35:NOP                s17 s14 .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .  
+length = 33;
+gas = 99;
+bytes = 49; 
+solution = [B(SHL_0), B(SUB_0), DUP(4), SWAP(4), P(PUSH_4), B(ADD_5), U(MLOAD_0), B(AND_2), DUP(3), P(PUSH_4), B(ADD_4), S(MSTORE_0), SWAP(3), SWAP(2), P(PUSH_1), DUP(2), P(PUSH_0), B(ADD_1), U(MLOAD_1), B(AND_0), DUP(3), P(PUSH_0), B(ADD_0), S(MSTORE_1), P(PUSH_2), B(ADD_3), U(MLOAD_2), P(PUSH_3), B(AND_1), SWAP(1), P(PUSH_2), B(ADD_2), S(MSTORE_2), NOP, NOP]
+% time elapsed: 7.90 s
+----------
+% Time limit exceeded!
+%%%mzn-stat: nodes=52362
+%%%mzn-stat: failures=26083
+%%%mzn-stat: restarts=3
+%%%mzn-stat: variables=145509
+%%%mzn-stat: intVars=2962
+%%%mzn-stat: boolVariables=142545
+%%%mzn-stat: propagators=15028
+%%%mzn-stat: propagations=79581269
+%%%mzn-stat: peakDepth=667
+%%%mzn-stat: nogoods=26083
+%%%mzn-stat: backjumps=24272
+%%%mzn-stat: peakMem=0.00
+%%%mzn-stat: time=7.831
+%%%mzn-stat: initTime=0.181
+%%%mzn-stat: solveTime=7.650
+%%%mzn-stat: objective=33
+%%%mzn-stat: optTime=7.218
+%%%mzn-stat: baseMem=0.00
+%%%mzn-stat: trailMem=0.28
+%%%mzn-stat: randomSeed=1734695927
+%%%mzn-stat: nSolutions=3
+%%%mzn-stat-end
+
+{U(MLOAD_0), U(MLOAD_1), U(MLOAD_2), B(SUB_0), B(SHL_0), B(ADD_0), B(AND_0), B(ADD_1), B(ADD_2), B(AND_1), B(ADD_3), B(ADD_4), B(AND_2), B(ADD_5), P(PUSH_0), P(PUSH_1), P(PUSH_2), P(PUSH_3), P(PUSH_4), S(MSTORE_0), S(MSTORE_1), S(MSTORE_2), DUP(1), DUP(2), DUP(3), DUP(4), DUP(5), DUP(6), DUP(7), DUP(8), DUP(9), DUP(10), DUP(11), DUP(12), DUP(13), DUP(14), DUP(15), DUP(16), SWAP(1), SWAP(2), SWAP(3), SWAP(4), SWAP(5), SWAP(6), SWAP(7), SWAP(8), SWAP(9), SWAP(10), SWAP(11), SWAP(12), SWAP(13), SWAP(14), SWAP(15), SWAP(16), POP, NOP}
+uses: [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 1, 1, 1, 1, 2, 1, 2, 1, 2]
+creates: [., s2, s8, s13, s3, s4, s5, s6, s7, s9, s10, s11, s18, s19, s20, s21, s22, s23, s24, s25, ., ., ., ., ., ., ., ., ., ., ., ., ., ., ., ., ., ., ., ., ., ., ., ., ., ., ., ., ., ., ., ., ., ., ., ., .]
+creator: [U(MLOAD_0), U(MLOAD_1), U(MLOAD_2), B(SUB_0), B(SHL_0), B(ADD_0), B(AND_0), B(ADD_1), B(ADD_2), B(AND_1), B(ADD_3), B(ADD_4), B(AND_2), B(ADD_5), P(PUSH_0), P(PUSH_1), P(PUSH_2), P(PUSH_3), P(PUSH_4)]
+maxdups = 7 maxpops = 0 uses: 33 null = 0 unused: {} creates something: 19 startlength: 7
+lcount: [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+ucount: [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 2, 1, 2, 1, 1, 1, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 0, 13]
+MLOAD_0 -> s20:U -> B(ADD_5)
+MLOAD_1 -> s7:U -> B(ADD_1)
+MLOAD_2 -> s11:U -> B(ADD_3)
+AND_0 -> {U(MLOAD_1),P(PUSH_1)}
+AND_1 -> {U(MLOAD_2),P(PUSH_3)}
+AND_2 -> {U(MLOAD_0),B(SUB_0)}
+ADD_0 -> s21:2Z -> P(PUSH_0)
+ADD_1 -> s21:2Z -> P(PUSH_0)
+ADD_2 -> s23:2Z -> P(PUSH_2)
+ADD_3 -> s23:2Z -> P(PUSH_2)
+ADD_4 -> s25:2Z -> P(PUSH_4)
+ADD_5 -> s25:2Z -> P(PUSH_4)
+SUB_0 -> s4:1N -> B(SHL_0)
+MSTORE_0 -> s18:1N -> B(ADD_4)
+MSTORE_1 -> s5:1N -> B(ADD_0)
+MSTORE_2 -> s9:1N -> B(ADD_2)
+WARNING: the --time-out flag has recently been changed.The time-out is now provided in milliseconds instead of seconds
+
+['SHL_0', 'SUB_0', 'DUP4', 'SWAP4', 'PUSH_4', 'ADD_5', 'MLOAD_0', 'AND_2', 'DUP3', 'PUSH_4', 'ADD_4', 'MSTORE_0', 'SWAP3', 'SWAP2', 'PUSH_1', 'DUP2', 'PUSH_0', 'ADD_1', 'MLOAD_1', 'AND_0', 'DUP3', 'PUSH_0', 'ADD_0', 'MSTORE_1', 'PUSH_2', 'ADD_3', 'MLOAD_2', 'PUSH_3', 'AND_1', 'SWAP1', 'PUSH_2', 'ADD_2', 'MSTORE_2']
+33
+35
+
+Initial sequence (basic block per line):
+SHL SUB PUSH1 0x40 DUP5 ADD MLOAD AND PUSH1 0x40 DUP4 ADD MSTORE PUSH4 0xffffffff PUSH1 0x60 DUP5 ADD MLOAD AND PUSH1 0x60 DUP4 ADD MSTORE PUSH6 0xffffffffffff PUSH1 0x80 DUP5 ADD MLOAD AND PUSH1 0x80 DUP4 ADD MSTORE SWAP3 SWAP2 POP POP
+
+Optimized sequence (basic block per line):
+SHL SUB DUP4 SWAP4 PUSH1 0x40 ADD MLOAD AND DUP3 PUSH1 0x40 ADD MSTORE SWAP3 SWAP2 PUSH4 0xffffffff DUP2 PUSH1 0x60 ADD MLOAD AND DUP3 PUSH1 0x60 ADD MSTORE PUSH1 0x80 ADD MLOAD PUSH6 0xffffffffffff AND SWAP1 PUSH1 0x80 ADD MSTORE
+
+Total time: 8.47 s
+
+Intermediate files stored at /tmp/gasol_eb13a91abf5041b3bbd7bd441625e951/
+
+Optimized code stored in block3_2_optimized.json_solc
+Optimality results stored in block3_2_statistics_seq.csv
+
+Estimated initial gas: 103
+Estimated gas optimized: 99
+
+Estimated initial size in bytes: 51
+Estimated size optimized in bytes: 49
+
+Initial number of instructions: 35
+Final number of instructions: 33

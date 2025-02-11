@@ -1,0 +1,112 @@
+9
+Optimizing isolated_block_0_0... Timeout:6
+[id: 0, len: 9, min_size: 2, min_pos: 4]
+
+splittocsv: 4;9
+Command: /home/nicolas/repos/gasol-optimizer/bin/MiniZincIDE-2.6.4-bundle-linux-x86_64/bin/minizinc --solver Chuffed --time-limit 6000 --output-time --intermediate-solutions -s dzn/evmopt-generic.mzn  /tmp/tmppfodqc7_.dzn
+% Generated FlatZinc statistics:
+%%%mzn-stat: paths=0
+%%%mzn-stat: flatBoolVars=765
+%%%mzn-stat: flatIntVars=285
+%%%mzn-stat: flatBoolConstraints=435
+%%%mzn-stat: flatIntConstraints=921
+%%%mzn-stat: evaluatedReifiedConstraints=519
+%%%mzn-stat: evaluatedHalfReifiedConstraints=228
+%%%mzn-stat: eliminatedImplications=45
+%%%mzn-stat: method="minimize"
+%%%mzn-stat: flatTime=0.156694
+%%%mzn-stat-end
+                      s0 s1 .  .  . 
+ 1:P(PUSH0_1)         s3 s0 s1 .  . 
+ 2:P(PUSH_2)          s4 s3 s0 s1 . 
+ 3:P(PUSH_0)          s2 s4 s3 s0 s1
+ 4:S(MSTORE_0)        s3 s0 s1 .  . 
+ 5:P(PUSH_0)          s2 s3 s0 s1 . 
+ 6:SWAP(3)            s1 s3 s0 s2 . 
+ 7:P(PUSH0_1)         s3 s1 s3 s0 s2
+ 8:S(MSTORE_1)        s3 s0 s2 .  . 
+ 9:SWAP(2)            s2 s0 s3 .  . 
+length = 9;
+gas = 25;
+bytes = 14; 
+solution = [P(PUSH0_1), P(PUSH_2), P(PUSH_0), S(MSTORE_0), P(PUSH_0), SWAP(3), P(PUSH0_1), S(MSTORE_1), SWAP(2)]
+% time elapsed: 0.20 s
+----------
+                      s0 s1 .  .  . 
+ 1:P(PUSH_0)          s2 s0 s1 .  . 
+ 2:P(PUSH0_1)         s3 s2 s0 s1 . 
+ 3:SWAP(3)            s1 s2 s0 s3 . 
+ 4:P(PUSH0_1)         s3 s1 s2 s0 s3
+ 5:S(MSTORE_1)        s2 s0 s3 .  . 
+ 6:P(PUSH_2)          s4 s2 s0 s3 . 
+ 7:P(PUSH_0)          s2 s4 s2 s0 s3
+ 8:S(MSTORE_0)        s2 s0 s3 .  . 
+ 9:NOP                s2 s0 s3 .  . 
+length = 8;
+gas = 22;
+bytes = 13; 
+solution = [P(PUSH_0), P(PUSH0_1), SWAP(3), P(PUSH0_1), S(MSTORE_1), P(PUSH_2), P(PUSH_0), S(MSTORE_0), NOP]
+% time elapsed: 0.20 s
+----------
+==========
+% time elapsed: 0.21 s
+%%%mzn-stat: nodes=166
+%%%mzn-stat: failures=69
+%%%mzn-stat: restarts=2
+%%%mzn-stat: variables=5618
+%%%mzn-stat: intVars=321
+%%%mzn-stat: boolVariables=5295
+%%%mzn-stat: propagators=955
+%%%mzn-stat: propagations=27319
+%%%mzn-stat: peakDepth=30
+%%%mzn-stat: nogoods=69
+%%%mzn-stat: backjumps=36
+%%%mzn-stat: peakMem=0.00
+%%%mzn-stat: time=0.022
+%%%mzn-stat: initTime=0.017
+%%%mzn-stat: solveTime=0.005
+%%%mzn-stat: objective=8
+%%%mzn-stat: optTime=0.002
+%%%mzn-stat: baseMem=0.00
+%%%mzn-stat: trailMem=0.02
+%%%mzn-stat: randomSeed=1734614876
+%%%mzn-stat: nSolutions=2
+%%%mzn-stat-end
+
+{P(PUSH_0), P(PUSH0_1), P(PUSH_2), S(MSTORE_0), S(MSTORE_1), DUP(1), DUP(2), DUP(3), DUP(4), DUP(5), SWAP(1), SWAP(2), SWAP(3), SWAP(4), POP, NOP}
+uses: [3, 1, 1, 2, 2, 1]
+creates: [., ., ., s2, s3, s4, ., ., ., ., ., ., ., ., ., ., ., ., .]
+creator: [P(PUSH_0), P(PUSH0_1), P(PUSH_2)]
+maxdups = 2 maxpops = 0 uses: 10 null = 3 unused: {} creates something: 3 startlength: 2
+lcount: [0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+ucount: [0, 0, 0, 2, 2, 1, 1, 1, 2, 2, 2, 2, 2, 4, 4, 4, 4, 0, 4]
+MSTORE_0 -> s2:1Z -> P(PUSH_0)
+MSTORE_0 -> s4:12 -> P(PUSH_2)
+MSTORE_1 -> s3:1Z -> P(PUSH0_1)
+WARNING: the --time-out flag has recently been changed.The time-out is now provided in milliseconds instead of seconds
+
+['PUSH_0', 'PUSH0_1', 'SWAP3', 'PUSH0_1', 'MSTORE_1', 'PUSH_2', 'PUSH_0', 'MSTORE_0']
+8
+9
+
+Initial sequence (basic block per line):
+PUSH1 0x1 PUSH1 0x20 SWAP1 DUP2 MSTORE PUSH0 SWAP3 DUP4 MSTORE
+
+Optimized sequence (basic block per line):
+PUSH1 0x20 PUSH0 SWAP3 PUSH0 MSTORE PUSH1 0x1 PUSH1 0x20 MSTORE
+
+Total time: 0.25 s
+
+Intermediate files stored at /tmp/gasol_fc26a6e583f7469183494db1c9f7e720/
+
+Optimized code stored in block2_1_optimized.json_solc
+Optimality results stored in block2_1_statistics_seq.csv
+
+Estimated initial gas: 26
+Estimated gas optimized: 22
+
+Estimated initial size in bytes: 11
+Estimated size optimized in bytes: 11
+
+Initial number of instructions: 9
+Final number of instructions: 8

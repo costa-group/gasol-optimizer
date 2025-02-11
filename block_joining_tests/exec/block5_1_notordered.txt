@@ -1,0 +1,141 @@
+% Generated FlatZinc statistics:
+%%%mzn-stat: paths=0
+%%%mzn-stat: flatBoolVars=7969
+%%%mzn-stat: flatIntVars=1921
+%%%mzn-stat: flatBoolConstraints=4357
+%%%mzn-stat: flatIntConstraints=8739
+%%%mzn-stat: evaluatedReifiedConstraints=4988
+%%%mzn-stat: evaluatedHalfReifiedConstraints=3073
+%%%mzn-stat: eliminatedImplications=561
+%%%mzn-stat: method="minimize"
+%%%mzn-stat: flatTime=0.291248
+%%%mzn-stat-end
+                      s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3  .   .   .   .   .   .  
+ 1:P(PUSH_2)          s20 s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3  .   .   .   .   .  
+ 2:U(MLOAD_0)         s5  s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3  .   .   .   .   .  
+ 3:P(PUSH_5)          s23 s5  s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3  .   .   .   .  
+ 4:P(PUSH_4)          s22 s23 s5  s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3  .   .   .  
+ 5:B(SHL_0)           s8  s5  s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3  .   .   .   .  
+ 6:DUP(2)             s5  s8  s5  s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3  .   .   .  
+ 7:S(MSTORE_0)        s5  s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3  .   .   .   .   .  
+ 8:P(PUSH_1)          s19 s5  s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3  .   .   .   .  
+ 9:B(ADD_0)           s4  s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3  .   .   .   .   .  
+10:SWAP(7)            s14 s0  s1  s7  s11 s12 s13 s4  s15 s16 s17 s2  s3  .   .   .   .   .  
+11:P(PUSH_0)          s18 s14 s0  s1  s7  s11 s12 s13 s4  s15 s16 s17 s2  s3  .   .   .   .  
+12:SWAP(10)           s16 s14 s0  s1  s7  s11 s12 s13 s4  s15 s18 s17 s2  s3  .   .   .   .  
+13:DUP(9)             s4  s16 s14 s0  s1  s7  s11 s12 s13 s4  s15 s18 s17 s2  s3  .   .   .  
+14:P(PUSH_3)          s21 s4  s16 s14 s0  s1  s7  s11 s12 s13 s4  s15 s18 s17 s2  s3  .   .  
+15:B(ADD_1)           s6  s16 s14 s0  s1  s7  s11 s12 s13 s4  s15 s18 s17 s2  s3  .   .   .  
+16:P(PUSH_2)          s20 s6  s16 s14 s0  s1  s7  s11 s12 s13 s4  s15 s18 s17 s2  s3  .   .  
+17:DUP(16)            s3  s20 s6  s16 s14 s0  s1  s7  s11 s12 s13 s4  s15 s18 s17 s2  s3  .  
+18:DUP(12)            s4  s3  s20 s6  s16 s14 s0  s1  s7  s11 s12 s13 s4  s15 s18 s17 s2  s3 
+19:S(MSTORE_1)        s20 s6  s16 s14 s0  s1  s7  s11 s12 s13 s4  s15 s18 s17 s2  s3  .   .  
+20:DUP(11)            s4  s20 s6  s16 s14 s0  s1  s7  s11 s12 s13 s4  s15 s18 s17 s2  s3  .  
+21:P(PUSH_6)          s24 s4  s20 s6  s16 s14 s0  s1  s7  s11 s12 s13 s4  s15 s18 s17 s2  s3 
+22:B(ADD_2)           s9  s20 s6  s16 s14 s0  s1  s7  s11 s12 s13 s4  s15 s18 s17 s2  s3  .  
+23:S(MSTORE_2)        s6  s16 s14 s0  s1  s7  s11 s12 s13 s4  s15 s18 s17 s2  s3  .   .   .  
+24:P(PUSH_7)          s25 s6  s16 s14 s0  s1  s7  s11 s12 s13 s4  s15 s18 s17 s2  s3  .   .  
+25:DUP(11)            s4  s25 s6  s16 s14 s0  s1  s7  s11 s12 s13 s4  s15 s18 s17 s2  s3  .  
+26:P(PUSH_2)          s20 s4  s25 s6  s16 s14 s0  s1  s7  s11 s12 s13 s4  s15 s18 s17 s2  s3 
+27:B(ADD_3)           s10 s25 s6  s16 s14 s0  s1  s7  s11 s12 s13 s4  s15 s18 s17 s2  s3  .  
+28:S(MSTORE_3)        s6  s16 s14 s0  s1  s7  s11 s12 s13 s4  s15 s18 s17 s2  s3  .   .   .  
+length = 28;
+gas = 84;
+bytes = 72; 
+solution = [P(PUSH_2), U(MLOAD_0), P(PUSH_5), P(PUSH_4), B(SHL_0), DUP(2), S(MSTORE_0), P(PUSH_1), B(ADD_0), SWAP(7), P(PUSH_0), SWAP(10), DUP(9), P(PUSH_3), B(ADD_1), P(PUSH_2), DUP(16), DUP(12), S(MSTORE_1), DUP(11), P(PUSH_6), B(ADD_2), S(MSTORE_2), P(PUSH_7), DUP(11), P(PUSH_2), B(ADD_3), S(MSTORE_3)]
+% time elapsed: 4.73 s
+----------
+                      s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3  .   .   .   .   .   .  
+ 1:P(PUSH_2)          s20 s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3  .   .   .   .   .  
+ 2:U(MLOAD_0)         s5  s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3  .   .   .   .   .  
+ 3:P(PUSH_0)          s18 s5  s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3  .   .   .   .  
+ 4:DUP(2)             s5  s18 s5  s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3  .   .   .  
+ 5:P(PUSH_1)          s19 s5  s18 s5  s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3  .   .  
+ 6:B(ADD_0)           s4  s18 s5  s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3  .   .   .  
+ 7:P(PUSH_5)          s23 s4  s18 s5  s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3  .   .  
+ 8:P(PUSH_4)          s22 s23 s4  s18 s5  s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3  .  
+ 9:B(SHL_0)           s8  s4  s18 s5  s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3  .   .  
+10:DUP(2)             s4  s8  s4  s18 s5  s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3  .  
+11:SWAP(4)            s5  s8  s4  s18 s4  s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3  .  
+12:S(MSTORE_0)        s4  s18 s4  s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3  .   .   .  
+13:P(PUSH_3)          s21 s4  s18 s4  s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3  .   .  
+14:B(ADD_1)           s6  s18 s4  s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3  .   .   .  
+15:P(PUSH_2)          s20 s6  s18 s4  s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3  .   .  
+16:DUP(16)            s3  s20 s6  s18 s4  s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3  .  
+17:DUP(5)             s4  s3  s20 s6  s18 s4  s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3 
+18:S(MSTORE_1)        s20 s6  s18 s4  s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3  .   .  
+19:DUP(4)             s4  s20 s6  s18 s4  s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3  .  
+20:P(PUSH_6)          s24 s4  s20 s6  s18 s4  s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3 
+21:B(ADD_2)           s9  s20 s6  s18 s4  s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3  .  
+22:S(MSTORE_2)        s6  s18 s4  s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3  .   .   .  
+23:P(PUSH_7)          s25 s6  s18 s4  s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3  .   .  
+24:DUP(4)             s4  s25 s6  s18 s4  s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3  .  
+25:P(PUSH_2)          s20 s4  s25 s6  s18 s4  s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3 
+26:B(ADD_3)           s10 s25 s6  s18 s4  s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3  .  
+27:S(MSTORE_3)        s6  s18 s4  s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3  .   .   .  
+28:NOP                s6  s18 s4  s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3  .   .   .  
+length = 27;
+gas = 81;
+bytes = 71; 
+solution = [P(PUSH_2), U(MLOAD_0), P(PUSH_0), DUP(2), P(PUSH_1), B(ADD_0), P(PUSH_5), P(PUSH_4), B(SHL_0), DUP(2), SWAP(4), S(MSTORE_0), P(PUSH_3), B(ADD_1), P(PUSH_2), DUP(16), DUP(5), S(MSTORE_1), DUP(4), P(PUSH_6), B(ADD_2), S(MSTORE_2), P(PUSH_7), DUP(4), P(PUSH_2), B(ADD_3), S(MSTORE_3), NOP]
+% time elapsed: 5.22 s
+----------
+                      s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3  .   .   .   .   .   .  
+ 1:P(PUSH_2)          s20 s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3  .   .   .   .   .  
+ 2:U(MLOAD_0)         s5  s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3  .   .   .   .   .  
+ 3:P(PUSH_5)          s23 s5  s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3  .   .   .   .  
+ 4:P(PUSH_4)          s22 s23 s5  s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3  .   .   .  
+ 5:B(SHL_0)           s8  s5  s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3  .   .   .   .  
+ 6:DUP(2)             s5  s8  s5  s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3  .   .   .  
+ 7:S(MSTORE_0)        s5  s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3  .   .   .   .   .  
+ 8:P(PUSH_1)          s19 s5  s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3  .   .   .   .  
+ 9:B(ADD_0)           s4  s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3  .   .   .   .   .  
+10:P(PUSH_0)          s18 s4  s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3  .   .   .   .  
+11:DUP(2)             s4  s18 s4  s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3  .   .   .  
+12:DUP(15)            s3  s4  s18 s4  s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3  .   .  
+13:DUP(4)             s4  s3  s4  s18 s4  s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3  .  
+14:S(MSTORE_1)        s4  s18 s4  s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3  .   .   .  
+15:P(PUSH_3)          s21 s4  s18 s4  s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3  .   .  
+16:B(ADD_1)           s6  s18 s4  s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3  .   .   .  
+17:P(PUSH_2)          s20 s6  s18 s4  s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3  .   .  
+18:DUP(4)             s4  s20 s6  s18 s4  s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3  .  
+19:P(PUSH_6)          s24 s4  s20 s6  s18 s4  s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3 
+20:B(ADD_2)           s9  s20 s6  s18 s4  s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3  .  
+21:S(MSTORE_2)        s6  s18 s4  s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3  .   .   .  
+22:P(PUSH_7)          s25 s6  s18 s4  s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3  .   .  
+23:DUP(4)             s4  s25 s6  s18 s4  s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3  .  
+24:P(PUSH_2)          s20 s4  s25 s6  s18 s4  s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3 
+25:B(ADD_3)           s10 s25 s6  s18 s4  s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3  .  
+26:S(MSTORE_3)        s6  s18 s4  s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3  .   .   .  
+27:NOP                s6  s18 s4  s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3  .   .   .  
+28:NOP                s6  s18 s4  s0  s1  s7  s11 s12 s13 s14 s15 s16 s17 s2  s3  .   .   .  
+length = 26;
+gas = 78;
+bytes = 70; 
+solution = [P(PUSH_2), U(MLOAD_0), P(PUSH_5), P(PUSH_4), B(SHL_0), DUP(2), S(MSTORE_0), P(PUSH_1), B(ADD_0), P(PUSH_0), DUP(2), DUP(15), DUP(4), S(MSTORE_1), P(PUSH_3), B(ADD_1), P(PUSH_2), DUP(4), P(PUSH_6), B(ADD_2), S(MSTORE_2), P(PUSH_7), DUP(4), P(PUSH_2), B(ADD_3), S(MSTORE_3), NOP, NOP]
+% time elapsed: 5.71 s
+----------
+==========
+% time elapsed: 6.63 s
+%%%mzn-stat: nodes=94690
+%%%mzn-stat: failures=30773
+%%%mzn-stat: restarts=3
+%%%mzn-stat: variables=106546
+%%%mzn-stat: intVars=2110
+%%%mzn-stat: boolVariables=104434
+%%%mzn-stat: propagators=10962
+%%%mzn-stat: propagations=87575246
+%%%mzn-stat: peakDepth=510
+%%%mzn-stat: nogoods=30773
+%%%mzn-stat: backjumps=63130
+%%%mzn-stat: peakMem=0.00
+%%%mzn-stat: time=6.218
+%%%mzn-stat: initTime=0.125
+%%%mzn-stat: solveTime=6.093
+%%%mzn-stat: objective=26
+%%%mzn-stat: optTime=5.186
+%%%mzn-stat: baseMem=0.00
+%%%mzn-stat: trailMem=0.28
+%%%mzn-stat: randomSeed=1736359876
+%%%mzn-stat: nSolutions=3
+%%%mzn-stat-end

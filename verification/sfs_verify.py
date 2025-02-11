@@ -56,6 +56,17 @@ def compare_target_stack(json_origin, json_opt):
     tgt_origin = json_origin["tgt_ws"]
     tgt_opt = json_opt["tgt_ws"]
 
+    print("compare_target_stack: ")
+    print()
+
+    print("src_origin: ", json_origin["src_ws"])
+    print("src_opt:    ", json_opt["src_ws"])
+    print()
+    print("tgt_origin: ", json_origin["tgt_ws"])
+    print("tgt_opt:    ", json_opt["tgt_ws"])
+    print()
+    print()
+
 
     if len(tgt_origin) != len(tgt_opt):
         return False, "Different lenghts between target stacks"
@@ -363,7 +374,6 @@ def verify_block_from_list_of_sfs(old_sfs_dict, new_sfs_dict):
     new_block_ids_aux = new_sfs_dict.keys()
     
     new_block_ids = map(lambda x: x.replace("alreadyOptimized_","") , new_block_ids_aux) 
-    
     
     # Both sfs dicts must contain the same sub blocks
     if set(old_block_ids) != set(new_block_ids):

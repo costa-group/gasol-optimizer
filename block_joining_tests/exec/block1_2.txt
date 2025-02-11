@@ -1,0 +1,181 @@
+18
+Optimizing isolated_block_0_0... Timeout:6
+[id: 0, len: 18, min_size: 3, min_pos: 7]
+
+extended_reverse:  ['PUSH_1', 'PUSH_0', 'MSTORE_1', 'MSTORE_0', 'ADD_0']
+min_pos: 11, min_size: 6
+splittocsv: 11;18
+Command: /home/nicolas/repos/gasol-optimizer/bin/MiniZincIDE-2.6.4-bundle-linux-x86_64/bin/minizinc --solver Chuffed --time-limit 6000 --output-time --intermediate-solutions -s dzn/evmopt-generic.mzn  /tmp/tmp_7ticj2b.dzn
+% Generated FlatZinc statistics:
+%%%mzn-stat: paths=0
+%%%mzn-stat: flatBoolVars=2734
+%%%mzn-stat: flatIntVars=752
+%%%mzn-stat: flatBoolConstraints=1538
+%%%mzn-stat: flatIntConstraints=2992
+%%%mzn-stat: evaluatedReifiedConstraints=1800
+%%%mzn-stat: evaluatedHalfReifiedConstraints=875
+%%%mzn-stat: eliminatedImplications=181
+%%%mzn-stat: method="minimize"
+%%%mzn-stat: flatTime=0.240738
+%%%mzn-stat-end
+                      s0 s1 s3 s4 .  .  .  .  .  . 
+ 1:DUP(3)             s3 s0 s1 s3 s4 .  .  .  .  . 
+ 2:DUP(3)             s1 s3 s0 s1 s3 s4 .  .  .  . 
+ 3:DUP(5)             s3 s1 s3 s0 s1 s3 s4 .  .  . 
+ 4:DUP(6)             s3 s3 s1 s3 s0 s1 s3 s4 .  . 
+ 5:SWAP(5)            s1 s3 s1 s3 s0 s3 s3 s4 .  . 
+ 6:DUP(8)             s4 s1 s3 s1 s3 s0 s3 s3 s4 . 
+ 7:P(PUSH_0)          s5 s4 s1 s3 s1 s3 s0 s3 s3 s4
+ 8:B(ADD_0)           s2 s1 s3 s1 s3 s0 s3 s3 s4 . 
+ 9:SWAP(4)            s3 s1 s3 s1 s2 s0 s3 s3 s4 . 
+10:SWAP(5)            s0 s1 s3 s1 s2 s3 s3 s3 s4 . 
+11:P(PUSH_1)          s6 s0 s1 s3 s1 s2 s3 s3 s3 s4
+12:S(MSTORE_0)        s1 s3 s1 s2 s3 s3 s3 s4 .  . 
+13:SWAP(6)            s3 s3 s1 s2 s3 s3 s1 s4 .  . 
+14:DUP(2)             s3 s3 s3 s1 s2 s3 s3 s1 s4 . 
+15:DUP(9)             s4 s3 s3 s3 s1 s2 s3 s3 s1 s4
+16:S(MSTORE_1)        s3 s3 s1 s2 s3 s3 s1 s4 .  . 
+17:DUP(7)             s1 s3 s3 s1 s2 s3 s3 s1 s4 . 
+18:DUP(5)             s2 s1 s3 s3 s1 s2 s3 s3 s1 s4
+length = 18;
+gas = 54;
+bytes = 20; 
+solution = [DUP(3), DUP(3), DUP(5), DUP(6), SWAP(5), DUP(8), P(PUSH_0), B(ADD_0), SWAP(4), SWAP(5), P(PUSH_1), S(MSTORE_0), SWAP(6), DUP(2), DUP(9), S(MSTORE_1), DUP(7), DUP(5)]
+% time elapsed: 0.39 s
+----------
+                      s0 s1 s3 s4 .  .  .  .  .  . 
+ 1:P(PUSH_1)          s6 s0 s1 s3 s4 .  .  .  .  . 
+ 2:S(MSTORE_0)        s1 s3 s4 .  .  .  .  .  .  . 
+ 3:SWAP(1)            s3 s1 s4 .  .  .  .  .  .  . 
+ 4:DUP(1)             s3 s3 s1 s4 .  .  .  .  .  . 
+ 5:DUP(3)             s1 s3 s3 s1 s4 .  .  .  .  . 
+ 6:DUP(4)             s1 s1 s3 s3 s1 s4 .  .  .  . 
+ 7:DUP(4)             s3 s1 s1 s3 s3 s1 s4 .  .  . 
+ 8:DUP(1)             s3 s3 s1 s1 s3 s3 s1 s4 .  . 
+ 9:DUP(6)             s3 s3 s3 s1 s1 s3 s3 s1 s4 . 
+10:DUP(9)             s4 s3 s3 s3 s1 s1 s3 s3 s1 s4
+11:SWAP(9)            s4 s3 s3 s3 s1 s1 s3 s3 s1 s4
+12:S(MSTORE_1)        s3 s3 s1 s1 s3 s3 s1 s4 .  . 
+13:DUP(8)             s4 s3 s3 s1 s1 s3 s3 s1 s4 . 
+14:P(PUSH_0)          s5 s4 s3 s3 s1 s1 s3 s3 s1 s4
+15:B(ADD_0)           s2 s3 s3 s1 s1 s3 s3 s1 s4 . 
+16:SWAP(4)            s1 s3 s3 s1 s2 s3 s3 s1 s4 . 
+17:DUP(5)             s2 s1 s3 s3 s1 s2 s3 s3 s1 s4
+18:NOP                s2 s1 s3 s3 s1 s2 s3 s3 s1 s4
+length = 17;
+gas = 51;
+bytes = 19; 
+solution = [P(PUSH_1), S(MSTORE_0), SWAP(1), DUP(1), DUP(3), DUP(4), DUP(4), DUP(1), DUP(6), DUP(9), SWAP(9), S(MSTORE_1), DUP(8), P(PUSH_0), B(ADD_0), SWAP(4), DUP(5), NOP]
+% time elapsed: 0.42 s
+----------
+                      s0 s1 s3 s4 .  .  .  .  .  . 
+ 1:P(PUSH_1)          s6 s0 s1 s3 s4 .  .  .  .  . 
+ 2:S(MSTORE_0)        s1 s3 s4 .  .  .  .  .  .  . 
+ 3:SWAP(1)            s3 s1 s4 .  .  .  .  .  .  . 
+ 4:DUP(1)             s3 s3 s1 s4 .  .  .  .  .  . 
+ 5:DUP(2)             s3 s3 s3 s1 s4 .  .  .  .  . 
+ 6:DUP(4)             s1 s3 s3 s3 s1 s4 .  .  .  . 
+ 7:DUP(6)             s4 s1 s3 s3 s3 s1 s4 .  .  . 
+ 8:P(PUSH_0)          s5 s4 s1 s3 s3 s3 s1 s4 .  . 
+ 9:B(ADD_0)           s2 s1 s3 s3 s3 s1 s4 .  .  . 
+10:DUP(5)             s3 s2 s1 s3 s3 s3 s1 s4 .  . 
+11:DUP(8)             s4 s3 s2 s1 s3 s3 s3 s1 s4 . 
+12:S(MSTORE_1)        s2 s1 s3 s3 s3 s1 s4 .  .  . 
+13:SWAP(2)            s3 s1 s2 s3 s3 s1 s4 .  .  . 
+14:DUP(4)             s3 s3 s1 s2 s3 s3 s1 s4 .  . 
+15:DUP(7)             s1 s3 s3 s1 s2 s3 s3 s1 s4 . 
+16:DUP(5)             s2 s1 s3 s3 s1 s2 s3 s3 s1 s4
+17:NOP                s2 s1 s3 s3 s1 s2 s3 s3 s1 s4
+18:NOP                s2 s1 s3 s3 s1 s2 s3 s3 s1 s4
+length = 16;
+gas = 48;
+bytes = 18; 
+solution = [P(PUSH_1), S(MSTORE_0), SWAP(1), DUP(1), DUP(2), DUP(4), DUP(6), P(PUSH_0), B(ADD_0), DUP(5), DUP(8), S(MSTORE_1), SWAP(2), DUP(4), DUP(7), DUP(5), NOP, NOP]
+% time elapsed: 0.59 s
+----------
+                      s0 s1 s3 s4 .  .  .  .  .  . 
+ 1:P(PUSH_1)          s6 s0 s1 s3 s4 .  .  .  .  . 
+ 2:S(MSTORE_0)        s1 s3 s4 .  .  .  .  .  .  . 
+ 3:SWAP(1)            s3 s1 s4 .  .  .  .  .  .  . 
+ 4:DUP(1)             s3 s3 s1 s4 .  .  .  .  .  . 
+ 5:DUP(4)             s4 s3 s3 s1 s4 .  .  .  .  . 
+ 6:S(MSTORE_1)        s3 s1 s4 .  .  .  .  .  .  . 
+ 7:DUP(1)             s3 s3 s1 s4 .  .  .  .  .  . 
+ 8:DUP(4)             s4 s3 s3 s1 s4 .  .  .  .  . 
+ 9:P(PUSH_0)          s5 s4 s3 s3 s1 s4 .  .  .  . 
+10:B(ADD_0)           s2 s3 s3 s1 s4 .  .  .  .  . 
+11:DUP(4)             s1 s2 s3 s3 s1 s4 .  .  .  . 
+12:DUP(4)             s3 s1 s2 s3 s3 s1 s4 .  .  . 
+13:DUP(1)             s3 s3 s1 s2 s3 s3 s1 s4 .  . 
+14:DUP(7)             s1 s3 s3 s1 s2 s3 s3 s1 s4 . 
+15:DUP(5)             s2 s1 s3 s3 s1 s2 s3 s3 s1 s4
+16:NOP                s2 s1 s3 s3 s1 s2 s3 s3 s1 s4
+17:NOP                s2 s1 s3 s3 s1 s2 s3 s3 s1 s4
+18:NOP                s2 s1 s3 s3 s1 s2 s3 s3 s1 s4
+length = 15;
+gas = 45;
+bytes = 17; 
+solution = [P(PUSH_1), S(MSTORE_0), SWAP(1), DUP(1), DUP(4), S(MSTORE_1), DUP(1), DUP(4), P(PUSH_0), B(ADD_0), DUP(4), DUP(4), DUP(1), DUP(7), DUP(5), NOP, NOP, NOP]
+% time elapsed: 0.66 s
+----------
+==========
+% time elapsed: 0.72 s
+%%%mzn-stat: nodes=4478
+%%%mzn-stat: failures=2076
+%%%mzn-stat: restarts=4
+%%%mzn-stat: variables=20153
+%%%mzn-stat: intVars=834
+%%%mzn-stat: boolVariables=19317
+%%%mzn-stat: propagators=3566
+%%%mzn-stat: propagations=2931970
+%%%mzn-stat: peakDepth=88
+%%%mzn-stat: nogoods=2076
+%%%mzn-stat: backjumps=2078
+%%%mzn-stat: peakMem=0.00
+%%%mzn-stat: time=0.410
+%%%mzn-stat: initTime=0.058
+%%%mzn-stat: solveTime=0.352
+%%%mzn-stat: objective=15
+%%%mzn-stat: optTime=0.297
+%%%mzn-stat: baseMem=0.00
+%%%mzn-stat: trailMem=0.08
+%%%mzn-stat: randomSeed=1734611056
+%%%mzn-stat: nSolutions=4
+%%%mzn-stat-end
+
+{B(ADD_0), P(PUSH_0), P(PUSH_1), S(MSTORE_0), S(MSTORE_1), DUP(1), DUP(2), DUP(3), DUP(4), DUP(5), DUP(6), DUP(7), DUP(8), DUP(9), DUP(10), SWAP(1), SWAP(2), SWAP(3), SWAP(4), SWAP(5), SWAP(6), SWAP(7), SWAP(8), SWAP(9), POP, NOP}
+uses: [1, 1, 3, 2, 5, 3, 1, 1]
+creates: [., ., s2, s5, s6, ., ., ., ., ., ., ., ., ., ., ., ., ., ., ., ., ., ., ., ., ., ., .]
+creator: [B(ADD_0), P(PUSH_0), P(PUSH_1)]
+maxdups = 9 maxpops = 0 uses: 17 null = 1 unused: {} creates something: 3 startlength: 4
+lcount: [0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+ucount: [0, 0, 1, 1, 1, 1, 1, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 13, 13, 13, 13, 13, 13, 13, 13, 13, 0, 13]
+ADD_0 -> s5:1Z -> P(PUSH_0)
+MSTORE_0 -> s6:1Z -> P(PUSH_1)
+WARNING: the --time-out flag has recently been changed.The time-out is now provided in milliseconds instead of seconds
+
+['PUSH_1', 'MSTORE_0', 'SWAP1', 'DUP1', 'DUP4', 'MSTORE_1', 'DUP1', 'DUP4', 'PUSH_0', 'ADD_0', 'DUP4', 'DUP4', 'DUP1', 'DUP7', 'DUP5']
+15
+18
+
+Initial sequence (basic block per line):
+PUSH1 0x40 MSTORE DUP2 DUP4 MSTORE SWAP1 DUP2 SWAP2 DUP2 SWAP1 DUP5 PUSH1 0x20 ADD SWAP1 DUP3 DUP1 DUP3 DUP5
+
+Optimized sequence (basic block per line):
+PUSH1 0x40 MSTORE SWAP1 DUP1 DUP4 MSTORE DUP1 DUP4 PUSH1 0x20 ADD DUP4 DUP4 DUP1 DUP7 DUP5
+
+Total time: 0.83 s
+
+Intermediate files stored at /tmp/gasol_a655091c41b0463faa35166e055b1d02/
+
+Optimized code stored in block1_2_optimized.json_solc
+Optimality results stored in block1_2_statistics_seq.csv
+
+Estimated initial gas: 54
+Estimated gas optimized: 45
+
+Estimated initial size in bytes: 20
+Estimated size optimized in bytes: 17
+
+Initial number of instructions: 18
+Final number of instructions: 15

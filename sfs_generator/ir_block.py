@@ -1082,7 +1082,6 @@ def compile_block(instrs,input_stack,block_id):
 
     split_calculator.finish_stack_split(block_split)
 
-
     return rule
 
 
@@ -1114,7 +1113,7 @@ Main function that build the rbr representation from the CFG of a solidity file.
 -saco_rbr is True if it has to generate the RBR in SACO syntax.
 -exe refers to the number of smart contracts analyzed.
 '''
-def evm2rbr_compiler(file_name = None,block = None, block_id = -1, block_name = "",simplification = True, storage = False, size = False, part = False, pop = False, push = False, revert = False,extra_dependences_info={},extra_opt_info={},debug_info = False):
+def evm2rbr_compiler(file_name = None,block = None, block_id = -1, block_name = "",simplification = True, storage = False, size = False, part = False, pop = False, push = False, revert = False,extra_dependences_info={},extra_opt_info={},debug_info = False, split_mode=None):
     global rbr_blocks
     
     init_globals()
@@ -1127,6 +1126,7 @@ def evm2rbr_compiler(file_name = None,block = None, block_id = -1, block_name = 
         
         rule = compile_block(instructions,input_stack,block_id)
 
+
         has_sto = has_storage_ins(instructions)
 
         write_rbr(rule,block_name)
@@ -1137,7 +1137,7 @@ def evm2rbr_compiler(file_name = None,block = None, block_id = -1, block_name = 
         ethir_time = end-begin
         #print("Build RBR: "+str(ethir_time)+"s")
     
-        subblocks = smt_translate_block(rule,file_name,block_name,assignImmutable_dict,simplification,storage, size, part, pop, push,revert,extra_dependences_info,extra_opt_info,debug_info)
+        subblocks = smt_translate_block(rule,file_name,block_name,assignImmutable_dict,simplification,storage, size, part, pop, push,revert,extra_dependences_info,extra_opt_info,debug_info, split_mode)
                 
         return 0, subblocks
         
@@ -1145,7 +1145,7 @@ def evm2rbr_compiler(file_name = None,block = None, block_id = -1, block_name = 
         traceback.print_exc()
         raise Exception("Error in RBR generation",4)
             
-def get_subblocks(block = None,storage = False,part = False,block_id = -1):
+def get_subblocks(block = None,storage = False,part = False,block_id = -1, split=None):
     init_globals()
 
     try:
@@ -1154,7 +1154,7 @@ def get_subblocks(block = None,storage = False,part = False,block_id = -1):
         
         rule = compile_block(instructions,input_stack,block_id)
 
-        subblocks = generate_subblocks2split(rule,part,storage)
+        subblocks = generate_subblocks2split(rule,part,storage,split)
         
         return subblocks
         

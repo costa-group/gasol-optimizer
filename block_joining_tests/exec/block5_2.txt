@@ -1,0 +1,104 @@
+12
+Optimizing isolated_block_0_0... Timeout:6
+[id: 0, len: 12, min_size: 1, min_pos: 6]
+
+extended_reverse:  ['PUSH_2', 'PUSH_3', 'PUSH_1', 'PUSH_0', 'SHL_0', 'ADD_1', 'ADD_0', 'MSTORE_1', 'MSTORE_0', 'PUSH [tag]_0']
+min_pos: 5, min_size: 2
+splittocsv: 5;14
+Command: /home/nicolas/repos/gasol-optimizer/bin/MiniZincIDE-2.6.4-bundle-linux-x86_64/bin/minizinc --solver Chuffed --time-limit 6000 --output-time --intermediate-solutions -s dzn/evmopt-generic.mzn  /tmp/tmpj7ujaqb1.dzn
+% Generated FlatZinc statistics:
+%%%mzn-stat: paths=0
+%%%mzn-stat: flatBoolVars=1748
+%%%mzn-stat: flatIntVars=525
+%%%mzn-stat: flatBoolConstraints=1057
+%%%mzn-stat: flatIntConstraints=1940
+%%%mzn-stat: evaluatedReifiedConstraints=991
+%%%mzn-stat: evaluatedHalfReifiedConstraints=661
+%%%mzn-stat: eliminatedImplications=96
+%%%mzn-stat: method="minimize"
+%%%mzn-stat: flatTime=0.11434
+%%%mzn-stat-end
+                      s0 s1 .  .  .  . 
+ 1:DUP(2)             s1 s0 s1 .  .  . 
+ 2:P(PUSH_0)          s6 s1 s0 s1 .  . 
+ 3:B(ADD_0)           s3 s0 s1 .  .  . 
+ 4:S(MSTORE_0)        s1 .  .  .  .  . 
+ 5:P(PUSH_3)          s9 s1 .  .  .  . 
+ 6:P(PUSH_2)          s8 s9 s1 .  .  . 
+ 7:B(SHL_0)           s5 s1 .  .  .  . 
+ 8:P(PUSH [tag]_0)    s2 s5 s1 .  .  . 
+ 9:SWAP(2)            s1 s5 s2 .  .  . 
+10:P(PUSH_1)          s7 s1 s5 s2 .  . 
+11:B(ADD_1)           s4 s5 s2 .  .  . 
+12:S(MSTORE_1)        s2 .  .  .  .  . 
+length = 12;
+gas = 36;
+bytes = 24; 
+solution = [DUP(2), P(PUSH_0), B(ADD_0), S(MSTORE_0), P(PUSH_3), P(PUSH_2), B(SHL_0), P(PUSH [tag]_0), SWAP(2), P(PUSH_1), B(ADD_1), S(MSTORE_1)]
+% time elapsed: 0.17 s
+----------
+==========
+% time elapsed: 0.17 s
+%%%mzn-stat: nodes=261
+%%%mzn-stat: failures=92
+%%%mzn-stat: restarts=1
+%%%mzn-stat: variables=13590
+%%%mzn-stat: intVars=586
+%%%mzn-stat: boolVariables=13002
+%%%mzn-stat: propagators=1861
+%%%mzn-stat: propagations=82561
+%%%mzn-stat: peakDepth=87
+%%%mzn-stat: nogoods=92
+%%%mzn-stat: backjumps=81
+%%%mzn-stat: peakMem=0.00
+%%%mzn-stat: time=0.032
+%%%mzn-stat: initTime=0.024
+%%%mzn-stat: solveTime=0.008
+%%%mzn-stat: objective=12
+%%%mzn-stat: optTime=0.006
+%%%mzn-stat: baseMem=0.00
+%%%mzn-stat: trailMem=0.05
+%%%mzn-stat: randomSeed=1736358989
+%%%mzn-stat: nSolutions=1
+%%%mzn-stat-end
+
+{B(ADD_0), B(ADD_1), B(SHL_0), P(PUSH [tag]_0), P(PUSH_0), P(PUSH_1), P(PUSH_2), P(PUSH_3), S(MSTORE_0), S(MSTORE_1), DUP(1), DUP(2), DUP(3), DUP(4), DUP(5), DUP(6), SWAP(1), SWAP(2), SWAP(3), SWAP(4), SWAP(5), POP, NOP}
+uses: [1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1]
+creates: [., ., s3, s4, s5, s2, s6, s7, s8, s9, ., ., ., ., ., ., ., ., ., ., ., ., ., ., .]
+creator: [B(ADD_0), B(ADD_1), B(SHL_0), P(PUSH [tag]_0), P(PUSH_0), P(PUSH_1), P(PUSH_2), P(PUSH_3)]
+maxdups = 1 maxpops = 0 uses: 12 null = 1 unused: {} creates something: 8 startlength: 2
+lcount: [0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+ucount: [0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 0, 2]
+ADD_0 -> s6:1Z -> P(PUSH_0)
+ADD_1 -> s7:1Z -> P(PUSH_1)
+SHL_0 -> s8:1Z -> P(PUSH_2)
+SHL_0 -> s9:12 -> P(PUSH_3)
+MSTORE_0 -> s3:1N -> B(ADD_0)
+MSTORE_1 -> s4:1N -> B(ADD_1)
+WARNING: the --time-out flag has recently been changed.The time-out is now provided in milliseconds instead of seconds
+
+['DUP2', 'PUSH_0', 'ADD_0', 'MSTORE_0', 'PUSH_3', 'PUSH_2', 'SHL_0', 'PUSH [tag]_0', 'SWAP2', 'PUSH_1', 'ADD_1', 'MSTORE_1']
+12
+12
+
+Initial sequence (basic block per line):
+DUP2 PUSH1 0x60 ADD MSTORE PUSH7 0x185cd31a5b5a5d PUSH1 0xca SHL SWAP1 PUSH1 0x80 ADD MSTORE PUSH [tag]
+
+Optimized sequence (basic block per line):
+DUP2 PUSH1 0x60 ADD MSTORE PUSH7 0x185cd31a5b5a5d PUSH1 0xca SHL SWAP1 PUSH1 0x80 ADD MSTORE PUSH [tag]
+
+Total time: 0.22 s
+
+Intermediate files stored at /tmp/gasol_f9f44c1b85124b0885f3a99be4140d50/
+
+Optimized code stored in block5_2_optimized.json_solc
+Optimality results stored in block5_2_statistics_seq.csv
+
+Estimated initial gas: 36
+Estimated gas optimized: 36
+
+Estimated initial size in bytes: 24
+Estimated size optimized in bytes: 24
+
+Initial number of instructions: 12
+Final number of instructions: 12

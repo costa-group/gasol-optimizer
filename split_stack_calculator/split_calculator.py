@@ -34,7 +34,7 @@ class Stack_split:
     def update_split_candidate(self, new_pos, new_size) -> None:
         if (new_pos > self.min_pos_block and new_pos < self.max_pos_block and new_size < self.min_size):
             self.min_size = new_size 
-            self.min_pos = new_pos 
+            self.min_pos = new_pos
     
     def __str__(self) -> str:
         return f"id: {self.block_id}, len: {self.length}, min_size: {self.min_size}, min_pos: {self.min_pos}"

@@ -1,0 +1,99 @@
+% Generated FlatZinc statistics:
+%%%mzn-stat: paths=0
+%%%mzn-stat: flatBoolVars=1986
+%%%mzn-stat: flatIntVars=561
+%%%mzn-stat: flatBoolConstraints=1196
+%%%mzn-stat: flatIntConstraints=2186
+%%%mzn-stat: evaluatedReifiedConstraints=1216
+%%%mzn-stat: evaluatedHalfReifiedConstraints=665
+%%%mzn-stat: eliminatedImplications=99
+%%%mzn-stat: method="minimize"
+%%%mzn-stat: flatTime=0.252791
+%%%mzn-stat-end
+                      s2 s1 s0 s3 .  .  . 
+ 1:P(PUSH_0)          s7 s2 s1 s0 s3 .  . 
+ 2:SWAP(3)            s0 s2 s1 s7 s3 .  . 
+ 3:P(PUSH_0)          s7 s0 s2 s1 s7 s3 . 
+ 4:DUP(3)             s2 s7 s0 s2 s1 s7 s3
+ 5:SWAP(4)            s1 s7 s0 s2 s2 s7 s3
+ 6:SWAP(3)            s2 s7 s0 s1 s2 s7 s3
+ 7:B(KECCAK256_1)     s6 s0 s1 s2 s7 s3 . 
+ 8:SWAP(1)            s0 s6 s1 s2 s7 s3 . 
+ 9:S(MSTORE_0)        s1 s2 s7 s3 .  .  . 
+10:DUP(2)             s2 s1 s2 s7 s3 .  . 
+11:S(MSTORE_1)        s2 s7 s3 .  .  .  . 
+12:B(KECCAK256_0)     s4 s3 .  .  .  .  . 
+13:U(SLOAD_0)         s5 s3 .  .  .  .  . 
+14:DUP(2)             s3 s5 s3 .  .  .  . 
+length = 14;
+gas = 2193;
+bytes = 16; 
+solution = [P(PUSH_0), SWAP(3), P(PUSH_0), DUP(3), SWAP(4), SWAP(3), B(KECCAK256_1), SWAP(1), S(MSTORE_0), DUP(2), S(MSTORE_1), B(KECCAK256_0), U(SLOAD_0), DUP(2)]
+% time elapsed: 0.38 s
+----------
+                      s2 s1 s0 s3 .  .  . 
+ 1:SWAP(1)            s1 s2 s0 s3 .  .  . 
+ 2:P(PUSH_0)          s7 s1 s2 s0 s3 .  . 
+ 3:SWAP(3)            s0 s1 s2 s7 s3 .  . 
+ 4:DUP(4)             s7 s0 s1 s2 s7 s3 . 
+ 5:DUP(4)             s2 s7 s0 s1 s2 s7 s3
+ 6:B(KECCAK256_1)     s6 s0 s1 s2 s7 s3 . 
+ 7:DUP(4)             s2 s6 s0 s1 s2 s7 s3
+ 8:SWAP(2)            s0 s6 s2 s1 s2 s7 s3
+ 9:S(MSTORE_0)        s2 s1 s2 s7 s3 .  . 
+10:S(MSTORE_1)        s2 s7 s3 .  .  .  . 
+11:B(KECCAK256_0)     s4 s3 .  .  .  .  . 
+12:U(SLOAD_0)         s5 s3 .  .  .  .  . 
+13:DUP(2)             s3 s5 s3 .  .  .  . 
+14:NOP                s3 s5 s3 .  .  .  . 
+length = 13;
+gas = 2190;
+bytes = 14; 
+solution = [SWAP(1), P(PUSH_0), SWAP(3), DUP(4), DUP(4), B(KECCAK256_1), DUP(4), SWAP(2), S(MSTORE_0), S(MSTORE_1), B(KECCAK256_0), U(SLOAD_0), DUP(2), NOP]
+% time elapsed: 0.39 s
+----------
+                      s2 s1 s0 s3 .  .  . 
+ 1:SWAP(1)            s1 s2 s0 s3 .  .  . 
+ 2:DUP(2)             s2 s1 s2 s0 s3 .  . 
+ 3:P(PUSH_0)          s7 s2 s1 s2 s0 s3 . 
+ 4:DUP(4)             s2 s7 s2 s1 s2 s0 s3
+ 5:B(KECCAK256_1)     s6 s2 s1 s2 s0 s3 . 
+ 6:P(PUSH_0)          s7 s6 s2 s1 s2 s0 s3
+ 7:SWAP(5)            s0 s6 s2 s1 s2 s7 s3
+ 8:S(MSTORE_0)        s2 s1 s2 s7 s3 .  . 
+ 9:S(MSTORE_1)        s2 s7 s3 .  .  .  . 
+10:B(KECCAK256_0)     s4 s3 .  .  .  .  . 
+11:U(SLOAD_0)         s5 s3 .  .  .  .  . 
+12:DUP(2)             s3 s5 s3 .  .  .  . 
+13:NOP                s3 s5 s3 .  .  .  . 
+14:NOP                s3 s5 s3 .  .  .  . 
+length = 12;
+gas = 2187;
+bytes = 14; 
+solution = [SWAP(1), DUP(2), P(PUSH_0), DUP(4), B(KECCAK256_1), P(PUSH_0), SWAP(5), S(MSTORE_0), S(MSTORE_1), B(KECCAK256_0), U(SLOAD_0), DUP(2), NOP, NOP]
+% time elapsed: 0.40 s
+----------
+==========
+% time elapsed: 0.42 s
+%%%mzn-stat: nodes=1321
+%%%mzn-stat: failures=528
+%%%mzn-stat: restarts=3
+%%%mzn-stat: variables=14198
+%%%mzn-stat: intVars=641
+%%%mzn-stat: boolVariables=13555
+%%%mzn-stat: propagators=2182
+%%%mzn-stat: propagations=369497
+%%%mzn-stat: peakDepth=82
+%%%mzn-stat: nogoods=528
+%%%mzn-stat: backjumps=560
+%%%mzn-stat: peakMem=0.00
+%%%mzn-stat: time=0.107
+%%%mzn-stat: initTime=0.052
+%%%mzn-stat: solveTime=0.055
+%%%mzn-stat: objective=12
+%%%mzn-stat: optTime=0.040
+%%%mzn-stat: baseMem=0.00
+%%%mzn-stat: trailMem=0.63
+%%%mzn-stat: randomSeed=1734616812
+%%%mzn-stat: nSolutions=3
+%%%mzn-stat-end

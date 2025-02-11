@@ -8,10 +8,12 @@ import global_params.constants as constants
 
 def rebuild_optimized_asm_block(previous_block : AsmBlock, sub_block_list : List[str],
                                 optimize_blocks_by_name : Dict[str, List[AsmBytecode]]) -> AsmBlock:
+
     optimized_instructions = []
 
     previous_instructions = previous_block.instructions
     instr_idx = 0
+
 
     previously_optimized = False
 

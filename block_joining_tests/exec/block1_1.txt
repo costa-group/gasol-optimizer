@@ -1,0 +1,105 @@
+14
+Optimizing isolated_block_0_0... Timeout:2
+[id: 0, len: 14, min_size: 3, min_pos: 7]
+
+extended_reverse:  ['PUSH_2', 'PUSH_1', 'ADD_2', 'PUSH_1_1', 'DIV_0', 'PUSH_1_2', 'MUL_0', 'PUSH_0', 'ADD_1', 'MLOAD_0', 'ADD_0']
+min_pos: 8, min_size: 4
+splittocsv: 8;14
+Command: /home/nicolas/repos/gasol-optimizer/bin/MiniZincIDE-2.6.4-bundle-linux-x86_64/bin/minizinc --solver Chuffed --time-limit 2000 --output-time --intermediate-solutions -s dzn/evmopt-generic.mzn  /tmp/tmpv5b2dpnc.dzn
+% Generated FlatZinc statistics:
+%%%mzn-stat: paths=0
+%%%mzn-stat: flatBoolVars=1950
+%%%mzn-stat: flatIntVars=552
+%%%mzn-stat: flatBoolConstraints=1180
+%%%mzn-stat: flatIntConstraints=2145
+%%%mzn-stat: evaluatedReifiedConstraints=1142
+%%%mzn-stat: evaluatedHalfReifiedConstraints=712
+%%%mzn-stat: eliminatedImplications=98
+%%%mzn-stat: method="minimize"
+%%%mzn-stat: flatTime=0.207273
+%%%mzn-stat-end
+                      s0  s1  .   .   .   .   .  
+ 1:P(PUSH_0)          s8  s0  s1  .   .   .   .  
+ 2:U(MLOAD_0)         s3  s0  s1  .   .   .   .  
+ 3:SWAP(2)            s1  s0  s3  .   .   .   .  
+ 4:P(PUSH_1)          s9  s1  s0  s3  .   .   .  
+ 5:DUP(3)             s0  s9  s1  s0  s3  .   .  
+ 6:P(PUSH_2)          s10 s0  s9  s1  s0  s3  .  
+ 7:B(ADD_2)           s7  s9  s1  s0  s3  .   .  
+ 8:B(DIV_0)           s6  s1  s0  s3  .   .   .  
+ 9:P(PUSH_1)          s9  s6  s1  s0  s3  .   .  
+10:B(MUL_0)           s5  s1  s0  s3  .   .   .  
+11:P(PUSH_1)          s9  s5  s1  s0  s3  .   .  
+12:B(ADD_1)           s4  s1  s0  s3  .   .   .  
+13:DUP(4)             s3  s4  s1  s0  s3  .   .  
+14:B(ADD_0)           s2  s1  s0  s3  .   .   .  
+length = 14;
+gas = 46;
+bytes = 19; 
+solution = [P(PUSH_0), U(MLOAD_0), SWAP(2), P(PUSH_1), DUP(3), P(PUSH_2), B(ADD_2), B(DIV_0), P(PUSH_1), B(MUL_0), P(PUSH_1), B(ADD_1), DUP(4), B(ADD_0)]
+% time elapsed: 0.31 s
+----------
+==========
+% time elapsed: 0.33 s
+%%%mzn-stat: nodes=405
+%%%mzn-stat: failures=151
+%%%mzn-stat: restarts=1
+%%%mzn-stat: variables=16483
+%%%mzn-stat: intVars=577
+%%%mzn-stat: boolVariables=15904
+%%%mzn-stat: propagators=2052
+%%%mzn-stat: propagations=132154
+%%%mzn-stat: peakDepth=97
+%%%mzn-stat: nogoods=151
+%%%mzn-stat: backjumps=156
+%%%mzn-stat: peakMem=0.00
+%%%mzn-stat: time=0.067
+%%%mzn-stat: initTime=0.043
+%%%mzn-stat: solveTime=0.024
+%%%mzn-stat: objective=14
+%%%mzn-stat: optTime=0.009
+%%%mzn-stat: baseMem=0.00
+%%%mzn-stat: trailMem=0.05
+%%%mzn-stat: randomSeed=1734610935
+%%%mzn-stat: nSolutions=1
+%%%mzn-stat-end
+
+{U(MLOAD_0), B(ADD_0), B(ADD_1), B(MUL_0), B(DIV_0), B(ADD_2), P(PUSH_0), P(PUSH_1), P(PUSH_2), DUP(1), DUP(2), DUP(3), DUP(4), DUP(5), DUP(6), DUP(7), SWAP(1), SWAP(2), SWAP(3), SWAP(4), SWAP(5), SWAP(6), POP, NOP}
+uses: [2, 2, 1, 1, 2, 1, 1, 1, 1, 1, 3, 1]
+creates: [., s3, s2, s4, s5, s6, s7, s8, s9, s10, ., ., ., ., ., ., ., ., ., ., ., ., ., ., ., .]
+creator: [U(MLOAD_0), B(ADD_0), B(ADD_1), B(MUL_0), B(DIV_0), B(ADD_2), P(PUSH_0), P(PUSH_1), P(PUSH_2)]
+maxdups = 4 maxpops = 0 uses: 17 null = 2 unused: {} creates something: 9 startlength: 2
+lcount: [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+ucount: [0, 1, 1, 1, 1, 1, 1, 1, 3, 1, 0, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 0, 5]
+MLOAD_0 -> s8:U -> P(PUSH_0)
+ADD_1 -> s9:1Z -> P(PUSH_1)
+MUL_0 -> s9:1Z -> P(PUSH_1)
+ADD_2 -> s10:1Z -> P(PUSH_2)
+DIV_0 -> s7:1N -> B(ADD_2)
+WARNING: the --time-out flag has recently been changed.The time-out is now provided in milliseconds instead of seconds
+
+['PUSH_0', 'MLOAD_0', 'SWAP2', 'PUSH_1', 'DUP3', 'PUSH_2', 'ADD_2', 'DIV_0', 'PUSH_1', 'MUL_0', 'PUSH_1', 'ADD_1', 'DUP4', 'ADD_0']
+14
+14
+
+Initial sequence (basic block per line):
+PUSH1 0x40 MLOAD SWAP2 PUSH1 0x20 DUP3 PUSH1 0x1f ADD DIV PUSH1 0x20 MUL PUSH1 0x20 ADD DUP4 ADD
+
+Optimized sequence (basic block per line):
+PUSH1 0x40 MLOAD SWAP2 PUSH1 0x20 DUP3 PUSH1 0x1f ADD DIV PUSH1 0x20 MUL PUSH1 0x20 ADD DUP4 ADD
+
+Total time: 0.43 s
+
+Intermediate files stored at /tmp/gasol_b19852ec95f94169abbeb922fdda6da5/
+
+Optimized code stored in block1_1_optimized.json_solc
+Optimality results stored in block1_1_statistics_seq.csv
+
+Estimated initial gas: 46
+Estimated gas optimized: 46
+
+Estimated initial size in bytes: 19
+Estimated size optimized in bytes: 19
+
+Initial number of instructions: 14
+Final number of instructions: 14

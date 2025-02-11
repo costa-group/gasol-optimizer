@@ -1,0 +1,111 @@
+% Generated FlatZinc statistics:
+%%%mzn-stat: paths=0
+%%%mzn-stat: flatBoolVars=2733
+%%%mzn-stat: flatIntVars=752
+%%%mzn-stat: flatBoolConstraints=1538
+%%%mzn-stat: flatIntConstraints=2991
+%%%mzn-stat: evaluatedReifiedConstraints=1799
+%%%mzn-stat: evaluatedHalfReifiedConstraints=875
+%%%mzn-stat: eliminatedImplications=181
+%%%mzn-stat: method="minimize"
+%%%mzn-stat: flatTime=0.275802
+%%%mzn-stat-end
+                      s0 s4 s3 s1 .  .  .  .  .  . 
+ 1:P(PUSH_1)          s6 s0 s4 s3 s1 .  .  .  .  . 
+ 2:S(MSTORE_0)        s4 s3 s1 .  .  .  .  .  .  . 
+ 3:SWAP(2)            s1 s3 s4 .  .  .  .  .  .  . 
+ 4:SWAP(1)            s3 s1 s4 .  .  .  .  .  .  . 
+ 5:DUP(1)             s3 s3 s1 s4 .  .  .  .  .  . 
+ 6:DUP(4)             s4 s3 s3 s1 s4 .  .  .  .  . 
+ 7:P(PUSH_0)          s5 s4 s3 s3 s1 s4 .  .  .  . 
+ 8:B(ADD_0)           s2 s3 s3 s1 s4 .  .  .  .  . 
+ 9:DUP(4)             s1 s2 s3 s3 s1 s4 .  .  .  . 
+10:DUP(4)             s3 s1 s2 s3 s3 s1 s4 .  .  . 
+11:DUP(5)             s3 s3 s1 s2 s3 s3 s1 s4 .  . 
+12:DUP(8)             s4 s3 s3 s1 s2 s3 s3 s1 s4 . 
+13:DUP(7)             s3 s4 s3 s3 s1 s2 s3 s3 s1 s4
+14:SWAP(2)            s3 s4 s3 s3 s1 s2 s3 s3 s1 s4
+15:SWAP(1)            s4 s3 s3 s3 s1 s2 s3 s3 s1 s4
+16:S(MSTORE_1)        s3 s3 s1 s2 s3 s3 s1 s4 .  . 
+17:DUP(7)             s1 s3 s3 s1 s2 s3 s3 s1 s4 . 
+18:DUP(5)             s2 s1 s3 s3 s1 s2 s3 s3 s1 s4
+length = 18;
+gas = 54;
+bytes = 20; 
+solution = [P(PUSH_1), S(MSTORE_0), SWAP(2), SWAP(1), DUP(1), DUP(4), P(PUSH_0), B(ADD_0), DUP(4), DUP(4), DUP(5), DUP(8), DUP(7), SWAP(2), SWAP(1), S(MSTORE_1), DUP(7), DUP(5)]
+% time elapsed: 0.87 s
+----------
+                      s0 s4 s3 s1 .  .  .  .  .  . 
+ 1:P(PUSH_1)          s6 s0 s4 s3 s1 .  .  .  .  . 
+ 2:S(MSTORE_0)        s4 s3 s1 .  .  .  .  .  .  . 
+ 3:DUP(2)             s3 s4 s3 s1 .  .  .  .  .  . 
+ 4:DUP(2)             s4 s3 s4 s3 s1 .  .  .  .  . 
+ 5:P(PUSH_0)          s5 s4 s3 s4 s3 s1 .  .  .  . 
+ 6:B(ADD_0)           s2 s3 s4 s3 s1 .  .  .  .  . 
+ 7:DUP(5)             s1 s2 s3 s4 s3 s1 .  .  .  . 
+ 8:DUP(5)             s3 s1 s2 s3 s4 s3 s1 .  .  . 
+ 9:DUP(6)             s3 s3 s1 s2 s3 s4 s3 s1 .  . 
+10:DUP(7)             s3 s3 s3 s1 s2 s3 s4 s3 s1 . 
+11:DUP(7)             s4 s3 s3 s3 s1 s2 s3 s4 s3 s1
+12:S(MSTORE_1)        s3 s3 s1 s2 s3 s4 s3 s1 .  . 
+13:DUP(8)             s1 s3 s3 s1 s2 s3 s4 s3 s1 . 
+14:SWAP(7)            s3 s3 s3 s1 s2 s3 s4 s1 s1 . 
+15:SWAP(6)            s4 s3 s3 s1 s2 s3 s3 s1 s1 . 
+16:SWAP(8)            s1 s3 s3 s1 s2 s3 s3 s1 s4 . 
+17:DUP(5)             s2 s1 s3 s3 s1 s2 s3 s3 s1 s4
+18:NOP                s2 s1 s3 s3 s1 s2 s3 s3 s1 s4
+length = 17;
+gas = 51;
+bytes = 19; 
+solution = [P(PUSH_1), S(MSTORE_0), DUP(2), DUP(2), P(PUSH_0), B(ADD_0), DUP(5), DUP(5), DUP(6), DUP(7), DUP(7), S(MSTORE_1), DUP(8), SWAP(7), SWAP(6), SWAP(8), DUP(5), NOP]
+% time elapsed: 1.09 s
+----------
+                      s0 s4 s3 s1 .  .  .  .  .  . 
+ 1:P(PUSH_1)          s6 s0 s4 s3 s1 .  .  .  .  . 
+ 2:S(MSTORE_0)        s4 s3 s1 .  .  .  .  .  .  . 
+ 3:SWAP(2)            s1 s3 s4 .  .  .  .  .  .  . 
+ 4:SWAP(1)            s3 s1 s4 .  .  .  .  .  .  . 
+ 5:DUP(1)             s3 s3 s1 s4 .  .  .  .  .  . 
+ 6:DUP(4)             s4 s3 s3 s1 s4 .  .  .  .  . 
+ 7:DUP(3)             s3 s4 s3 s3 s1 s4 .  .  .  . 
+ 8:DUP(6)             s4 s3 s4 s3 s3 s1 s4 .  .  . 
+ 9:S(MSTORE_1)        s4 s3 s3 s1 s4 .  .  .  .  . 
+10:P(PUSH_0)          s5 s4 s3 s3 s1 s4 .  .  .  . 
+11:B(ADD_0)           s2 s3 s3 s1 s4 .  .  .  .  . 
+12:DUP(4)             s1 s2 s3 s3 s1 s4 .  .  .  . 
+13:DUP(4)             s3 s1 s2 s3 s3 s1 s4 .  .  . 
+14:DUP(5)             s3 s3 s1 s2 s3 s3 s1 s4 .  . 
+15:DUP(7)             s1 s3 s3 s1 s2 s3 s3 s1 s4 . 
+16:DUP(5)             s2 s1 s3 s3 s1 s2 s3 s3 s1 s4
+17:NOP                s2 s1 s3 s3 s1 s2 s3 s3 s1 s4
+18:NOP                s2 s1 s3 s3 s1 s2 s3 s3 s1 s4
+length = 16;
+gas = 48;
+bytes = 18; 
+solution = [P(PUSH_1), S(MSTORE_0), SWAP(2), SWAP(1), DUP(1), DUP(4), DUP(3), DUP(6), S(MSTORE_1), P(PUSH_0), B(ADD_0), DUP(4), DUP(4), DUP(5), DUP(7), DUP(5), NOP, NOP]
+% time elapsed: 1.27 s
+----------
+==========
+% time elapsed: 1.48 s
+%%%mzn-stat: nodes=12224
+%%%mzn-stat: failures=6864
+%%%mzn-stat: restarts=3
+%%%mzn-stat: variables=20152
+%%%mzn-stat: intVars=834
+%%%mzn-stat: boolVariables=19316
+%%%mzn-stat: propagators=3566
+%%%mzn-stat: propagations=8213883
+%%%mzn-stat: peakDepth=88
+%%%mzn-stat: nogoods=6864
+%%%mzn-stat: backjumps=5106
+%%%mzn-stat: peakMem=0.00
+%%%mzn-stat: time=1.127
+%%%mzn-stat: initTime=0.074
+%%%mzn-stat: solveTime=1.053
+%%%mzn-stat: objective=16
+%%%mzn-stat: optTime=0.842
+%%%mzn-stat: baseMem=0.00
+%%%mzn-stat: trailMem=0.08
+%%%mzn-stat: randomSeed=1734612576
+%%%mzn-stat: nSolutions=3
+%%%mzn-stat-end

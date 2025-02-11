@@ -1,0 +1,123 @@
+% Generated FlatZinc statistics:
+%%%mzn-stat: paths=0
+%%%mzn-stat: flatBoolVars=4445
+%%%mzn-stat: flatIntVars=1203
+%%%mzn-stat: flatBoolConstraints=2517
+%%%mzn-stat: flatIntConstraints=4891
+%%%mzn-stat: evaluatedReifiedConstraints=2765
+%%%mzn-stat: evaluatedHalfReifiedConstraints=1599
+%%%mzn-stat: eliminatedImplications=288
+%%%mzn-stat: method="minimize"
+%%%mzn-stat: flatTime=0.352812
+%%%mzn-stat-end
+                      s0  s1  s5  s6  s7  s8  .   .   .   .   .  
+ 1:P(PUSH_5)          s16 s0  s1  s5  s6  s7  s8  .   .   .   .  
+ 2:U(MLOAD_0)         s10 s0  s1  s5  s6  s7  s8  .   .   .   .  
+ 3:DUP(7)             s8  s10 s0  s1  s5  s6  s7  s8  .   .   .  
+ 4:DUP(2)             s10 s8  s10 s0  s1  s5  s6  s7  s8  .   .  
+ 5:P(PUSH_4)          s15 s10 s8  s10 s0  s1  s5  s6  s7  s8  .  
+ 6:B(ADD_2)           s9  s8  s10 s0  s1  s5  s6  s7  s8  .   .  
+ 7:P(PUSH_2)          s13 s9  s8  s10 s0  s1  s5  s6  s7  s8  .  
+ 8:P(PUSH_1)          s12 s13 s9  s8  s10 s0  s1  s5  s6  s7  s8 
+ 9:B(SHL_0)           s3  s9  s8  s10 s0  s1  s5  s6  s7  s8  .  
+10:DUP(2)             s9  s3  s9  s8  s10 s0  s1  s5  s6  s7  s8 
+11:SWAP(4)            s10 s3  s9  s8  s9  s0  s1  s5  s6  s7  s8 
+12:S(MSTORE_0)        s9  s8  s9  s0  s1  s5  s6  s7  s8  .   .  
+13:S(MSTORE_1)        s9  s0  s1  s5  s6  s7  s8  .   .   .   .  
+14:DUP(1)             s9  s9  s0  s1  s5  s6  s7  s8  .   .   .  
+15:P(PUSH_5)          s16 s9  s9  s0  s1  s5  s6  s7  s8  .   .  
+16:DUP(3)             s9  s16 s9  s9  s0  s1  s5  s6  s7  s8  .  
+17:P(PUSH_3)          s14 s9  s16 s9  s9  s0  s1  s5  s6  s7  s8 
+18:B(ADD_1)           s4  s16 s9  s9  s0  s1  s5  s6  s7  s8  .  
+19:S(MSTORE_2)        s9  s9  s0  s1  s5  s6  s7  s8  .   .   .  
+20:P(PUSH_0)          s11 s9  s9  s0  s1  s5  s6  s7  s8  .   .  
+21:B(ADD_0)           s2  s9  s0  s1  s5  s6  s7  s8  .   .   .  
+22:SWAP(7)            s8  s9  s0  s1  s5  s6  s7  s2  .   .   .  
+length = 22;
+gas = 66;
+bytes = 32; 
+solution = [P(PUSH_5), U(MLOAD_0), DUP(7), DUP(2), P(PUSH_4), B(ADD_2), P(PUSH_2), P(PUSH_1), B(SHL_0), DUP(2), SWAP(4), S(MSTORE_0), S(MSTORE_1), DUP(1), P(PUSH_5), DUP(3), P(PUSH_3), B(ADD_1), S(MSTORE_2), P(PUSH_0), B(ADD_0), SWAP(7)]
+% time elapsed: 1.94 s
+----------
+                      s0  s1  s5  s6  s7  s8  .   .   .   .   .  
+ 1:P(PUSH_5)          s16 s0  s1  s5  s6  s7  s8  .   .   .   .  
+ 2:U(MLOAD_0)         s10 s0  s1  s5  s6  s7  s8  .   .   .   .  
+ 3:P(PUSH_2)          s13 s10 s0  s1  s5  s6  s7  s8  .   .   .  
+ 4:P(PUSH_1)          s12 s13 s10 s0  s1  s5  s6  s7  s8  .   .  
+ 5:B(SHL_0)           s3  s10 s0  s1  s5  s6  s7  s8  .   .   .  
+ 6:DUP(2)             s10 s3  s10 s0  s1  s5  s6  s7  s8  .   .  
+ 7:S(MSTORE_0)        s10 s0  s1  s5  s6  s7  s8  .   .   .   .  
+ 8:P(PUSH_4)          s15 s10 s0  s1  s5  s6  s7  s8  .   .   .  
+ 9:B(ADD_2)           s9  s0  s1  s5  s6  s7  s8  .   .   .   .  
+10:DUP(1)             s9  s9  s0  s1  s5  s6  s7  s8  .   .   .  
+11:P(PUSH_0)          s11 s9  s9  s0  s1  s5  s6  s7  s8  .   .  
+12:B(ADD_0)           s2  s9  s0  s1  s5  s6  s7  s8  .   .   .  
+13:P(PUSH_5)          s16 s2  s9  s0  s1  s5  s6  s7  s8  .   .  
+14:DUP(9)             s8  s16 s2  s9  s0  s1  s5  s6  s7  s8  .  
+15:DUP(4)             s9  s8  s16 s2  s9  s0  s1  s5  s6  s7  s8 
+16:S(MSTORE_1)        s16 s2  s9  s0  s1  s5  s6  s7  s8  .   .  
+17:DUP(3)             s9  s16 s2  s9  s0  s1  s5  s6  s7  s8  .  
+18:SWAP(3)            s9  s16 s2  s9  s0  s1  s5  s6  s7  s8  .  
+19:P(PUSH_3)          s14 s9  s16 s2  s9  s0  s1  s5  s6  s7  s8 
+20:B(ADD_1)           s4  s16 s2  s9  s0  s1  s5  s6  s7  s8  .  
+21:S(MSTORE_2)        s2  s9  s0  s1  s5  s6  s7  s8  .   .   .  
+22:NOP                s2  s9  s0  s1  s5  s6  s7  s8  .   .   .  
+length = 21;
+gas = 63;
+bytes = 31; 
+solution = [P(PUSH_5), U(MLOAD_0), P(PUSH_2), P(PUSH_1), B(SHL_0), DUP(2), S(MSTORE_0), P(PUSH_4), B(ADD_2), DUP(1), P(PUSH_0), B(ADD_0), P(PUSH_5), DUP(9), DUP(4), S(MSTORE_1), DUP(3), SWAP(3), P(PUSH_3), B(ADD_1), S(MSTORE_2), NOP]
+% time elapsed: 2.26 s
+----------
+                      s0  s1  s5  s6  s7  s8  .   .   .   .   .  
+ 1:P(PUSH_5)          s16 s0  s1  s5  s6  s7  s8  .   .   .   .  
+ 2:U(MLOAD_0)         s10 s0  s1  s5  s6  s7  s8  .   .   .   .  
+ 3:P(PUSH_2)          s13 s10 s0  s1  s5  s6  s7  s8  .   .   .  
+ 4:P(PUSH_1)          s12 s13 s10 s0  s1  s5  s6  s7  s8  .   .  
+ 5:B(SHL_0)           s3  s10 s0  s1  s5  s6  s7  s8  .   .   .  
+ 6:DUP(2)             s10 s3  s10 s0  s1  s5  s6  s7  s8  .   .  
+ 7:S(MSTORE_0)        s10 s0  s1  s5  s6  s7  s8  .   .   .   .  
+ 8:P(PUSH_4)          s15 s10 s0  s1  s5  s6  s7  s8  .   .   .  
+ 9:B(ADD_2)           s9  s0  s1  s5  s6  s7  s8  .   .   .   .  
+10:DUP(1)             s9  s9  s0  s1  s5  s6  s7  s8  .   .   .  
+11:P(PUSH_0)          s11 s9  s9  s0  s1  s5  s6  s7  s8  .   .  
+12:B(ADD_0)           s2  s9  s0  s1  s5  s6  s7  s8  .   .   .  
+13:P(PUSH_5)          s16 s2  s9  s0  s1  s5  s6  s7  s8  .   .  
+14:DUP(9)             s8  s16 s2  s9  s0  s1  s5  s6  s7  s8  .  
+15:DUP(4)             s9  s8  s16 s2  s9  s0  s1  s5  s6  s7  s8 
+16:S(MSTORE_1)        s16 s2  s9  s0  s1  s5  s6  s7  s8  .   .  
+17:DUP(3)             s9  s16 s2  s9  s0  s1  s5  s6  s7  s8  .  
+18:P(PUSH_3)          s14 s9  s16 s2  s9  s0  s1  s5  s6  s7  s8 
+19:B(ADD_1)           s4  s16 s2  s9  s0  s1  s5  s6  s7  s8  .  
+20:S(MSTORE_2)        s2  s9  s0  s1  s5  s6  s7  s8  .   .   .  
+21:NOP                s2  s9  s0  s1  s5  s6  s7  s8  .   .   .  
+22:NOP                s2  s9  s0  s1  s5  s6  s7  s8  .   .   .  
+length = 20;
+gas = 60;
+bytes = 30; 
+solution = [P(PUSH_5), U(MLOAD_0), P(PUSH_2), P(PUSH_1), B(SHL_0), DUP(2), S(MSTORE_0), P(PUSH_4), B(ADD_2), DUP(1), P(PUSH_0), B(ADD_0), P(PUSH_5), DUP(9), DUP(4), S(MSTORE_1), DUP(3), P(PUSH_3), B(ADD_1), S(MSTORE_2), NOP, NOP]
+% time elapsed: 2.28 s
+----------
+==========
+% time elapsed: 2.35 s
+%%%mzn-stat: nodes=19264
+%%%mzn-stat: failures=7126
+%%%mzn-stat: restarts=3
+%%%mzn-stat: variables=45897
+%%%mzn-stat: intVars=1330
+%%%mzn-stat: boolVariables=44565
+%%%mzn-stat: propagators=5723
+%%%mzn-stat: propagations=11443915
+%%%mzn-stat: peakDepth=223
+%%%mzn-stat: nogoods=7126
+%%%mzn-stat: backjumps=11675
+%%%mzn-stat: peakMem=0.00
+%%%mzn-stat: time=1.877
+%%%mzn-stat: initTime=0.148
+%%%mzn-stat: solveTime=1.729
+%%%mzn-stat: objective=20
+%%%mzn-stat: optTime=1.672
+%%%mzn-stat: baseMem=0.00
+%%%mzn-stat: trailMem=0.12
+%%%mzn-stat: randomSeed=1738670409
+%%%mzn-stat: nSolutions=3
+%%%mzn-stat-end
