@@ -18,8 +18,6 @@ from smt_encoding.json_with_dependencies import extended_json_with_minlength, in
 from typing import Optional, List, Tuple
 import networkx as nx
 
-from split_stack_calculator.split_calculator import Split_calculator, Stack_split
-
 terminate_block = ["ASSERTFAIL","RETURN","REVERT","SUICIDE","STOP"]
 
 pre_defined_functions = ["PUSH","POP","SWAP","DUP"]
@@ -3239,6 +3237,7 @@ def generate_subblocks(rule,list_subblocks,isolated,sub_block_name,simplificatio
         seq = range(ts_idx,-1,-1)
         target_stack = list(map(lambda x: "s("+str(x)+")",seq))
 
+
         # target_stack = target_stack[1:]
 
         new_nexts, pops2remove = translate_subblock(rule,block,source_stack,target_stack,source_stack_idx,i,list_subblocks[i+1],sub_block_name,simplification,pops2remove)
@@ -3703,7 +3702,7 @@ def compute_max_program_len(opcodes, num_guard,block = None):
     return len(new_opcodes)
     
 
-def smt_translate_block(rule,file_name,block_name,immutable_dict,simplification=True,storage = False, size = False, part = False, pop = False, push = False, revert = False,extra_dependences_info={},extra_opt_info= {}, debug_info = False, split_mode = None):
+def smt_translate_block(rule,file_name,block_name,immutable_dict,simplification=True,storage = False, size = False, part = False, pop = False, push = False, revert = False,extra_dependences_info={},extra_opt_info= {}, debug_info = False):
     global s_counter
     global max_instr_size
     global int_not0
@@ -3774,14 +3773,10 @@ def smt_translate_block(rule,file_name,block_name,immutable_dict,simplification=
 
         original_ins = ops
 
-        if part or split_mode != "none":
+        if part :
             if len(opcodes) >= max_bound and not split_sto:
                 stores_pos = compute_position_stores(opcodes)
                 where2split = split_by_numbers(stores_pos)
-
-                if split_mode != "none":
-                    split_calculator = Split_calculator()
-                    where2split = [split_calculator.min_split_point_candidate[-1].min_pos]
 
                 if where2split == []:
                     subblocks = [opcodes]
@@ -7118,7 +7113,7 @@ def is_atomic(var,sstack):
         return False
 
     
-def generate_subblocks2split(rule,part,split_sto,split_mode=None):
+def generate_subblocks2split(rule,part,split_sto):
 
     instructions = filter_opcodes(rule)
     opcodes = get_opcodes(rule)    
@@ -7129,14 +7124,10 @@ def generate_subblocks2split(rule,part,split_sto,split_mode=None):
 
         original_ins = ops
 
-        if part or split_mode is not None:
+        if part:
             if len(opcodes) > max_bound and not split_sto:
                 stores_pos = compute_position_stores(opcodes)
                 where2split = split_by_numbers(stores_pos)
-
-                if split_mode is not None:
-                    split_calculator = Split_calculator()
-                    where2split = [split_calculator.min_split_point_candidate[-1].min_pos]
 
                 if where2split == []:
                     subblocks = [opcodes]

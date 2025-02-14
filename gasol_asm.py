@@ -27,7 +27,7 @@ from sfs_generator.parser_asm import (parse_asm, parse_json_asm,
                                       parse_blocks_from_plain_instructions)
 from sfs_generator.utils import process_blocks_split
 from verification.sfs_verify import verify_block_from_list_of_sfs, are_equals
-from solution_generation.optimize_from_sub_blocks import rebuild_optimized_asm_block
+from solution_generation.optimize_from_sub_blocks import rebuild_optimized_asm_block, rebuild_optimized_asm_block_minstack
 from sfs_generator.asm_block import AsmBlock, AsmBytecode
 from sfs_generator.asm_contract import AsmContract
 from smt_encoding.block_optimizer import BlockOptimizer, OptimizeOutcome
@@ -92,7 +92,7 @@ def create_ml_models(params: OptimizationParams) -> None:
         params.optimized_predictor_model = opt_predictor.ModelQuery(model_name, conf)
 
 
-def compute_original_sfs_with_simplifications(block: AsmBlock, params: OptimizationParams, split_mode="none"):
+def compute_original_sfs_with_simplifications(block: AsmBlock, params: OptimizationParams):
     stack_size = block.source_stack
     block_name = block.block_name
     block_id = block.block_id
@@ -111,7 +111,7 @@ def compute_original_sfs_with_simplifications(block: AsmBlock, params: Optimizat
                                   simplification=params.rules_enabled, storage=params.split_storage,
                                   size=params.size_rules_enabled, part=params.split_partition,
                                   pop=params.pop_uninterpreted, push=not params.push_basic, revert=revert_flag,
-                                  debug_info=params.verbose, split_mode=split_mode)
+                                  debug_info=params.verbose)
 
     sfs_dict = get_sfs_dict()
 
@@ -228,39 +228,35 @@ def optimize_block(sfs_dict, params: OptimizationParams) -> List[Tuple[AsmBlock,
     # stack are eliminated preserving the order. The input portion of the stack is the portion in which we have the same elements
     # we can find in the source_stack (if there is such portion we dont want to modify it). The output portion is the other portion
     block_names = [name for name in sfs_dict]
-    eliminates_mstore = True # TODO_Nico: flag que representa si entre el primer bloque y el segundo se ha eliminado un mstore modificar para que sea dinamico
 
-    if params.split_block == "ordered" and len(sfs_dict) == 2: 
+    if params.split_block == "ordered" or params.split_block == "not-ordered": 
+        assert len(sfs_dict) == 2 # the ordered and not-ordered execution must be made with two blocks
         element_correspondence = {}
         blk1_tgt = []
-        total_block = {}
-
 
         tblk = {}
         blk1 = sfs_dict[block_names[0]]
         blk2 = sfs_dict[block_names[1]]
 
         
-        print("blk tgt", blk1["tgt_ws"])
-        blk1_tgt_tmp = blk1["tgt_ws"][2:] # TODO_Nico: hacer bien (hago esto porque tengo que tener en cuenta el comportamiento de un MSTORE)
-        print("blk tgt", blk1["tgt_ws"])
+        blk1_tgt = blk1["tgt_ws"]
 
-
-        element_correspondence = get_blk1_blk2_correspondance(sfs_dict[block_names[0]]["tgt_ws"], sfs_dict[block_names[1]]["tgt_ws"])
+        element_correspondence = get_blk1_blk2_correspondance(blk1_tgt, sfs_dict[block_names[1]]["src_ws"])
+        # print("element_correspondence: ", element_correspondence)
 
         #total_blk_calculation
-        if len(blk1["tgt_ws"]) > len(blk2["src_ws"]):
+        if len(blk1_tgt) > len(blk2["src_ws"]):
             #tblk.src = blk1.src
             tblk["src_ws"] = [extend_stack_element(100, elem) for elem in blk1["src_ws"]] 
 
             #tblk.tgt = [blk2.tgt|blk1.src']
             tblk["tgt_ws"] = [extend_stack_element(200, elem) for elem in blk2["tgt_ws"]] \
-                           + [extend_stack_element(100, elem) for elem in blk1["tgt_ws"][len(blk2["src_ws"]):]] 
+                           + [extend_stack_element(100, elem) for elem in blk1_tgt[len(blk2["src_ws"]):]] 
 
-        elif len(blk1["tgt_ws"]) < len(blk2["src_ws"]):
+        elif len(blk1_tgt) < len(blk2["src_ws"]):
             #tblk.src = [blk1.src|blk2.src']
             tblk["src_ws"] = [extend_stack_element(100, elem) for elem in blk1["src_ws"]] \
-                           + [extend_stack_element(200, elem) for elem in blk2["src_ws"][len(blk1["tgt_ws"]):]] 
+                           + [extend_stack_element(200, elem) for elem in blk2["src_ws"][len(blk1_tgt):]] 
 
             #tblk.tgt = blk2.tgt
             tblk["tgt_ws"] = [extend_stack_element(200, elem) for elem in blk2["tgt_ws"]] 
@@ -271,9 +267,6 @@ def optimize_block(sfs_dict, params: OptimizationParams) -> List[Tuple[AsmBlock,
             #tblk.tgt = blk2.tgt
             tblk["tgt_ws"] = [extend_stack_element(200, elem) for elem in blk2["tgt_ws"]]
 
-        print("instr_blk1: ", blk1["original_instrs"])
-        print("instr_blk2: ", blk2["original_instrs"])
-        
 
     # SFS dict of syrup contract contains all sub-blocks derived from a block after splitting
     for i, block_name in enumerate(sfs_dict):
@@ -309,12 +302,18 @@ def optimize_block(sfs_dict, params: OptimizationParams) -> List[Tuple[AsmBlock,
         if params.split_block == "ordered" and len(sfs_dict) == 2:
 
             if i == 0: #blk1_modification
-                out_portion, in_portion = separate_stack_portions(sfs_block["src_ws"], sfs_block["tgt_ws"])
+                target = sfs_block["tgt_ws"]
+
+                out_portion, in_portion = separate_stack_portions(sfs_block["src_ws"], target)
                 out_portion = eliminate_duplicates(out_portion)
                 blk1_tgt = out_portion + in_portion
+
+                target = out_portion + in_portion
+
                 sfs_block["tgt_ws"] = blk1_tgt
 
             if i == 1: #blk2_modification
+                blk1_tgt = blk1_tgt
 
                 init_stack = [element_correspondence[elem] for elem in blk1_tgt]
 
@@ -325,7 +324,7 @@ def optimize_block(sfs_dict, params: OptimizationParams) -> List[Tuple[AsmBlock,
 
                 
                 # 2. Modify the input stack by translating from the first block to the second
-                sfs_block["src_ws"] = init_stack
+                sfs_block["src_ws"] = init_stack + sfs_block["src_ws"][len(init_stack):]
 
                 # 3. Modify the output stack by translating from the total block to the second (if an element cant be mapped to the second, map to the first)
                 tgt_stack = get_tgt_stack(tblk, element_correspondence)
@@ -333,14 +332,7 @@ def optimize_block(sfs_dict, params: OptimizationParams) -> List[Tuple[AsmBlock,
 
                 # 4. Modify the bounds (min_stack, min_prog_len...)
                 sfs_block["max_sk_sz"] = sfs_block["max_sk_sz"] + len(sfs_block["vars"]) - original_var_len
-                sfs_block["init_progr_len"] = 26 # TODO_Nico 26 es prueba, hacer calculo automatico
-                sfs_block["min_length"] = 22
 
-                # print("blk2_tgt: ", sfs_block["tgt_ws"])
-                # print("blk2_tgt len: ", len(sfs_block["tgt_ws"]))
-
-                # print("tblk_tgt: ", tblk["tgt_ws"])
-                # print("tblk_tgt len: ", len(tblk["tgt_ws"]))
 
         # We have enabled the optimization process (otherwise, we just generate the intermediate SMT files)
         if params.dot_generation:
@@ -441,7 +433,7 @@ def merge_unique(arr1:List, arr2:List):
 # contains the sfs from each block, the second one contains the sequence of instructions and
 # the third one is a set that contains all block ids.
 def generate_sfs_dicts_from_log(block, json_log, params: OptimizationParams):
-    contracts_dict, sub_block_list = compute_original_sfs_with_simplifications(block, params, params.split_block)
+    contracts_dict, sub_block_list = compute_original_sfs_with_simplifications(block, params)
     syrup_contracts = contracts_dict["syrup_contract"]
 
     # Contains sfs blocks considered to check the SMT problem. Therefore, a block is added from
@@ -739,7 +731,7 @@ def optimize_asm_block_asm_format(block: AsmBlock, params: OptimizationParams) -
 
         instructions_to_optimize = block.instructions_to_optimize_plain()
         block_data = {"instructions": instructions_to_optimize, "input": stack_size}
-        sub_block_list = ir_block.get_subblocks(block_data, storage=params.split_storage, part=params.split_partition, split_mode=params.split_block)
+        sub_block_list = ir_block.get_subblocks(block_data, storage=params.split_storage, part=params.split_partition)
         subblocks2analyze = [instructions for instructions in process_blocks_split(sub_block_list)]
 
 
@@ -779,8 +771,30 @@ def optimize_asm_block_asm_format(block: AsmBlock, params: OptimizationParams) -
 
     else:
         try:
-            contracts_dict, sub_block_list = compute_original_sfs_with_simplifications(block, params, params.split_block)
+            if params.split_block != "none":
+
+                contracts_dict = {}
+                syrup_contract = {}
+                sub_block_list = []
+
+                #split block
+                split_calculator = Split_calculator()
+                min_stack, instr_num = split_calculator.calculate_minstack_split(block)
+
+                #create new contracts_dict with the subblocks
+                for i, blk in enumerate(block.divide_block(instr_num)):
+                    partial_contracts_dict, partial_sub_block_list = compute_original_sfs_with_simplifications(blk, params)
+
+                    syrup_contract[blk.block_name + f"_{i}"] = partial_contracts_dict["syrup_contract"][blk.block_name + "_0"]
+                    sub_block_list.extend(partial_sub_block_list)
+
+                contracts_dict["syrup_contract"] = syrup_contract
+
+            else:
+                contracts_dict, sub_block_list = compute_original_sfs_with_simplifications(block, params, params.split_block)
+            
         except Exception as e:
+            print(e)
             failed_row = {'instructions': instructions, 'exception': str(e)}
             return new_block, {}, []
 
@@ -815,9 +829,13 @@ def optimize_asm_block_asm_format(block: AsmBlock, params: OptimizationParams) -
             sub_block_name = sub_block.block_name
 
             # TODO_Nico: hacer que cuando la suma de las instrucciones sea mayor al original se descarte
-            if params.split_block == "ordered": 
+            if params.split_block != "none": 
                 optimized_blocks[sub_block_name] = optimized_asm
                 log_dicts[sub_block_name] = optimized_log_rep
+                new_block = rebuild_optimized_asm_block_minstack(block, sub_block_list, optimized_blocks)
+                if not block_has_been_optimized(block, new_block, params.criteria):
+                    optimized_blocks = {}
+                    log_dicts = {}
             else:
                 if block_has_been_optimized(sub_block, optimal_block, params.criteria):
                     optimized_blocks[sub_block_name] = optimized_asm
@@ -825,7 +843,8 @@ def optimize_asm_block_asm_format(block: AsmBlock, params: OptimizationParams) -
                 else:
                     optimized_blocks[sub_block_name] = None
 
-    new_block = rebuild_optimized_asm_block(block, sub_block_list, optimized_blocks)
+    if params.split_block == "none":
+        new_block = rebuild_optimized_asm_block(block, sub_block_list, optimized_blocks)
 
     return new_block, log_dicts, csv_statistics
 

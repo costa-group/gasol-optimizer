@@ -8,7 +8,6 @@ import global_params.paths as paths
 from sfs_generator.gasol_optimization import smt_translate_block, generate_subblocks2split
 from sfs_generator.rbr_rule import RBRRule
 from sfs_generator.utils import get_push_number_hex, isYulInstruction
-from split_stack_calculator.split_calculator import Split_calculator, Stack_split
 
 '''
 It initialize the globals variables. 
@@ -1056,7 +1055,6 @@ The stack could be reconstructed as [s(ith)...s(0)].
 def compile_block(instrs,input_stack,block_id):
     global rbr_blocks
     global top_index
-    split_calculator = Split_calculator()
 
     cont = 0
     top_index = 0
@@ -1068,19 +1066,13 @@ def compile_block(instrs,input_stack,block_id):
     rule.set_index_input(input_stack)
     l_instr = instrs
 
-    block_split = Stack_split(block_id, len(instrs), input_stack)
-
-    
     while not(finish) and cont< len(l_instr):
         # if l_instr[cont].find("KECCAK")!=-1 and l_instr[cont-1].find("MSTORE")!=-1:
         #     #print("KECCYES")
         index_variables = compile_instr(rule,l_instr[cont],index_variables,[],True)        
-        split_calculator.update_split_block(block_split, cont, index_variables)
         cont+=1
 
     rule.set_fresh_index(top_index)
-
-    split_calculator.finish_stack_split(block_split)
 
     return rule
 
@@ -1113,7 +1105,7 @@ Main function that build the rbr representation from the CFG of a solidity file.
 -saco_rbr is True if it has to generate the RBR in SACO syntax.
 -exe refers to the number of smart contracts analyzed.
 '''
-def evm2rbr_compiler(file_name = None,block = None, block_id = -1, block_name = "",simplification = True, storage = False, size = False, part = False, pop = False, push = False, revert = False,extra_dependences_info={},extra_opt_info={},debug_info = False, split_mode=None):
+def evm2rbr_compiler(file_name = None,block = None, block_id = -1, block_name = "",simplification = True, storage = False, size = False, part = False, pop = False, push = False, revert = False,extra_dependences_info={},extra_opt_info={},debug_info = False):
     global rbr_blocks
     
     init_globals()
@@ -1137,7 +1129,7 @@ def evm2rbr_compiler(file_name = None,block = None, block_id = -1, block_name = 
         ethir_time = end-begin
         #print("Build RBR: "+str(ethir_time)+"s")
     
-        subblocks = smt_translate_block(rule,file_name,block_name,assignImmutable_dict,simplification,storage, size, part, pop, push,revert,extra_dependences_info,extra_opt_info,debug_info, split_mode)
+        subblocks = smt_translate_block(rule,file_name,block_name,assignImmutable_dict,simplification,storage, size, part, pop, push,revert,extra_dependences_info,extra_opt_info,debug_info)
                 
         return 0, subblocks
         
@@ -1145,7 +1137,7 @@ def evm2rbr_compiler(file_name = None,block = None, block_id = -1, block_name = 
         traceback.print_exc()
         raise Exception("Error in RBR generation",4)
             
-def get_subblocks(block = None,storage = False,part = False,block_id = -1, split=None):
+def get_subblocks(block = None,storage = False,part = False,block_id = -1):
     init_globals()
 
     try:
@@ -1154,7 +1146,7 @@ def get_subblocks(block = None,storage = False,part = False,block_id = -1, split
         
         rule = compile_block(instructions,input_stack,block_id)
 
-        subblocks = generate_subblocks2split(rule,part,storage,split)
+        subblocks = generate_subblocks2split(rule,part,storage)
         
         return subblocks
         

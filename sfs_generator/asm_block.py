@@ -317,3 +317,15 @@ class AsmBlock:
 
     def set_block_name(self,block_name):
         self.block_name = block_name
+
+    def divide_block(self, split_point:int):
+        '''
+        Recieves a split point and divides the AsmBlock into two AsmBlocks that are returned
+        '''
+        hblk1 = AsmBlock(self.contract_name, self.block_id , self.block_name, self.is_init_block)
+        hblk2 = AsmBlock(self.contract_name, self.block_id , self.block_name, False)
+
+        hblk1.instructions = self.instructions[:split_point+1]
+        hblk2.instructions = self.instructions[split_point+1:]
+
+        return hblk1, hblk2
