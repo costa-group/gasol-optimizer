@@ -56,18 +56,6 @@ def compare_target_stack(json_origin, json_opt):
     tgt_origin = json_origin["tgt_ws"]
     tgt_opt = json_opt["tgt_ws"]
 
-    print("compare_target_stack: ")
-    print()
-
-    print("src_origin: ", json_origin["src_ws"])
-    print("src_opt:    ", json_opt["src_ws"])
-    print()
-    print("tgt_origin: ", json_origin["tgt_ws"])
-    print("tgt_opt:    ", json_opt["tgt_ws"])
-    print()
-    print()
-
-
     if len(tgt_origin) != len(tgt_opt):
         return False, "Different lenghts between target stacks"
 

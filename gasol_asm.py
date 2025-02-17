@@ -13,6 +13,7 @@ import pandas as pd
 from pandas.core.internals import blocks
 from pandas.core.internals.managers import blockwise_all
 
+import greedy
 from split_stack_calculator.split_calculator import Split_calculator
 
 sys.path.append(os.path.dirname(os.path.realpath(__file__)) + "/gasol_ml")
@@ -144,7 +145,7 @@ def compare_best_block(original_seq: List[AsmBytecode], optimized_superopt: List
 
 
 def search_optimal(sfs_block: Dict, params: OptimizationParams, tout: int,
-                   block_name: str) -> Tuple[OptimizeOutcome, float, List[str], Optional[List[str]]]:
+                   block_name: str, iteration: int) -> Tuple[OptimizeOutcome, float, List[str], Optional[List[str]]]:
     """
     Decides which superoptimization algorithm (or greedy standalone) is applied, using the bound by the greedy if
     the corresponding option is enabled. Returns the optimization outcome, the time spent in the search, the ids
@@ -168,15 +169,16 @@ def search_optimal(sfs_block: Dict, params: OptimizationParams, tout: int,
             greedy_ids = None
     else:
         greedy_ids = None
+
     # Greedy standalone configuration
     if params.greedy:
         optimization_outcome_str, solver_time, optimized_ids = greedy_standalone(sfs_block)
         optimization_outcome = OptimizeOutcome.non_optimal if optimization_outcome_str == "non_optimal" else OptimizeOutcome.error
 
-    elif params.dzn:
+    elif (params.split_block == "not-ordered" and iteration == 1) or params.split_block == "ordered" or params.split_block == "complete":
         optimization_outcome, solver_time, optimized_ids = dzn_optimization_from_sms(sfs_block, tout, params)
 
-    elif params.minstack:
+    elif params.split_block == "not-ordered": 
         optimization_outcome, solver_time, optimized_ids = dzn_optimization_from_sms(sfs_block, tout, params, "dzn/evmopt-generic-reorder.mzn")
 
     # Otherwise, SMT superoptimization
@@ -299,7 +301,8 @@ def optimize_block(sfs_dict, params: OptimizationParams) -> List[Tuple[AsmBlock,
 
         sfs_block = extended_json_with_minlength(extended_json_with_instr_dep_and_bounds(sfs_block))
 
-        if params.split_block == "ordered" and len(sfs_dict) == 2:
+        if params.split_block == "ordered":
+            assert len(sfs_dict) == 2
 
             if i == 0: #blk1_modification
                 target = sfs_block["tgt_ws"]
@@ -313,8 +316,6 @@ def optimize_block(sfs_dict, params: OptimizationParams) -> List[Tuple[AsmBlock,
                 sfs_block["tgt_ws"] = blk1_tgt
 
             if i == 1: #blk2_modification
-                blk1_tgt = blk1_tgt
-
                 init_stack = [element_correspondence[elem] for elem in blk1_tgt]
 
                 # 1. add the first block variables to the variable list blk2[vars]
@@ -333,12 +334,35 @@ def optimize_block(sfs_dict, params: OptimizationParams) -> List[Tuple[AsmBlock,
                 # 4. Modify the bounds (min_stack, min_prog_len...)
                 sfs_block["max_sk_sz"] = sfs_block["max_sk_sz"] + len(sfs_block["vars"]) - original_var_len
 
+        if params.split_block == "not-ordered":
+            assert len(sfs_dict) == 2
+
+            if i == 1: #blk2_modification
+                blk1_tgt = simulate_execution_from_instr_sequence(optimized_ids, sfs_dict[block_names[0]])
+
+                init_stack = [element_correspondence[elem] for elem in blk1_tgt]
+
+                # 1. add the first block variables to the variable list blk2[vars]
+                original_var_len = len(sfs_block["vars"])
+                variables = merge_unique(sfs_block["vars"], init_stack)
+                sfs_block["vars"] = variables
+                
+                # 2. Modify the input stack by translating from the optimized target stack of first block to the second (since it has been treated as a set)
+                sfs_block["src_ws"] = init_stack + sfs_block["src_ws"][len(init_stack):]
+
+                # 3. Modify the output stack by translating from the total block to the second (if an element cant be mapped to the second, map to the first)
+                tgt_stack = get_tgt_stack(tblk, element_correspondence)
+                sfs_block["tgt_ws"] = tgt_stack
+
+                # 4. Modify the bounds (min_stack, min_prog_len...)
+                sfs_block["max_sk_sz"] = sfs_block["max_sk_sz"] + len(sfs_block["vars"]) - original_var_len
+                sfs_block["init_progr_len"] = sfs_block["init_progr_len"] + 3
 
         # We have enabled the optimization process (otherwise, we just generate the intermediate SMT files)
         if params.dot_generation:
             generate_dot_graph_from_sms(sfs_block, block_name)
         elif params.optimization_enabled:
-            optimization_outcome, solver_time, optimized_ids, greedy_ids = search_optimal(sfs_block, params, tout, block_name)
+            optimization_outcome, solver_time, optimized_ids, greedy_ids = search_optimal(sfs_block, params, tout, block_name, i)
             optimized_asm = asm_from_ids(sfs_block, optimized_ids) if optimized_ids is not None else []
             greedy_asm = asm_from_ids(sfs_block, greedy_ids) if greedy_ids is not None else None
 
@@ -380,11 +404,11 @@ def reduce_stack_element(element:str):
     return f"s({int(element.replace('s(', '').replace(')', '')[1:]) })" # the element has the form s(x)
 
 
-'''
-An output stack can have two regions, one with elements only used to read and another with calculated values
-Given an input stack and output stack, divide the regions in read only elements and read write elements
-'''
 def separate_stack_portions(in_stack:List, out_stack:List):
+    '''
+    An output stack can have two regions, one with elements only used to read and another with calculated values
+    Given an input stack and output stack, divide the regions in read only elements and read write elements
+    '''
     i = len(in_stack) - 1
     j = len(out_stack) - 1
     common_length = 0
@@ -400,11 +424,11 @@ def separate_stack_portions(in_stack:List, out_stack:List):
         return out_stack[:-common_length], out_stack[-common_length:]
 
 
-'''
-Given the target stack of the whole block, the function translates it to the elements
-found in blk2
-'''
 def get_tgt_stack(tblk:dict, corresp:dict):
+    '''
+    Given the target stack of the whole block, the function translates it to the elements
+    found in blk2
+    '''
     tgt_stack = []
 
     for elem in tblk["tgt_ws"]:
@@ -791,7 +815,7 @@ def optimize_asm_block_asm_format(block: AsmBlock, params: OptimizationParams) -
                 contracts_dict["syrup_contract"] = syrup_contract
 
             else:
-                contracts_dict, sub_block_list = compute_original_sfs_with_simplifications(block, params, params.split_block)
+                contracts_dict, sub_block_list = compute_original_sfs_with_simplifications(block, params)
             
         except Exception as e:
             print(e)
@@ -828,7 +852,6 @@ def optimize_asm_block_asm_format(block: AsmBlock, params: OptimizationParams) -
         if optimization_outcome == OptimizeOutcome.non_optimal or optimization_outcome == OptimizeOutcome.optimal:
             sub_block_name = sub_block.block_name
 
-            # TODO_Nico: hacer que cuando la suma de las instrucciones sea mayor al original se descarte
             if params.split_block != "none": 
                 optimized_blocks[sub_block_name] = optimized_asm
                 log_dicts[sub_block_name] = optimized_log_rep
@@ -862,13 +885,6 @@ def compare_asm_block_asm_format(old_block: AsmBlock, new_block: AsmBlock, param
 
     old_sfs_dict = old_sfs_information["syrup_contract"]
 
-
-    '''
-    TODO_Nico quitar comentario
-    print("old_sfs: ", old_sfs_dict[original_block_name + "_0"])
-    print("new_sfs: ", new_sfs_dict["alreadyOptimized_" + original_block_name + "_0"])
-    '''
-
     final_comparison, reason = verify_block_from_list_of_sfs(old_sfs_dict, new_sfs_dict)
 
     # We also must check intermediate instructions match i.e those that are not sub blocks
@@ -881,11 +897,11 @@ def compare_asm_block_asm_format(old_block: AsmBlock, new_block: AsmBlock, param
     return final_comparison and (initial_instructions_new == initial_instructions_old) and \
            final_instructions_new == final_instructions_old, reason
 
-'''
-Given an instruction sequence where every instruction is a reference to an entry in sfs["user_instrs"]
-it returns the tgt stack from the src stack of the sfs
-'''
 def simulate_execution_from_instr_sequence(instr_secuence, sfs):
+    '''
+    Given an instruction sequence where every instruction is a reference to an entry in sfs["user_instrs"]
+    it returns the tgt stack from the src stack of the sfs
+    '''
     stack = sfs["src_ws"]
 
     user_instr_dict = defaultdict(dict)
@@ -1174,8 +1190,6 @@ def options_gasol(ap: ArgumentParser) -> None:
 
     basic.add_argument("-ub-greedy", "--ub-greedy", dest='ub_greedy', help='Enables greedy algorithm to predict the upper bound', action='store_true')
     basic.add_argument('-greedy', '--greedy', dest='greedy', help='Uses greedy directly to generate the results', action='store_true')
-    basic.add_argument('-dzn', '--dzn', dest='dzn', help='Superoptimization via a MiniZinc model', action='store_true')
-    basic.add_argument('-minstack', '--minstack', dest='minstack', help='Superoptimization via a MiniZinc model', action='store_true')
     basic.add_argument("-solver", "--solver", help="Choose the solver", choices=["z3", "barcelogic", "oms"],
                        default="oms")
     basic.add_argument("-tout", metavar='timeout', action='store', type=int,
