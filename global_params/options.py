@@ -126,7 +126,7 @@ class OptimizationParams:
         self.greedy = None
         self.no_simp = True
         self.debug_flag = False
-        #self.dzn = False
+        self.dzn = False
 
         self.length_bound = False
         self.gcc_bounds = False
@@ -231,7 +231,7 @@ class OptimizationParams:
         if "debug_flag" in parsed_args:
             self.debug_flag = parsed_args.debug_flag
 
-        # self.dzn = parsed_args.dzn
+        self.dzn = parsed_args.dzn
         self.length_bound = parsed_args.length_bound
         self.gcc_bounds = parsed_args.gcc_bounds
         self.unary_shrink = parsed_args.unary_shrink

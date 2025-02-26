@@ -10,6 +10,7 @@ from timeit import default_timer as dtimer
 from argparse import ArgumentParser, Namespace
 
 import pandas as pd
+from pandas.core.algorithms import duplicated
 from pandas.core.internals import blocks
 from pandas.core.internals.managers import blockwise_all
 
@@ -175,7 +176,7 @@ def search_optimal(sfs_block: Dict, params: OptimizationParams, tout: int,
         optimization_outcome_str, solver_time, optimized_ids = greedy_standalone(sfs_block)
         optimization_outcome = OptimizeOutcome.non_optimal if optimization_outcome_str == "non_optimal" else OptimizeOutcome.error
 
-    elif (params.split_block == "not-ordered" and iteration == 1) or params.split_block == "ordered" or params.split_block == "complete":
+    elif params.dzn or (params.split_block == "not-ordered" and iteration == 1) or params.split_block == "ordered" or params.split_block == "complete":
         optimization_outcome, solver_time, optimized_ids = dzn_optimization_from_sms(sfs_block, tout, params)
 
     elif params.split_block == "not-ordered": 
@@ -236,18 +237,25 @@ def optimize_block(sfs_dict, params: OptimizationParams) -> List[Tuple[AsmBlock,
         element_correspondence = {}
         blk1_tgt = []
 
+
         tblk = {}
         blk1 = sfs_dict[block_names[0]]
         blk2 = sfs_dict[block_names[1]]
 
+        total_length = blk1["init_progr_len"] + blk2["init_progr_len"]
         
         blk1_tgt = blk1["tgt_ws"]
 
-        element_correspondence = get_blk1_blk2_correspondance(blk1_tgt, sfs_dict[block_names[1]]["src_ws"])
-        # print("element_correspondence: ", element_correspondence)
+        element_correspondence, dups = get_blk1_blk2_correspondance(blk1_tgt, sfs_dict[block_names[1]]["src_ws"])
+
+        print("corresp", element_correspondence)
+        print("dups", dups)
+
+        blk2 = rename_duplicated(blk2, dups)
 
         #total_blk_calculation
         if len(blk1_tgt) > len(blk2["src_ws"]):
+
             #tblk.src = blk1.src
             tblk["src_ws"] = [extend_stack_element(100, elem) for elem in blk1["src_ws"]] 
 
@@ -269,6 +277,7 @@ def optimize_block(sfs_dict, params: OptimizationParams) -> List[Tuple[AsmBlock,
             #tblk.tgt = blk2.tgt
             tblk["tgt_ws"] = [extend_stack_element(200, elem) for elem in blk2["tgt_ws"]]
 
+    
 
     # SFS dict of syrup contract contains all sub-blocks derived from a block after splitting
     for i, block_name in enumerate(sfs_dict):
@@ -316,6 +325,10 @@ def optimize_block(sfs_dict, params: OptimizationParams) -> List[Tuple[AsmBlock,
                 sfs_block["tgt_ws"] = blk1_tgt
 
             if i == 1: #blk2_modification
+
+                if optimization_outcome == OptimizeOutcome.no_model: # it is not worth to continue
+                    continue
+
                 init_stack = [element_correspondence[elem] for elem in blk1_tgt]
 
                 # 1. add the first block variables to the variable list blk2[vars]
@@ -325,19 +338,31 @@ def optimize_block(sfs_dict, params: OptimizationParams) -> List[Tuple[AsmBlock,
 
                 
                 # 2. Modify the input stack by translating from the first block to the second
-                sfs_block["src_ws"] = init_stack + sfs_block["src_ws"][len(init_stack):]
+                sfs_block["src_ws"] = init_stack + eliminate_duplicates(sfs_block["src_ws"])[len(init_stack):]
 
                 # 3. Modify the output stack by translating from the total block to the second (if an element cant be mapped to the second, map to the first)
                 tgt_stack = get_tgt_stack(tblk, element_correspondence)
                 sfs_block["tgt_ws"] = tgt_stack
 
                 # 4. Modify the bounds (min_stack, min_prog_len...)
-                sfs_block["max_sk_sz"] = sfs_block["max_sk_sz"] + len(sfs_block["vars"]) - original_var_len
+                sfs_block["max_sk_sz"] = max(sfs_block["max_sk_sz"] + len(sfs_block["vars"]) - original_var_len, len(tgt_stack), len(sfs_block["src_ws"]))
+                sfs_block["init_progr_len"] = total_length - len(optimized_asm)
+
+                sfs_block = extended_json_with_minlength(extended_json_with_instr_dep_and_bounds(sfs_block))
 
         if params.split_block == "not-ordered":
             assert len(sfs_dict) == 2
 
+            if i == 0: #blk1_modification
+                
+                sfs_block["tgt_ws"] = eliminate_duplicates(sfs_block["tgt_ws"])# helps the solver
+
+                print("blk1: ", sfs_block)
+
             if i == 1: #blk2_modification
+                if optimization_outcome == OptimizeOutcome.no_model: # it is not worth to continue
+                    continue
+
                 blk1_tgt = simulate_execution_from_instr_sequence(optimized_ids, sfs_dict[block_names[0]])
 
                 init_stack = [element_correspondence[elem] for elem in blk1_tgt]
@@ -348,15 +373,19 @@ def optimize_block(sfs_dict, params: OptimizationParams) -> List[Tuple[AsmBlock,
                 sfs_block["vars"] = variables
                 
                 # 2. Modify the input stack by translating from the optimized target stack of first block to the second (since it has been treated as a set)
-                sfs_block["src_ws"] = init_stack + sfs_block["src_ws"][len(init_stack):]
+                sfs_block["src_ws"] = init_stack + eliminate_duplicates(sfs_block["src_ws"])[len(init_stack):]
 
                 # 3. Modify the output stack by translating from the total block to the second (if an element cant be mapped to the second, map to the first)
                 tgt_stack = get_tgt_stack(tblk, element_correspondence)
                 sfs_block["tgt_ws"] = tgt_stack
 
                 # 4. Modify the bounds (min_stack, min_prog_len...)
-                sfs_block["max_sk_sz"] = sfs_block["max_sk_sz"] + len(sfs_block["vars"]) - original_var_len
-                sfs_block["init_progr_len"] = sfs_block["init_progr_len"] + 3
+                sfs_block["max_sk_sz"] = max(sfs_block["max_sk_sz"] + len(sfs_block["vars"]) - original_var_len, len(tgt_stack), len(sfs_block["src_ws"]))
+                sfs_block["init_progr_len"] = total_length - len(optimized_asm)
+
+                sfs_block = extended_json_with_minlength(extended_json_with_instr_dep_and_bounds(sfs_block))
+                print("blk2: ", sfs_block)
+
 
         # We have enabled the optimization process (otherwise, we just generate the intermediate SMT files)
         if params.dot_generation:
@@ -380,14 +409,18 @@ def optimize_block(sfs_dict, params: OptimizationParams) -> List[Tuple[AsmBlock,
     return block_solutions
 
 
-def get_blk1_blk2_correspondance(tgt_stack:List, src_stack:List) -> Dict:
+def get_blk1_blk2_correspondance(tgt_stack:List, src_stack:List):
     '''
     Given an tgt stack and source stack of the following block returns a mapping
     elements of the first block to the elements of the second block
     '''
+
     mapping = {}
+    duplicated = defaultdict(list)
     for i, elem in enumerate(tgt_stack):
         if elem in mapping:
+            if i < len(src_stack):
+                duplicated[mapping[elem]].append(src_stack[i])
             continue
 
         if i < len(src_stack):
@@ -395,7 +428,28 @@ def get_blk1_blk2_correspondance(tgt_stack:List, src_stack:List) -> Dict:
         else:
             mapping[elem] = extend_stack_element(100, elem)
 
-    return mapping
+    return mapping, duplicated
+
+def rename_duplicated(sfs, dups):
+    '''
+    Given a block and given a dictionary with the elements that correspond to the same value
+    it modifies the block so that the values are unified
+    '''
+
+    for elem in dups.keys():
+        for dup in dups[elem]:
+            sfs["vars"].remove(dup)
+            sfs["src_ws"] = rename_list(sfs["src_ws"], dup, elem)
+            sfs["tgt_ws"] = rename_list(sfs["tgt_ws"], dup, elem)
+
+            for instr in sfs["user_instrs"]:
+                instr["inpt_sk"] = rename_list(instr["inpt_sk"], dup, elem)
+                instr["outpt_sk"] = rename_list(instr["outpt_sk"], dup, elem)
+
+    return sfs
+
+def rename_list(lst, fr, to):
+    return [to if x == fr else x for x in lst]
     
 def extend_stack_element(prefix: int, element: str):
     return f"s({prefix + int(element.replace('s(', '').replace(')', '')) })" # the element has the form s(x)
@@ -606,7 +660,7 @@ def optimize_isolated_asm_block(params: OptimizationParams):
         asm_block, log_element, statistics_csv = optimize_asm_block_asm_format(old_block, params)
         seqs_rows.extend(statistics_csv)
 
-        eq, reason = compare_asm_block_asm_format(old_block, asm_block, params, log_element)
+        eq, reason = compare_asm_block_asm_format(old_block, asm_block, params)
 
 
         if not eq:
@@ -816,7 +870,7 @@ def optimize_asm_block_asm_format(block: AsmBlock, params: OptimizationParams) -
 
             else:
                 contracts_dict, sub_block_list = compute_original_sfs_with_simplifications(block, params)
-            
+
         except Exception as e:
             print(e)
             failed_row = {'instructions': instructions, 'exception': str(e)}
@@ -859,6 +913,8 @@ def optimize_asm_block_asm_format(block: AsmBlock, params: OptimizationParams) -
                 if not block_has_been_optimized(block, new_block, params.criteria):
                     optimized_blocks = {}
                     log_dicts = {}
+                    new_block = rebuild_optimized_asm_block_minstack(block, sub_block_list, optimized_blocks)
+                    print("The resulting block was worst than the original")
             else:
                 if block_has_been_optimized(sub_block, optimal_block, params.criteria):
                     optimized_blocks[sub_block_name] = optimized_asm
@@ -872,7 +928,7 @@ def optimize_asm_block_asm_format(block: AsmBlock, params: OptimizationParams) -
     return new_block, log_dicts, csv_statistics
 
 
-def compare_asm_block_asm_format(old_block: AsmBlock, new_block: AsmBlock, params: OptimizationParams, log_dicts=None) -> Tuple[bool, str]:
+def compare_asm_block_asm_format(old_block: AsmBlock, new_block: AsmBlock, params: OptimizationParams) -> Tuple[bool, str]:
     # Change new block name to store the corresponding sfs with the new change
     original_block_name = new_block.get_block_name()
     new_block.set_block_name("alreadyOptimized_"+ original_block_name)
@@ -1190,6 +1246,7 @@ def options_gasol(ap: ArgumentParser) -> None:
 
     basic.add_argument("-ub-greedy", "--ub-greedy", dest='ub_greedy', help='Enables greedy algorithm to predict the upper bound', action='store_true')
     basic.add_argument('-greedy', '--greedy', dest='greedy', help='Uses greedy directly to generate the results', action='store_true')
+    basic.add_argument('-dzn', '--dzn', dest='dzn', help='Superoptimization via a MiniZinc model', action='store_true')
     basic.add_argument("-solver", "--solver", help="Choose the solver", choices=["z3", "barcelogic", "oms"],
                        default="oms")
     basic.add_argument("-tout", metavar='timeout', action='store', type=int,

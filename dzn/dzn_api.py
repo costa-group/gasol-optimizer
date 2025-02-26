@@ -92,6 +92,7 @@ def generate_flags_for_minizinc(bool_flags) -> str:
 def dzn_optimization_from_sms(sms, timeout, bool_flags, model_path="dzn/evmopt-generic.mzn") -> \
         Tuple[OptimizeOutcome, float, List[str]]:
 
+
     fd, tmp_file = tempfile.mkstemp('.dzn')
     os.close(fd)
     with open(tmp_file, 'w') as f:
@@ -103,7 +104,7 @@ def dzn_optimization_from_sms(sms, timeout, bool_flags, model_path="dzn/evmopt-g
               f"--output-time --intermediate-solutions -s {model_path} {flag_str} {tmp_file}"
     #stats -s needed to run analysis
 
-    print(f"Command: {mzn_path} --solver Chuffed --time-limit {timeout*1000} --output-time --intermediate-solutions -s {model_path} {flag_str} {tmp_file}")
+    print(f"Command: {command}")
     output, total_time = run_and_measure_command(command)
 
     #os.remove(tmp_file)
