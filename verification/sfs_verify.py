@@ -25,6 +25,12 @@ def are_equals(json_orig, json_opt):
     userdef_orig = json_orig["user_instrs"]
     userdef_opt = json_opt["user_instrs"]
 
+    print("dep_orig: ", dep_orig)
+    print("dep_opt: ", dep_opt)
+    print("userdef_orig: ", userdef_orig)
+    print("userdef_opt: ", userdef_opt)
+
+
     same_dep_sto = compare_dependences(dep_orig,dep_opt,src_orig,src_opt,userdef_orig,userdef_opt,"storage")
 
     if not same_dep_sto:
@@ -32,6 +38,9 @@ def are_equals(json_orig, json_opt):
 
     dep_orig = json_orig["memory_dependences"]
     dep_opt = json_opt["memory_dependences"]
+
+    print("dep_orig: ", dep_orig)
+    print("dep_opt: ", dep_opt)
     
     same_dep_mem = compare_dependences(dep_orig,dep_opt,src_orig,src_opt,userdef_orig,userdef_opt,"memory")
 
@@ -82,12 +91,22 @@ def compare_dependences(dep_origin,dep_opt,src_origin,src_opt,user_def_origin,us
     i = 0
     verified = True
 
+    '''
     if location == "storage":
         ins_origin = list(filter(lambda x: x["disasm"].find("SSTORE")!=-1 or x["disasm"].find("SLOAD")!=-1,user_def_origin))
         ins_opt = list(filter(lambda x: x["disasm"].find("SSTORE")!=-1 or x["disasm"].find("SLOAD")!=-1,user_def_opt))
     else:
         ins_origin = list(filter(lambda x: x["disasm"].find("MSTORE")!=-1 or x["disasm"].find("MLOAD")!=-1 or x["disasm"].find("KECCAK")!=-1,user_def_origin))
         ins_opt = list(filter(lambda x: x["disasm"].find("MSTORE")!=-1 or x["disasm"].find("MLOAD")!=-1 or x["disasm"].find("KECCAK")!=-1,user_def_opt))
+    '''
+    ins_origin_st = list(filter(lambda x: x["disasm"].find("SSTORE")!=-1 or x["disasm"].find("SLOAD")!=-1,user_def_origin))
+    ins_opt_st = list(filter(lambda x: x["disasm"].find("SSTORE")!=-1 or x["disasm"].find("SLOAD")!=-1,user_def_opt))
+
+    ins_origin_mem = list(filter(lambda x: x["disasm"].find("MSTORE")!=-1 or x["disasm"].find("MLOAD")!=-1 or x["disasm"].find("KECCAK")!=-1,user_def_origin))
+    ins_opt_mem = list(filter(lambda x: x["disasm"].find("MSTORE")!=-1 or x["disasm"].find("MLOAD")!=-1 or x["disasm"].find("KECCAK")!=-1,user_def_opt))
+
+    ins_origin = ins_origin_st + ins_origin_mem
+    ins_opt = ins_opt_st + ins_opt_mem
 
     if len(dep_origin) != len(dep_opt):
         m_clousure_orig = compute_clousure(dep_origin)
@@ -110,10 +129,13 @@ def compare_dependences(dep_origin,dep_opt,src_origin,src_opt,user_def_origin,us
             first = dep[0]
             second = dep[1]
 
+            print("instr_origin", ins_origin)
+            print("instr_opt", ins_opt)
 
-            # print("BUSCO EQUIVALENCIA ENTRE")
-            # print(first)
-            # print(second)
+
+            print("BUSCO EQUIVALENCIA ENTRE")
+            print(first)
+            print(second)
             
             first_instr_list = list(filter(lambda x: x["id"] == first, ins_origin))
             if len(first_instr_list) != 1:

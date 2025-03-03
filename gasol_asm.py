@@ -941,6 +941,11 @@ def compare_asm_block_asm_format(old_block: AsmBlock, new_block: AsmBlock, param
 
     old_sfs_dict = old_sfs_information["syrup_contract"]
 
+
+    #print("old: ", old_sfs_dict)
+    #print("new: ", new_sfs_dict)
+
+
     final_comparison, reason = verify_block_from_list_of_sfs(old_sfs_dict, new_sfs_dict)
 
     # We also must check intermediate instructions match i.e those that are not sub blocks
