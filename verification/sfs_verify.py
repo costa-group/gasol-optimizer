@@ -25,11 +25,6 @@ def are_equals(json_orig, json_opt):
     userdef_orig = json_orig["user_instrs"]
     userdef_opt = json_opt["user_instrs"]
 
-    print("dep_orig: ", dep_orig)
-    print("dep_opt: ", dep_opt)
-    print("userdef_orig: ", userdef_orig)
-    print("userdef_opt: ", userdef_opt)
-
 
     same_dep_sto = compare_dependences(dep_orig,dep_opt,src_orig,src_opt,userdef_orig,userdef_opt,"storage")
 

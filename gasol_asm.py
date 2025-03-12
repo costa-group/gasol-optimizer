@@ -248,9 +248,6 @@ def optimize_block(sfs_dict, params: OptimizationParams) -> List[Tuple[AsmBlock,
 
         element_correspondence, dups = get_blk1_blk2_correspondance(blk1_tgt, sfs_dict[block_names[1]]["src_ws"])
 
-        print("corresp", element_correspondence)
-        print("dups", dups)
-
         blk2 = rename_duplicated(blk2, dups)
 
         #total_blk_calculation
@@ -357,7 +354,6 @@ def optimize_block(sfs_dict, params: OptimizationParams) -> List[Tuple[AsmBlock,
                 
                 sfs_block["tgt_ws"] = eliminate_duplicates(sfs_block["tgt_ws"])# helps the solver
 
-                print("blk1: ", sfs_block)
 
             if i == 1: #blk2_modification
                 if optimization_outcome == OptimizeOutcome.no_model: # it is not worth to continue
@@ -384,7 +380,6 @@ def optimize_block(sfs_dict, params: OptimizationParams) -> List[Tuple[AsmBlock,
                 sfs_block["init_progr_len"] = total_length - len(optimized_asm)
 
                 sfs_block = extended_json_with_minlength(extended_json_with_instr_dep_and_bounds(sfs_block))
-                print("blk2: ", sfs_block)
 
 
         # We have enabled the optimization process (otherwise, we just generate the intermediate SMT files)
