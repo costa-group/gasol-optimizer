@@ -36,7 +36,7 @@ class Split_calculator:
             bytecode_info = opcodes.get_opcode(instr.disasm)
             stack_size = stack_size - bytecode_info[1] + bytecode_info[2]
 
-            if (lower_instr_num_bound < instr_number < upper_instr_num_bound and stack_size < min_stack_size):
+            if (lower_instr_num_bound < instr_number < upper_instr_num_bound and stack_size <= min_stack_size):
                 min_stack_size = stack_size 
                 min_instr_number = instr_number 
 
