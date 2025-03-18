@@ -307,6 +307,9 @@ def optimize_block(sfs_dict, params: OptimizationParams) -> List[Tuple[AsmBlock,
 
         sfs_block = extended_json_with_minlength(extended_json_with_instr_dep_and_bounds(sfs_block))
 
+        aggressiveness_1 = 5
+        aggressiveness_2 = 5
+
         if params.split_block == "ordered":
             assert len(sfs_dict) == 2
 
@@ -320,7 +323,9 @@ def optimize_block(sfs_dict, params: OptimizationParams) -> List[Tuple[AsmBlock,
                 target = out_portion + in_portion
 
                 sfs_block["tgt_ws"] = blk1_tgt
-                sfs_block["init_progr_len"] = sfs_block["init_progr_len"] - 2
+
+                original_length = sfs_block["init_progr_len"]
+                sfs_block["init_progr_len"] = original_length - round(original_length*aggressiveness_1/100)
 
             if i == 1: #blk2_modification
 
@@ -344,7 +349,9 @@ def optimize_block(sfs_dict, params: OptimizationParams) -> List[Tuple[AsmBlock,
 
                 # 4. Modify the bounds (min_stack, min_prog_len...)
                 sfs_block["max_sk_sz"] = max(sfs_block["max_sk_sz"] + len(sfs_block["vars"]) - original_var_len, len(tgt_stack), len(sfs_block["src_ws"]))
-                sfs_block["init_progr_len"] = total_length - len(optimized_asm) - 2
+
+                original_length = total_length - len(optimized_asm)
+                sfs_block["init_progr_len"] = original_length - round(original_length*aggressiveness_2/100)
 
                 sfs_block = extended_json_with_minlength(extended_json_with_instr_dep_and_bounds(sfs_block))
 
@@ -354,7 +361,9 @@ def optimize_block(sfs_dict, params: OptimizationParams) -> List[Tuple[AsmBlock,
             if i == 0: #blk1_modification
                 
                 sfs_block["tgt_ws"] = eliminate_duplicates(sfs_block["tgt_ws"])# helps the solver
-                sfs_block["init_progr_len"] = sfs_block["init_progr_len"] - 1
+
+                original_length = sfs_block["init_progr_len"]
+                sfs_block["init_progr_len"] = original_length - round(original_length*aggressiveness_1/100)
 
 
             if i == 1: #blk2_modification
@@ -379,12 +388,21 @@ def optimize_block(sfs_dict, params: OptimizationParams) -> List[Tuple[AsmBlock,
 
                 # 4. Modify the bounds (min_stack, min_prog_len...)
                 sfs_block["max_sk_sz"] = max(sfs_block["max_sk_sz"] + len(sfs_block["vars"]) - original_var_len, len(tgt_stack), len(sfs_block["src_ws"]))
-                sfs_block["init_progr_len"] = total_length - len(optimized_asm) - 1
+                
+                original_length = total_length - len(optimized_asm)
+                sfs_block["init_progr_len"] = original_length - round(original_length*aggressiveness_2/100)
 
                 sfs_block = extended_json_with_minlength(extended_json_with_instr_dep_and_bounds(sfs_block))
 
 
         # We have enabled the optimization process (otherwise, we just generate the intermediate SMT files)
+        if params.dot_generation:
+            generate_dot_graph_from_sms(sfs_block, block_name)
+        elif params.optimization_enabled:
+            optimization_outcome, solver_time, optimized_ids, greedy_ids = search_optimal(sfs_block, params, tout, block_name, i)
+            optimized_asm = asm_from_ids(sfs_block, optimized_ids) if optimized_ids is not None else []
+            greedy_asm = asm_from_ids(sfs_block, greedy_ids) if greedy_ids is not None else None
+
         if params.dot_generation:
             generate_dot_graph_from_sms(sfs_block, block_name)
         elif params.optimization_enabled:
@@ -1367,13 +1385,6 @@ def execute_gasol(params: OptimizationParams):
             log_dict = json.load(path)
             optimize_asm_from_log(params, log_dict)
             if not params.keep_files:
-                shutil.rmtree(paths.gasol_path, ignore_errors=True)
-            exit(0)
-
-    if params.input_format == "plain":
-        optimize_isolated_asm_block(params)
-    elif params.input_format == "sfs":
-        optimize_from_sfs(params)
     elif params.input_format == "single-asm":
         optimize_asm_from_asm_json(params)
     else:
