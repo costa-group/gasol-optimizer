@@ -307,6 +307,9 @@ def optimize_block(sfs_dict, params: OptimizationParams) -> List[Tuple[AsmBlock,
 
         sfs_block = extended_json_with_minlength(extended_json_with_instr_dep_and_bounds(sfs_block))
 
+        aggressive_1 = 10
+        aggressive_2 = 10
+
         if params.split_block == "ordered":
             assert len(sfs_dict) == 2
 
@@ -320,7 +323,8 @@ def optimize_block(sfs_dict, params: OptimizationParams) -> List[Tuple[AsmBlock,
                 target = out_portion + in_portion
 
                 sfs_block["tgt_ws"] = blk1_tgt
-                sfs_block["init_progr_len"] = sfs_block["init_progr_len"] - 2
+                original_length = sfs_block["init_progr_len"] 
+                sfs_block["init_progr_len"] = original_length - round(original_length*aggressive_1/100)
 
             if i == 1: #blk2_modification
 
@@ -344,7 +348,8 @@ def optimize_block(sfs_dict, params: OptimizationParams) -> List[Tuple[AsmBlock,
 
                 # 4. Modify the bounds (min_stack, min_prog_len...)
                 sfs_block["max_sk_sz"] = max(sfs_block["max_sk_sz"] + len(sfs_block["vars"]) - original_var_len, len(tgt_stack), len(sfs_block["src_ws"]))
-                sfs_block["init_progr_len"] = total_length - len(optimized_asm) - 2
+                original_length = total_length - len(optimized_asm)
+                sfs_block["init_progr_len"] = original_length - round(original_length*aggressive_2/100)
 
                 sfs_block = extended_json_with_minlength(extended_json_with_instr_dep_and_bounds(sfs_block))
 
@@ -354,7 +359,8 @@ def optimize_block(sfs_dict, params: OptimizationParams) -> List[Tuple[AsmBlock,
             if i == 0: #blk1_modification
                 
                 sfs_block["tgt_ws"] = eliminate_duplicates(sfs_block["tgt_ws"])# helps the solver
-                sfs_block["init_progr_len"] = sfs_block["init_progr_len"] - 1
+                original_length = sfs_block["init_progr_len"] 
+                sfs_block["init_progr_len"] = original_length - round(original_length*aggressive_1/100)
 
 
             if i == 1: #blk2_modification
@@ -379,7 +385,8 @@ def optimize_block(sfs_dict, params: OptimizationParams) -> List[Tuple[AsmBlock,
 
                 # 4. Modify the bounds (min_stack, min_prog_len...)
                 sfs_block["max_sk_sz"] = max(sfs_block["max_sk_sz"] + len(sfs_block["vars"]) - original_var_len, len(tgt_stack), len(sfs_block["src_ws"]))
-                sfs_block["init_progr_len"] = total_length - len(optimized_asm) - 1
+                original_length = total_length - len(optimized_asm)
+                sfs_block["init_progr_len"] = original_length - round(original_length*aggressive_2/100)
 
                 sfs_block = extended_json_with_minlength(extended_json_with_instr_dep_and_bounds(sfs_block))
 
