@@ -232,6 +232,10 @@ def optimize_block(sfs_dict, params: OptimizationParams) -> List[Tuple[AsmBlock,
     # we can find in the source_stack (if there is such portion we dont want to modify it). The output portion is the other portion
     block_names = [name for name in sfs_dict]
 
+    blk1 = sfs_dict[block_names[0]]
+    blk2 = sfs_dict[block_names[1]]
+    total_length = blk1["init_progr_len"] + blk2["init_progr_len"]
+
     if params.split_block == "ordered" or params.split_block == "not-ordered": 
         assert len(sfs_dict) == 2 # the ordered and not-ordered execution must be made with two blocks
         element_correspondence = {}
@@ -239,10 +243,7 @@ def optimize_block(sfs_dict, params: OptimizationParams) -> List[Tuple[AsmBlock,
 
 
         tblk = {}
-        blk1 = sfs_dict[block_names[0]]
-        blk2 = sfs_dict[block_names[1]]
 
-        total_length = blk1["init_progr_len"] + blk2["init_progr_len"]
         
         blk1_tgt = blk1["tgt_ws"]
 
@@ -309,6 +310,17 @@ def optimize_block(sfs_dict, params: OptimizationParams) -> List[Tuple[AsmBlock,
 
         aggressive_1 = 10
         aggressive_2 = 10
+
+
+        if params.split_block == "complete":
+            if i == 0: #blk1_modification
+                original_length = sfs_block["init_progr_len"] 
+                sfs_block["init_progr_len"] = original_length - round(original_length*aggressive_1/100)
+
+
+            if i == 2: #blk2_modification
+                original_length = total_length - len(optimized_asm)
+                sfs_block["init_progr_len"] = original_length - round(original_length*aggressive_2/100)
 
         if params.split_block == "ordered":
             assert len(sfs_dict) == 2
