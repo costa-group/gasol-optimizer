@@ -232,9 +232,11 @@ def optimize_block(sfs_dict, params: OptimizationParams) -> List[Tuple[AsmBlock,
     # we can find in the source_stack (if there is such portion we dont want to modify it). The output portion is the other portion
     block_names = [name for name in sfs_dict]
 
-    blk1 = sfs_dict[block_names[0]]
-    blk2 = sfs_dict[block_names[1]]
-    total_length = blk1["init_progr_len"] + blk2["init_progr_len"]
+    if params.split_block == "ordered" or params.split_block == "not-ordered" or params.split_block == "complete": 
+
+        blk1 = sfs_dict[block_names[0]]
+        blk2 = sfs_dict[block_names[1]]
+        total_length = blk1["init_progr_len"] + blk2["init_progr_len"]
 
     if params.split_block == "ordered" or params.split_block == "not-ordered": 
         assert len(sfs_dict) == 2 # the ordered and not-ordered execution must be made with two blocks
