@@ -306,6 +306,7 @@ def optimize_block(sfs_dict, params: OptimizationParams) -> List[Tuple[AsmBlock,
 
         print(f"Optimizing {block_name}... Timeout:{str(tout)}")
 
+
         sfs_block = extended_json_with_minlength(extended_json_with_instr_dep_and_bounds(sfs_block))
 
         aggressive_1 = 10
@@ -867,13 +868,29 @@ def optimize_asm_block_asm_format(block: AsmBlock, params: OptimizationParams) -
         try:
             if params.split_block != "none":
 
+                split_mode = "dag"
+
                 contracts_dict = {}
                 syrup_contract = {}
                 sub_block_list = []
 
                 #split block
                 split_calculator = Split_calculator()
-                min_stack, instr_num = split_calculator.calculate_minstack_split(block)
+
+                if split_mode == "min_stack":
+                    min_stack, instr_num = split_calculator.calculate_minstack_split(block)
+
+                if split_mode == "dag":
+                    contracts_dict_aux, _ = compute_original_sfs_with_simplifications(block, params)
+
+                    sfs_block = contracts_dict_aux["syrup_contract"]["isolated_block_0_0"]
+
+                    sfs_block = extended_json_with_minlength(extended_json_with_instr_dep_and_bounds(sfs_block))
+
+                    min_stack, instr_num = split_calculator.calculate_extended_dao_split(sfs_block)
+
+                print(f"splittocsv: {min_stack};{instr_num}")
+
 
                 #create new contracts_dict with the subblocks
                 for i, blk in enumerate(block.divide_block(instr_num)):
@@ -888,7 +905,7 @@ def optimize_asm_block_asm_format(block: AsmBlock, params: OptimizationParams) -
                 contracts_dict, sub_block_list = compute_original_sfs_with_simplifications(block, params)
 
         except Exception as e:
-            print(e)
+            print("exception: ", e)
             failed_row = {'instructions': instructions, 'exception': str(e)}
             return new_block, {}, []
 
