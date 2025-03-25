@@ -889,7 +889,7 @@ def optimize_asm_block_asm_format(block: AsmBlock, params: OptimizationParams) -
 
                     min_stack, instr_num = split_calculator.calculate_extended_dao_split(sfs_block)
 
-                print(f"splittocsv: {min_stack};{instr_num}")
+                #print(f"splittocsv: {min_stack};{instr_num}")
 
 
                 #create new contracts_dict with the subblocks
