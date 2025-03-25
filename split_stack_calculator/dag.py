@@ -29,7 +29,6 @@ class DAG:
             self.nodes, self.id_to_pos = self.extend_dag(code_with_id)
             self.generate_dot(self.nodes, "extended")
             self.reverse = self.reverse_topological_order(self.nodes)
-            print("extended_reverse: ", self.reverse)
 
         else:
             self.nodes = dep
@@ -44,7 +43,6 @@ class DAG:
 
             self.id_to_pos = {k: sorted(v, key=lambda x: x[1] ) for k, v in id_to_pos.items()}
 
-            print("reverse: ", self.reverse)
 
     
     def generate_dot(self, graph, name):
