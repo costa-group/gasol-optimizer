@@ -115,30 +115,20 @@ class Split_calculator:
 
         dag = DAG(sfs_block["instr_dependencies"], original_code_with_ids, extended=True)
 
-        # split the block in the middle instruction of the inverse dag.
-
-        middle = dag.reverse[len(dag.reverse)//2]
-
-        _, min_instr_number, min_stack_size = next(instr for instr in original_code_with_ids if instr[0] == middle)
-
-
-
-        '''
-        #split the block in the first minimum stack found in the inverse dag
+        #split the block in the last minimum stack found in the inverse dag
         id_to_pos = dag.id_to_pos
 
         quart = length/3
         min_pos_block = quart
         max_pos_block = quart * 2
 
-        min_size = 1024
-        min_pos = None
+        min_stack_size = 1024
+        min_instr_number = 0
 
         for instr in dag.reverse:
-            if (id_to_pos[instr][0] > min_pos_block and id_to_pos[instr][0] < max_pos_block and id_to_pos[instr][1] < min_size):
-                min_pos = id_to_pos[instr][0]
-                min_size = id_to_pos[instr][1]
-        '''
+            if (id_to_pos[instr][0] > min_pos_block and id_to_pos[instr][0] < max_pos_block and id_to_pos[instr][1] <= min_stack_size):
+                min_instr_number = id_to_pos[instr][0]
+                min_stack_size = id_to_pos[instr][1]
 
         return min_stack_size, min_instr_number
 
