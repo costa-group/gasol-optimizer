@@ -15,6 +15,7 @@ from pandas.core.internals import blocks
 from pandas.core.internals.managers import blockwise_all
 
 import greedy
+from gasol_ml import opcodes
 from split_stack_calculator.split_calculator import Split_calculator
 
 sys.path.append(os.path.dirname(os.path.realpath(__file__)) + "/gasol_ml")
@@ -668,6 +669,17 @@ def optimize_isolated_asm_block(params: OptimizationParams):
 
     with open(params.input_file, "r") as f:
         instructions = f.read()
+
+    if params.split_block == "ml":
+        predicted = predict_split_mode(instructions)
+
+        if predicted == "original":
+            params.dzn = True 
+            params.split_block = "none"
+        else:
+            params.split_block = predicted
+
+
 
     blocks: List[AsmBlock] = parse_blocks_from_plain_instructions(instructions, params.block_name, params.block_name_prefix)
     asm_blocks = []
@@ -1368,14 +1380,86 @@ def options_gasol(ap: ArgumentParser) -> None:
     minizinc_options.add_argument('-pop-unused', action='store_true', dest='pop_unused', help='')
 
 
-    split_options = ap.add_argument_group('Split Options', 'Options for deciding where to split the block')
-    split_options.add_argument("-split", help="Choose the split mode", choices=["complete", "ordered", "not-ordered", "none"],
-                      default="none", dest='split_block')
+    s_o = ap.add_argument_group('Split Options', 'Options for deciding where to split the block')
+    split_options = s_o.add_mutually_exclusive_group()
+    split_options.add_argument( "-split", help="Choose the split mode", choices=["complete", "ordered", "not-ordered", "none"],
+        default="none", dest='split_block')
+
+    split_options.add_argument( "-split-ml", "--split-ml", help="Choose split mode with machine learning", dest='split_block', 
+        action='store_const', const='ml')
 
 
 def parse_encoding_args(ap: ArgumentParser):
     return ap.parse_args()
 
+
+def split_bytecode_(block):
+    """
+    Using the imported opcodes module to split the bytecode
+    This is assumed to be the implementation of opcodes.split_bytecode_
+    """
+    return opcodes.split_bytecode_(block)
+
+def transform(op: str) -> str:
+    """
+    Transform an opcode to its hexadecimal representation
+    """
+    if op.startswith("#"):
+        return op
+
+    return f"{hex(opcodes.get_opcode(op)[0])}"
+
+def parse_block(instruction):
+    """
+    Process a single instruction by splitting it into opcodes and transforming each opcode
+    """
+
+    instruction = instruction.replace('\n', '')
+
+    # Split the instruction into opcodes
+    splitted = split_bytecode_(instruction)
+
+    # Transform each opcode to its hexadecimal representation
+    ops = [transform(op) for op in splitted]
+    
+    # Return the list of transformed opcodes
+    return ops
+
+
+def predict_split_mode(text):
+    import tensorflow as tf
+    import pickle 
+    import numpy as np
+
+    text = parse_block(text)
+
+    model = tf.keras.models.load_model('ml_model/model.keras')
+
+    # Tokenizer
+    with open('ml_model/tokenizer.pkl', 'rb') as f:
+        tokenizer = pickle.load(f)
+
+    # MultiLabelBinarizer
+    with open('ml_model/mlb.pkl', 'rb') as f:
+        mlb = pickle.load(f)
+
+    num_classes = len(mlb.classes_)
+
+    text = ' '.join(text)
+
+    # Tokeniza igual que en el entrenamiento
+    sequences = tokenizer.texts_to_sequences(text)
+    padded = tf.keras.preprocessing.sequence.pad_sequences(sequences, maxlen=100)
+
+     # Predicción
+    prediccion = model.predict(padded)
+
+    # Check if predicted class is within the known range
+    predicted_class_index = np.argmax(prediccion[0])  # Get predicted class index
+    predicted = mlb.inverse_transform(np.eye(num_classes)[predicted_class_index].reshape(1, -1))[0][0]
+
+    print(f"Predicted class: {predicted}")
+    return predicted
 
 def execute_gasol(params: OptimizationParams):
     global previous_gas
