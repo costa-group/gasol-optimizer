@@ -15,7 +15,7 @@ from pandas.core.internals import blocks
 from pandas.core.internals.managers import blockwise_all
 
 import greedy
-from gasol_ml import opcodes
+from ml_model import opcodes
 from split_stack_calculator.split_calculator import Split_calculator
 
 sys.path.append(os.path.dirname(os.path.realpath(__file__)) + "/gasol_ml")
