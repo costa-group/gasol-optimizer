@@ -41,6 +41,7 @@ from global_params.options import OptimizationParams
 from greedy.block_generation import greedy_from_json, greedy_standalone
 from smt_encoding.json_with_dependencies import extended_json_with_instr_dep_and_bounds, extended_json_with_minlength, generate_dot_graph_from_sms
 from dzn.dzn_api import dzn_optimization_from_sms
+from pathlib import Path
 
 
 def init():
@@ -312,8 +313,8 @@ def optimize_block(sfs_dict, params: OptimizationParams) -> List[Tuple[AsmBlock,
 
         sfs_block = extended_json_with_minlength(extended_json_with_instr_dep_and_bounds(sfs_block))
 
-        aggressive_1 = 10
-        aggressive_2 = 10
+        aggressive_1 = 5
+        aggressive_2 = 5
 
 
         if params.split_block == "complete":
@@ -1433,14 +1434,16 @@ def predict_split_mode(text):
 
     text = parse_block(text)
 
-    model = tf.keras.models.load_model('ml_model/model.keras')
+    BASE_DIR = Path(__file__).resolve().parent
+
+    model = tf.keras.models.load_model(f'{BASE_DIR}/ml_model/model.keras')
 
     # Tokenizer
-    with open('ml_model/tokenizer.pkl', 'rb') as f:
+    with open(f'{BASE_DIR}/ml_model/tokenizer.pkl', 'rb') as f:
         tokenizer = pickle.load(f)
 
     # MultiLabelBinarizer
-    with open('ml_model/mlb.pkl', 'rb') as f:
+    with open(f'{BASE_DIR}/ml_model/mlb.pkl', 'rb') as f:
         mlb = pickle.load(f)
 
     num_classes = len(mlb.classes_)
