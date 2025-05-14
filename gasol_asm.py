@@ -1451,8 +1451,11 @@ def predict_split_mode(text):
     text = ' '.join(text)
 
     # Tokeniza igual que en el entrenamiento
-    sequences = tokenizer.texts_to_sequences(text)
+    sequences = tokenizer.texts_to_sequences([text])
     padded = tf.keras.preprocessing.sequence.pad_sequences(sequences, maxlen=100)
+
+    print(text)
+    print(sequences)
 
      # Predicción
     prediccion = model.predict(padded)
