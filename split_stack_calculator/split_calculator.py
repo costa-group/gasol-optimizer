@@ -109,7 +109,6 @@ class Split_calculator:
 
         if original_code_with_ids == []:
             min_stack_size, min_instr_number = self.get_minstack_split(len(sfs_block["src_ws"]), sfs_block["init_progr_len"], [instr for instr in sfs_block["original_instrs"].split() if not is_hex(instr)])
-            print("no dag split found")
             return min_stack_size, min_instr_number
 
 

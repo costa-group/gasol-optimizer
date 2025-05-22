@@ -323,7 +323,7 @@ def optimize_block(sfs_dict, params: OptimizationParams) -> List[Tuple[AsmBlock,
                 sfs_block["init_progr_len"] = original_length - round(original_length*aggressive_1/100)
 
 
-            if i == 2: #blk2_modification
+            if i == 1: #blk2_modification
                 original_length = total_length - len(optimized_asm)
                 sfs_block["init_progr_len"] = original_length - round(original_length*aggressive_2/100)
 
