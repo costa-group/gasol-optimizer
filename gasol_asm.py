@@ -679,8 +679,9 @@ def optimize_isolated_asm_block(params: OptimizationParams):
         predicted = predict_split_mode(instructions)
 
         if predicted == "original":
-            params.dzn = True 
+            #params.dzn = True 
             params.split_block = "none"
+            params.sat_solver = True
         else:
             params.split_block = predicted
 

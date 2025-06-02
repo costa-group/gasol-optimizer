@@ -130,7 +130,7 @@ class Split_calculator:
                 min_instr_number = id_to_pos[instr][0]
                 min_stack_size = id_to_pos[instr][1]
 
-        dag.render_graph(min_stack_size, min_instr_number, sfs_block["user_instrs"])
+        #dag.render_graph(min_stack_size, min_instr_number, sfs_block["user_instrs"])
 
         return min_stack_size, min_instr_number
 
