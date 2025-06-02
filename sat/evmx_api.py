@@ -16,6 +16,8 @@ import tempfile
 import signal
 import resource
 import subprocess
+from smt_encoding.block_optimizer import OptimizeOutcome
+
 
 
 def run_command(cmd, timeout):
@@ -59,7 +61,7 @@ def initialize_options(params, language: str) -> Options:
 
         sat_engine = "sat" # if not parsed_args.external else 'nuwls-c'
 
-        parsed_options = ['-vvv', '-o', 'len', '-a', sat_engine, '--config', parsed_args.config_sat, '-e', 'pw',
+        parsed_options = ['-vvv', '-o', 'len', '-a', sat_engine, '--config', params.config_sat, '-e', 'pw',
                           '-s', 'g3', '-w']
     else:
         raise ValueError(f"Stack language {language} not recognized")
@@ -193,44 +195,23 @@ def evmx_from_sms_with_process(json_file: Dict[str, Any], timeout: float, parsed
 
 def evmx_from_sms(json_file: Dict[str, Any], timeout: float, parsed_args, language: str) -> Tuple[List[str], str, float]:
     return evmx_from_sms_with_process(json_file, timeout, parsed_args, language)
-    # return evmx_from_sms_with_subprocess(json_file, timeout)
-
-def id_to_asm_bytecode(instr_id: str, uf_instrs: Dict[str, Dict[str, Any]]) -> str:
-    if instr_id in uf_instrs:
-        associated_instr = uf_instrs[instr_id]
-        opc = associated_instr['disasm']
-
-        # Special PUSH cases that were transformed to decimal are analyzed separately
-        if opc == "PUSH" or opc == "PUSH [tag]" or opc == "PUSH data" or opc == "PUSHIMMUTABLE":
-            value = hex(int(associated_instr['value'][0]))[2:]
-            return f'{opc} {value}'
-        else:
-            return f'{opc} {associated_instr["value"][0]}' if 'value' in associated_instr else opc
-
-    else:
-        # The id is the instruction itself
-        return instr_id
 
 
-def opcode_seq_from_id_seq(id_seq: List[str], instrs: List[Dict[str, Any]]) -> List[str]:
-    instr_id_to_instr = {instr['id']: instr for instr in instrs}
-    return [id_to_asm_bytecode(instr_id, instr_id_to_instr) for instr_id in id_seq if instr_id != 'NOP']
+def evmx_opt_outcome_to_gasol(opt_outcome: str) -> OptimizeOutcome:
+    if opt_outcome == 'unsat':
+        return OptimizeOutcome.unsat
+    if opt_outcome == 'error':
+        return OptimizeOutcome.error
+    elif opt_outcome == 'no_model':
+        return OptimizeOutcome.no_model
+    elif opt_outcome == 'non_optimal':
+        return OptimizeOutcome.non_optimal
+    elif opt_outcome == 'optimal':
+        return OptimizeOutcome.optimal
+    raise ValueError(f'{opt_outcome} not recognized')
 
 
-def optimize_evmx(sms, timeout) -> Tuple[str, float, List[str]]:
+def evmx_to_gasol(sms, timeout: float, parsed_args) -> Tuple[OptimizeOutcome, float, List[str]]:
     # There was an error when initializing the optimizer
-    id_seq, optimization_outcome, time = evmx_from_sms(sms, timeout)
-    return optimization_outcome, time, opcode_seq_from_id_seq(id_seq, sms['user_instrs'])
-
-
-if __name__ == '__main__':
-    json_file = sys.argv[1]
-    timeout = float(sys.argv[2])
-
-    with open(json_file, 'r') as path:
-        old_sms = json.load(path)
-
-    solution = optimize_evmx(old_sms, timeout)
-
-    print('Initial solution')
-    print(solution)
+    id_seq, optimization_outcome, time = evmx_from_sms(sms, timeout, parsed_args, "evm")
+    return evmx_opt_outcome_to_gasol(optimization_outcome), time, id_seq

@@ -134,6 +134,13 @@ class OptimizationParams:
         self.binary_shrink = False
         self.pop_unused = False
 
+        # SAT Options
+        self.sat_solver = None
+        self.config_sat = None
+        self.initial_sat = None
+        self.initial_block = None
+        self.external = None
+
     def parse_args(self, parsed_args: Namespace):
         self.input_file = parsed_args.input_path
 
@@ -231,6 +238,7 @@ class OptimizationParams:
         if "debug_flag" in parsed_args:
             self.debug_flag = parsed_args.debug_flag
 
+        self.sat_solver = parsed_args.sat_solver
         self.dzn = parsed_args.dzn
         self.length_bound = parsed_args.length_bound
         self.gcc_bounds = parsed_args.gcc_bounds
@@ -238,3 +246,9 @@ class OptimizationParams:
         self.binary_shrink = parsed_args.binary_shrink
         self.pop_unused = parsed_args.pop_unused
         self.split_block = parsed_args.split_block
+
+        # SAT Options
+        self.config_sat = parsed_args.config_sat
+        self.initial_sat = parsed_args.initial_sat
+        self.initial_block = parsed_args.initial_block
+        self.external = parsed_args.external
