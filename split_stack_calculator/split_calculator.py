@@ -47,7 +47,7 @@ class Split_calculator:
 
             if (lower_instr_num_bound < instr_number < upper_instr_num_bound and stack_size <= min_stack_size):
                 min_stack_size = stack_size 
-                min_instr_number = instr_number 
+                min_instr_number = instr_number
 
         return min_stack_size, min_instr_number
 
@@ -108,11 +108,12 @@ class Split_calculator:
             return
 
         if original_code_with_ids == []:
+            print("no dag")
             min_stack_size, min_instr_number = self.get_minstack_split(len(sfs_block["src_ws"]), sfs_block["init_progr_len"], [instr for instr in sfs_block["original_instrs"].split() if not is_hex(instr)])
             return min_stack_size, min_instr_number
 
 
-        dag = DAG(sfs_block["instr_dependencies"], original_code_with_ids, extended=True)
+        dag = DAG(sfs_block["instr_dependencies"], original_code_with_ids, length, extended=True)
 
         #split the block in the last minimum stack found in the inverse dag
         id_to_pos = dag.id_to_pos
@@ -128,6 +129,8 @@ class Split_calculator:
             if (id_to_pos[instr][0] > min_pos_block and id_to_pos[instr][0] < max_pos_block and id_to_pos[instr][1] <= min_stack_size):
                 min_instr_number = id_to_pos[instr][0]
                 min_stack_size = id_to_pos[instr][1]
+
+        dag.render_graph(min_stack_size, min_instr_number, sfs_block["user_instrs"])
 
         return min_stack_size, min_instr_number
 
@@ -145,8 +148,6 @@ class Split_calculator:
         for i, word in enumerate(original_instr_splitted):
             if word[0].isdigit():
                 continue
-
-
 
             if word.startswith("PUSH0"):
                 if "PUSH0" in user_instr_dict.keys():
@@ -184,6 +185,33 @@ class Split_calculator:
 
 
             elif word.startswith("KECCAK256"):
+                for kw in user_instr_dict[word]:
+                    kw_input = kw["inpt_sk"] 
+                    st_input = stack[:len(kw["inpt_sk"])]
+                    if kw_input == st_input:
+
+                        original_pos = pos
+                        original_code_with_ids_and_pos_size = code_with_ids_and_pos_size.copy()
+                        original_stack = stack.copy()
+
+
+                        code_with_ids_and_pos_size.append((kw["id"], pos, len(stack)))
+                        stack = stack[len(kw["inpt_sk"]):]
+                        stack = kw["outpt_sk"] + stack
+
+
+                        backtracking, pos = self.parse_original_instr(original_instr[len(" ".join(original_instr_splitted[0:i + 1])) + 1:],user_instr, stack, final_stack, code_with_ids_and_pos_size, pos)
+
+
+                        if len(backtracking) != 0:
+                            return backtracking, pos
+
+                        stack = original_stack
+                        pos = original_pos
+                        code_with_ids_and_pos_size = original_code_with_ids_and_pos_size
+
+
+            elif word.startswith("MLOAD"):
                 for kw in user_instr_dict[word]:
                     kw_input = kw["inpt_sk"] 
                     st_input = stack[:len(kw["inpt_sk"])]

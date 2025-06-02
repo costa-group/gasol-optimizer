@@ -21,18 +21,20 @@ class DAG:
     nodes: Dict[str, List[str]]
     reverse: List[str]
 
-    def __init__(self, dep, code_with_id, extended: bool = False) -> None:
+    def __init__(self, dep, code_with_id, length, extended: bool = False) -> None:
 
+        self.length = length
         if extended:
             self.nodes = dep
             self.reverse = self.reverse_topological_order(self.nodes)
             self.nodes, self.id_to_pos = self.extend_dag(code_with_id)
-            self.generate_dot(self.nodes, "extended")
+            self.name = "extended"
             self.reverse = self.reverse_topological_order(self.nodes)
 
         else:
             self.nodes = dep
-            self.generate_dot(self.nodes, "normal")
+            self.name = "normal"
+            self.generate_dot(self.nodes)
             self.reverse = self.reverse_topological_order(self.nodes)
 
 
@@ -43,22 +45,45 @@ class DAG:
 
             self.id_to_pos = {k: sorted(v, key=lambda x: x[1] ) for k, v in id_to_pos.items()}
 
-
     
-    def generate_dot(self, graph, name):
+    def generate_dot(self, graph, min_stack, part_pos, instrs):
 
-        dot = Digraph()
+        self.dot = Digraph()
 
         for id in graph.keys():
-            dot.node(id, id)
+            style = {'color': 'black',
+                     'fill': 'white'}
+
+            if self.id_to_pos[id][1] == min_stack:
+                style['color'] = 'red'
+
+            if self.id_to_pos[id][0] == part_pos:
+                style['color'] = 'green'
+
+
+            if self.id_to_pos[id][0] <= part_pos:
+                style['fill'] = 'lightyellow'
+            else:
+                style['fill'] = 'lightblue'
+        
+
+            self.dot.node(id, f"{id} {self.id_to_pos[id]}", color=style['color'], fillcolor=style['fill'], style='filled')
+
+        outputs = {}
+
+        for instr in instrs:
+            outputs[instr['id']]=str(instr['outpt_sk'])
 
         for id, prev_nodes in graph.items():
             for node in prev_nodes:
-                dot.edge(node, id)
+                self.dot.edge(node, id, label=outputs["_".join(node.split("_")[:2])])
 
 
-        dot.render(name, format='dot')
-        #dot.render(name, format='png', view=True)
+    def render_graph(self, min_stack, part_pos, instrs):
+        self.generate_dot(self.nodes, min_stack, part_pos, instrs)
+        self.dot.render("graph", format='dot')
+        self.dot.render("graph", format='png', view=True)
+
 
     def reverse_topological_order(self, graph):
         # Compute in-degree of each node
