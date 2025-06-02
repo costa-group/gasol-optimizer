@@ -42,7 +42,7 @@ from greedy.block_generation import greedy_from_json, greedy_standalone
 from smt_encoding.json_with_dependencies import extended_json_with_instr_dep_and_bounds, extended_json_with_minlength, generate_dot_graph_from_sms
 from dzn.dzn_api import dzn_optimization_from_sms
 from pathlib import Path
-
+from sat.evmx_api import evmx_to_gasol
 
 def init():
     global previous_gas
@@ -177,6 +177,10 @@ def search_optimal(sfs_block: Dict, params: OptimizationParams, tout: int,
     if params.greedy:
         optimization_outcome_str, solver_time, optimized_ids = greedy_standalone(sfs_block)
         optimization_outcome = OptimizeOutcome.non_optimal if optimization_outcome_str == "non_optimal" else OptimizeOutcome.error
+
+    # SAT COMES HERE
+    elif params.sat_solver:
+        optimization_outcome, solver_time, optimized_ids = evmx_to_gasol(sfs_block, tout, params)
 
     elif params.dzn or (params.split_block == "not-ordered" and iteration == 1) or params.split_block == "ordered" or params.split_block == "complete":
         optimization_outcome, solver_time, optimized_ids = dzn_optimization_from_sms(sfs_block, tout, params)
@@ -1300,6 +1304,7 @@ def options_gasol(ap: ArgumentParser) -> None:
     basic.add_argument("-ub-greedy", "--ub-greedy", dest='ub_greedy', help='Enables greedy algorithm to predict the upper bound', action='store_true')
     basic.add_argument('-greedy', '--greedy', dest='greedy', help='Uses greedy directly to generate the results', action='store_true')
     basic.add_argument('-dzn', '--dzn', dest='dzn', help='Superoptimization via a MiniZinc model', action='store_true')
+    basic.add_argument("-sat", "--sat", dest='sat_solver', help='Enables SAT encoding using evmx', action='store_true')
     basic.add_argument("-solver", "--solver", help="Choose the solver", choices=["z3", "barcelogic", "oms"],
                        default="oms")
     basic.add_argument("-tout", metavar='timeout', action='store', type=int,
@@ -1379,6 +1384,13 @@ def options_gasol(ap: ArgumentParser) -> None:
     minizinc_options.add_argument('-unary-shrink', action='store_true', dest='unary_shrink', help='')
     minizinc_options.add_argument('-binary-shrink', action='store_true', dest='binary_shrink', help='')
     minizinc_options.add_argument('-pop-unused', action='store_true', dest='pop_unused', help='')
+
+    sat_options = ap.add_argument_group('SAT Options', 'Options for enabling flags in SAT')
+    sat_options.add_argument('-sat-config', '--sat-config', action='store', dest='config_sat',
+                             choices=['all', 'base', 'e', 'f', 'g', 'h', 'allbutf'], default='all')
+    sat_options.add_argument('-init-sol', '--init-sol', action='store_true', dest='initial_sat')
+    sat_options.add_argument('-init-block', '--init-block', action='store_true', dest='initial_block')
+    sat_options.add_argument('-ext', '--ext', action='store_true', dest='external')
 
 
     s_o = ap.add_argument_group('Split Options', 'Options for deciding where to split the block')
