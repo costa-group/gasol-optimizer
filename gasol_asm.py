@@ -179,7 +179,7 @@ def search_optimal(sfs_block: Dict, params: OptimizationParams, tout: int,
         optimization_outcome = OptimizeOutcome.non_optimal if optimization_outcome_str == "non_optimal" else OptimizeOutcome.error
 
     # SAT COMES HERE
-    elif params.sat_solver:
+    elif params.sat_solver :
         optimization_outcome, solver_time, optimized_ids = evmx_to_gasol(sfs_block, tout, params)
 
     elif params.dzn or (params.split_block == "not-ordered" and iteration == 1) or params.split_block == "ordered" or params.split_block == "complete":
@@ -317,8 +317,8 @@ def optimize_block(sfs_dict, params: OptimizationParams) -> List[Tuple[AsmBlock,
 
         sfs_block = extended_json_with_minlength(extended_json_with_instr_dep_and_bounds(sfs_block))
 
-        aggressive_1 = 5
-        aggressive_2 = 5
+        aggressive_1 = 0
+        aggressive_2 = 0
 
 
         if params.split_block == "complete":
