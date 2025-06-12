@@ -678,12 +678,31 @@ def optimize_isolated_asm_block(params: OptimizationParams):
     if params.split_block == "ml":
         predicted = predict_split_mode(instructions)
 
-        if predicted == "original":
-            #params.dzn = True 
+        if predicted == "original-smt":
+            params.dzn = True 
+            params.split_block = "none"
+            params.sat_solver = False 
+        elif predicted == "original-sat":
             params.split_block = "none"
             params.sat_solver = True
+
+        elif predicted == "simple-smt":
+            params.split_block = "complete"
+            params.sat_solver = False 
+        elif predicted == "simple-sat":
+            params.split_block = "complete"
+            params.sat_solver = True
+
+        elif predicted == "minimal-smt":
+            params.split_block = "ordered"
+            params.sat_solver = False 
+        elif predicted == "minimal-sat":
+            params.split_block = "ordered"
+            params.sat_solver = True 
+
         else:
-            params.split_block = predicted
+            params.split_block = "complete"
+            params.sat_solver = False 
 
 
 
