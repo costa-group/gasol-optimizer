@@ -676,7 +676,7 @@ def optimize_isolated_asm_block(params: OptimizationParams):
         instructions = f.read()
 
     if params.split_block == "ml":
-        predicted = predict_split_mode(instructions)
+        predicted = predict_split_mode_random_forest(instructions)
 
         if predicted == "original-smt":
             params.dzn = True 
@@ -1498,6 +1498,46 @@ def predict_split_mode(text):
 
     print(f"Predicted class: {predicted}")
     return predicted
+
+def predict_split_mode_random_forest(X:str):
+    import pickle
+    from scipy.sparse import hstack
+    import numpy as np
+
+    X = [X]
+
+    BASE_DIR = Path(__file__).resolve().parent
+
+    with open(f'{BASE_DIR}/ml_model/model.pkl', 'rb') as f:
+        model = pickle.load(f)
+
+    # MultiLabelBinarizer
+    with open(f'{BASE_DIR}/ml_model/vectorizers_and_svd.pkl', 'rb') as f:
+        word_vectorizer, char_vectorizer, svd = pickle.load(f)
+
+    # Vectorize input
+    X_word = word_vectorizer.transform(X)
+    X_char = char_vectorizer.transform(X)
+    X_combined = hstack([X_word, X_char])
+
+    # Reduce dimensionality
+    X_reduced = svd.transform(X_combined)
+
+
+    # Predict probabilities
+    y_proba = model.predict_proba(X_reduced)  # list of arrays, one per label
+
+    proba_matrix = np.array(y_proba)
+
+    # Get the most probable label per sample
+    best_indices = np.argmax(proba_matrix, axis=1)
+
+    all_labels = ['original-sat', 'original-smt', 'simple-sat', 'simple-smt', 'minimal-sat', 'minimal-smt']
+
+    predictions = [(all_labels[i],)[0] for i in best_indices][0]
+
+    print("predicted class: ", predictions)
+    return predictions
 
 def execute_gasol(params: OptimizationParams):
     global previous_gas
