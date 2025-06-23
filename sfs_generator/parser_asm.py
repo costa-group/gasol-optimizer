@@ -9,6 +9,7 @@ from sfs_generator.asm_bytecode import AsmBytecode, ASM_Json_T
 from sfs_generator.asm_contract import AsmContract
 from sfs_generator.asm_json import AsmJSON
 from sfs_generator.utils import isYulKeyword
+import global_params.constants as constants
 
 
 def build_asm_bytecode(instruction : ASM_Json_T, pushlib_values: dict) -> AsmBytecode:
@@ -16,17 +17,25 @@ def build_asm_bytecode(instruction : ASM_Json_T, pushlib_values: dict) -> AsmByt
         value = instruction['value']
         if value not in pushlib_values:
             pushlib_values[value] = len(pushlib_values)
+        real_value = value
         value = pushlib_values[value]
     else:
         value = instruction.get("value", None)
+        real_value = value
 
     begin = instruction.get("begin", -1)
     end = instruction.get("end", -1)
     name = instruction.get("name", -1)
     source = instruction.get("source", -1)
+    modifier_depth = instruction.get("modifierDepth", None)
     jump_type = instruction.get("jumpType", None)
 
-    asm_bytecode = AsmBytecode(begin, end, source, name, value, jump_type)
+    # At this point, we identify PUSH0 instructions, and we create an AsmBytecode as such
+    if constants.push0_enabled and name == 'PUSH' and value == "0":
+        asm_bytecode = AsmBytecode(begin, end, source, "PUSH0", None, jump_type, modifier_depth, real_value)
+    else:
+        asm_bytecode = AsmBytecode(begin, end, source, name, value,  jump_type, modifier_depth, real_value)
+
     return asm_bytecode
 
 
@@ -53,6 +62,7 @@ def build_blocks_from_asm_representation(cname : str, block_name_prefix : str, i
             block.add_instruction(asm_bytecode)
             bytecodes.append(block)
             block = AsmBlock(cname, block_id, _generate_block_name_from_id(block_name_prefix, block_id), is_init_code)
+            block._idx2real_value = pushlib_values
             pushlib_values = dict()
             block_id+=1
 
@@ -62,6 +72,7 @@ def build_blocks_from_asm_representation(cname : str, block_name_prefix : str, i
             if block.instructions:
                 bytecodes.append(block)
                 block = AsmBlock(cname, block_id, _generate_block_name_from_id(block_name_prefix, block_id), is_init_code)
+                block._idx2real_value = pushlib_values
                 pushlib_values = dict()
                 block_id += 1
                 
@@ -73,6 +84,7 @@ def build_blocks_from_asm_representation(cname : str, block_name_prefix : str, i
 
     # If last block has any instructions left, it must be added to the bytecode
     if block.instructions:
+        block._idx2real_value = pushlib_values
         bytecodes.append(block)
         
     return bytecodes
@@ -114,9 +126,15 @@ def build_asm_contract(cname : str, cinfo : Dict[str, Any]) -> AsmContract:
         else:
             asm_c.set_data_field_with_address(elem, data[elem])
 
-    asm_c.build_static_edges_init()
-    asm_c.build_static_edges_runtime()
+    # asm_c.build_static_edges_init()
+    # asm_c.build_static_edges_runtime()
     return asm_c
+
+
+def parse_json_asm(file_name: str) -> AsmContract:
+    with open(file_name) as f:
+        data = json.load(f)
+    return build_asm_contract("contract", data)
 
 
 def parse_asm(file_name : str) -> AsmJSON:
@@ -174,11 +192,12 @@ def plain_instructions_to_asm_representation(raw_instruction_str : str) -> [ASM_
                 final_op = {"name": op}
             elif op.startswith("PUSH") and op.find("SIZE") != -1:
                 final_op = {"name": op}
-            # This case refers to PUSHx opcodes, that are allowed in the plain representation
+            # PUSH0 is parsed similarly to PUSH 0, and is interpreted as one form or the other depending on the
+            # flag --push0
             elif op.startswith("PUSH0"):
                 val_representation = "0"
-                final_op = {"name": "PUSH0", "value": val_representation}
-                
+                final_op = {"name": "PUSH", "value": val_representation}
+            # This case refers to PUSHx opcodes, that are allowed in the plain representation
             elif re.fullmatch("PUSH([0-9]+)", op) is not None:
                 val = ops[i + 1]
                 # The hex representation omits
@@ -213,9 +232,12 @@ def plain_instructions_to_asm_representation(raw_instruction_str : str) -> [ASM_
 # Conversion from a string containing all different instructions in Assembly format to ASMBlocks representation.
 # See https://github.com/ethereum/solidity/blob/develop/libevmasm/Assembly.cpp on how different assembly
 # items are represented
-def parse_blocks_from_plain_instructions(raw_instructions_str):
+def parse_blocks_from_plain_instructions(raw_instructions_str, cname = "", block_name_prefix = ""):
     instr_list = plain_instructions_to_asm_representation(raw_instructions_str)
-    blocks = build_blocks_from_asm_representation("isolated", "isolated", instr_list, False)
+    if cname == "" and block_name_prefix == "":
+        blocks = build_blocks_from_asm_representation("isolated", "isolated", instr_list, False)
+    else:
+        blocks = build_blocks_from_asm_representation(cname, block_name_prefix, instr_list, False)
     return blocks
 
 
