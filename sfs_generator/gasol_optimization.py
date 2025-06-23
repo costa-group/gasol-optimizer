@@ -3730,7 +3730,7 @@ def apply_transform(instr):
 
             rule = opcode+"(0,X)"
             
-            return inp_vars[1]
+            return inp_vars[0]
         elif inp_vars[1] == 0:
             discount_op+=1
             saved_push+=2
@@ -3763,7 +3763,7 @@ def apply_transform_rules(user_def_instrs,list_vars,tstack):
     modified = False
     for instr in user_def_instrs:
         
-        if instr["disasm"] in ["AND","OR","XOR","ADD","SUB","MUL","DIV","EXP","EQ","GT","LT","SGT","SLT","NOT","ISZERO"]:
+        if instr["disasm"] in ["AND","OR","XOR","ADD","SUB","MUL","DIV","EXP","EQ","GT","LT","SGT","SLT","NOT","ISZERO","SHL","SHR"]:
             r = apply_transform(instr)
 
             if r!=-1:
