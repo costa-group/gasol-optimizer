@@ -44,6 +44,12 @@ from dzn.dzn_api import dzn_optimization_from_sms
 from pathlib import Path
 from sat.evmx_api import evmx_to_gasol
 
+
+import pickle
+from scipy.sparse import hstack
+import numpy as np
+import time
+
 def init():
     global previous_gas
     previous_gas = 0
@@ -335,9 +341,11 @@ def optimize_block(sfs_dict, params: OptimizationParams) -> List[Tuple[AsmBlock,
             assert len(sfs_dict) == 2
 
             if i == 0: #blk1_modification
+
                 target = sfs_block["tgt_ws"]
 
                 out_portion, in_portion = separate_stack_portions(sfs_block["src_ws"], target)
+                n_duplicated = len(out_portion) - len(set(out_portion))
                 out_portion = eliminate_duplicates(out_portion)
                 blk1_tgt = out_portion + in_portion
 
@@ -346,6 +354,7 @@ def optimize_block(sfs_dict, params: OptimizationParams) -> List[Tuple[AsmBlock,
                 sfs_block["tgt_ws"] = blk1_tgt
                 original_length = sfs_block["init_progr_len"] 
                 sfs_block["init_progr_len"] = original_length - round(original_length*aggressive_1/100)
+                sfs_block["min_length"] -= n_duplicated
 
             if i == 1: #blk2_modification
 
@@ -378,10 +387,14 @@ def optimize_block(sfs_dict, params: OptimizationParams) -> List[Tuple[AsmBlock,
             assert len(sfs_dict) == 2
 
             if i == 0: #blk1_modification
+
+                n_duplicated = len(sfs_block["tgt_ws"]) - len(set(sfs_block["tgt_ws"]))
                 
                 sfs_block["tgt_ws"] = eliminate_duplicates(sfs_block["tgt_ws"])# helps the solver
                 original_length = sfs_block["init_progr_len"] 
                 sfs_block["init_progr_len"] = original_length - round(original_length*aggressive_1/100)
+
+                sfs_block["min_length"] -= n_duplicated
 
 
             if i == 1: #blk2_modification
@@ -1486,9 +1499,6 @@ def predict_split_mode(text):
     sequences = tokenizer.texts_to_sequences([text])
     padded = tf.keras.preprocessing.sequence.pad_sequences(sequences, maxlen=100)
 
-    print(text)
-    print(sequences)
-
      # Predicción
     prediccion = model.predict(padded)
 
@@ -1500,9 +1510,7 @@ def predict_split_mode(text):
     return predicted
 
 def predict_split_mode_random_forest(X:str):
-    import pickle
-    from scipy.sparse import hstack
-    import numpy as np
+
 
     X = [X]
 
@@ -1515,6 +1523,7 @@ def predict_split_mode_random_forest(X:str):
     with open(f'{BASE_DIR}/ml_model/vectorizers_and_svd.pkl', 'rb') as f:
         word_vectorizer, char_vectorizer, svd = pickle.load(f)
 
+    st = time.time()
     # Vectorize input
     X_word = word_vectorizer.transform(X)
     X_char = char_vectorizer.transform(X)
@@ -1536,7 +1545,10 @@ def predict_split_mode_random_forest(X:str):
 
     predictions = [(all_labels[i],)[0] for i in best_indices][0]
 
+    et = time.time()
+
     print("predicted class: ", predictions)
+    print("Execution time: {:.4f} seconds".format(et - st))
     return predictions
 
 def execute_gasol(params: OptimizationParams):
