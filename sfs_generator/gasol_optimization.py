@@ -20,7 +20,7 @@ terminate_block = ["ASSERTFAIL","RETURN","REVERT","SUICIDE","STOP"]
 
 pre_defined_functions = ["PUSH","POP","SWAP","DUP"]
 
-zero_ary = ["origin","caller","callvalue","address","number","gasprice","difficulty","prevrandao","basefee","coinbase","timestamp","codesize","gaslimit","gas","calldatasize","returndatasize","msize","selfbalance","chainid","pushdeployaddress","pushsize"]
+zero_ary = ["origin","caller","callvalue","address","number","gasprice","difficulty","prevrandao","basefee","coinbase","timestamp","codesize","gaslimit","gas","calldatasize","returndatasize","msize","selfbalance","chainid","pushdeployaddress","pushsize","blobbasefee"]
 
 commutative_bytecodes = ["ADD","MUL","EQ","AND","OR","XOR"]
 
@@ -1225,7 +1225,9 @@ def get_involved_vars(instr,var):
     #     funct =  "pc"
     
     elif instr.find("blockhash")!=-1:
-        
+        instr_new = instr.strip()
+        pos = instr_new.find("blockhash(")
+        var = instr[pos+9:-1]
         var0 = var.strip()
         var_list.append(var0)
 

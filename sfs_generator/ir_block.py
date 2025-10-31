@@ -36,16 +36,16 @@ def init_globals():
     opcodes30 = ["ADDRESS", "BALANCE", "ORIGIN", "CALLER",
                  "CALLVALUE", "CALLDATALOAD", "CALLDATASIZE",
                  "CALLDATACOPY", "CODESIZE", "CODECOPY", "GASPRICE",
-                 "EXTCODESIZE", "EXTCODECOPY", "MCOPY","EXTCODEHASH"]
+                 "EXTCODESIZE", "EXTCODECOPY","RETURNDATACOPY","RETURNDATASIZE","EXTCODEHASH"]
 
     global opcodes40
     opcodes40 = ["BLOCKHASH", "COINBASE", "TIMESTAMP", "NUMBER",
-                 "DIFFICULTY", "PREVRANDAO", "GASLIMIT","SELFBALANCE","CHAINID","BASEFEE"]
+                 "DIFFICULTY", "PREVRANDAO", "GASLIMIT","SELFBALANCE","CHAINID","BASEFEE","BLOBHASH","BLOBBASEFEE"]
 
     global opcodes50
     opcodes50 = ["POP", "MLOAD", "MSTORE", "MSTORE8", "SLOAD",
                  "SSTORE", "JUMP", "JUMPI", "PC", "MSIZE", "GAS", "JUMPDEST",
-                 "SLOADEXT", "SSTOREEXT", "SLOADBYTESEXT", "SSTOREBYTESEXT","TLOAD","TSTORE"]
+                 "SLOADEXT", "SSTOREEXT", "SLOADBYTESEXT", "SSTOREBYTESEXT","TLOAD","TSTORE","MCOPY"]
 
     global opcodes60
     opcodes60 = ["PUSH"]
@@ -64,9 +64,6 @@ def init_globals():
                 "ASSERTFAIL", "DELEGATECALL", "BREAKPOINT", "RNGSEED", "SSIZEEXT",
                 "SLOADBYTES", "SSTOREBYTES", "SSIZE", "STATEROOT", "TXEXECGAS",
                 "CALLSTATIC", "INVALID", "SUICIDE","STATICCALL","CREATE2"]
-
-    global opcodesZ
-    opcodesZ = ["RETURNDATACOPY","RETURNDATASIZE"]
 
     global opcodesYul
     opcodesYul = ["PUSH [tag]","PUSH #[$]","PUSH [$]", "PUSH data", "PUSHDEPLOYADDRESS", "ASSIGNIMMUTABLE","PUSHSIZE","PUSHIMMUTABLE","PUSHLIB"]
@@ -478,7 +475,7 @@ def translateOpcodes30(opcode, value, index_variables):
         v1, updated_variables = get_consume_variable(updated_variables)
         v2, updated_variables = get_consume_variable(updated_variables)
 
-        instr = "calldatacopy("+v0+","+v1+","+v2+")"  
+        instr = "codecopy("+v0+","+v1+","+v2+")"  
         
     elif opcode == "GASPRICE":
         v1, updated_variables = get_new_variable(index_variables)
@@ -501,9 +498,19 @@ def translateOpcodes30(opcode, value, index_variables):
         _, updated_variables = get_consume_variable(index_variables)
         v1, updated_variables = get_new_variable(updated_variables)
         instr = v1+" = extcodehash("+v1+")"  
+
+
+    elif opcode == "RETURNDATASIZE":
+        v1, updated_variables = get_new_variable(index_variables)
+        instr = v1+" = returndatasize"
+
+    elif opcode == "RETURNDATACOPY":
+        v0, updated_variables = get_consume_variable(index_variables)
+        v1, updated_variables = get_consume_variable(updated_variables)
+        v2, updated_variables = get_consume_variable(updated_variables)
         
-    elif opcode == "MCOPY":
-        raise NotImplementedError
+        instr = "returndatacopy("+v0+","+v1+","+v2+")"
+        
     else:
         instr = "Error opcodes30: "+opcode
         updated_variables = index_variables
@@ -524,7 +531,7 @@ def translateOpcodes40(opcode, index_variables):
     if opcode == "BLOCKHASH":
         v0, updated_variables = get_consume_variable(index_variables)
         v1, updated_variables = get_new_variable(updated_variables)
-        instr = v1+" = blockhash_"+str(blockhash_cont)
+        instr = v1+" = blockhash("+str(v0)+")"
 
         blockhash_cont +=1
     elif opcode == "COINBASE":
@@ -566,6 +573,15 @@ def translateOpcodes40(opcode, index_variables):
         instr = v1+" = chainid"
 
 
+    elif opcode == "BLOBHASH":
+        v0, updated_variables = get_consume_variable(index_variables)
+        v1, updated_variables = get_new_variable(updated_variables)
+        instr = v1+" = blobhash("+str(v0)+")"
+
+    elif opcode == "BLOBBASEFEE":
+        v1, updated_variables = get_new_variable(index_variables)
+        instr = v1+" = blobbasefee"
+        
     else:
         instr = "Error opcodes40: "+opcode
         updated_variables = index_variables
@@ -653,6 +669,13 @@ def translateOpcodes50(opcode, value, index_variables):
     elif opcode == "JUMPDEST":
         instr = ""
         updated_variables = index_variables
+
+    elif opcode == "MCOPY":
+        v0, updated_variables = get_consume_variable(index_variables)
+        v1, updated_variables = get_consume_variable(updated_variables)
+        v2, updated_variables = get_consume_variable(updated_variables)
+
+        instr = "mcopy("+v0+","+v1+","+v2+")"  
     # elif opcode == "SLOADEXT":
     #     pass
     # elif opcode == "SSTOREEXT":
@@ -905,29 +928,6 @@ def translateOpcodes90(opcode, value, index_variables):
 
     return instr, index_variables
 
-'''
-It simulates the execution of evm bytecodes.  It consumes or
-generates variables depending on the bytecode and returns the
-corresponding translated instruction and the variables's index
-updated. It also updated the corresponding global variables.
-Unclassified opcodes.
-'''
-def translateOpcodesZ(opcode, index_variables):
-    if opcode == "RETURNDATASIZE":
-        v1, updated_variables = get_new_variable(index_variables)
-        instr = v1+" = returndatasize"
-
-    elif opcode == "RETURNDATACOPY":
-        v0, updated_variables = get_consume_variable(index_variables)
-        v1, updated_variables = get_consume_variable(updated_variables)
-        v2, updated_variables = get_consume_variable(updated_variables)
-        
-        instr = "returndatacopy("+v0+","+v1+","+v2+")"
-
-    else:
-        instr = "Error opcodesZ: "+opcode
-
-    return instr, updated_variables
 
 def translateYulOpcodes(opcode, value, index_variables):
     global assignImmutable_dict
