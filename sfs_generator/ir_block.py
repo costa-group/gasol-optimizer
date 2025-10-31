@@ -45,7 +45,7 @@ def init_globals():
     global opcodes50
     opcodes50 = ["POP", "MLOAD", "MSTORE", "MSTORE8", "SLOAD",
                  "SSTORE", "JUMP", "JUMPI", "PC", "MSIZE", "GAS", "JUMPDEST",
-                 "SLOADEXT", "SSTOREEXT", "SLOADBYTESEXT", "SSTOREBYTESEXT"]
+                 "SLOADEXT", "SSTOREEXT", "SLOADBYTESEXT", "SSTOREBYTESEXT","TLOAD","TSTORE"]
 
     global opcodes60
     opcodes60 = ["PUSH"]
@@ -95,6 +95,9 @@ def init_globals():
     global sload_counter
     sload_counter = 0
 
+    global tload_counter
+    tload_counter = 0
+    
     global gas_counter
     gas_counter = 0
 
@@ -578,6 +581,7 @@ updated. It also updated the corresponding global variables.
 '''
 def translateOpcodes50(opcode, value, index_variables):
     global pc_cont
+    global tload_counter
     global sload_counter
     global mload_counter
     global gas_counter
@@ -617,6 +621,22 @@ def translateOpcodes50(opcode, value, index_variables):
 
         instr = "sstore("+v0+","+v1+")"
 
+
+
+    elif opcode == "TLOAD":
+        _ , updated_variables = get_consume_variable(index_variables)
+        v1, updated_variables = get_new_variable(updated_variables)
+
+        instr = v1+" = tload"+str(tload_counter)+"("+v1+")"
+        tload_counter+=1
+
+    elif opcode == "TSTORE":
+        v0 , updated_variables = get_consume_variable(index_variables)
+        v1 , updated_variables = get_consume_variable(updated_variables)
+
+        instr = "tstore("+v0+","+v1+")"
+
+        
     elif opcode == "PC":
         v1, updated_variables = get_new_variable(index_variables)
         instr = v1 + " = pc"+str(pc_cont)
