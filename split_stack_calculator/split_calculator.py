@@ -23,7 +23,7 @@ def is_hex(s):
 '''
 class Split_calculator:
 
-    def get_minstack_split(self, source_stack_size: int, block_length:int, instrs: List[str]):
+    def get_minstack_split(self, source_stack_size: int, block_length:int, instrs: List[str], split_first: bool):
 
         print("source_stack_size: ", source_stack_size)
         print("block_length: ", block_length)
@@ -45,16 +45,22 @@ class Split_calculator:
                 continue
             stack_size = stack_size - bytecode_info[1] + bytecode_info[2]
 
-            if (lower_instr_num_bound < instr_number < upper_instr_num_bound and stack_size <= min_stack_size):
+            if split_first:
+                store_stack = stack_size < min_stack_size
+            else:
+                store_stack = stack_size <= min_stack_size
+
+
+            if (lower_instr_num_bound < instr_number < upper_instr_num_bound and store_stack):
                 min_stack_size = stack_size 
                 min_instr_number = instr_number
 
         return min_stack_size, min_instr_number
 
 
-    def calculate_minstack_split(self, block:AsmBlock):
+    def calculate_minstack_split(self, block:AsmBlock, split_first: bool):
 
-        return self.get_minstack_split(block.source_stack, block.length, [instr.disasm for instr in block.instructions])
+        return self.get_minstack_split(block.source_stack, block.length, [instr.disasm for instr in block.instructions], split_first)
 
     '''
     def calculate_dao_split(self, sfs_block: Dict) -> None:
@@ -98,7 +104,7 @@ class Split_calculator:
         self.split_point = f"splittocsv: {min_pos};{length}"
     '''
 
-    def calculate_extended_dao_split(self, sfs_block: Dict) -> None:
+    def calculate_extended_dao_split(self, sfs_block: Dict, split_first: bool) -> None:
 
 
         original_code_with_ids, length = self.parse_original_instr(sfs_block["original_instrs"], sfs_block["user_instrs"], sfs_block["src_ws"], sfs_block["tgt_ws"])
@@ -109,7 +115,7 @@ class Split_calculator:
 
         if original_code_with_ids == []:
             print("no dag")
-            min_stack_size, min_instr_number = self.get_minstack_split(len(sfs_block["src_ws"]), sfs_block["init_progr_len"], [instr for instr in sfs_block["original_instrs"].split() if not is_hex(instr)])
+            min_stack_size, min_instr_number = self.get_minstack_split(len(sfs_block["src_ws"]), sfs_block["init_progr_len"], [instr for instr in sfs_block["original_instrs"].split() if not is_hex(instr)], split_first)
             return min_stack_size, min_instr_number
 
 
@@ -125,8 +131,15 @@ class Split_calculator:
         min_stack_size = 1024
         min_instr_number = 0
 
+
         for instr in dag.reverse:
-            if (id_to_pos[instr][0] > min_pos_block and id_to_pos[instr][0] < max_pos_block and id_to_pos[instr][1] <= min_stack_size):
+
+            if split_first:
+                store_stack = id_to_pos[instr][1] < min_stack_size
+            else:
+                store_stack = id_to_pos[instr][1] <= min_stack_size
+
+            if (id_to_pos[instr][0] > min_pos_block and id_to_pos[instr][0] < max_pos_block and store_stack):
                 min_instr_number = id_to_pos[instr][0]
                 min_stack_size = id_to_pos[instr][1]
 

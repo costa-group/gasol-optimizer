@@ -189,6 +189,7 @@ class OptimizationParams:
         # Split options
         self.split_storage = parsed_args.storage
         self.split_partition = parsed_args.partition
+        self.split_first = parsed_args.split_first
 
         # Hard constraints
         self.memory_encoding = parsed_args.memory_encoding

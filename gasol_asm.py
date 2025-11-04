@@ -934,7 +934,7 @@ def optimize_asm_block_asm_format(block: AsmBlock, params: OptimizationParams) -
                 split_calculator = Split_calculator()
 
                 if split_mode == "min_stack":
-                    min_stack, instr_num = split_calculator.calculate_minstack_split(block)
+                    min_stack, instr_num = split_calculator.calculate_minstack_split(block, params.split_first)
 
                 if split_mode == "dag":
                     contracts_dict_aux, _ = compute_original_sfs_with_simplifications(block, params)
@@ -943,7 +943,7 @@ def optimize_asm_block_asm_format(block: AsmBlock, params: OptimizationParams) -
 
                     sfs_block = extended_json_with_minlength(extended_json_with_instr_dep_and_bounds(sfs_block))
 
-                    min_stack, instr_num = split_calculator.calculate_extended_dao_split(sfs_block)
+                    min_stack, instr_num = split_calculator.calculate_extended_dao_split(sfs_block, params.split_first)
 
                 #print(f"splittocsv: {min_stack};{instr_num}")
 
@@ -1437,6 +1437,8 @@ def options_gasol(ap: ArgumentParser) -> None:
 
     split_options.add_argument( "-split-ml", "--split-ml", help="Choose split mode with machine learning", dest='split_block', 
         action='store_const', const='ml')
+
+    s_o.add_argument( "-sptfst", "--split-first", help="split the block in the first minimal stack of the middle third", action='store_true')
 
 
 def parse_encoding_args(ap: ArgumentParser):
