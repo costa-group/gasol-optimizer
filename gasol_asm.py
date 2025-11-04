@@ -691,7 +691,7 @@ def optimize_isolated_asm_block(params: OptimizationParams):
     if params.split_block == "ml":
         predicted = predict_split_mode_random_forest(instructions)
 
-        if predicted == "original-smt":
+        if predicted == "original-cp":
             params.dzn = True 
             params.split_block = "none"
             params.sat_solver = False 
@@ -699,19 +699,23 @@ def optimize_isolated_asm_block(params: OptimizationParams):
             params.split_block = "none"
             params.sat_solver = True
 
-        elif predicted == "simple-smt":
+        elif predicted == "simple-cp":
             params.split_block = "complete"
             params.sat_solver = False 
         elif predicted == "simple-sat":
             params.split_block = "complete"
             params.sat_solver = True
 
-        elif predicted == "minimal-smt":
+        elif predicted == "minimal-cp":
             params.split_block = "ordered"
             params.sat_solver = False 
         elif predicted == "minimal-sat":
             params.split_block = "ordered"
             params.sat_solver = True 
+
+        elif predicted == "not-ordered":
+            params.split_block = "not-ordered"
+            params.sat_solver = False
 
         else:
             params.split_block = "complete"
@@ -1516,6 +1520,7 @@ def predict_split_mode_random_forest(X:str):
 
     BASE_DIR = Path(__file__).resolve().parent
 
+    st = time.time()
     with open(f'{BASE_DIR}/ml_model/model.pkl', 'rb') as f:
         model = pickle.load(f)
 
@@ -1523,7 +1528,6 @@ def predict_split_mode_random_forest(X:str):
     with open(f'{BASE_DIR}/ml_model/vectorizers_and_svd.pkl', 'rb') as f:
         word_vectorizer, char_vectorizer, svd = pickle.load(f)
 
-    st = time.time()
     # Vectorize input
     X_word = word_vectorizer.transform(X)
     X_char = char_vectorizer.transform(X)
@@ -1541,7 +1545,7 @@ def predict_split_mode_random_forest(X:str):
     # Get the most probable label per sample
     best_indices = np.argmax(proba_matrix, axis=1)
 
-    all_labels = ['original-sat', 'original-smt', 'simple-sat', 'simple-smt', 'minimal-sat', 'minimal-smt']
+    all_labels = ['original-sat', 'original-cp', 'simple-sat', 'simple-cp', 'minimal-sat', 'minimal-cp']
 
     predictions = [(all_labels[i],)[0] for i in best_indices][0]
 

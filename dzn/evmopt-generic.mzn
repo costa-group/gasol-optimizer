@@ -557,9 +557,9 @@ constraint totalgas2 = sum(i in STEP)(opgas2[op[i]]);
 solve 
       %:: int_search(op, input_order, indomain_min)
       %:: int_search([length], input_order, indomain_min) 
-      minimize length;
+      %minimize length;
       %minimize totalsize2;
-      %minimize totalgas2;
+      minimize totalgas2;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%        OUTPUT               %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
