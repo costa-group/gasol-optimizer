@@ -28,6 +28,7 @@ opcodes = {
     "SHR": [0x1c,2,1],
     "SAR": [0x1d,2,1],
     "SHA3": [0x20, 2, 1],
+    "KECCAK256": [0x20, 2, 1],
     "ADDRESS": [0x30, 0, 1],
     "BALANCE": [0x31, 1, 1],
     "ORIGIN": [0x32, 0, 1],
@@ -42,7 +43,9 @@ opcodes = {
     "EXTCODESIZE": [0x3b, 1, 1],
     "EXTCODECOPY": [0x3c, 4, 0],
     "MCOPY": [0x3d, 3, 0],
-    "EXTCODEHASH":[0x3f,1,1],
+    "RETURNDATASIZE": [0x3d,0,1],
+    "RETURNDATACOPY":[0x3e, 3, 0],
+    "EXTCODEHASH": [0x3f, 1, 1],
     "BLOCKHASH": [0x40, 1, 1],
     "COINBASE": [0x41, 0, 1],
     "TIMESTAMP": [0x42, 0, 1],
@@ -52,7 +55,9 @@ opcodes = {
     "GASLIMIT": [0x45, 0, 1],
     "CHAINID": [0x46,0,1],
     "SELFBALANCE": [0x47,0,1],
-    "BASEFEE": [0x48,0,1],
+    "BASEFEE":[0x48,0,1],
+    "BLOBHASH":[0x49,1,1],
+    "BLOBBASEFEE":[0x4a,1,1],
     "POP": [0x50, 1, 0],
     "MLOAD": [0x51, 1, 1],
     "MSTORE": [0x52, 2, 0],
@@ -69,6 +74,9 @@ opcodes = {
     "SSTOREEXT": [0x5d, 3, 0],
     "SLOADBYTESEXT": [0x5c, 4, 0],
     "SSTOREBYTESEXT": [0x5d, 4, 0],
+    "TLOAD": [0x5c, 1, 1],
+    "TSTORE": [0x5d, 2, 0],
+    "MCOPY": [0x5e, 3, 0],
     "LOG0": [0xa0, 2, 0],
     "LOG1": [0xa1, 3, 0],
     "LOG2": [0xa2, 4, 0],
@@ -78,35 +86,26 @@ opcodes = {
     "CALL": [0xf1, 7, 1],
     "CALLCODE": [0xf2, 7, 1],
     "RETURN": [0xf3, 2, 0],
-    "REVERT": [0xfd, 2, 0],
     "ASSERTFAIL": [0xfe, 0, 0],
     "DELEGATECALL": [0xf4, 6, 1],
     "CREATE2": [0xf5,4,1],
-    "BREAKPOINT": [0xf5, 0, 0],
+    "BREAKPOINT": [0xf5b, 0, 0],
     "RNGSEED": [0xf6, 1, 1],
     "SSIZEEXT": [0xf7, 2, 1],
     "SLOADBYTES": [0xf8, 3, 0],
     "SSTOREBYTES": [0xf9, 3, 0],
-    "SSIZE": [0xfa, 1, 1],
     "STATICCALL": [0xfa, 6, 1],
+    "SSIZE": [0xfa, 1, 1],
     "STATEROOT": [0xfb, 1, 1],
     "TXEXECGAS": [0xfc, 0, 1],
+    "REVERT": [0xfd, 2, 0],
     "CALLSTATIC": [0xfd, 7, 1],
-    "KECCAK256": [0x20, 2, 1], #For evm it is representes as SHA3, for solc as KECCAK256
     "INVALID": [0xfe, 0, 0],  # Not an opcode use to cause an exception
     "SUICIDE": [0xff, 1, 0],
-    # See https://github.com/ethereum/solidity/blob/develop/libevmasm/Assembly.cpp for more information
-    "ASSIGNIMMUTABLE": [0x00,2,0], #Yul opcode. Assembly Item: AssignImmutable
-    "PUSH [tag]": [0x00,0,1], #Yul opcode. Assembly Item: PushTag
-    "PUSHLIB": [0x00,0,1], #Yul opcode. Assembly Item: PushLib
-    "PUSH #[$]": [0x00,0,1], #Yul opcode. Assembly Item: PushSubSize
-    "PUSH [$]": [0x00,0,1], #Yul opcode. Assembly Item: PushSub
-    "PUSHDEPLOYADDRESS": [0x00,0,1], #Yul opcode. AssemblyItem: PushDeployTimeAddress
-    "PUSH data": [0x00,0,1], #Yul opcode. Assembly Item: PushData
-    "PUSHSIZE": [0x00,0,1], #Yul opcode. Assembly Item: PushProgramSize
-    "PUSHIMMUTABLE": [0x00,0,1], #Yul opcode. Assembly Item:PushImmutable
+    "SELFDESTRUCT": [0xff, 1, 0],
     "---END---": [0x00, 0, 0]
 }
+
 
 # Opcodes that have a blank character in their name are put together in our representation
 encoding_functor_name = {
@@ -123,6 +122,7 @@ opcode_internal_representation_to_assembly_item = {
     "PUSH[$]": "PUSH [$]", #Yul opcode. Assembly Item: PushSub
     "PUSHDATA": "PUSH data", #Yul opcode. Assembly Item: PushData
 }
+
 
 # TO BE UPDATED IF ETHEREUM VM CHANGES their fee structure
 
@@ -199,28 +199,19 @@ def get_opcode(opcode):
     if opcode in opcodes:
         return opcodes[opcode]
 
-    elif opcode == "SELFDESTRUCT":
-        return [0xff, 1, 0]
-
     #PG
     elif opcode == "RETURNDATASIZE":
-        return [0x3d, 0, 1]
+        return [hex(0x3d), 0, 1]
 
     elif opcode == "RETURNDATACOPY":
-        return [0x3e, 3, 0]
+        return [hex(0x3e), 3, 0]
 
-    elif opcode == "PUSH0":
-        return [0x5f, 0, 1]
+    elif opcode.startswith("PUSH0"):
+        return [hex(0x5f),0,1]
     
     elif opcode.startswith("PUSH"):
-    # # check PUSHi
-    # for i in range(32):
-    #     if opcode == 'PUSH' + str(i + 1):
-        return [0x60, 0, 1]
-
-    elif opcode.startswith("tag"):
-        return [hex(0x00), 0, 0]
-
+        return [hex(0x60),0,1]
+    
     # check PUSHi
     for i in range(32):
         if opcode == 'PUSH' + str(i + 1):
@@ -288,5 +279,9 @@ def get_ins_cost(opcode, params=None, already=False, store_changed_original_valu
 
     elif opcode == "SELFDESTRUCT":
         return GCOST["Gsuicide"]
+    elif opcode == "TLOAD":
+        return 100
+    elif opcode == "TSTORE":
+        return 100
     return 0
 
