@@ -201,16 +201,20 @@ def get_opcode(opcode):
 
     #PG
     elif opcode == "RETURNDATASIZE":
-        return [hex(0x3d), 0, 1]
+        return [0x3d, 0, 1]
 
     elif opcode == "RETURNDATACOPY":
-        return [hex(0x3e), 3, 0]
+        return [0x3e, 3, 0]
 
     elif opcode.startswith("PUSH0"):
-        return [hex(0x5f),0,1]
+        return [0x5f,0,1]
     
     elif opcode.startswith("PUSH"):
-        return [hex(0x60),0,1]
+        return [0x60,0,1]
+
+
+    elif opcode.startswith("tag"):
+        return [hex(0x00), 0, 0]
     
     # check PUSHi
     for i in range(32):
