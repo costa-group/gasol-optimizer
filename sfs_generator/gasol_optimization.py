@@ -600,6 +600,9 @@ def search_for_value_aux(var, instructions,source_stack,level,evaluate = True):
 def generate_sstore_mstore(store_ins,instructions,source_stack,pos,simp):
     level = 0
     new_vars, funct = get_involved_vars(store_ins,"")
+
+    print(new_vars)
+    print(funct)
     
     values = {}
 
@@ -787,6 +790,8 @@ def update_unary_func(func,var,val,evaluate):
 def get_involved_vars(instr,var):
     var_list = []
     funct = ""
+
+    print(instr)
     
     if instr.find("mload")!=-1:
         instr_new = instr.strip("\n")
@@ -1365,7 +1370,7 @@ def get_involved_vars(instr,var):
         funct =  "coinbase"
 
 
-    elif instr.startswith("delegatecall("):
+    elif instr.find("delegatecall(")!=-1:
         instr_new = instr.strip("\n")
         pos = instr_new.find("delegatecall(")
         arg = instr[pos+13:-1]
@@ -1386,7 +1391,7 @@ def get_involved_vars(instr,var):
 
         funct = "delegatecall"
 
-    elif instr.startswith("staticcall("):
+    elif instr.find("staticcall(")!=-1:
         instr_new = instr.strip("\n")
         pos = instr_new.find("staticcall(")
         arg = instr[pos+11:-1]
@@ -1406,29 +1411,6 @@ def get_involved_vars(instr,var):
         var_list.append(var5)
 
         funct = "staticcall"
-        
-    elif instr.startswith("call("):
-        instr_new = instr.strip("\n")
-        pos = instr_new.find("call(")
-        arg = instr[pos+5:-1]
-        vars06 = arg.split(",")
-        var0 = vars06[0].strip()
-        var1 = vars06[1].strip()
-        var2 = vars06[2].strip()
-        var3 = vars06[3].strip()
-        var4 = vars06[4].strip()
-        var5 = vars06[5].strip()
-        var6 = vars06[6].strip()
-                                
-        var_list.append(var0)
-        var_list.append(var1)
-        var_list.append(var2)
-        var_list.append(var3)
-        var_list.append(var4)
-        var_list.append(var5)
-        var_list.append(var6)
-        
-        funct = "call"
 
     elif instr.startswith("callcode("):
         instr_new = instr.strip("\n")
@@ -1475,6 +1457,29 @@ def get_involved_vars(instr,var):
         var_list.append(var6)
 
         funct = "callstatic"
+        
+    elif instr.find("call(")!=-1:
+        instr_new = instr.strip("\n")
+        pos = instr_new.find("call(")
+        arg = instr[pos+5:-1]
+        vars06 = arg.split(",")
+        var0 = vars06[0].strip()
+        var1 = vars06[1].strip()
+        var2 = vars06[2].strip()
+        var3 = vars06[3].strip()
+        var4 = vars06[4].strip()
+        var5 = vars06[5].strip()
+        var6 = vars06[6].strip()
+                                
+        var_list.append(var0)
+        var_list.append(var1)
+        var_list.append(var2)
+        var_list.append(var3)
+        var_list.append(var4)
+        var_list.append(var5)
+        var_list.append(var6)
+        
+        funct = "call"
 
     elif instr.startswith("pushtag("):
         instr_new = instr.strip("\n")
@@ -2075,7 +2080,6 @@ def generate_storage_info(instructions,source_stack,opcodes,simplification=True)
     global transient_dep
     global extra_dep_info
 
-
     sload_relative_pos = {}
     mload_relative_pos = {}
     tload_relative_pos = {}
@@ -2102,6 +2106,14 @@ def generate_storage_info(instructions,source_stack,opcodes,simplification=True)
             ins_list = [] if x == 0 else instructions[x-1::-1]
             exp = generate_sstore_mstore(instructions[x],ins_list,source_stack,len(instructions)-x,simplification)
             mstore_seq.append(exp)
+
+        elif has_dependences(instructions[x]):
+            ins_list = [] if x == 0 else instructions[x-1::-1]
+            exp = generate_sstore_mstore(instructions[x],ins_list,source_stack,len(instructions)-x,simplification)
+            if instructions[x].find("call(") != -1 or instructions[x].find("delegatecall") !=-1 or instructions[x].find("staticcall") != -1:
+                sstore_seq.append(exp)
+            mstore_seq.append(exp)
+
 
     last_sload = ""
     sstores = list(sstore_seq)
@@ -2181,6 +2193,15 @@ def generate_storage_info(instructions,source_stack,opcodes,simplification=True)
             storage_order.append(keccak)
             extra_dep_info_ins2int[opcodes_idx] = (keccak,len(memory_order)-1)
 
+        elif has_dependences(instructions[x]):
+            if instructions[x].find("call(") != -1 or instructions[x].find("delegatecall") !=-1 or instructions[x].find("staticcall") != -1:
+                ins_store = sstores.pop(0)
+                storage_order.append(ins_store)
+                
+            ins = mstores.pop(0)
+            memory_order.append(ins)
+            extra_dep_info_ins2int[opcodes_idx] = (ins,len(memory_order)-1)
+            
         if x >= next_val:    
             if  opcodes[opcodes_idx].find("SWAP")!=-1:
                 next_val = x+3
@@ -2308,6 +2329,41 @@ def compute_max_idx(max_ss,ss):
 
     return idx_top
 
+
+def generate_call_info(call_elem, op):
+    global user_def_counter
+    global sstore_v_counter
+
+    obj = {}
+    idx  = user_def_counter.get(op.upper(),0)
+
+    instr_name = op.upper()
+    name = op.upper()+"_"+str(idx)
+
+    args_aux = []
+    for e in call_elem[0][0:-1]:
+        val = is_integer(e)
+        if val != -1:
+            args_aux.append(val)
+        else:
+            args_aux.append(e)
+
+    
+    obj["id"] = name
+    obj["opcode"] = process_opcode(str(opcodes.get_opcode(instr_name)[0]))
+    obj["disasm"] = instr_name
+    obj["inpt_sk"] = args_aux
+    obj["push"] = False
+    obj["outpt_sk"] = ["cl("+str(idx)+")"]
+    
+    obj["gas"] = opcodes.get_ins_cost(instr_name)
+    obj["commutative"] = False
+    obj["push"] = False
+    obj["storage"] = False
+    obj["size"] = get_ins_size(instr_name)
+    user_def_counter[op.upper()]=idx+1
+
+    return obj
 
 
 
@@ -2519,6 +2575,10 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
             
     sto_objs = []
 
+
+    print(user_defins)
+    print(storage_order)
+    print(u_dict)
     sstore_ins = list(filter(lambda x: x[0][-1].find("sstore")!=-1,storage_order))
 
     modified_variables_userdefins(sstore_ins)
@@ -6253,6 +6313,39 @@ def generate_dependences(storage_location, location):
 
                 j+=1                                
 
+
+        elif elem[0][-1].find("delegatecall")!=-1 or elem[0][-1].find("staticcall")!=-1 or elem[0][-1].find("callcode")!=-1 or elem[0][-1] == "call": 
+            predecessor = storage_location[:i]
+
+            j = len(predecessor)-1
+            while(j>=0):
+                store = predecessor[j]
+                if store[0][-1].find(instruction)!=-1 or store[0][-1].find(load_instruction)!=-1:
+                    if (location == "storage") or (location == "transient"): #the calls has dependences with every storage operation
+                        storage_dependences.append((j,i))
+                    else:
+                        var_rest = store[0][0]
+                        dep = are_dependent(store,elem,j,i, location)
+                        # dep = are_dependent(store,elem)
+                        if dep:
+                            storage_dependences.append((j,i))                                
+                j-=1
+
+            j = 0
+            successor = storage_location[i+1:]
+            while(j<len(successor)):
+                store = successor[j]
+                if store[0][-1].find(instruction)!=-1 or store[0][-1].find(load_instruction)!=-1:
+                    if (location == "storage") or (location == "transient"):
+                        storage_dependences.append((i,i+j+1))
+                    else:
+                        var_rest = store[0][0]
+                        dep = are_dependent(elem,store,i,i+1+j, location)
+                        # dep = are_dependent(elem,store)
+                        if dep:
+                            storage_dependences.append((i,i+j+1))
+
+                j+=1                                
                 
             
         else: #loads
@@ -6546,6 +6639,7 @@ def compute_identifiers_storage_instructions(storage_location, location, new_use
             # print(values_list)
             keccak_ins = list(filter(lambda x: x[0][-1] == ins[0][-1],values_list))
             if len(keccak_ins)!=1: #if it does not exist means that it does not appear in the target stack and we have to create the identifier
+                raise Exception
                 storage_identifiers.append("KECCAK256_"+str(keccak_count))
                 keccak_count+=1
             else:
