@@ -452,7 +452,7 @@ def translateOpcodes30(opcode, value, index_variables):
         v0, updated_variables = get_consume_variable(index_variables)
         v1, updated_variables = get_new_variable(updated_variables)
 
-        instr = v1+" = calldataload"
+        instr = v1+" = calldataload("+str(v0)+")"
 
             
     elif opcode == "CALLDATASIZE":
@@ -635,8 +635,6 @@ def translateOpcodes50(opcode, value, index_variables):
         v1 , updated_variables = get_consume_variable(updated_variables)
 
         instr = "sstore("+v0+","+v1+")"
-
-
 
     elif opcode == "TLOAD":
         _ , updated_variables = get_consume_variable(index_variables)
@@ -1175,7 +1173,7 @@ def get_subblocks(block = None,storage = False,part = False,block_id = -1):
 
     
 def has_storage_ins(instructions):
-    if "MSTORE" in instructions or "SSTORE" in instructions or "MSTORE8" in instructions:
+    if "MSTORE" in instructions or "SSTORE" in instructions or "MSTORE8" in instructions or "TSTORE" in instructions:
         return True
     else:
         return False
