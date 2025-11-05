@@ -1365,7 +1365,7 @@ def get_involved_vars(instr,var):
         funct =  "coinbase"
 
 
-        elif instr.startswith("delegatecall("):
+    elif instr.startswith("delegatecall("):
         instr_new = instr.strip("\n")
         pos = instr_new.find("delegatecall(")
         arg = instr[pos+13:-1]
