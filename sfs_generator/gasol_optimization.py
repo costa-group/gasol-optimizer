@@ -1269,18 +1269,33 @@ def get_involved_vars(instr,var):
     elif instr.find("blockhash")!=-1:
         instr_new = instr.strip()
         pos = instr_new.find("blockhash(")
-        var = instr[pos+9:-1]
+        var = instr[pos+10:-1]
         var0 = var.strip()
         var_list.append(var0)
 
         funct = "blockhash"
+        assert(var0 == var)
 
-    elif instr.find("calldataload")!=-1:
+    elif instr.find("blobhash")!=-1:
+        instr_new = instr.strip()
+        pos = instr_new.find("blobhash(")
+        var = instr[pos+9:-1]
+        var0 = var.strip()
+        var_list.append(var0)
+
+        funct = "blobhash"
+        assert(var0 == var)
         
+    elif instr.find("calldataload")!=-1:
+        instr_new = instr.strip()
+        pos = instr_new.find("calldataload(")
+        var = instr[pos+13:-1]
         var0 = var.strip()
         var_list.append(var0)
         funct = "calldataload"
 
+        assert(var0 == var)
+        
     elif instr.find("selfbalance")!=-1:
         var_list.append("selfbalance")
         funct =  "selfbalance"
@@ -1340,14 +1355,62 @@ def get_involved_vars(instr,var):
         var_list.append("basefee")
         funct =  "basefee"
 
+    elif instr.find("blobbasefee")!=-1:
+        var_list.append("blobbasefee")
+        funct =  "blobbasefee"
+
+        
     elif instr.find("coinbase")!=-1:
         var_list.append("coinbase")
         funct =  "coinbase"
 
-    elif instr.startswith("call_ext("):
+
+        elif instr.startswith("delegatecall("):
         instr_new = instr.strip("\n")
-        pos = instr_new.find("call_ext(")
-        arg = instr[pos+9:-1]
+        pos = instr_new.find("delegatecall(")
+        arg = instr[pos+13:-1]
+        vars05 = arg.split(",")
+        var0 = vars05[0].strip()
+        var1 = vars05[1].strip()
+        var2 = vars05[2].strip()
+        var3 = vars05[3].strip()
+        var4 = vars05[4].strip()
+        var5 = vars05[5].strip()
+                                
+        var_list.append(var0)
+        var_list.append(var1)
+        var_list.append(var2)
+        var_list.append(var3)
+        var_list.append(var4)
+        var_list.append(var5)
+
+        funct = "delegatecall"
+
+    elif instr.startswith("staticcall("):
+        instr_new = instr.strip("\n")
+        pos = instr_new.find("staticcall(")
+        arg = instr[pos+11:-1]
+        vars05 = arg.split(",")
+        var0 = vars05[0].strip()
+        var1 = vars05[1].strip()
+        var2 = vars05[2].strip()
+        var3 = vars05[3].strip()
+        var4 = vars05[4].strip()
+        var5 = vars05[5].strip()
+                                
+        var_list.append(var0)
+        var_list.append(var1)
+        var_list.append(var2)
+        var_list.append(var3)
+        var_list.append(var4)
+        var_list.append(var5)
+
+        funct = "staticcall"
+        
+    elif instr.startswith("call("):
+        instr_new = instr.strip("\n")
+        pos = instr_new.find("call(")
+        arg = instr[pos+5:-1]
         vars06 = arg.split(",")
         var0 = vars06[0].strip()
         var1 = vars06[1].strip()
@@ -1412,48 +1475,6 @@ def get_involved_vars(instr,var):
         var_list.append(var6)
 
         funct = "callstatic"
-
-    elif instr.startswith("delegatecall_ext("):
-        instr_new = instr.strip("\n")
-        pos = instr_new.find("delegatecall_ext(")
-        arg = instr[pos+17:-1]
-        vars05 = arg.split(",")
-        var0 = vars05[0].strip()
-        var1 = vars05[1].strip()
-        var2 = vars05[2].strip()
-        var3 = vars05[3].strip()
-        var4 = vars05[4].strip()
-        var5 = vars05[5].strip()
-                                
-        var_list.append(var0)
-        var_list.append(var1)
-        var_list.append(var2)
-        var_list.append(var3)
-        var_list.append(var4)
-        var_list.append(var5)
-
-        funct = "delegatecall"
-
-    elif instr.startswith("staticcall_ext("):
-        instr_new = instr.strip("\n")
-        pos = instr_new.find("staticcall_ext(")
-        arg = instr[pos+15:-1]
-        vars05 = arg.split(",")
-        var0 = vars05[0].strip()
-        var1 = vars05[1].strip()
-        var2 = vars05[2].strip()
-        var3 = vars05[3].strip()
-        var4 = vars05[4].strip()
-        var5 = vars05[5].strip()
-                                
-        var_list.append(var0)
-        var_list.append(var1)
-        var_list.append(var2)
-        var_list.append(var3)
-        var_list.append(var4)
-        var_list.append(var5)
-
-        funct = "staticcall"
 
     elif instr.startswith("pushtag("):
         instr_new = instr.strip("\n")
@@ -2992,9 +3013,15 @@ def funct_to_opcode(funct: str) -> Optional[str]:
     elif funct.find("basefee") != -1:
         instr_name = "BASEFEE"
 
+    elif funct.find("blobbasefee") != -1:
+        instr_name = "BLOBBASEFEE"
+        
     elif funct.find("blockhash") != -1:
         instr_name = "BLOCKHASH"
 
+    elif funct.find("blobhash") != -1:
+        instr_name = "BLOBHASH"
+        
     elif funct.find("balance") != -1:
         instr_name = "BALANCE"
 
