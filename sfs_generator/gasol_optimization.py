@@ -150,7 +150,7 @@ def init_globals():
     mstore_v_counter = 0
 
     global tstore_seq
-    sstore_seq = []
+    tstore_seq = []
 
     global tstore_v_counter
     tstore_v_counter = 0
@@ -812,6 +812,32 @@ def get_involved_vars(instr,var):
             funct = instr_new[:pos]
         else:
             funct = "sload"
+
+    elif instr.find("tload")!=-1:
+        instr_new = instr.strip("\n")
+
+        pos = instr_new.find("(")
+        arg0 = instr_new[pos+1:-1]
+        var0 = arg0.strip()
+        var_list.append(var0)
+
+        if not split_sto: 
+            funct = instr_new[:pos]
+        else:
+            funct = "tload"
+
+
+    elif instr.find("tstore(")!=-1:
+        instr_new = instr.strip("\n")
+        pos = instr_new.find("tstore(")
+        arg01 = instr[pos+7:-1]
+        var01 = arg01.split(",")
+        var0 = var01[0].strip()
+        var1 = var01[1].strip()
+        var_list.append(var0)
+        var_list.append(var1)
+
+        funct = "tstore"
             
     elif instr.find("sstore(")!=-1:
         instr_new = instr.strip("\n")
@@ -2064,7 +2090,7 @@ def generate_storage_info(instructions,source_stack,opcodes,simplification=True)
     
     extra_dep_info_ins2int = {}
     extra_dep_info_ins2int_sto = {}
-    extra_dep_info_ins2init_transient = {}
+    extra_dep_info_ins2int_transient = {}
     
     opcodes_idx = 0
     next_val = 0
@@ -2358,7 +2384,7 @@ def generate_tstore_info(tstore_elem):
     name = "TSTORE"+"_"+str(idx)
 
     args_aux = []
-    for e in sstore_elem[0][0:-1]:
+    for e in tstore_elem[0][0:-1]:
         val = is_integer(e)
         if val != -1:
             args_aux.append(val)
@@ -2492,7 +2518,7 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     modified_variables_userdefins(tstore_ins)
 
     for trans in tstore_ins:
-        x = generate_tstore_info(mem)
+        x = generate_tstore_info(trans)
         transient_objs.append(x)
         
         
@@ -3120,6 +3146,7 @@ def times_used_userdef_instructions(user_def,tstack,all_input_values):
         instr["times_used"] = len(used)
 
 def process_opcode(result):
+    print(result)
     op_val = hex(int(result))[2:]
 
     if (int(op_val,16)<12):
