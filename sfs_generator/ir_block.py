@@ -432,9 +432,9 @@ def translateOpcodes30(opcode, value, index_variables):
         instr = v1+" = address"
 
     elif opcode == "BALANCE":
-        _, updated_variables = get_consume_variable(index_variables)
+        v0, updated_variables = get_consume_variable(index_variables)
         v1, updated_variables = get_new_variable(updated_variables)
-        instr = v1+" = balance"
+        instr = v1+" = balance("+str(v0)+")"
 
     elif opcode == "ORIGIN":
         v1, updated_variables = get_new_variable(index_variables)
@@ -484,7 +484,7 @@ def translateOpcodes30(opcode, value, index_variables):
     elif opcode == "EXTCODESIZE":
         v0, updated_variables = get_consume_variable(index_variables)
         v1, updated_variables = get_new_variable(updated_variables)
-        instr = v1+" = extcodesize"
+        instr = v1+" = extcodesize("+v0+")"
 
     elif opcode == "EXTCODECOPY":
         v0, updated_variables = get_consume_variable(index_variables)
@@ -533,7 +533,6 @@ def translateOpcodes40(opcode, index_variables):
         v1, updated_variables = get_new_variable(updated_variables)
         instr = v1+" = blockhash("+str(v0)+")"
 
-        blockhash_cont +=1
     elif opcode == "COINBASE":
         v1, updated_variables = get_new_variable(index_variables)
         instr = v1+" = coinbase"
