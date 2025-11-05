@@ -1427,7 +1427,7 @@ def get_involved_vars(instr,var):
         var_list.append(var4)
         var_list.append(var5)
         var_list.append(var6)
-
+        
         funct = "call"
 
     elif instr.startswith("callcode("):
@@ -2056,6 +2056,11 @@ def compute_memory_dependences(simplification):
     memory_dep = memdep
     transient_dep = transdep
 
+
+def has_dependences(ins):
+    for depen_ins in constants.dependences_instructions:
+        if ins.find(depen_ins.lower())!=-1:
+            return True
 
         
 def generate_storage_info(instructions,source_stack,opcodes,simplification=True):
@@ -3352,6 +3357,7 @@ def translate_block(rule,instructions,opcodes,isolated,sub_block_name,simp):
     num_pops = len(pops)
 
     source_stack = generate_source_stack_variables(source_stack_idx)
+
     get_s_counter(source_stack,t_vars)
 
     generate_encoding(instructions,t_vars,source_stack,opcodes,simp)
@@ -3946,6 +3952,7 @@ def smt_translate_block(rule,file_name,block_name,immutable_dict,simplification=
     subblocks = []
     res = is_optimizable(opcodes,instructions)
     if res:
+        
         ops = list(map(lambda x: x[4:-1],opcodes))
 
         original_ins = ops
