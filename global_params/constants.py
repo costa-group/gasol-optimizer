@@ -8,7 +8,7 @@ split_block = {"LOG0","LOG1","LOG2","LOG3","LOG4","CALLDATACOPY","CODECOPY","EXT
 store_instructions = {"SSTORE","MSTORE","MSTORE8", "TSTORE"}
 
 dependences_instructions = {"LOG0","LOG1","LOG2","LOG3","LOG4","CALLDATACOPY","CODECOPY","EXTCODECOPY","RETURNDATACOPY",
-               "STATICCALL","DELEGATECALL","CREATE","CREATE2","ASSIGNIMMUTABLE","MCOPY"}
+                            "CALL","STATICCALL","DELEGATECALL","CREATE","CREATE2","ASSIGNIMMUTABLE","MCOPY", "CALLCODE"}
 
 # We set the maximum k dup and swap instructions
 # can have.
