@@ -149,12 +149,21 @@ def init_globals():
     global mstore_v_counter
     mstore_v_counter = 0
 
+    global tstore_seq
+    sstore_seq = []
+
+    global tstore_v_counter
+    tstore_v_counter = 0
+    
     global storage_dep
     storage_dep = []
 
     global memory_dep
     memory_dep = []
 
+    global transient_dep
+    transient_dep = []
+    
     global memory_opt
     memory_opt = [False,False,False]
 
@@ -201,6 +210,9 @@ def process_extra_dependences_info(info,location="memory"):
     elif location == "memory":
         equal_pairs = info.get_equal_pairs_memory()
         nonequal_pairs = info.get_nonequal_pairs_memory()
+    elif location == "transient":
+        equal_pairs = info.get_equal_pairs_transient()
+        nonequal_pairs = info.get_nonequal_pairs_transient()
     else:
         raise Exception("Unknown location")
     
@@ -214,7 +226,9 @@ def process_extra_dependences_info(info,location="memory"):
     list(map(lambda x: x.set_values(x.get_first()-offset,x.get_second()-offset),equal_pairs))
 
     if location == "memory":
-        extra_dep_info["memory_deps_eqs"] = equal_pairs    
+        extra_dep_info["memory_deps_eqs"] = equal_pairs
+    elif location == "transient":
+        extra_dep_info["transient_deps_eqs"] = equal_pairs
     else:
         extra_dep_info["storage_deps_eqs"] = equal_pairs
 
@@ -225,6 +239,8 @@ def process_extra_dependences_info(info,location="memory"):
     
     if location == "memory":
         extra_dep_info["memory_deps_noneqs"] =  nonequal_pairs
+    elif location == "transient":
+        extra_dep_info["transient_deps_noneqs"] =  nonequal_pairs
     else:
         extra_dep_info["storage_deps_noneqs"] =  nonequal_pairs
 
@@ -1245,6 +1261,7 @@ def get_involved_vars(instr,var):
 
         
     elif instr.find("balance")!=-1:
+        
         var0 = var.strip()
         var_list.append(var0)
         funct = "balance"
@@ -1837,7 +1854,8 @@ def generate_encoding(instructions,variables,source_stack,opcodes,simplification
     global storage_order
     global storage_dep
     global memory_dep
-    
+    global transient_order
+    global transient_dep
     
     instructions_reverse = instructions[::-1]
     u_dict = {}
@@ -1878,8 +1896,10 @@ def generate_encoding(instructions,variables,source_stack,opcodes,simplification
 def compute_memory_dependences(simplification):
     global memory_order
     global storage_order
+    global transient_order
     global storage_dep
     global memory_dep
+    global transient_dep
     global non_aliasing_disabled
 
     modified = False
@@ -1917,7 +1937,33 @@ def compute_memory_dependences(simplification):
     msg = "Storage dep simplified: "+str(stdep)
     check_and_print_debug_info(debug, msg)
 
+    modified = False
+    if non_aliasing_disabled:
+        modified = True
+        old_value = non_aliasing_disabled
+        non_aliasing_disabled = not non_aliasing_disabled
 
+    transient_order = list(filter(lambda x: type(x) == tuple, transient_order))
+    unify_loads_instructions(transient_order, "transient")
+
+
+    msg = "Transient order: "+str(transient_order)
+    check_and_print_debug_info(debug, msg)
+
+    if modified:
+        non_aliasing_disabled = old_value
+        modified = False
+    
+    transdep = generate_dependences(transient_order,"transient")
+
+    msg = "Transient dep: "+str(transdep)
+    check_and_print_debug_info(debug, msg)
+
+    transdep = simplify_dependences(transdep)
+
+    msg = "Transient dep simplified: "+str(transdep)
+    check_and_print_debug_info(debug, msg)
+    
     modified = False
     if non_aliasing_disabled:
         modified = True
@@ -1955,28 +2001,33 @@ def compute_memory_dependences(simplification):
 
     s1= compute_clousure(stdep)
     m1 = compute_clousure(memdep)
+    t1 = compute_clousure(transdep)
     
     get_best_storage(s1, len(storage_order))
     
     storage_dep = stdep
     memory_dep = memdep
-
+    transient_dep = transdep
 
 
         
 def generate_storage_info(instructions,source_stack,opcodes,simplification=True):
     global sstore_seq
     global mstore_seq
+    global tstore_seq
     global storage_order
     global memory_order
+    global transient_order
     global storage_dep
     global memory_dep
+    global transient_dep
     global extra_dep_info
 
 
     sload_relative_pos = {}
     mload_relative_pos = {}
-
+    tload_relative_pos = {}
+    
     for x in range(0,len(instructions)):
         s_dict = {}
 
@@ -1984,6 +2035,11 @@ def generate_storage_info(instructions,source_stack,opcodes,simplification=True)
             ins_list = [] if x == 0 else instructions[x-1::-1]
             exp = generate_sstore_mstore(instructions[x],ins_list,source_stack,len(instructions)-x, simplification)
             sstore_seq.append(exp)
+
+        elif instructions[x].find("tstore")!=-1:
+            ins_list = [] if x == 0 else instructions[x-1::-1]
+            exp = generate_sstore_mstore(instructions[x],ins_list,source_stack,len(instructions)-x, simplification)
+            tstore_seq.append(exp)
 
         elif instructions[x].find("keccak")!=-1 or instructions[x].find("sha3")!=-1:
             ins_list = [] if x == 0 else instructions[x-1::-1]
@@ -1999,13 +2055,17 @@ def generate_storage_info(instructions,source_stack,opcodes,simplification=True)
     sstores = list(sstore_seq)
     last_mload = ""
     mstores = list(mstore_seq)
+    last_tload = ""
+    tstores = list(tstore_seq)
     
     storage_order = []
     memory_order = []
-
+    transient_order = []
+    
     extra_dep_info_ins2int = {}
     extra_dep_info_ins2int_sto = {}
-
+    extra_dep_info_ins2init_transient = {}
+    
     opcodes_idx = 0
     next_val = 0
 
@@ -2028,11 +2088,25 @@ def generate_storage_info(instructions,source_stack,opcodes,simplification=True)
             last_sload = exp
             storage_order.append(r)
             extra_dep_info_ins2int_sto[opcodes_idx] = (r,len(storage_order)-1)
-            
+  
         elif instructions[x].find("sstore")!=-1: #and last_sload != "" and sload_relative_pos.get(last_sload,[])==[]:
             sload_relative_pos[last_sload]=sstores.pop(0)
             storage_order.append(sload_relative_pos[last_sload])
             extra_dep_info_ins2int_sto[opcodes_idx] = (sload_relative_pos[last_sload],len(storage_order)-1)
+
+            
+        elif instructions[x].find("tload")!=-1:
+            ins_list = [] if x == 0 else instructions[x-1::-1]
+            exp,r = generate_sload_mload(instructions[x],ins_list,source_stack,len(instructions)-x,simplification)
+            last_tload = exp
+            transient_order.append(r)
+            extra_dep_info_ins2int_transient[opcodes_idx] = (r,len(transient_order)-1)
+
+        elif instructions[x].find("tstore")!=-1: #and last_sload != "" and sload_relative_pos.get(last_sload,[])==[]:
+            tload_relative_pos[last_tload]=tstores.pop(0)
+            transient_order.append(tload_relative_pos[last_tload])
+            extra_dep_info_ins2int_transient[opcodes_idx] = (tload_relative_pos[last_tload],len(transient_order)-1)
+
             
         elif instructions[x].find("mload")!=-1:
             ins_list = [] if x == 0 else instructions[x-1::-1]
@@ -2069,7 +2143,8 @@ def generate_storage_info(instructions,source_stack,opcodes,simplification=True)
     if extra_dep_info != {}:
         extra_dep_info["mem_deps_int2ins"] = extra_dep_info_ins2int
         extra_dep_info["sto_deps_int2ins"] = extra_dep_info_ins2int_sto
-
+        extra_dep_info["transient_deps_int2ins"] = extra_dep_info_ins2init_transient
+        
     if useless_info != []: #It deletes from memory_order de useless mstores
         new_memory_order = []
         extra_deps_todelete = []
@@ -2272,6 +2347,44 @@ def generate_mstore_info(mstore_elem):
     return obj
 
 
+def generate_tstore_info(tstore_elem):
+    global user_def_counter
+    global tstore_v_counter
+
+    obj = {}
+    idx  = user_def_counter.get("TSTORE",0)
+
+    instr_name = "TSTORE"
+    name = "TSTORE"+"_"+str(idx)
+
+    args_aux = []
+    for e in sstore_elem[0][0:-1]:
+        val = is_integer(e)
+        if val != -1:
+            args_aux.append(val)
+        else:
+            args_aux.append(e)
+
+    
+    obj["id"] = name
+    obj["opcode"] = process_opcode(str(opcodes.get_opcode(instr_name)[0]))
+    obj["disasm"] = instr_name
+    obj["inpt_sk"] = args_aux
+    obj["sto_var"] = ["tsto"+str(idx)]
+    obj["push"] = False
+    obj["outpt_sk"] = []
+    
+    obj["gas"] = opcodes.get_ins_cost(instr_name)
+    obj["commutative"] = False
+    obj["push"] = False
+    obj["storage"] = True
+    obj["size"] = get_ins_size(instr_name)
+    user_def_counter["TSTORE"]=idx+1
+
+    return obj
+
+
+
 def modified_variables_userdefins(storage_ins):
     global modified_userdef_vals
     
@@ -2310,6 +2423,8 @@ def extend_mem_deps_with_subterm_relation(json_dict):
                 json_dict["dependencies"].append(possible_dependency)
                 if access2.startswith("MSTORE"):
                     json_dict["memory_dependences"].append(possible_dependency)
+                elif access2.startswith("TSTORE"):
+                    json_dict["transient_dependences"].append(possible_dependency)
                 else:
                     json_dict["storage_dependences"].append(possible_dependency)
 
@@ -2366,14 +2481,22 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     
     modified_variables_userdefins(mstore_ins)
 
-    
-    
     for mem in mstore_ins:
         x = generate_mstore_info(mem)
         mem_objs.append(x)
 
+    transient_objs = []
+    tstore_ins = list(filter(lambda x: x[0][-1].find("tstore")!=-1,transient_order))
+
+    
+    modified_variables_userdefins(tstore_ins)
+
+    for trans in tstore_ins:
+        x = generate_tstore_info(mem)
+        transient_objs.append(x)
         
-    all_user_defins = user_defins+sto_objs+mem_objs
+        
+    all_user_defins = user_defins+sto_objs+mem_objs+transient_objs
         
             
     for user_ins in all_user_defins:
@@ -2463,10 +2586,10 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
         num_pops = num
         
     if not split_sto:
-        sto_dep, mem_dep = translate_dependences_sfs(new_user_defins)
+        sto_dep, mem_dep, transient_dep = translate_dependences_sfs(new_user_defins)
 
     else:
-        sto_dep, mem_dep = [],[]
+        sto_dep, mem_dep, transient_dep = [],[], []
     
     bound_comp = compute_vars(new_ts, new_ss, new_user_defins)
     stack_bound = min(max_sk_sz_idx-len(remove_vars),bound_comp)
@@ -2488,7 +2611,8 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     json_dict["current_cost"] = gas
     json_dict["storage_dependences"] = [list(dep) for dep in sto_dep]
     json_dict["memory_dependences"]= [list(dep) for dep in mem_dep]
-    json_dict["dependencies"] = [*json_dict["storage_dependences"], *json_dict["memory_dependences"]]
+    json_dict["transient_dependences"]= [list(dep) for dep in transient_dep]
+    json_dict["dependencies"] = [*json_dict["storage_dependences"], *json_dict["memory_dependences"], *json_dict["transient_dependences"]]
     json_dict["is_revert"]= True if revert_flag else False
     json_dict["rules_applied"] = rule_applied
     json_dict["rules"] = list(filter(lambda x: x != "", rules_applied))
@@ -2638,7 +2762,7 @@ def build_userdef_instructions():
 
             
             if not is_new and funct.find("timestamp")==-1 and funct.find("returndatasize")==-1 and funct.find("gas")==-1:
-                if not split_sto and funct.find("sload")==-1 and funct.find("mload")==-1:
+                if not split_sto and funct.find("sload")==-1 and funct.find("mload")==-1 and funct.find("tload") == -1:
                     user_defins.append(obj)
                 else:
                     modified_svariable(u_var, obj["outpt_sk"][0])
@@ -2857,6 +2981,9 @@ def funct_to_opcode(funct: str) -> Optional[str]:
     elif funct.find("sload") != -1:
         instr_name = "SLOAD"
 
+    elif funct.find("tload") != -1:
+        instr_name = "TLOAD"
+
     elif funct.find("timestamp") != -1:
         instr_name = funct.upper()
 
@@ -2932,7 +3059,7 @@ def generate_userdefname(u_var,funct,args,arity,init=False):
     instr_name = funct_to_opcode(funct)
     
     if instr_name in already_defined_userdef:
-        if not split_sto and not init and instr_name in ["SLOAD","MLOAD","KECCAK256","SHA3"]:
+        if not split_sto and not init and instr_name in ["TLOAD","SLOAD","MLOAD","KECCAK256","SHA3"]:
             defined = -1
         else:
             defined = check_inputs(instr_name,args)
@@ -2971,7 +3098,7 @@ def generate_userdefname(u_var,funct,args,arity,init=False):
         obj["push"] = "PUSH" in instr_name
         obj["gas"] = opcodes.get_ins_cost(instr_name)
         obj["commutative"] = True if instr_name in commutative_bytecodes else False
-        obj["storage"] = False #It is true only for MSTORE and SSTORE
+        obj["storage"] = False #It is true only for MSTORE and SSTORE and TSTORE
         if instr_name in ["PUSH [tag]","PUSH #[$]","PUSH [$]","PUSH data","PUSHIMMUTABLE","PUSHLIB"]:
             obj["value"] = args_aux
         user_def_counter[instr_name]=idx+1
@@ -5368,7 +5495,7 @@ def is_identity_map(source_stack,target_stack,instructions):
         if v != variable_content[v]:
             return False
 
-    storage_ins = list(filter(lambda x: x.find("mstore")!=-1 or x.find("sstore")!=-1,instructions))
+    storage_ins = list(filter(lambda x: x.find("mstore")!=-1 or x.find("sstore")!=-1 or x.find("tstore")!=-1,instructions))
 
     if len(storage_ins)>0:
         return False
@@ -5384,6 +5511,10 @@ def get_idx_in_instructions(idx_in_seq, location = "memory"):
     elif location == "storage":
         for i in extra_dep_info["sto_deps_int2ins"]:
             if idx_in_seq in extra_dep_info["sto_deps_int2ins"][i]:
+                return i
+    elif location == "transient":
+        for i in extra_dep_info["transient_deps_int2ins"]:
+            if idx_in_seq in extra_dep_info["transient_deps_int2ins"][i]:
                 return i
     else:
         raise Exception("Unknown location")
@@ -5455,6 +5586,33 @@ def remove_extra_deps_info(idx_in_seq, location = "memory"):
 
         extra_dep_info["sto_deps_int2ins"] = new_dict
 
+    elif idx != -1 and location == "transient":
+        extra_dep_info["transient_deps_eqs"] = list(filter(lambda x: x.get_first()!=idx and x.get_second()!= idx,extra_dep_info["transient_deps_eqs"]))
+        extra_dep_info["transient_deps_noneqs"] = list(filter(lambda x: x.get_first()!=idx and x.get_second()!= idx,extra_dep_info["transient_deps_noneqs"]))
+        extra_dep_info["transient_deps_int2ins"].pop(idx) 
+
+        for x in extra_dep_info["transient_deps_eqs"]:
+            if x.get_first() > idx:
+                x.set_first(x.get_first()-1)
+            if x.get_second() > idx:
+                x.set_second(x.get_second()-1)
+
+        for x in extra_dep_info["transient_deps_noneqs"]:
+            if x.get_first() > idx:
+                x.set_first(x.get_first()-1)
+            if x.get_second() > idx:
+                x.set_second(x.get_second()-1)
+
+        new_dict = {}
+                
+        for i in extra_dep_info["transient_deps_int2ins"]:
+            if extra_dep_info["transient_deps_int2ins"][i][1]>idx_in_seq:
+                new_val = (extra_dep_info["transient_deps_int2ins"][i][0],extra_dep_info["transient_deps_int2ins"][i][1]-1)
+                new_dict[i-1] = new_val
+            else:
+                new_dict[i] = extra_dep_info["transient_deps_int2ins"][i]
+
+        extra_dep_info["transient_deps_int2ins"] = new_dict    
                 
 def remove_loads(storage,instruction):
     new_storage = []
@@ -5468,6 +5626,8 @@ def remove_loads(storage,instruction):
                     remove_extra_deps_info(i,"memory")
                 elif instruction == "sload" and extra_dep_info != {}:
                     remove_extra_deps_info(i, "storage")
+                elif instruction == "tload" and extra_dep_info != {}:
+                    remove_extra_deps_info(i, "transient")
         else:
             new_storage.append(s)
     return new_storage
@@ -5478,18 +5638,22 @@ def remove_loads(storage,instruction):
 def remove_loads_instructions():
     global storage_order
     global memory_order
-
+    global transient_order
+    
     target_stack_content = variable_content.values()
 
     sstore_instructions = filter(lambda x: x[0][-1].find("sstore")!=-1,storage_order)
     sstore_vars = list(map(lambda x: x[0][0],sstore_instructions))
+
+    tstore_instructions = filter(lambda x: x[0][-1].find("tstore")!=-1,transient_order)
+    tstore_vars = list(map(lambda x: x[0][0],tstore_instructions))
     
     mstore_instructions = filter(lambda x: x[0][-1].find("mstore")!=-1,memory_order)
     mstore_vars = list(map(lambda x: x[0][0],mstore_instructions))
                 
     storage_order = remove_loads(storage_order,"sload")
     memory_order = remove_loads(memory_order,"mload")
-
+    transient_order = remove_loads(transient_order, "tload")
 
 
 #Here it means that we have sloads between the sstores that are equals.
@@ -5952,6 +6116,9 @@ def generate_dependences(storage_location, location):
     if location == "storage":
         instruction = "sstore"
         load_instruction = "sload"
+    elif location == "transient":
+        instruction = "tstore"
+        load_instruction = "tload"
     else:
         instruction = "mstore"
         load_instruction = "mload"
@@ -6192,6 +6359,9 @@ def unify_loads_instructions(storage_location, location):
     elif location == "memory":
         instruction = "mload"
         store_ins = "mstore"
+    elif location == "transient":
+        instruction = "tload"
+        store_ins = "tstore"
 
     i = 0
     finished = False
@@ -6273,6 +6443,12 @@ def compute_identifiers_storage_instructions(storage_location, location, new_use
         store_up = "SSTORE"
         store8_up = ""
         load = "SLOAD"
+    elif location == "transient":
+        store = "tstore"
+        store8 = ""
+        store_up = "TSTORE"
+        store8_up = ""
+        load = "TLOAD"
     else:
         store = "mstore"
         store8 = "mstore8"
@@ -6295,10 +6471,10 @@ def compute_identifiers_storage_instructions(storage_location, location, new_use
         ins = storage_location[i]
         
         if ins[0][-1].find(store)!=-1:
-            if location !="storage" and ins[0][-1].find(store8)!=-1:
+            if location !="storage" and location != "transient" and ins[0][-1].find(store8)!=-1:
                 storage_identifiers.append(store8_up+"_"+str(store8_count))
                 store8_count+=1
-            elif location !="storage" and ins[0][-1].find("mstoreImmutable")!=-1:
+            elif location !="storage" and location != "transient" and ins[0][-1].find("mstoreImmutable")!=-1:
                 storage_identifiers.append(ins[0][-1])
             else:
                 storage_identifiers.append(store_up+"_"+str(store_count))
@@ -6341,12 +6517,15 @@ def compute_identifiers_storage_instructions(storage_location, location, new_use
 def update_storage_sequences(removed_instructions,simplification,max_ss_idx):
     global storage_order
     global memory_order
+    global transient_order
     global storage_dep
     global memory_dep
+    global transient_dep
     global non_aliasing_disabled
     
     new_storage_order = []
     new_memory_order = []
+    new_transient_order = []
     
     for ins in storage_order:
         instructions_name = ins[0][-1]
@@ -6484,6 +6663,75 @@ def update_storage_sequences(removed_instructions,simplification,max_ss_idx):
         memory_dep = memdep
         # memory_order = new_memory_order
 
+    for ins in transient_order:
+        instructions_name = ins[0][-1]
+        inpt_var = ins[0][0]
+        if instructions_name.find("tload")!=-1:
+            unused = list(filter(lambda x: x["disasm"] == "TLOAD", removed_instructions))
+            unify_stack_variables_unused(unused,max_ss_idx)
+            unsued = list(filter(lambda x: inpt_var == str(x["inpt_sk"][0]),unused))
+            if len(unused)==0:
+                new_transient_order.append(ins)
+                
+        elif instructions_name.find("tstore")!=-1:
+            unused = list(filter(lambda x: x["disasm"] == "TSTORE",removed_instructions))
+            unify_stack_variables_unused(unused,max_ss_idx)
+            unsued = list(filter(lambda x: inpt_var == str(x["inpt_sk"][0]),unused))
+            if len(unused)==0:
+                new_transient_order.append(ins)
+                
+        elif instructions_name.find("keccak")!=-1:
+            unused = list(filter(lambda x: x["disasm"] == "KECCAK256", removed_instructions))
+            unify_stack_variables_unused(unused,max_ss_idx)
+            unsued = list(filter(lambda x: inpt_var == str(x["inpt_sk"][0]),unused))
+            if len(unused)==0:
+                new_transient_order.append(ins)
+            else:
+                found = False
+                for u in unused:
+                    out_var = u["outpt_sk"][0]
+                    if u_dict[out_var] == ins:
+                        found = True
+                if not found:
+                    new_transient_order.append(ins)
+
+        # elif instructions_name.find("keccak")!=-1:
+        #     unused = list(filter(lambda x: x["disasm"] == "KECCAK256" and inpt_var == str(x["inpt_sk"][0]),removed_instructions))
+        #     if len(unused)==0:
+        #         new_storage_order.append(ins)
+        #     else:
+        #         out_var = unused[0]["outpt_sk"][0]
+        #         if u_dict[out_var] != ins:
+        #             new_storage_order.append(ins)        
+        else:
+            new_transient_order.append(ins)
+
+
+    if transient_order != new_transient_order:
+        transient_order = new_transient_order
+        
+        modified = False
+        if non_aliasing_disabled:
+            modified = True
+            old_value = non_aliasing_disabled
+            non_aliasing_disabled = not non_aliasing_disabled
+
+        
+        # if simplification:
+        #     simp = True
+        #     while(simp):
+        #         simp = simplify_memory(storage_order, memory_order, "storage")
+
+        if modified:
+            modified = False
+            non_aliasing_disabled = old_value
+                
+        transdep = generate_dependences(transient_order,"transient")
+        transdep = simplify_dependences(transdep)
+        
+        transient_dep = transdep
+        # storage_order = new_storage_order
+        
 
 #variables in u_dict appears with s0 be the bottom and in uf s0 is top
 def unify_stack_variables_unused(unused,max_ss_idx):
@@ -6496,9 +6744,11 @@ def unify_stack_variables_unused(unused,max_ss_idx):
 def translate_dependences_sfs(new_user_defins):    
     new_storage_dep = []
     new_memory_dep = []
+    new_transient_dep = []
     
     storage = compute_identifiers_storage_instructions(storage_order,"storage",new_user_defins)
     memory = compute_identifiers_storage_instructions(memory_order,"memory",new_user_defins)
+    transient = compute_identifiers_storage_instructions(transient_order,"transient",new_user_defins)
     
     for e in storage_dep:
         first, second = e    
@@ -6508,7 +6758,12 @@ def translate_dependences_sfs(new_user_defins):
         first, second = e
         new_memory_dep.append((memory[first],memory[second]))
 
-    return new_storage_dep, new_memory_dep
+    for e in transient_dep:
+        first, second = e
+        new_transient_dep.append((transient[first],transient[second]))
+
+        
+    return new_storage_dep, new_memory_dep, new_transient_dep
     
 
 #it receives two tuples of the form ((ar1,arg2, opcode),arity) and
@@ -6528,6 +6783,9 @@ def are_dependent(t1, t2, idx1, idx2, location = "memory"):
         elif location == "storage":
             eqs = extra_dep_info["storage_deps_eqs"]
             neqs = extra_dep_info["storage_deps_noneqs"]
+        elif location == "transient":
+            eqs = extra_dep_info["transient_deps_eqs"]
+            neqs = extra_dep_info["transient_deps_noneqs"]
         else:
             raise Exception("Unknown location")
 
@@ -6559,7 +6817,11 @@ def are_dependent(t1, t2, idx1, idx2, location = "memory"):
     
     if (ins1.find("keccak")!=-1 and (ins2.find("sload")!=-1 or ins2.find("sstore")!=-1)) or ((ins2.find("keccak")!=-1 and (ins1.find("sload")!=-1 or ins1.find("sstore")!=-1))):
         dep = False
+        
+    elif (ins1.find("keccak")!=-1 and (ins2.find("tload")!=-1 or ins2.find("tstore")!=-1)) or ((ins2.find("keccak")!=-1 and (ins1.find("tload")!=-1 or ins1.find("tstore")!=-1))):
+        dep = False
 
+        
     elif str(var1) == str(var2):
         dep = True
 
@@ -7187,7 +7449,7 @@ def unify_user_defins(ts,user_def_instructions,list_vars):
     modified = False
     
     for ins in user_defins:
-        if ins["disasm"] not in ["SHA3","SLOAD","MLOAD","KECCAK256","SSTORE","MSTORE","GAS","TIMESTAMP"] and ins not in to_delete:
+        if ins["disasm"] not in ["SHA3","TLOAD","SLOAD","MLOAD","KECCAK256","SSTORE","MSTORE","GAS","TIMESTAMP"] and ins not in to_delete:
             duplicated = list(filter(lambda x: x["inpt_sk"] == ins["inpt_sk"] and x["disasm"] == ins["disasm"] and x.get("value",-1) == -1, user_defins))
             if len(duplicated) > 1:
                 tokeep = duplicated[0]
