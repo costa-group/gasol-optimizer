@@ -1913,6 +1913,7 @@ def generate_encoding(instructions,variables,source_stack,opcodes,simplification
     u_dict = {}
     
     variable_content = {}
+    
     for v in variables:
         s_dict = {}
         search_for_value(v,instructions_reverse, source_stack,simplification)
@@ -1936,7 +1937,7 @@ def generate_encoding(instructions,variables,source_stack,opcodes,simplification
             check_and_print_debug_info(debug, msg)
 
             compute_memory_dependences(simplification)
-            
+
     else:
         memory_order = []
         storage_order = []
@@ -2330,7 +2331,16 @@ def compute_max_idx(max_ss,ss):
     return idx_top
 
 
-def generate_call_info(call_elem, op):
+def exists_instr(ins):
+
+    for u_keys, u_elems in u_dict.items():
+        if u_elems == ins:
+            return True
+
+    return False
+
+
+def generate_dep_instr_info(elem, op, out_elem=False):
     global user_def_counter
     global sstore_v_counter
 
@@ -2341,7 +2351,7 @@ def generate_call_info(call_elem, op):
     name = op.upper()+"_"+str(idx)
 
     args_aux = []
-    for e in call_elem[0][0:-1]:
+    for e in elem[0][0:-1]:
         val = is_integer(e)
         if val != -1:
             args_aux.append(val)
@@ -2354,8 +2364,10 @@ def generate_call_info(call_elem, op):
     obj["disasm"] = instr_name
     obj["inpt_sk"] = args_aux
     obj["push"] = False
-    obj["outpt_sk"] = ["cl("+str(idx)+")"]
-    
+    if out_elem:
+        obj["outpt_sk"] = ["cl("+str(idx)+")"]
+    else:
+        obj["outpt_sk"] = []
     obj["gas"] = opcodes.get_ins_cost(instr_name)
     obj["commutative"] = False
     obj["push"] = False
@@ -2574,23 +2586,35 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
             new_ts.append(new_v)
             
     sto_objs = []
-
-
-    print(user_defins)
-    print(storage_order)
-    print(u_dict)
     sstore_ins = list(filter(lambda x: x[0][-1].find("sstore")!=-1,storage_order))
 
+    
     modified_variables_userdefins(sstore_ins)
 
     for sto in sstore_ins:
         x = generate_sstore_info(sto)
         sto_objs.append(x)
 
+    other_dep_objs = []
+        
+    other_dep_ins = list(filter(lambda x: x[0][-1].find("sstore")==-1 and x[0][-1].find("sload")==-1 and x[0][-1].find("keccak")==-1, storage_order))
+
+    modified_variables_userdefins(other_dep_ins)
+
+    for other in other_dep_ins:
+        if not exists_instr(other):
+            produce_elem = False
+            if other[0][-1] in ["call","delegatecall","staticcall","callcode"]:
+                produce_elem = True
+            
+            x = generate_dep_instr_info(other, other[0][-1], produce_elem)
+            other_dep_objs.append(x)
+
+
+        
     mem_objs = []
     mstore_ins = list(filter(lambda x: x[0][-1].find("mstore")!=-1,memory_order))
 
-    
     modified_variables_userdefins(mstore_ins)
 
     for mem in mstore_ins:
@@ -2608,7 +2632,7 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
         transient_objs.append(x)
         
         
-    all_user_defins = user_defins+sto_objs+mem_objs+transient_objs
+    all_user_defins = user_defins+sto_objs+mem_objs+transient_objs+other_dep_objs
         
             
     for user_ins in all_user_defins:
@@ -6293,7 +6317,6 @@ def generate_dependences(storage_location, location):
             while(j>=0):
                 store = predecessor[j]
                 if store[0][-1].find(instruction)!=-1:
-                    var_rest = store[0][0]
                     dep = are_dependent(store,elem,j,i, location)
                     # dep = are_dependent(store,elem)
                     if dep:
@@ -6305,7 +6328,6 @@ def generate_dependences(storage_location, location):
             while(j<len(successor)):
                 store = successor[j]
                 if store[0][-1].find(instruction)!=-1:
-                    var_rest = store[0][0]
                     dep = are_dependent(elem,store,i,i+1+j, location)
                     # dep = are_dependent(elem,store)
                     if dep:
@@ -6314,19 +6336,45 @@ def generate_dependences(storage_location, location):
                 j+=1                                
 
 
-        elif elem[0][-1].find("delegatecall")!=-1 or elem[0][-1].find("staticcall")!=-1 or elem[0][-1].find("callcode")!=-1 or elem[0][-1] == "call": 
+        elif elem[0][-1].find("delegatecall")!=-1 or elem[0][-1].find("staticcall")!=-1 or elem[0][-1].find("callcode")!=-1 or elem[0][-1] == "call" or elem[0][-1].find("mcopy") != -1: 
             predecessor = storage_location[:i]
 
             j = len(predecessor)-1
             while(j>=0):
                 store = predecessor[j]
                 if store[0][-1].find(instruction)!=-1 or store[0][-1].find(load_instruction)!=-1:
-                    if (location == "storage") or (location == "transient"): #the calls has dependences with every storage operation
-                        storage_dependences.append((j,i))
+                    if ((location == "storage") or (location == "transient")): #the calls has dependences with every storage operation
+                            storage_dependences.append((j,i)) 
                     else:
-                        var_rest = store[0][0]
-                        dep = are_dependent(store,elem,j,i, location)
-                        # dep = are_dependent(store,elem)
+
+                        if elem[0][-1] in ["call","callcode"]:
+                            new_elem1 = ((elem[0][3],elem[0][4],elem[0][-1]),elem[1])
+                            dep1 = are_dependent(store,new_elem1,j,i, location)
+
+                            new_elem2 = ((elem[0][5],elem[0][6],elem[0][-1]),elem[1])
+                            dep2 = are_dependent(store,new_elem2,j,i, location)
+
+                            dep = dep1 or dep2
+
+                        elif elem[0][-1] in ["delegatecall", "staticcall"]:
+                            new_elem1 = ((elem[0][2],elem[0][3],elem[0][-1]),elem[1])
+                            dep1 = are_dependent(store,new_elem1,j,i, location)
+
+                            new_elem2 = ((elem[0][4],elem[0][5],elem[0][-1]),elem[1])
+                            dep2 = are_dependent(store,new_elem2,j,i, location)
+
+                            dep = dep1 or dep2
+
+                        elif elem[0][-1] in ["mcopy"]:
+                            new_elem1 = ((elem[0][1],elem[0][2],elem[0][-1]),elem[1])
+                            dep1 = are_dependent(store,new_elem1,j,i, location)
+
+                            new_elem2 = ((elem[0][0],elem[0][2],elem[0][-1]),elem[1])
+                            dep2 = are_dependent(store,new_elem2,j,i, location)
+                            dep = dep1 or dep2
+                        else:
+                            dep = True
+                            
                         if dep:
                             storage_dependences.append((j,i))                                
                 j-=1
@@ -6339,11 +6387,42 @@ def generate_dependences(storage_location, location):
                     if (location == "storage") or (location == "transient"):
                         storage_dependences.append((i,i+j+1))
                     else:
-                        var_rest = store[0][0]
-                        dep = are_dependent(elem,store,i,i+1+j, location)
-                        # dep = are_dependent(elem,store)
+
+                        if elem[0][-1] in ["call","callcode"]:
+                            new_elem1 = ((elem[0][3],elem[0][4],elem[0][-1]),elem[1])
+                            dep1 = are_dependent(store,new_elem1,i,i+j+1, location)
+
+                            new_elem2 = ((elem[0][5],elem[0][6],elem[0][-1]),elem[1])
+                            dep2 = are_dependent(store,new_elem2,i,i+j+1, location)
+
+                            dep = dep1 or dep2
+
+                        elif elem[0][-1] in ["delegatecall", "staticcall"]:
+                            new_elem1 = ((elem[0][2],elem[0][3],elem[0][-1]),elem[1])
+                            dep1 = are_dependent(store,new_elem1,i,i+j+1, location)
+
+                            new_elem2 = ((elem[0][4],elem[0][5],elem[0][-1]),elem[1])
+                            dep2 = are_dependent(store,new_elem2,i,i+j+1, location)
+
+                            dep = dep1 or dep2
+
+                        elif elem[0][-1] in ["mcopy"]:
+                            new_elem1 = ((elem[0][1],elem[0][2],elem[0][-1]),elem[1])
+                            dep1 = are_dependent(store,new_elem1,i,i+j+1, location)
+
+                            new_elem2 = ((elem[0][0],elem[0][2],elem[0][-1]),elem[1])
+                            dep2 = are_dependent(store,new_elem2,i,i+j+1, location)
+                            dep = dep1 or dep2
+                        else:
+                            dep = True
+
                         if dep:
                             storage_dependences.append((i,i+j+1))
+                        
+                        # dep = are_dependent(elem,store,i,i+1+j, location)
+                        # # dep = are_dependent(elem,store)
+                        # if dep:
+                        #     storage_dependences.append((i,i+j+1))
 
                 j+=1                                
                 
@@ -6613,6 +6692,7 @@ def compute_identifiers_storage_instructions(storage_location, location, new_use
     store_count = 0
     store8_count = 0
     keccak_count = 0
+    dep_count = {}
     
     storage_identifiers = []
 
@@ -6639,13 +6719,31 @@ def compute_identifiers_storage_instructions(storage_location, location, new_use
             # print(values_list)
             keccak_ins = list(filter(lambda x: x[0][-1] == ins[0][-1],values_list))
             if len(keccak_ins)!=1: #if it does not exist means that it does not appear in the target stack and we have to create the identifier
-                raise Exception
                 storage_identifiers.append("KECCAK256_"+str(keccak_count))
                 keccak_count+=1
             else:
                 pos = values_list.index(keccak_ins[0])
                 var = key_list[pos]
                 k_ins = list(filter(lambda x: x["disasm"] == "KECCAK256" and x["outpt_sk"] == [var],new_user_defins))
+                if len(k_ins)!= 1:
+                    raise Exception("Error in looking for keccak instruction")
+                else:
+                    storage_identifiers.append(k_ins[0]["id"])
+
+
+        elif ins[0][-1] in ["call","delegatecall","staticcall","callcode"]:
+            # print(ins)
+            # print(values_list)
+            dep_ins = list(filter(lambda x: x[0][-1] == ins[0][-1],values_list))
+            if len(dep_ins)!=1: #if it does not exist means that it does not appear in the target stack and we have to create the identifier
+                storage_identifiers.append(ins[0][-1].upper()+"_"+str(dep_count.get(ins[0][-1].upper(),0)))
+                dep_val = dep_count.get(ins[0][-1].upper(),0)
+                dep_count[ins[0][-1].upper()] = dep_val+1
+                
+            else:
+                pos = values_list.index(dep_ins[0])
+                var = key_list[pos]
+                k_ins = list(filter(lambda x: x["disasm"] == ins[0][-1].upper() and x["outpt_sk"] == [var],new_user_defins))
                 if len(k_ins)!= 1:
                     raise Exception("Error in looking for keccak instruction")
                 else:
@@ -7004,7 +7102,33 @@ def are_dependent(t1, t2, idx1, idx2, location = "memory"):
                     dep = False
             else:
                 dep = False
-        
+
+    elif ins1 in ["mstore","mload"] and ins2 in ["callcode","call","delegatecall","staticcall","mcopy"]:
+        if str(var1).startswith("s") or str(var2).startswith("s"):
+            dep = True
+        else:
+            if int(var1)>= int(var2):
+                if str(t2[0][1]).startswith("s") or int(var1)< int(var2)+int(t2[0][1]):
+                    dep = True
+                else:
+                    dep = False
+            else:
+                dep = False
+
+    elif ins1 in ["callcode","call","delegatecall","staticcall","mcopy"] and ins2 in ["mstore","mload"]:
+        if str(var1).startswith("s") or str(var2).startswith("s"):
+            dep = True
+        else:
+            if int(var2)>= int(var1):
+                if str(t1[0][1]).startswith("s") or int(var2)< int(var1)+int(t1[0][1]):
+                    dep = True
+                else:
+                    dep = False
+            else:
+                dep = False
+
+
+                
     else:
         var1_str = str(var1)
         var2_str = str(var2)
@@ -7238,7 +7362,7 @@ def update_user_defins(target_stack, userdef_ins):
 def remove_unused_userdefins(target_stack, userdef_ins):
     new_userdef_ins = []
     for u in userdef_ins:
-        if not u["storage"]: 
+        if not u["storage"] and u["disasm"] not in ["CALL","CALLCODE","DELEGATECALL","STATICCALL"]: 
             output_st = u["outpt_sk"][0]
 
             used = list(filter(lambda x: output_st in x["inpt_sk"], userdef_ins))
