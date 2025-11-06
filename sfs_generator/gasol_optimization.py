@@ -832,6 +832,28 @@ def get_involved_vars(instr,var):
             funct = "tload"
 
 
+    elif instr.find("mcopy")!=-1:
+        instr_new = instr.strip("\n")
+
+        pos = instr_new.find("(")
+        arg012 = instr_new[pos+1:-1]
+        var012 = arg012.split(",")
+
+        var0 = var012[0].strip()
+        var1 = var012[1].strip()
+        var2 = var012[2].strip()
+        
+        var_list.append(var0)
+        var_list.append(var1)
+        var_list.append(var2)
+
+        if not split_sto: 
+            funct = instr_new[:pos]
+        else:
+            funct = "mcopy"
+
+            
+
     elif instr.find("tstore(")!=-1:
         instr_new = instr.strip("\n")
         pos = instr_new.find("tstore(")
@@ -2041,7 +2063,7 @@ def compute_memory_dependences(simplification):
     if modified:
         non_aliasing_disabled = old_value
         modified = False
-    
+        
     memdep = generate_dependences(memory_order,"memory")
     
     msg = "Memory dep: "+str(memdep)
@@ -2371,7 +2393,7 @@ def generate_dep_instr_info(elem, op, out_elem=False):
     obj["gas"] = opcodes.get_ins_cost(instr_name)
     obj["commutative"] = False
     obj["push"] = False
-    obj["storage"] = False
+    obj["storage"] = False if out_elem else True
     obj["size"] = get_ins_size(instr_name)
     user_def_counter[op.upper()]=idx+1
 
@@ -2597,11 +2619,11 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
 
     other_dep_objs = []
         
-    other_dep_ins = list(filter(lambda x: x[0][-1].find("sstore")==-1 and x[0][-1].find("sload")==-1 and x[0][-1].find("keccak")==-1, storage_order))
+    other_dep_ins_sto = list(filter(lambda x: x[0][-1].find("sstore")==-1 and x[0][-1].find("sload")==-1 and x[0][-1].find("keccak")==-1, storage_order))
 
-    modified_variables_userdefins(other_dep_ins)
+    modified_variables_userdefins(other_dep_ins_sto)
 
-    for other in other_dep_ins:
+    for other in other_dep_ins_sto:
         if not exists_instr(other):
             produce_elem = False
             if other[0][-1] in ["call","delegatecall","staticcall","callcode"]:
@@ -2621,6 +2643,20 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
         x = generate_mstore_info(mem)
         mem_objs.append(x)
 
+
+    other_dep_ins_mem = list(filter(lambda x: x[0][-1].find("mstore")==-1 and x[0][-1].find("mload")==-1 and x[0][-1].find("keccak")==-1 and x not in storage_order, memory_order))
+
+    modified_variables_userdefins(other_dep_ins_mem)
+
+    for other in other_dep_ins_mem:
+        if not exists_instr(other):
+            produce_elem = False
+            if other[0][-1] in ["call","delegatecall","staticcall","callcode"]:
+                produce_elem = True
+            
+            x = generate_dep_instr_info(other, other[0][-1], produce_elem)
+            other_dep_objs.append(x)
+        
     transient_objs = []
     tstore_ins = list(filter(lambda x: x[0][-1].find("tstore")!=-1,transient_order))
 
@@ -6749,6 +6785,10 @@ def compute_identifiers_storage_instructions(storage_location, location, new_use
                 else:
                     storage_identifiers.append(k_ins[0]["id"])
 
+        elif ins[0][-1] in ["mcopy"]:
+            storage_identifiers.append(ins[0][-1].upper()+"_"+str(dep_count.get(ins[0][-1].upper(),0)))
+            dep_val = dep_count.get(ins[0][-1].upper(),0)
+            dep_count[ins[0][-1].upper()] = dep_val+1
             
         else: # loads instructions
             load_ins = list(filter(lambda x: x[0][-1] == ins[0][-1],values_list))
