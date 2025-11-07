@@ -62,47 +62,6 @@ class Split_calculator:
 
         return self.get_minstack_split(block.source_stack, block.length, [instr.disasm for instr in block.instructions], split_first)
 
-    '''
-    def calculate_dao_split(self, sfs_block: Dict) -> None:
-        print("block:", sfs_block)
-
-        original_code_with_ids, length = self.parse_original_instr(sfs_block["original_instrs"], sfs_block["user_instrs"], sfs_block["src_ws"], sfs_block["tgt_ws"])
-
-
-        if length < 10:
-            return
-
-
-        if original_code_with_ids == []:
-
-            
-
-            block = self.min_split_point_candidate[-1]
-            print(f"splittocsv: {block.min_pos};{block.length}")
-            print("no dag split found")
-            return
-
-        dag = DAG(sfs_block["instr_dependencies"], original_code_with_ids)
-
-
-
-
-        quart = length/3
-        min_pos_block = quart
-        max_pos_block = quart * 2
-
-        min_size = 1024
-        min_pos = None
-
-        for instr in dag.reverse:
-            if (dag.id_to_pos[instr][0][0] > min_pos_block and dag.id_to_pos[instr][0][0] < max_pos_block and dag.id_to_pos[instr][0][1] < min_size):
-                min_pos = dag.id_to_pos[instr][0][0]
-                min_size = dag.id_to_pos[instr][0][1]
-
-        
-        print(f"min_pos: {min_pos}, min_size: {min_size}")
-        self.split_point = f"splittocsv: {min_pos};{length}"
-    '''
 
     def calculate_extended_dao_split(self, sfs_block: Dict, split_first: bool) -> None:
 

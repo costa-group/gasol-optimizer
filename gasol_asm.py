@@ -702,24 +702,25 @@ def optimize_isolated_asm_block(params: OptimizationParams):
         elif predicted == "simple-cp":
             params.split_block = "complete"
             params.sat_solver = False 
+            params.split_first = True
         elif predicted == "simple-sat":
             params.split_block = "complete"
             params.sat_solver = True
+            params.split_first = False 
 
         elif predicted == "minimal-cp":
             params.split_block = "ordered"
             params.sat_solver = False 
+            params.split_first = True
         elif predicted == "minimal-sat":
             params.split_block = "ordered"
             params.sat_solver = True 
-
-        elif predicted == "not-ordered":
-            params.split_block = "not-ordered"
-            params.sat_solver = False
+            params.split_first = False 
 
         else:
             params.split_block = "complete"
             params.sat_solver = False 
+            params.split_first = True
 
 
 
