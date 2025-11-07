@@ -1559,7 +1559,164 @@ def get_involved_vars(instr,var):
 
         funct = assign_inmutable_match.group(1)
 
+    elif instr.find("log0") != -1:
+        instr_new = instr.strip("\n")
+        pos = instr_new.find("(")
+        arg01 = instr_new[pos+1:-1]
+        var01 = arg01.split(",")
+
+        var0 = var01[0].strip()
+        var1 = var01[1].strip()
+
+        var_list.append(var0)
+        var_list.append(var1)
         
+        funct = "log0"
+
+
+    elif instr.find("log1") != -1:
+        instr_new = instr.strip("\n")
+        pos = instr_new.find("(")
+        arg012 = instr_new[pos+1:-1]
+        var012 = arg012.split(",")
+
+        var0 = var012[0].strip()
+        var1 = var012[1].strip()
+        var2 = var012[2].strip()
+
+        var_list.append(var0)
+        var_list.append(var1)
+        var_list.append(var2)
+        
+        funct = "log1"
+
+    elif instr.find("log2") != -1:
+        instr_new = instr.strip("\n")
+        pos = instr_new.find("(")
+        args = instr_new[pos+1:-1]
+        vars_log = args.split(",")
+
+        var0 = vars_log[0].strip()
+        var1 = vars_log[1].strip()
+        var2 = vars_log[2].strip()
+        var3 = vars_log[3].strip()
+
+        var_list.append(var0)
+        var_list.append(var1)
+        var_list.append(var2)
+        var_list.append(var3)
+        
+        funct = "log2"
+    
+    elif instr.find("log3") != -1:
+        instr_new = instr.strip("\n")
+        pos = instr_new.find("(")
+        args = instr_new[pos+1:-1]
+        vars_log = args.split(",")
+
+        var0 = vars_log[0].strip()
+        var1 = vars_log[1].strip()
+        var2 = vars_log[2].strip()
+        var3 = vars_log[3].strip()
+        var4 = vars_log[4].strip()
+
+        var_list.append(var0)
+        var_list.append(var1)
+        var_list.append(var2)
+        var_list.append(var3)
+        var_list.append(var4)
+        
+        funct = "log3"
+
+    elif instr.find("log4") != -1:
+        instr_new = instr.strip("\n")
+        pos = instr_new.find("(")
+        args = instr_new[pos+1:-1]
+        vars_log = args.split(",")
+
+        var0 = vars_log[0].strip()
+        var1 = vars_log[1].strip()
+        var2 = vars_log[2].strip()
+        var3 = vars_log[3].strip()
+        var4 = vars_log[4].strip()
+        var5 = vars_log[5].strip()
+
+        var_list.append(var0)
+        var_list.append(var1)
+        var_list.append(var2)
+        var_list.append(var3)
+        var_list.append(var4)
+        var_list.append(var5)
+        
+        funct = "log4"
+
+    elif instr.find("calldatacopy") != -1:
+        instr_new = instr.strip("\n")
+        pos = instr_new.find("(")
+        arg012 = instr_new[pos+1:-1]
+        var012 = arg012.split(",")
+
+        var0 = var012[0].strip()
+        var1 = var012[1].strip()
+        var2 = var012[2].strip()
+
+        var_list.append(var0)
+        var_list.append(var1)
+        var_list.append(var2)
+        
+        funct = "calldatacopy"
+
+    elif instr.find("codecopy") != -1:
+        instr_new = instr.strip("\n")
+        pos = instr_new.find("(")
+        arg012 = instr_new[pos+1:-1]
+        var012 = arg012.split(",")
+
+        var0 = var012[0].strip()
+        var1 = var012[1].strip()
+        var2 = var012[2].strip()
+
+        var_list.append(var0)
+        var_list.append(var1)
+        var_list.append(var2)
+        
+        funct = "codecopy"
+
+    elif instr.find("returncodecopy") != -1:
+        instr_new = instr.strip("\n")
+        pos = instr_new.find("(")
+        arg012 = instr_new[pos+1:-1]
+        var012 = arg012.split(",")
+
+        var0 = var012[0].strip()
+        var1 = var012[1].strip()
+        var2 = var012[2].strip()
+
+        var_list.append(var0)
+        var_list.append(var1)
+        var_list.append(var2)
+        
+        funct = "returncodecopy"
+
+
+    elif instr.find("extcodecopy") != -1:
+        instr_new = instr.strip("\n")
+        pos = instr_new.find("(")
+        arg0123 = instr_new[pos+1:-1]
+        var0123 = arg0123.split(",")
+
+        var0 = var0123[0].strip()
+        var1 = var0123[1].strip()
+        var2 = var0123[2].strip()
+        var3 = var0123[3].strip()
+
+        var_list.append(var0)
+        var_list.append(var1)
+        var_list.append(var2)
+        var_list.append(var3)
+        
+        funct = "extcodecopy"
+
     else:
         var_list.append(instr)
         funct = ""
@@ -3230,6 +3387,38 @@ def funct_to_opcode(funct: str) -> Optional[str]:
     elif funct.find("call") != -1:
         instr_name = "CALL"
 
+    elif funct.find("log0") != -1:
+        instr_name = "LOG0"
+
+    elif funct.find("log1") != -1:
+        instr_name = "LOG1"
+
+    elif funct.find("log2") != -1:
+        instr_name = "LOG2"
+
+    elif funct.find("log3") != -1:
+        instr_name = "LOG3"
+
+    elif funct.find("log4") != -1:
+        instr_name = "LOG4"
+
+
+    elif funct.find("codecopy") != -1:
+        instr_name = "CODECOPY"
+
+
+    elif funct.find("calldatacopy") != -1:
+        instr_name = "CALLDATACOPY"
+
+
+    elif funct.find("extcodecopy") != -1:
+        instr_name = "EXTCODECOPY"
+
+
+    elif funct.find("returndatacopy") != -1:
+        instr_name = "RETURNDATACOPY"
+
+        
     # Yul opcodes
 
     elif funct.find("pushtag") != -1:
@@ -6452,8 +6641,10 @@ def generate_dependences(storage_location, location):
                     else:
 
                         if elem[0][-1] in ["call","callcode"]:
-                            new_elem1 = ((elem[0][3],elem[0][4],elem[0][-1]),elem[1])
-                            dep1 = are_dependent(store,new_elem1,i,i+j+1, location)
+                            dep1 = False
+                            if store[0][-1].find(instruction)!=-1:
+                                new_elem1 = ((elem[0][3],elem[0][4],elem[0][-1]),elem[1])
+                                dep1 = are_dependent(store,new_elem1,i,i+j+1, location)
 
                             new_elem2 = ((elem[0][5],elem[0][6],elem[0][-1]),elem[1])
                             dep2 = are_dependent(store,new_elem2,i,i+j+1, location)
@@ -6461,8 +6652,10 @@ def generate_dependences(storage_location, location):
                             dep = dep1 or dep2
 
                         elif elem[0][-1] in ["delegatecall", "staticcall"]:
-                            new_elem1 = ((elem[0][2],elem[0][3],elem[0][-1]),elem[1])
-                            dep1 = are_dependent(store,new_elem1,i,i+j+1, location)
+                            dep1 = False
+                            if store[0][-1].find(instruction) != -1:
+                                new_elem1 = ((elem[0][2],elem[0][3],elem[0][-1]),elem[1])
+                                dep1 = are_dependent(store,new_elem1,i,i+j+1, location)
 
                             new_elem2 = ((elem[0][4],elem[0][5],elem[0][-1]),elem[1])
                             dep2 = are_dependent(store,new_elem2,i,i+j+1, location)
@@ -6470,8 +6663,10 @@ def generate_dependences(storage_location, location):
                             dep = dep1 or dep2
 
                         elif elem[0][-1] in ["mcopy"]:
-                            new_elem1 = ((elem[0][1],elem[0][2],elem[0][-1]),elem[1])
-                            dep1 = are_dependent(store,new_elem1,i,i+j+1, location)
+                            dep1 = False
+                            if store[0][-1].find(instruction) != -1:
+                                new_elem1 = ((elem[0][1],elem[0][2],elem[0][-1]),elem[1])
+                                dep1 = are_dependent(store,new_elem1,i,i+j+1, location)
 
                             new_elem2 = ((elem[0][0],elem[0][2],elem[0][-1]),elem[1])
                             dep2 = are_dependent(store,new_elem2,i,i+j+1, location)
@@ -7146,7 +7341,7 @@ def are_dependent(t1, t2, idx1, idx2, location = "memory"):
         dep = True
 
     #The dependences with keccaks have to be computed only for mstore instructions.    
-    elif ins1.find("mstore")!=-1 and ins2.find("keccak256")!=-1:
+    elif ins1.find("mstore")!=-1 and ins2 in ["keccak256","log0", "log1","log2","log3","log4","create","create2"]:
         if str(var1).startswith("s") or str(var2).startswith("s"):
             dep = True
         else:
@@ -7158,7 +7353,7 @@ def are_dependent(t1, t2, idx1, idx2, location = "memory"):
             else:
                 dep = False
 
-    elif ins1.find("keccak256")!=-1 and ins2.find("mstore")!=-1:
+    elif ins1 in ["keccak256","log0", "log1","log2","log3","log4","create","create2"] and ins2.find("mstore")!=-1:
         if str(var1).startswith("s") or str(var2).startswith("s"):
             dep = True
         else:
@@ -7170,7 +7365,7 @@ def are_dependent(t1, t2, idx1, idx2, location = "memory"):
             else:
                 dep = False
 
-    elif ins1 in ["mstore","mload"] and ins2 in ["callcode","call","delegatecall","staticcall","mcopy"]:
+    elif ins1 in ["mstore","mload"] and ins2 in ["callcode","call","delegatecall","staticcall","mcopy","calldatacopy","codecopy","returndatacopy","extcodecopy"]:
         if str(var1).startswith("s") or str(var2).startswith("s"):
             dep = True
         else:
@@ -7182,7 +7377,7 @@ def are_dependent(t1, t2, idx1, idx2, location = "memory"):
             else:
                 dep = False
 
-    elif ins1 in ["callcode","call","delegatecall","staticcall","mcopy"] and ins2 in ["mstore","mload"]:
+    elif ins1 in ["callcode","call","delegatecall","staticcall","mcopy","calldatacopy","codecopy","returndatacopy","extcodecopy"] and ins2 in ["mstore","mload"]:
         if str(var1).startswith("s") or str(var2).startswith("s"):
             dep = True
         else:
@@ -7795,7 +7990,7 @@ def unify_user_defins(ts,user_def_instructions,list_vars):
     modified = False
     
     for ins in user_defins:
-        if ins["disasm"] not in ["SHA3","TLOAD","SLOAD","MLOAD","KECCAK256","SSTORE","MSTORE","GAS","TIMESTAMP"] and ins not in to_delete:
+        if ins["disasm"] not in ["SHA3","TLOAD","SLOAD","MLOAD","KECCAK256","SSTORE","TSTORE","MSTORE","GAS","TIMESTAMP","CALL","DELEGATECALL","STATICCALL","LOG0","LOG1","LOG2","LOG3","LOG4","CREATE","CREATE2"] and ins not in to_delete:
             duplicated = list(filter(lambda x: x["inpt_sk"] == ins["inpt_sk"] and x["disasm"] == ins["disasm"] and x.get("value",-1) == -1, user_defins))
             if len(duplicated) > 1:
                 tokeep = duplicated[0]
