@@ -6404,17 +6404,22 @@ def generate_dependences(storage_location, location):
                     else:
 
                         if elem[0][-1] in ["call","callcode"]:
-                            new_elem1 = ((elem[0][3],elem[0][4],elem[0][-1]),elem[1])
-                            dep1 = are_dependent(store,new_elem1,j,i, location)
+                            dep1 = False
+                            if store[0][-1].find(instruction)!=-1:
+                                new_elem1 = ((elem[0][3],elem[0][4],elem[0][-1]),elem[1])
+                                dep1 = are_dependent(store,new_elem1,j,i, location)
 
+                            
                             new_elem2 = ((elem[0][5],elem[0][6],elem[0][-1]),elem[1])
                             dep2 = are_dependent(store,new_elem2,j,i, location)
 
                             dep = dep1 or dep2
 
                         elif elem[0][-1] in ["delegatecall", "staticcall"]:
-                            new_elem1 = ((elem[0][2],elem[0][3],elem[0][-1]),elem[1])
-                            dep1 = are_dependent(store,new_elem1,j,i, location)
+                            dep1 = False
+                            if store[0][-1].find(instruction)!=-1:
+                                new_elem1 = ((elem[0][2],elem[0][3],elem[0][-1]),elem[1])
+                                dep1 = are_dependent(store,new_elem1,j,i, location)
 
                             new_elem2 = ((elem[0][4],elem[0][5],elem[0][-1]),elem[1])
                             dep2 = are_dependent(store,new_elem2,j,i, location)
@@ -6422,8 +6427,10 @@ def generate_dependences(storage_location, location):
                             dep = dep1 or dep2
 
                         elif elem[0][-1] in ["mcopy"]:
-                            new_elem1 = ((elem[0][1],elem[0][2],elem[0][-1]),elem[1])
-                            dep1 = are_dependent(store,new_elem1,j,i, location)
+                            dep1 = False
+                            if store[0][-1].find(instruction)!=-1:
+                                new_elem1 = ((elem[0][1],elem[0][2],elem[0][-1]),elem[1])
+                                dep1 = are_dependent(store,new_elem1,j,i, location)
 
                             new_elem2 = ((elem[0][0],elem[0][2],elem[0][-1]),elem[1])
                             dep2 = are_dependent(store,new_elem2,j,i, location)
