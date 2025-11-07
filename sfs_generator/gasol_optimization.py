@@ -2135,6 +2135,7 @@ def generate_storage_info(instructions,source_stack,opcodes,simplification=True)
             exp = generate_sstore_mstore(instructions[x],ins_list,source_stack,len(instructions)-x,simplification)
             if instructions[x].find("call(") != -1 or instructions[x].find("delegatecall") !=-1 or instructions[x].find("staticcall") != -1:
                 sstore_seq.append(exp)
+                tstore_seq.append(exp)
             mstore_seq.append(exp)
 
 
@@ -2220,6 +2221,9 @@ def generate_storage_info(instructions,source_stack,opcodes,simplification=True)
             if instructions[x].find("call(") != -1 or instructions[x].find("delegatecall") !=-1 or instructions[x].find("staticcall") != -1:
                 ins_store = sstores.pop(0)
                 storage_order.append(ins_store)
+                ins_tstore = tstores.pop(0)
+                transient_order.append(ins_tstore)
+
                 
             ins = mstores.pop(0)
             memory_order.append(ins)
@@ -2666,8 +2670,24 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     for trans in tstore_ins:
         x = generate_tstore_info(trans)
         transient_objs.append(x)
+
+
+    other_dep_objs_trans = []
         
-        
+    other_dep_ins_trans = list(filter(lambda x: x[0][-1].find("tstore")==-1 and x[0][-1].find("tload")==-1 and x[0][-1].find("keccak")==-1, transient_order))
+
+    modified_variables_userdefins(other_dep_ins_trans)
+
+    for other in other_dep_ins_trans:
+        if not exists_instr(other):
+            produce_elem = False
+            if other[0][-1] in ["call","delegatecall","staticcall","callcode"]:
+                produce_elem = True
+            
+            x = generate_dep_instr_info(other, other[0][-1], produce_elem)
+            other_dep_objs.append(x)
+
+
     all_user_defins = user_defins+sto_objs+mem_objs+transient_objs+other_dep_objs
         
             
