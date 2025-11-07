@@ -2,13 +2,12 @@ beginning_block = {"tag", "JUMPDEST"}
 
 end_block = {"JUMP","JUMPI","STOP","RETURN","REVERT","INVALID","SELFDESTRUCT"}
 
-split_block = {"LOG0","LOG1","LOG2","LOG3","LOG4","CALLDATACOPY","CODECOPY","EXTCODECOPY","RETURNDATACOPY",
-               "CREATE","CREATE2","ASSIGNIMMUTABLE", "GAS"}
+split_block = {"ASSIGNIMMUTABLE", "GAS"}
 
 store_instructions = {"SSTORE","MSTORE","MSTORE8", "TSTORE"}
 
 dependences_instructions = {"LOG0","LOG1","LOG2","LOG3","LOG4","CALLDATACOPY","CODECOPY","EXTCODECOPY","RETURNDATACOPY",
-                            "CALL","STATICCALL","DELEGATECALL","CREATE","CREATE2","ASSIGNIMMUTABLE","MCOPY", "CALLCODE"}
+                            "CALL","STATICCALL","DELEGATECALL","CREATE","CREATE2","MCOPY", "CALLCODE"}
 
 # We set the maximum k dup and swap instructions
 # can have.
