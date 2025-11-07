@@ -2515,11 +2515,11 @@ def compute_max_idx(max_ss,ss):
 
 
 def exists_instr(ins):
-
     for u_keys, u_elems in u_dict.items():
         if u_elems == ins:
             return True
 
+        
     return False
 
 
@@ -6563,7 +6563,7 @@ def generate_dependences(storage_location, location):
                 store = predecessor[j]
                 if store[0][-1].find(instruction)!=-1:
 
-                    if elem[0][1] in ["create", "create2"]:
+                    if elem[0][-1] in ["create", "create2"]:
                         new_elem = ((elem[0][1],elem[0][2],elem[0][-1]),elem[1])
                         dep = are_dependent(store,new_elem,j,i, location)
                     else:
@@ -6580,11 +6580,53 @@ def generate_dependences(storage_location, location):
                 store = successor[j]
                 if store[0][-1].find(instruction)!=-1:
                     
-                    if elem[0][1] in ["create", "create2"]:
+                    if elem[0][-1] in ["create", "create2"]:
                         new_elem = ((elem[0][1],elem[0][2],elem[0][-1]),elem[1])
-                        dep = are_dependent(store,new_elem,j,i, location)
+                        dep = are_dependent(new_elem,store,i,i+j+1, location)
                     else:
-                        dep = are_dependent(store,elem,j,i, location)
+                        dep = are_dependent(elem,store,i,i+j+1, location)
+
+                    # dep = are_dependent(elem,store)
+                    if dep:
+                        storage_dependences.append((i,i+j+1))
+
+                j+=1                                
+
+
+
+        elif elem[0][-1] in ["codecopy","calldatacopy","returndatacopy","extcodecopy"]:
+            predecessor = storage_location[:i]
+
+            j = len(predecessor)-1
+            while(j>=0):
+                store = predecessor[j]
+                if store[0][-1].find(instruction)!=-1 or store[0][-1].find(load_instruction)!=-1:
+
+                    if elem[0][-1] in ["codecopy","calldatacopy","returndatacopy"]:
+                        new_elem = ((elem[0][0],elem[0][2],elem[0][-1]),elem[1])
+                    elif elem[0][-1] in ["extcodecopy"]:
+                        new_elem = ((elem[0][0],elem[0][2],elem[0][-1]),elem[1])
+                        
+                    dep = are_dependent(store,new_elem,j,i, location)
+
+                    # dep = are_dependent(store,elem)
+                    if dep:
+                        storage_dependences.append((j,i))                                
+                j-=1
+
+            j = 0
+            successor = storage_location[i+1:]
+            while(j<len(successor)):
+                store = successor[j]
+                if store[0][-1].find(instruction)!=-1:
+                    
+                    if elem[0][-1] in ["codecopy","calldatacopy","returndatacopy","extcodecopy"]:
+                        new_elem = ((elem[0][0],elem[0][2],elem[0][-1]),elem[1])
+
+                    elif elem[0][-1] in ["extcodecopy"]:
+                        new_elem = ((elem[0][0],elem[0][2],elem[0][-1]),elem[1])
+
+                    dep = are_dependent(new_elem,store,i,i+j+1, location)
 
                     # dep = are_dependent(elem,store)
                     if dep:
