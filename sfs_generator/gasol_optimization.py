@@ -6555,14 +6555,20 @@ def generate_dependences(storage_location, location):
                                 
                 j-=1
 
-        elif elem[0][-1].find("keccak")!=-1:
+        elif elem[0][-1] in ["keccak256", "log0", "log1", "log2", "log3", "log4", "create", "create2"]:
             predecessor = storage_location[:i]
 
             j = len(predecessor)-1
             while(j>=0):
                 store = predecessor[j]
                 if store[0][-1].find(instruction)!=-1:
-                    dep = are_dependent(store,elem,j,i, location)
+
+                    if elem[0][1] in ["create", "create2"]:
+                        new_elem = ((elem[0][1],elem[0][2],elem[0][-1]),elem[1])
+                        dep = are_dependent(store,new_elem,j,i, location)
+                    else:
+                        dep = are_dependent(store,elem,j,i, location)
+
                     # dep = are_dependent(store,elem)
                     if dep:
                         storage_dependences.append((j,i))                                
@@ -6573,7 +6579,13 @@ def generate_dependences(storage_location, location):
             while(j<len(successor)):
                 store = successor[j]
                 if store[0][-1].find(instruction)!=-1:
-                    dep = are_dependent(elem,store,i,i+1+j, location)
+                    
+                    if elem[0][1] in ["create", "create2"]:
+                        new_elem = ((elem[0][1],elem[0][2],elem[0][-1]),elem[1])
+                        dep = are_dependent(store,new_elem,j,i, location)
+                    else:
+                        dep = are_dependent(store,elem,j,i, location)
+
                     # dep = are_dependent(elem,store)
                     if dep:
                         storage_dependences.append((i,i+j+1))
