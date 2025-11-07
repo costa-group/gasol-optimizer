@@ -7061,7 +7061,7 @@ def compute_identifiers_storage_instructions(storage_location, location, new_use
                 else:
                     storage_identifiers.append(k_ins[0]["id"])
 
-        elif ins[0][-1] in ["mcopy"]:
+        elif ins[0][-1] in ["mcopy","log0","log1","log2","log3","log4","calldatacopy","extcodecopy","returndatacopy","codecopy"]:
             storage_identifiers.append(ins[0][-1].upper()+"_"+str(dep_count.get(ins[0][-1].upper(),0)))
             dep_val = dep_count.get(ins[0][-1].upper(),0)
             dep_count[ins[0][-1].upper()] = dep_val+1
