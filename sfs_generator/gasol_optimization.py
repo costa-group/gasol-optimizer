@@ -1666,22 +1666,6 @@ def get_involved_vars(instr,var):
         
         funct = "calldatacopy"
 
-    elif instr.find("codecopy") != -1:
-        instr_new = instr.strip("\n")
-        pos = instr_new.find("(")
-        arg012 = instr_new[pos+1:-1]
-        var012 = arg012.split(",")
-
-        var0 = var012[0].strip()
-        var1 = var012[1].strip()
-        var2 = var012[2].strip()
-
-        var_list.append(var0)
-        var_list.append(var1)
-        var_list.append(var2)
-        
-        funct = "codecopy"
-
     elif instr.find("returncodecopy") != -1:
         instr_new = instr.strip("\n")
         pos = instr_new.find("(")
@@ -1717,6 +1701,23 @@ def get_involved_vars(instr,var):
         
         funct = "extcodecopy"
 
+    elif instr.find("codecopy") != -1:
+        instr_new = instr.strip("\n")
+        pos = instr_new.find("(")
+        arg012 = instr_new[pos+1:-1]
+        var012 = arg012.split(",")
+
+        var0 = var012[0].strip()
+        var1 = var012[1].strip()
+        var2 = var012[2].strip()
+
+        var_list.append(var0)
+        var_list.append(var1)
+        var_list.append(var2)
+        
+        funct = "codecopy"
+
+        
     else:
         var_list.append(instr)
         funct = ""
