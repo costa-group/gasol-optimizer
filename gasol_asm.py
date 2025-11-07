@@ -1441,6 +1441,8 @@ def options_gasol(ap: ArgumentParser) -> None:
 
     s_o.add_argument( "-sptfst", "--split-first", help="split the block in the first minimal stack of the middle third", action='store_true')
 
+    s_o.add_argument( "-mlagr", "--ml-aggressive", help="use the aggressive ml mode", action='store_true')
+
 
 def parse_encoding_args(ap: ArgumentParser):
     return ap.parse_args()
@@ -1516,7 +1518,12 @@ def predict_split_mode(text):
     print(f"Predicted class: {predicted}")
     return predicted
 
-def predict_split_mode_random_forest(X:str):
+def predict_split_mode_random_forest(X:str, aggressive: bool = False):
+
+    if aggressive:
+        model_type = "aggressive"
+    else: 
+        model_type = "conservative"
 
 
     X = [X]
@@ -1524,11 +1531,11 @@ def predict_split_mode_random_forest(X:str):
     BASE_DIR = Path(__file__).resolve().parent
 
     st = time.time()
-    with open(f'{BASE_DIR}/ml_model/model.pkl', 'rb') as f:
+    with open(f'{BASE_DIR}/ml_model/model_{model_type}.pkl', 'rb') as f:
         model = pickle.load(f)
 
     # MultiLabelBinarizer
-    with open(f'{BASE_DIR}/ml_model/vectorizers_and_svd.pkl', 'rb') as f:
+    with open(f'{BASE_DIR}/ml_model/vectorizers_and_svd_{model_type}.pkl', 'rb') as f:
         word_vectorizer, char_vectorizer, svd = pickle.load(f)
 
     # Vectorize input
