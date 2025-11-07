@@ -689,7 +689,7 @@ def optimize_isolated_asm_block(params: OptimizationParams):
         instructions = f.read()
 
     if params.split_block == "ml":
-        predicted = predict_split_mode_random_forest(instructions)
+        predicted = predict_split_mode_random_forest(instructions, params.ml_aggressive)
 
         if predicted == "original-cp":
             params.dzn = True 
