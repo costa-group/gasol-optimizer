@@ -2379,8 +2379,6 @@ def generate_storage_info(instructions,source_stack,opcodes,simplification=True)
             extra_dep_info_ins2int[opcodes_idx] = (keccak,len(memory_order)-1)
 
         elif has_dependences(instructions[x]):
-            print(instructions[x])
-
             if instructions[x].find("call(") != -1 or instructions[x].find("delegatecall") !=-1 or instructions[x].find("staticcall") != -1:
                 ins_store = sstores.pop(0)
                 storage_order.append(ins_store)
@@ -2945,7 +2943,7 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
 
     else:
         sto_dep, mem_dep, transient_dep = [],[], []
-    
+
     bound_comp = compute_vars(new_ts, new_ss, new_user_defins)
     stack_bound = min(max_sk_sz_idx-len(remove_vars),bound_comp)
 
@@ -2974,7 +2972,7 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     
     json_dict["original_instrs"] = " ".join(original_ins)
     json_dict = extended_json_with_minlength(json_dict)
-    json_dict = extend_mem_deps_with_subterm_relation(json_dict)
+    #json_dict = extend_mem_deps_with_subterm_relation(json_dict)
 
     # if not simplification:
     #     op = opcodes_seq["non_inter"]
