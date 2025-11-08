@@ -8049,12 +8049,13 @@ def unify_user_defins(ts,user_def_instructions,list_vars):
     modified = False
     
     for ins in user_defins:
-        if ins["disasm"] not in ["SHA3","TLOAD","SLOAD","MLOAD","KECCAK256","SSTORE","TSTORE","MSTORE","GAS","TIMESTAMP","CALL","DELEGATECALL","STATICCALL","LOG0","LOG1","LOG2","LOG3","LOG4","CREATE","CREATE2"] and ins not in to_delete:
+        if ins["disasm"] not in ["SHA3","TLOAD","SLOAD","MLOAD","KECCAK256","SSTORE","CODECOPY","TSTORE","MSTORE","GAS","TIMESTAMP","CALL","DELEGATECALL","STATICCALL","LOG0","LOG1","LOG2","LOG3","LOG4","CREATE","CREATE2","EXTCODECOPY","MCOPY","CALLCODE","CALLDATACOPY","RETURNDATACOPY"] and ins not in to_delete:
             duplicated = list(filter(lambda x: x["inpt_sk"] == ins["inpt_sk"] and x["disasm"] == ins["disasm"] and x.get("value",-1) == -1, user_defins))
             if len(duplicated) > 1:
                 tokeep = duplicated[0]
                 # print(duplicated)
                 for rest in duplicated[1:]:
+                    print(rest)
                     replace_var_userdef(rest["outpt_sk"][0],tokeep["outpt_sk"][0],user_defins)
                     target_stack = replace_var(rest["outpt_sk"][0],tokeep["outpt_sk"][0],target_stack)
                     # print(list_vars)
