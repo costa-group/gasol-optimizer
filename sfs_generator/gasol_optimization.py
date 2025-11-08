@@ -600,9 +600,6 @@ def search_for_value_aux(var, instructions,source_stack,level,evaluate = True):
 def generate_sstore_mstore(store_ins,instructions,source_stack,pos,simp):
     level = 0
     new_vars, funct = get_involved_vars(store_ins,"")
-
-    print(new_vars)
-    print(funct)
     
     values = {}
 
@@ -790,8 +787,6 @@ def update_unary_func(func,var,val,evaluate):
 def get_involved_vars(instr,var):
     var_list = []
     funct = ""
-
-    print(instr)
     
     if instr.find("mload")!=-1:
         instr_new = instr.strip("\n")
@@ -2245,9 +2240,17 @@ def compute_memory_dependences(simplification):
 
 def has_dependences(ins):
     for depen_ins in constants.dependences_instructions:
-        if ins.find(depen_ins.lower())!=-1:
-            return True
 
+        if ins.find(depen_ins.lower())!=-1:
+            if(depen_ins.lower() == "call"):
+                if ins.find("call(") != -1:
+                    return True
+                else:
+                    return False
+            else:
+                return True
+            
+    return False
         
 def generate_storage_info(instructions,source_stack,opcodes,simplification=True):
     global sstore_seq
@@ -2376,6 +2379,8 @@ def generate_storage_info(instructions,source_stack,opcodes,simplification=True)
             extra_dep_info_ins2int[opcodes_idx] = (keccak,len(memory_order)-1)
 
         elif has_dependences(instructions[x]):
+            print(instructions[x])
+
             if instructions[x].find("call(") != -1 or instructions[x].find("delegatecall") !=-1 or instructions[x].find("staticcall") != -1:
                 ins_store = sstores.pop(0)
                 storage_order.append(ins_store)
@@ -2397,7 +2402,7 @@ def generate_storage_info(instructions,source_stack,opcodes,simplification=True)
             if opcodes_idx < len(opcodes):
                 if opcodes[opcodes_idx].find("POP")!=-1:
                     opcodes_idx+=1
-    
+
     if extra_dep_info != {}:
         extra_dep_info["mem_deps_int2ins"] = extra_dep_info_ins2int
         extra_dep_info["sto_deps_int2ins"] = extra_dep_info_ins2int_sto
@@ -3508,7 +3513,6 @@ def times_used_userdef_instructions(user_def,tstack,all_input_values):
         instr["times_used"] = len(used)
 
 def process_opcode(result):
-    print(result)
     op_val = hex(int(result))[2:]
 
     if (int(op_val,16)<12):
