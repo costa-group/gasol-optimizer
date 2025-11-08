@@ -1661,7 +1661,7 @@ def get_involved_vars(instr,var):
         
         funct = "calldatacopy"
 
-    elif instr.find("returncodecopy") != -1:
+    elif instr.find("returndatacopy") != -1:
         instr_new = instr.strip("\n")
         pos = instr_new.find("(")
         arg012 = instr_new[pos+1:-1]
@@ -1675,7 +1675,7 @@ def get_involved_vars(instr,var):
         var_list.append(var1)
         var_list.append(var2)
         
-        funct = "returncodecopy"
+        funct = "returndatacopy"
 
 
     elif instr.find("extcodecopy") != -1:
