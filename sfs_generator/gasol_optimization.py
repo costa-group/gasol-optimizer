@@ -6560,7 +6560,7 @@ def generate_dependences(storage_location, location):
                                 
                 j-=1
 
-        elif elem[0][-1] in ["keccak256", "log0", "log1", "log2", "log3", "log4", "create", "create2"]:
+        elif elem[0][-1] in ["log0", "log1", "log2", "log3", "log4", "create", "create2"] or elem[0][-1].find("keccak256")!=-1:
             predecessor = storage_location[:i]
 
             j = len(predecessor)-1
@@ -7400,7 +7400,7 @@ def are_dependent(t1, t2, idx1, idx2, location = "memory"):
         dep = True
 
     #The dependences with keccaks have to be computed only for mstore instructions.    
-    elif ins1.find("mstore")!=-1 and ins2 in ["keccak256","log0", "log1","log2","log3","log4","create","create2"]:
+    elif ins1.find("mstore")!=-1 and (ins2 in ["log0", "log1","log2","log3","log4","create","create2"] or ins2.find("keccak256")!=-1):
         if str(var1).startswith("s") or str(var2).startswith("s"):
             dep = True
         else:
@@ -7412,7 +7412,7 @@ def are_dependent(t1, t2, idx1, idx2, location = "memory"):
             else:
                 dep = False
 
-    elif ins1 in ["keccak256","log0", "log1","log2","log3","log4","create","create2"] and ins2.find("mstore")!=-1:
+    elif ((ins1 in ["log0", "log1","log2","log3","log4","create","create2"]) or ins1.find("keccak256")!=-1) and ins2.find("mstore")!=-1:
         if str(var1).startswith("s") or str(var2).startswith("s"):
             dep = True
         else:
