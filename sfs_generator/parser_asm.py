@@ -3,6 +3,7 @@ import itertools
 import json
 import re
 from typing import Union, Dict, Any
+import sys
 
 from sfs_generator.asm_block import AsmBlock
 from sfs_generator.asm_bytecode import AsmBytecode, ASM_Json_T
@@ -235,7 +236,12 @@ def plain_instructions_to_asm_representation(raw_instruction_str : str) -> [ASM_
 def parse_blocks_from_plain_instructions(raw_instructions_str, cname = "", block_name_prefix = ""):
     instr_list = plain_instructions_to_asm_representation(raw_instructions_str)
     if cname == "" and block_name_prefix == "":
-        blocks = build_blocks_from_asm_representation("isolated", "isolated", instr_list, False)
+        try:
+            blocks = build_blocks_from_asm_representation("isolated", "isolated", instr_list, False)
+        except ValueError:
+            print("ERROR in processing list: "+raw_instructions_str)
+            print("LEN LIST GASOL:"+str(len(instr_list)))
+            sys.exit(-1)
     else:
         blocks = build_blocks_from_asm_representation(cname, block_name_prefix, instr_list, False)
     return blocks
