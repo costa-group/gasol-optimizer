@@ -1,12 +1,21 @@
 import json
 import os
-import shutil
 import multiprocessing as mp
 import tempfile
 from pathlib import Path
-import pandas as pd
-from gasol_asm import optimize_from_sfs, OptimizationParams
 import sys
+import uuid
+from gasol_asm import optimize_from_sfs, OptimizationParams
+import global_params.paths as paths
+
+def modify_params():
+    paths.gasol_folder = "gasol_" + uuid.uuid4().hex
+    paths.gasol_path = paths.tmp_path + paths.gasol_folder + "/"
+    paths.json_path = paths.gasol_path + "jsons"
+    paths.smt_encoding_path = paths.gasol_path + "smt_encoding/"
+    paths.solutions_path = paths.gasol_path + "solutions/"
+    paths.dot_path = paths.gasol_path + "dot/"
+
 
 def initialize_params(input_file: str, seqs_file: str):
     optimization_params = OptimizationParams()
@@ -108,8 +117,9 @@ def analyze_sfs(sfs_folder: str, final_dir: str):
         json.dump(combined_json, f)
 
     opt_params = initialize_params(filename, csv_dir.joinpath(f"{folder_name}.csv"))
+    modify_params()
 
-    print(f'Analyzing {folder_name}')
+    print(f'Analyzing {folder_name} {paths.gasol_path}')
     optimize_from_sfs(opt_params)
     os.unlink(filename)
 
