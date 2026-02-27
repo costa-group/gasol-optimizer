@@ -1,0 +1,31 @@
+{
+    "original_instrs": "",
+    "yul_expressions": "10 = PUSH [tag]\nJUMP(10)",
+    "src_ws": [
+        "x",
+        "y"
+    ],
+    "tgt_ws": [
+        "x",
+        "x",
+        "y"
+    ],
+    "user_instrs": [
+
+    ],
+    "variables": [
+        "10"
+    ],
+    "memory_dependences": [],
+    "storage_dependences": [],
+    "init_progr_len": 0,
+    "max_progr_len": 0,
+    "min_length_instrs": 0,
+    "min_length_bounds": 0,
+    "min_length": 0,
+    "rules": "",
+    "name": "SimpleYul_13_deployed_Block17",
+    "transient_dependences": [],
+    "dependencies": [],
+    "admits_junk": true
+}

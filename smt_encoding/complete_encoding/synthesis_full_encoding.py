@@ -76,14 +76,11 @@ class FullEncoding:
         self._uninterpreted_instructions = [self._instruction_factory.create_instruction_json_format(instr_json)
                                             for instr_json in sms['user_instrs']]
 
-        self.current_cost = sms['current_cost']
-
         self.initial_instructions = sms['original_instrs']
         self.mem_order = [*sms['storage_dependences'], *sms['memory_dependences']]
 
         self.initial_stack = sms['src_ws']
         self.final_stack = sms['tgt_ws']
-        self.variables = sms['vars']
 
         # Terminal flag appears in the SMS because when splitting the block,
         # only the last sub-block must have it enabled

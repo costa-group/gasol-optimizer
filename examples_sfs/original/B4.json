@@ -1,0 +1,67 @@
+{
+    "original_instrs": "",
+    "yul_expressions": "v2 = PhiFunction(y,x)\nv4 = LiteralAssignment(0x01)\nv3 = LiteralAssignment(0x00)\n9 = PUSH [tag]\nJUMP(9)",
+    "src_ws": [
+        "x",
+        "v2"
+    ],
+    "tgt_ws": [
+        "v3",
+        "v4",
+        "x",
+        "v2"
+    ],
+    "user_instrs": [
+        {
+            "id": "PUSH_0",
+            "opcode": "60",
+            "disasm": "PUSH",
+            "inpt_sk": [],
+            "value": [
+                1
+            ],
+            "outpt_sk": [
+                "v4"
+            ],
+            "gas": 3,
+            "commutative": false,
+            "push": true,
+            "storage": false,
+            "size": 2
+        },
+        {
+            "id": "PUSH0_0",
+            "opcode": "5f",
+            "disasm": "PUSH0",
+            "inpt_sk": [],
+            "value": [
+                0
+            ],
+            "outpt_sk": [
+                "v3"
+            ],
+            "gas": 2,
+            "commutative": false,
+            "push": true,
+            "storage": false,
+            "size": 1
+        }
+    ],
+    "variables": [
+        "9",
+        "v3",
+        "v4"
+    ],
+    "memory_dependences": [],
+    "storage_dependences": [],
+    "init_progr_len": 0,
+    "max_progr_len": 0,
+    "min_length_instrs": 0,
+    "min_length_bounds": 0,
+    "min_length": 0,
+    "rules": "",
+    "name": "SimpleYul_13_deployed_Block18",
+    "transient_dependences": [],
+    "dependencies": [],
+    "admits_junk": true
+}

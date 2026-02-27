@@ -1,0 +1,56 @@
+{
+    "original_instrs": "",
+    "yul_expressions": "v9 = PhiFunction(v8,v39)\nv10 = PhiFunction(v6,v37)\nv11 = lt(v9,v2)\n13 = PUSH [tag]\nJUMPI(13,v11)",
+    "src_ws": [
+        "v9",
+        "v5",
+        "v10",
+        "x",
+        "v2"
+    ],
+    "tgt_ws": [
+        "v11",
+        "v9",
+        "v5",
+        "v10",
+        "x",
+        "v2"
+    ],
+    "user_instrs": [
+        {
+            "id": "LT_0",
+            "opcode": "10",
+            "disasm": "LT",
+            "inpt_sk": [
+                "v9",
+                "v2"
+            ],
+            "outpt_sk": [
+                "v11"
+            ],
+            "gas": 3,
+            "commutative": false,
+            "push": false,
+            "storage": false,
+            "size": 1
+        }
+    ],
+    "variables": [
+        "13",
+        "v9",
+        "v2",
+        "v11"
+    ],
+    "memory_dependences": [],
+    "storage_dependences": [],
+    "init_progr_len": 0,
+    "max_progr_len": 0,
+    "min_length_instrs": 0,
+    "min_length_bounds": 0,
+    "min_length": 0,
+    "rules": "",
+    "name": "SimpleYul_13_deployed_Block23",
+    "transient_dependences": [],
+    "dependencies": [],
+    "admits_junk": false
+}

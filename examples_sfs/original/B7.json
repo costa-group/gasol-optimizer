@@ -1,0 +1,52 @@
+{
+    "original_instrs": "",
+    "yul_expressions": "v8 = LiteralAssignment(0x00)\n12 = PUSH [tag]\nJUMP(12)",
+    "src_ws": [
+        "v5",
+        "v6",
+        "x",
+        "v2"
+    ],
+    "tgt_ws": [
+        "v8",
+        "v5",
+        "v6",
+        "x",
+        "v2"
+    ],
+    "user_instrs": [
+        {
+            "id": "PUSH0_0",
+            "opcode": "5f",
+            "disasm": "PUSH0",
+            "inpt_sk": [],
+            "value": [
+                0
+            ],
+            "outpt_sk": [
+                "v8"
+            ],
+            "gas": 2,
+            "commutative": false,
+            "push": true,
+            "storage": false,
+            "size": 1
+        }
+    ],
+    "variables": [
+        "12",
+        "v8"
+    ],
+    "memory_dependences": [],
+    "storage_dependences": [],
+    "init_progr_len": 0,
+    "max_progr_len": 0,
+    "min_length_instrs": 0,
+    "min_length_bounds": 0,
+    "min_length": 0,
+    "rules": "",
+    "name": "SimpleYul_13_deployed_Block20",
+    "transient_dependences": [],
+    "dependencies": [],
+    "admits_junk": false
+}

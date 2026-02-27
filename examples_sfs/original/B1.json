@@ -1,0 +1,50 @@
+{
+    "original_instrs": "",
+    "yul_expressions": "v22 = LiteralAssignment(0x00)\nv23 = gt(y,x)\n8 = PUSH [tag]\nJUMPI(8,v23)",
+    "src_ws": [
+        "x",
+        "y"
+    ],
+    "tgt_ws": [
+        "v23",
+        "x",
+        "y"
+    ],
+    "user_instrs": [
+        {
+            "id": "GT_0",
+            "opcode": "11",
+            "disasm": "GT",
+            "inpt_sk": [
+                "y",
+                "x"
+            ],
+            "outpt_sk": [
+                "v23"
+            ],
+            "gas": 3,
+            "commutative": false,
+            "push": false,
+            "storage": false,
+            "size": 1
+        }
+    ],
+    "variables": [
+        "y",
+        "v23",
+        "8",
+        "x"
+    ],
+    "memory_dependences": [],
+    "storage_dependences": [],
+    "init_progr_len": 0,
+    "max_progr_len": 0,
+    "min_length_instrs": 0,
+    "min_length_bounds": 0,
+    "min_length": 0,
+    "rules": "",
+    "name": "SimpleYul_13_deployed_Block15",
+    "transient_dependences": [],
+    "dependencies": [],
+    "admits_junk": true
+}

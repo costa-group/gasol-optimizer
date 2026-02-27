@@ -1,0 +1,71 @@
+{
+    "original_instrs": "",
+    "yul_expressions": "v19 = add(v5,0x01)\n9 = PUSH [tag]\nJUMP(9)",
+    "src_ws": [
+        "v9",
+        "v5",
+        "v10",
+        "x",
+        "v2"
+    ],
+    "tgt_ws": [
+        "v19",
+        "v10",
+        "x",
+        "v2"
+    ],
+    "user_instrs": [
+        {
+            "id": "PUSH_0",
+            "opcode": "60",
+            "disasm": "PUSH",
+            "inpt_sk": [],
+            "value": [
+                1
+            ],
+            "outpt_sk": [
+                "s0"
+            ],
+            "gas": 3,
+            "commutative": false,
+            "push": true,
+            "storage": false,
+            "size": 2
+        },
+        {
+            "id": "ADD_0",
+            "opcode": "01",
+            "disasm": "ADD",
+            "inpt_sk": [
+                "v5",
+                "s0"
+            ],
+            "outpt_sk": [
+                "v19"
+            ],
+            "gas": 3,
+            "commutative": true,
+            "push": false,
+            "storage": false,
+            "size": 1
+        }
+    ],
+    "variables": [
+        "9",
+        "v19",
+        "v5",
+        "s0"
+    ],
+    "memory_dependences": [],
+    "storage_dependences": [],
+    "init_progr_len": 0,
+    "max_progr_len": 0,
+    "min_length_instrs": 0,
+    "min_length_bounds": 0,
+    "min_length": 0,
+    "rules": "",
+    "name": "SimpleYul_13_deployed_Block26",
+    "transient_dependences": [],
+    "dependencies": [],
+    "admits_junk": false
+}

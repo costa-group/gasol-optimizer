@@ -1,5 +1,8 @@
+import json
+import os
 import shutil
 import multiprocessing as mp
+import tempfile
 from pathlib import Path
 import pandas as pd
 from gasol_asm import optimize_from_sfs, OptimizationParams
@@ -30,7 +33,7 @@ def initialize_params(input_file: str, seqs_file: str):
     optimization_params.from_log = None
 
     optimization_params.smt_solver = "oms"
-    optimization_params.timeout = 10
+    optimization_params.timeout = 240
     optimization_params.direct_timeout = False
     optimization_params.push0 = True
     optimization_params.rules_enabled = True
@@ -65,27 +68,50 @@ def initialize_params(input_file: str, seqs_file: str):
 
     return optimization_params
 
+def combine_jsons(original_folder: str):
+    """
+    Combines all SFS JSON into a single element
+    """
+    combined_json = {}
+
+    for file_ in Path(original_folder).glob("*.json"):
+        with open(file_, 'r') as f:
+            json_file = json.load(f)
+
+        # Modify the params for the current examples
+        json_file["max_progr_len"] = 20
+        json_file["init_progr_len"] = 20
+        json_file["max_sk_sz"] = 8
+        json_file["is_revert"] = False
+
+        basename = Path(Path(file_).name).stem
+        combined_json[basename] = json_file
+
+    return combined_json
+
 def initialize_folders(final_dir: str):
     csv_dir = f'{final_dir}/csv'
 
-    shutil.rmtree(final_dir, ignore_errors=True)
+    # shutil.rmtree(final_dir, ignore_errors=True)
     for folder in (csv_dir, ):
         Path(folder).mkdir(parents=True, exist_ok=True)
 
-
-def dict_file_to_contract(contract_csv_file):
-    rows = pd.read_csv(contract_csv_file).to_dict(orient='records')
-    return {row["ContractAddress"]: row["ContractName"] for row in rows}
-
-def analyze_sfs(sfs_file: str, final_dir: str):
+def analyze_sfs(sfs_folder: str, final_dir: str):
     csv_dir = Path(f'{final_dir}/csv')
-    filename = Path(Path(sfs_file).name).stem
+    folder_name = Path(sfs_folder).name
 
-    opt_params = initialize_params(sfs_file, csv_dir.joinpath(f"{filename}.csv"))
+    combined_json = combine_jsons(sfs_folder)
 
-    print(f'Analyzing {sfs_file}')
+    _, filename = tempfile.mkstemp(".json")
+
+    with open(filename, 'w') as f:
+        json.dump(combined_json, f)
+
+    opt_params = initialize_params(filename, csv_dir.joinpath(f"{folder_name}.csv"))
+
+    print(f'Analyzing {folder_name}')
     optimize_from_sfs(opt_params)
-
+    os.unlink(filename)
 
 
 def run_instance_language(input_file: str, final_dir: str):
@@ -97,7 +123,10 @@ def run_instance_language(input_file: str, final_dir: str):
 def run_experiments(initial_dir: str, final_dir: str, n_cpus):
     # Set how many process to be running in parallel
     # Project folder
-    run_combinations = [[file_, final_dir] for file_ in Path(initial_dir).glob("*.json") ]
+    run_combinations = [[folder_, final_dir] for folder_ in Path(initial_dir).iterdir()
+                        if Path(folder_).is_dir()
+                        and not Path(final_dir).joinpath("csv").joinpath(Path(folder_).name + ".csv").exists()
+                        ]
     Path(final_dir).mkdir(parents=True, exist_ok=True)
     initialize_folders(final_dir)
 
@@ -105,4 +134,4 @@ def run_experiments(initial_dir: str, final_dir: str, n_cpus):
         p.starmap(run_instance_language, run_combinations)
 
 if __name__ == "__main__":
-    run_experiments(sys.argv[1], sys.argv[2], 10)
+    run_experiments(sys.argv[1], sys.argv[2], 28)

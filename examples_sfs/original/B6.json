@@ -1,0 +1,36 @@
+{
+    "original_instrs": "",
+    "yul_expressions": "mstore(v0,v6)\nreturn(v0,0x20)",
+    "src_ws": [
+        "v5",
+        "v6",
+        "x",
+        "v2"
+    ],
+    "tgt_ws": [
+        "v6",
+        "v5",
+        "v6",
+        "x",
+        "v2"
+    ],
+    "user_instrs": [
+    ],
+    "variables": [
+        "v0",
+        "0x20",
+        "v6"
+    ],
+    "memory_dependences": [],
+    "storage_dependences": [],
+    "init_progr_len": 0,
+    "max_progr_len": 0,
+    "min_length_instrs": 0,
+    "min_length_bounds": 0,
+    "min_length": 0,
+    "rules": "",
+    "name": "SimpleYul_13_deployed_Block22",
+    "transient_dependences": [],
+    "dependencies": [],
+    "admits_junk": true
+}
