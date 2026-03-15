@@ -2796,8 +2796,6 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
             
             x = generate_dep_instr_info(other, other[0][-1], produce_elem)
             other_dep_objs.append(x)
-
-
         
     mem_objs = []
     mstore_ins = list(filter(lambda x: x[0][-1].find("mstore")!=-1,memory_order))
@@ -2821,7 +2819,7 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
             
             x = generate_dep_instr_info(other, other[0][-1], produce_elem)
             other_dep_objs.append(x)
-        
+            
     transient_objs = []
     tstore_ins = list(filter(lambda x: x[0][-1].find("tstore")!=-1,transient_order))
 
@@ -2831,11 +2829,8 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     for trans in tstore_ins:
         x = generate_tstore_info(trans)
         transient_objs.append(x)
-
-
-    other_dep_objs_trans = []
         
-    other_dep_ins_trans = list(filter(lambda x: x[0][-1].find("tstore")==-1 and x[0][-1].find("tload")==-1 and x[0][-1].find("keccak")==-1, transient_order))
+    other_dep_ins_trans = list(filter(lambda x: x[0][-1].find("tstore")==-1 and x[0][-1].find("tload")==-1 and x[0][-1].find("keccak")==-1 and x not in storage_order, transient_order))
 
     modified_variables_userdefins(other_dep_ins_trans)
 
@@ -2847,11 +2842,9 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
             
             x = generate_dep_instr_info(other, other[0][-1], produce_elem)
             other_dep_objs.append(x)
-
-
-    all_user_defins = user_defins+sto_objs+mem_objs+transient_objs+other_dep_objs
-        
             
+    all_user_defins = user_defins+sto_objs+mem_objs+transient_objs+other_dep_objs
+                    
     for user_ins in all_user_defins:
         new_inpt_sk = []
 
@@ -2971,7 +2964,7 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     json_dict["rules"] = list(filter(lambda x: x != "", rules_applied))
     
     json_dict["original_instrs"] = " ".join(original_ins)
-    json_dict = extended_json_with_minlength(json_dict)
+    #json_dict = extended_json_with_minlength(json_dict)
     #json_dict = extend_mem_deps_with_subterm_relation(json_dict)
 
     # if not simplification:
@@ -3003,7 +2996,7 @@ def generate_json(block_name,ss,ts,max_ss_idx1,gas,opcodes_seq,subblock = None,s
     with open(paths.json_path+"/"+ block_nm + "_input.json","w") as json_file:
         json.dump(json_dict, json_file, indent=4)
 
-    # print(paths.json_path+"/"+ block_nm + "_input.json")
+    print(paths.json_path+"/"+ block_nm + "_input.json")
     rule_applied = False
     
     return split_by,""
