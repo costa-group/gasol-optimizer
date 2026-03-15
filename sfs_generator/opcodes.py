@@ -179,7 +179,7 @@ Wbase = ("ADDRESS", "ORIGIN", "CALLER", "CALLVALUE", "CALLDATASIZE",
 
 Wverylow = ("ADD", "SUB", "NOT", "LT", "GT", "SLT", "SGT", "EQ",
             "ISZERO", "AND", "OR", "XOR", "BYTE", "CALLDATALOAD",
-            "MLOAD", "MSTORE", "MSTORE8", "PUSH", "DUP", "SWAP","SHL","SHR","SAR","BLOBHASH")
+            "MLOAD", "MSTORE", "MSTORE8", "PUSH", "DUP", "SWAP","SHL","SHR","SAR","BLOBHASH","MCOPY")
 
 Wlow = ("MUL", "DIV", "SDIV", "MOD", "SMOD", "SIGNEXTEND","SELFBALANCE")
 
