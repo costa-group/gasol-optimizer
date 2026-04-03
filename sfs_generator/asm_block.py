@@ -15,6 +15,37 @@ def execute_asm(current_stack: List[str], asm_bytecode: AsmBytecode) -> List[str
     instr_name = asm_bytecode.disasm
     if instr_name == "PUSH":
         current_stack.insert(0, str(int(asm_bytecode.value, 16)))
+
+    # NEW INSTRUCTIONS SWAPN, DUPN, EXCHANGE
+    elif instr_name.startswith("SWAPN"):
+        index = int(instr_name[5:])
+        # --- DINAMIC EXPANSION SOLUTION ---
+        while len(current_stack) <= index:
+            current_stack.append(f's({len(current_stack)})')
+        # ------------------------------------
+        current_stack[0], current_stack[index] = current_stack[index], current_stack[0]
+        
+    elif instr_name.startswith("DUPN"):
+        index = int(instr_name[4:])
+        # --- DINAMIC EXPANSION SOLUTION ---
+        while len(current_stack) < index:
+            current_stack.append(f's({len(current_stack)})')
+        # ------------------------------------
+        current_stack.insert(0, current_stack[index - 1])
+        
+    elif instr_name.startswith("EXCHANGE"):
+        parts = instr_name.split(" ")
+        n = int(parts[1])
+        m = int(parts[2])
+        # --- DINAMIC EXPANSION SOLUTION ---
+        max_idx = max(n, m)
+        while len(current_stack) <= max_idx:
+            current_stack.append(f's({len(current_stack)})')
+        # ------------------------------------
+        # swaps the elements n and m directly
+        current_stack[n], current_stack[m] = current_stack[m], current_stack[n]
+    # --------------------------------------------------
+    
     elif instr_name.startswith("SWAP"):
         index = int(instr_name[4:])
         current_stack[0], current_stack[index] = current_stack[index], current_stack[0]

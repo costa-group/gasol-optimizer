@@ -38,6 +38,14 @@ def dupk_encoding_empty(j: int, theta_dupk: ThetaValue, sf: SynthesisFunctions, 
     return AssertHard(add_implies(left_term, right_term))
 
 
+#DUPN_ENCODING
+def dupn_encoding(j: int, theta_dupn: ThetaValue, sf: SynthesisFunctions, bs: int, n: int) -> AssertHard:
+    left_term = add_eq(sf.t(j), sf.theta_value(theta_dupn))
+    right_term = add_and(add_not(sf.u(bs - 1, j)), sf.u(n - 1, j), sf.u(0, j + 1),
+                         add_eq(sf.x(0, j + 1), sf.x(n - 1, j)), move(sf, j, 0, bs - 2, 1))
+    return AssertHard(add_implies(left_term, right_term))
+
+
 def swapk_encoding(j: int, theta_swapk: ThetaValue, sf: SynthesisFunctions, bs: int,  k: int) -> AssertHard:
     left_term = add_eq(sf.t(j), sf.theta_value(theta_swapk))
     right_term = add_and(sf.u(k, j), sf.u(0, j + 1), add_eq(sf.x(0, j + 1), sf.x(k, j)),
@@ -51,6 +59,24 @@ def swapk_encoding_empty(j: int, theta_swapk: ThetaValue, sf: SynthesisFunctions
     right_term = add_and(add_distinct(sf.x(k, j), sf.empty()), add_eq(sf.x(0, j + 1), sf.x(k, j)),
                          add_distinct(sf.x(0, j), sf.empty()), add_eq(sf.x(k, j + 1), sf.x(0, j)),
                          move_only_x_j_i(sf, j, 1, k - 1, 0), move_only_x_j_i(sf, j, k + 1, bs - 1, 0))
+    return AssertHard(add_implies(left_term, right_term))
+
+
+#SWAPN_ENCODING
+def swapn_encoding(j: int, theta_swapn: ThetaValue, sf: SynthesisFunctions, bs: int,  n: int) -> AssertHard:
+    left_term = add_eq(sf.t(j), sf.theta_value(theta_swapn))
+    right_term = add_and(sf.u(n, j), sf.u(0, j + 1), add_eq(sf.x(0, j + 1), sf.x(n, j)),
+                         sf.u(n, j + 1), add_eq(sf.x(n, j + 1), sf.x(0, j)),
+                         move(sf, j, 1, n - 1, 0), move(sf, j, n + 1, bs - 1, 0))
+    return AssertHard(add_implies(left_term, right_term))
+
+
+#EXCHANGE_ENCODING
+def exchange_encoding(j: int, theta_exchange: ThetaValue, sf: SynthesisFunctions, bs: int,  n: int, m: int) -> AssertHard:
+    left_term = add_eq(sf.t(j), sf.theta_value(theta_exchange))
+    right_term = add_and(sf.u(m, j), sf.u(m, j + 1), sf.u(n, j + 1), add_eq(sf.x(n, j + 1), sf.x(m, j)),
+                         add_eq(sf.x(m, j + 1), sf.x(n, j)),
+                         move(sf, j, 0, n - 1, 0), move(sf, j, n + 1, m - 1, 0), move(sf, j, m + 1, bs - 1, 0))
     return AssertHard(add_implies(left_term, right_term))
 
 

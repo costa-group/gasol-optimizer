@@ -244,6 +244,11 @@ def get_ins_size(op_name, val = None, address_length = 2):
     # JUMPDEST are already included in the json_solc file, so tags do not count either in size or gas
     elif op_name == "tag":
         return 0
+    
+    # NEW INSTRUCTIONS
+    elif op_name.startswith("DUPN") or op_name.startswith("SWAPN") or op_name.startswith("EXCHANGE"):
+        return 2
+
     elif not op_name.startswith("PUSH"):
         return 1
     else:
@@ -270,6 +275,12 @@ def get_ins_size_seq(instructions_disasm):
                     and not instructions[i].startswith("PUSHSIZE"):
             bytes += get_ins_size(instructions[i], None)
             i += 2
+
+        #EXCHANGE LOGIC
+        elif instructions[i] == "EXCHANGE":
+            bytes += 2  
+            i += 3      
+        
         else:
             bytes += get_ins_size(instructions[i], None)
             i += 1

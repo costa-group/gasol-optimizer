@@ -18,7 +18,8 @@ import networkx as nx
 
 terminate_block = ["ASSERTFAIL","RETURN","REVERT","SUICIDE","STOP"]
 
-pre_defined_functions = ["PUSH","POP","SWAP","DUP"]
+#FUNCTIONS SWAPN, DUPN Y EXCHANGE ADDED
+pre_defined_functions = ["PUSH","POP","SWAP","DUP", "SWAPN", "DUPN", "EXCHANGE"]
 
 zero_ary = ["origin","caller","callvalue","address","number","gasprice","difficulty","prevrandao","basefee","coinbase","timestamp","codesize","gaslimit","gas","calldatasize","returndatasize","msize","selfbalance","chainid","pushdeployaddress","pushsize"]
 
@@ -499,6 +500,26 @@ def search_for_value_aux(var, instructions,source_stack,level,evaluate = True):
     global rule_applied
     global rules_applied
     global rule
+
+def search_for_value_aux(var, instructions,source_stack,level,evaluate = True):
+    global s_counter
+    global s_dict
+    global u_counter
+    global u_dict
+    global rule_applied
+    global rules_applied
+    global rule
+    
+    # --- PARCHE EIP-8024: CASO BASE PARA RECURSIÓN ---
+    if len(instructions) == 0 and var not in source_stack:
+        if var not in s_dict:
+            s_dict[var] = var
+        return
+    # -------------------------------------------------
+
+    i = 0
+    found = False
+    vars_instr = " "
     
     i = 0
     found = False
@@ -508,8 +529,10 @@ def search_for_value_aux(var, instructions,source_stack,level,evaluate = True):
 
         instr = instructions[i]
         vars_instr = instr.split("=")
-        if vars_instr[0].strip().startswith(var):
+        # --- PARCHE EIP-8024: EVITAR COLISIÓN s(1) vs s(17) ---
+        if vars_instr[0].strip() == var.strip():
             found = True
+        # ------------------------------------------------------
            
         i+=1
     level+=i
@@ -1456,9 +1479,9 @@ def get_involved_vars(instr,var):
 
         funct = "pushimmutable"
 
-
+    #r added for regular expression
     elif instr.startswith("mstoreImmutable"):
-        assign_inmutable_match = re.fullmatch("(mstoreImmutable[0-9]*)\((.+),(.+)\)", instr)
+        assign_inmutable_match = re.fullmatch(r"(mstoreImmutable[0-9]*)\((.+),(.+)\)", instr)
         var0 = assign_inmutable_match.group(2)
         var1 = assign_inmutable_match.group(3)
         var_list.append(var0)
@@ -2053,12 +2076,12 @@ def generate_storage_info(instructions,source_stack,opcodes,simplification=True)
             storage_order.append(keccak)
             extra_dep_info_ins2int[opcodes_idx] = (keccak,len(memory_order)-1)
 
+        #new logic introduced for the instruction EXCHANGE
         if x >= next_val:    
-            if  opcodes[opcodes_idx].find("SWAP")!=-1:
-                next_val = x+3
-                opcodes_idx+=1
-            else:
-                opcodes_idx+=1
+            if opcodes_idx < len(opcodes):
+                if opcodes[opcodes_idx].find("SWAP") != -1 or opcodes[opcodes_idx].find("EXCHANGE") != -1:
+                    next_val = x + 3
+                opcodes_idx += 1
 
             if opcodes_idx < len(opcodes):
                 if opcodes[opcodes_idx].find("POP")!=-1:
@@ -2066,7 +2089,7 @@ def generate_storage_info(instructions,source_stack,opcodes,simplification=True)
     
     if extra_dep_info != {}:
         extra_dep_info["mem_deps_int2ins"] = extra_dep_info_ins2int
-        extra_dep_info["sto_deps_int2ins"] = extra_dep_info_ins2int_sto
+        extra_dep_info["sto_dep3s_int2ins"] = extra_dep_info_ins2int_sto
 
     if useless_info != []: #It deletes from memory_order de useless mstores
         new_memory_order = []
@@ -7057,6 +7080,17 @@ def compute_vars_aux(var, sstack, tstack, userdef_ins, visited):
         instr_l = list(filter(lambda x: var in x["outpt_sk"], userdef_ins))
 
         if len(instr_l) == 0:
+            # --- PARCHE EIP-8024: SOPORTE PARA PILA PROFUNDA (>16) ---
+            if isinstance(var, str) and var.startswith("s("):
+                if var not in sstack:
+                    sstack.append(var)
+                if var not in visited:
+                    visited.append(var)
+                
+                # Devolvemos el valor de la variable para calcular el tamaño en gas
+                val = int(var[2:-1])
+                return val + 1, 1, True
+            # ---------------------------------------------------------
             raise Exception("Error in computing vars")
 
         instr = instr_l[0]

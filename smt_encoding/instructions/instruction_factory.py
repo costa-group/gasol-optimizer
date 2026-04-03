@@ -3,6 +3,7 @@ import re
 from smt_encoding.instructions.comm_uninterpreted import \
     CommutativeUninterpreted
 from smt_encoding.instructions.dupk_basic import DupKBasic
+from smt_encoding.instructions.dupn_basic import DupNBasic
 from smt_encoding.instructions.non_comm_uninterpreted import \
     NonCommutativeUninterpreted
 from smt_encoding.instructions.nop_basic import NopBasic
@@ -11,6 +12,8 @@ from smt_encoding.instructions.pop_uninterpreted import PopUninterpreted
 from smt_encoding.instructions.push_basic import PushBasic
 from smt_encoding.instructions.store_uninterpreted import StoreUninterpreted
 from smt_encoding.instructions.swapk_basic import SwapKBasic
+from smt_encoding.instructions.swapn_basic import SwapNBasic
+from smt_encoding.instructions.exchange_basic import ExchangeBasic
 from smt_encoding.instructions.uninterpreted_instruction import UninterpretedInstruction, Instruction_JSON_T
 from smt_encoding.instructions.basic_instruction import BasicInstruction
 from smt_encoding.instructions.encoding_instruction import ThetaValue, EncodingInstruction
@@ -65,12 +68,35 @@ class InstructionFactory:
             swap_match = re.fullmatch("SWAP([0-9]+)", name)
             dup_match = re.fullmatch("DUP([0-9]+)", name)
 
+            swapn_match = re.fullmatch("SWAPN([0-9]+)", name)
+            dupn_match = re.fullmatch("DUPN([0-9]+)", name)
+
+            exchange_match = re.fullmatch(r"EXCHANGE ([0-9]+) ([0-9]+)", name)
+
             if swap_match is not None:
                 k = int(swap_match.group(1))
                 instance = SwapKBasic(self._next_theta_value, k)
+                
+            #SWAPN 
+            elif swapn_match is not None:
+                n = int(swapn_match.group(1))
+                instance = SwapNBasic(self._next_theta_value, n)
+
             elif dup_match is not None:
                 k = int(dup_match.group(1))
                 instance = DupKBasic(self._next_theta_value, k)
+
+            #DUPN 
+            elif dupn_match is not None:
+                n = int(dupn_match.group(1))
+                instance = DupNBasic(self._next_theta_value, n)
+
+            #EXCHANGE 
+            elif exchange_match is not None:
+                n = int(exchange_match.group(1))
+                m = int(exchange_match.group(2))
+                instance = ExchangeBasic(self._next_theta_value, n, m)
+
             else:
                 raise ValueError(name + " instruction not recognized")
 

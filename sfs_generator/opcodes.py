@@ -230,11 +230,28 @@ def get_opcode(opcode):
     for i in range(16):
         if opcode == 'DUP' + str(i + 1):
             return [hex(0x80 + i), i + 1, i + 2]
+        
+    #check DUPN
+    for n in range(16, 236):
+        if opcode == 'DUPN' + str(n + 1):
+            return [hex(0xe6), n, n + 1]
 
     # check SWAPi
     for i in range(16):
         if opcode == 'SWAP' + str(i + 1):
             return [hex(0x90 + i), i + 2, i + 2]
+
+    #check SWAPN
+    for n in range(16, 236):
+        if opcode == 'SWAPN' + str(n):
+            return [hex(0xe7), n + 1, n + 1]
+
+    #check EXCHANGE (n + m <= 30 here?)
+    for n in range(1, 14):
+        for m in range(n + 1, 30):
+            if n + m <= 30 and opcode == 'EXCHANGE ' + str(n) + ' ' + str(m):
+                return [hex(0xe8), m + 1, m + 1]
+            
     raise ValueError('Bad Opcode ' + opcode)
 
 
@@ -242,8 +259,9 @@ def get_ins_cost(opcode, params=None, already=False, store_changed_original_valu
     if opcode in Wzero:
         return GCOST["Gzero"]
     elif opcode in Wbase:
+        
         return GCOST["Gbase"]
-    elif opcode in Wverylow or opcode.startswith("PUSH") or opcode.startswith("DUP") or opcode.startswith("SWAP"):
+    elif opcode in Wverylow or opcode.startswith("PUSH") or opcode.startswith("DUP") or opcode.startswith("SWAP") or opcode.startswith("EXCHANGE"):
         return GCOST["Gverylow"]
     elif opcode in Wlow:
         return GCOST["Glow"]

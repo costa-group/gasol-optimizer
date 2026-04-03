@@ -56,6 +56,10 @@ def init_globals():
     global opcodes90
     opcodes90 = ["SWAP"]
 
+    #FUNCTIONS DUPN, SWAPN, EXCHANGE
+    global opcodesOx
+    opcodesOx = ["DUPN", "SWAPN", "EXCHANGE"]
+
     global opcodesA
     opcodesA = ["LOG0", "LOG1", "LOG2", "LOG3", "LOG4"]
 
@@ -885,6 +889,53 @@ def translateOpcodes90(opcode, value, index_variables):
 
     return instr, index_variables
 
+#FUNCTIONS DUPN, SWAPN Y EXCHANGE ADDED
+def translateOpcodesOxE6_7(opcode, value, index_variables):
+    if opcode == "DUPN":
+        v1 = get_ith_variable(index_variables,int(value)-1)
+        v2, updated_variables= get_new_variable(index_variables)
+        instr = v2 +" = "+ v1
+
+    elif opcode == "SWAPN":
+        v1 = get_ith_variable(index_variables,int(value))
+        v2 = get_current_variable(index_variables)
+        v3,_ = get_new_variable(index_variables)
+        instr1 = v3 + " = " + v1
+        instr2 = v1 + " = " + v2
+        instr3 = v2 + " = " + v3
+        instr = [instr1,instr2,instr3]
+        updated_variables = index_variables
+
+    else:
+        instr = "Error opcodesOxE6_7: "+ opcode
+        updated_variables = index_variables
+
+    return instr, updated_variables
+
+def translateOpcodesOxE8(opcode, value, index_variables):
+    if opcode.startswith("EXCHANGE"):
+            digits = opcode.split(" ")
+            n = int(digits[1])
+            m = int(digits[2])
+                
+            v_n = get_ith_variable(index_variables, n)
+            v_m = get_ith_variable(index_variables, m)
+            v_temp, _ = get_new_variable(index_variables)
+            
+            instr1 = v_temp + " = " + v_n
+            instr2 = v_n + " = " + v_m
+            instr3 = v_m + " = " + v_temp
+            
+            instr = [instr1, instr2, instr3]
+
+            updated_variables = index_variables
+
+    else:
+        instr = "Error opcodesOxE8: "+ opcode
+        updated_variables = index_variables
+
+    return instr, updated_variables
+
 '''
 It simulates the execution of evm bytecodes.  It consumes or
 generates variables depending on the bytecode and returns the
@@ -1014,6 +1065,22 @@ def compile_instr(rule,evm_opcode,variables,list_jumps,cond):
         value, index_variables = translateOpcodes60(opcode_name, opcode_rest, variables)
         pushid = get_push_number_hex(opcode_rest)
         rule.add_instr(value)
+
+    # NEW INSTRUCTIONS DUPN, SWAPN, EXCHANGE
+    elif opcode_name[:5] in opcodesOx:
+        value, index_variables = translateOpcodesOxE6_7(opcode_name[5:], opcode_name[5:], variables)
+        for ins in value:
+            rule.add_instr(ins)
+            
+    elif opcode_name[:4] in opcodesOx:
+        value, index_variables = translateOpcodesOxE6_7(opcode_name[4:], opcode_name[4:], variables)
+        rule.add_instr(value)
+        
+    elif evm_opcode.startswith("EXCHANGE"):
+        value, index_variables = translateOpcodesOxE8(evm_opcode, "", variables)
+        for ins in value:
+            rule.add_instr(ins)
+
     elif opcode_name[:3] in opcodes80:
         value, index_variables = translateOpcodes80(opcode_name[:3], opcode_name[3:], variables)
         rule.add_instr(value)

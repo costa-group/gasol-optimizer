@@ -184,6 +184,12 @@ def plain_instructions_to_asm_representation(raw_instruction_str : str) -> [ASM_
                 pushlib_values[value] = len(pushlib_values)
             opcodes.append({"name": op, "value": pushlib_values[ops[i+1]]})
             i += 1
+
+        # ADITIONAL LOGIC FOR EXCHANGE (2 params)
+        elif op == "EXCHANGE":
+            opcodes.append({"name": f"EXCHANGE {ops[i+1]} {ops[i+2]}"})
+            i += 2
+        
         elif not op.startswith("PUSH"):
             opcodes.append({"name": op})
         else:
