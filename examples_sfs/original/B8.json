@@ -3,19 +3,33 @@
     "yul_expressions": "v34 = add(v9,v5)\nv35 = mod(v34,x)\nv36 = and(v35,v2)\nv16 = add(v10,v36)\nv17 = add(v9,0x01)\n12 = PUSH [tag]\nJUMP(12)",
     "src_ws": [
         "v9",
-        "v5",
-        "v10",
         "x",
-        "v2"
+        "v2",
+        "v10"
     ],
     "tgt_ws": [
-        "v17",
+        "v2",
+        "v9",
         "v5",
-        "v16",
-        "x",
-        "v2"
+        "v10",
+        "x"
     ],
     "user_instrs": [
+        {
+            "id": "GET_v5",
+            "opcode": "01",
+            "disasm": "CALLVALUE",
+            "inpt_sk": [
+            ],
+            "outpt_sk": [
+                "v5"
+            ],
+            "gas": 3,
+            "commutative": false,
+            "push": false,
+            "storage": false,
+            "size": 1
+        },
         {
             "id": "ADD_0",
             "opcode": "01",

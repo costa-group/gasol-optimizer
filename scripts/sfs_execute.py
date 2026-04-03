@@ -7,8 +7,11 @@ import sys
 import uuid
 from gasol_asm import optimize_from_sfs, OptimizationParams
 import global_params.paths as paths
+import global_params.constants
 
 def modify_params():
+    global_params.constants.max_k_dup = 4
+    global_params.constants.max_k_swap = 4
     paths.gasol_folder = "gasol_" + uuid.uuid4().hex
     paths.gasol_path = paths.tmp_path + paths.gasol_folder + "/"
     paths.json_path = paths.gasol_path + "jsons"
@@ -42,7 +45,7 @@ def initialize_params(input_file: str, seqs_file: str):
     optimization_params.from_log = None
 
     optimization_params.smt_solver = "oms"
-    optimization_params.timeout = 240
+    optimization_params.timeout = 10000
     optimization_params.direct_timeout = False
     optimization_params.push0 = True
     optimization_params.rules_enabled = True
@@ -60,7 +63,7 @@ def initialize_params(input_file: str, seqs_file: str):
     optimization_params.terminal = False
     optimization_params.ac_solver = False
 
-    optimization_params.criteria = "gas"
+    optimization_params.criteria = "size"
     optimization_params.size_rules_enabled = True
     optimization_params.direct_soft = False
 
@@ -88,8 +91,8 @@ def combine_jsons(original_folder: str):
             json_file = json.load(f)
 
         # Modify the params for the current examples
-        json_file["max_progr_len"] = 20
-        json_file["init_progr_len"] = 20
+        json_file["max_progr_len"] = 19
+        json_file["init_progr_len"] = 19
         json_file["max_sk_sz"] = 8
         json_file["is_revert"] = False
 
@@ -135,7 +138,7 @@ def run_experiments(initial_dir: str, final_dir: str, n_cpus):
     # Project folder
     run_combinations = [[folder_, final_dir] for folder_ in Path(initial_dir).iterdir()
                         if Path(folder_).is_dir()
-                        and not Path(final_dir).joinpath("csv").joinpath(Path(folder_).name + ".csv").exists()
+                        # and not Path(final_dir).joinpath("csv").joinpath(Path(folder_).name + ".csv").exists()
                         ]
     Path(final_dir).mkdir(parents=True, exist_ok=True)
     initialize_folders(final_dir)
