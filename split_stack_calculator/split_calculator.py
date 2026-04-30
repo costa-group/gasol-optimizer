@@ -25,19 +25,17 @@ class Split_calculator:
 
     def get_minstack_split(self, source_stack_size: int, block_length:int, instrs: List[str], split_first: bool):
 
-        print("source_stack_size: ", source_stack_size)
-        print("block_length: ", block_length)
-        print("instructions: ", instrs)
 
         stack_size = source_stack_size
 
         quart = block_length / 3
-        lower_instr_num_bound = quart
+        lower_instr_num_bound = quart 
         upper_instr_num_bound = quart * 2
-        
+
         min_stack_size = 1024
         min_instr_number = 0
         for instr_number, instr in enumerate(instrs):
+
 
             try:
                 bytecode_info = opcodes.get_opcode(instr)
@@ -58,34 +56,63 @@ class Split_calculator:
         return min_stack_size, min_instr_number
 
 
-    def calculate_minstack_split(self, block:AsmBlock, split_first: bool):
-
-        return self.get_minstack_split(block.source_stack, block.length, [instr.disasm for instr in block.instructions], split_first)
+    def get_minstack_split_middle(self, source_stack_size: int, block_length:int, instrs: List[str], split_first: bool):
 
 
-    def calculate_extended_dao_split(self, sfs_block: Dict, split_first: bool) -> None:
+        stack_size = source_stack_size
+
+        quart = block_length / 3
+        lower_instr_num_bound = quart
+        upper_instr_num_bound = quart * 2
+        
+        min_stack_size = 1024
+        min_instr_number = 0
+        min_stacks = []
+
+        for instr_number, instr in enumerate(instrs):
+            try:
+                bytecode_info = opcodes.get_opcode(instr)
+            except ValueError:
+                continue
+            stack_size = stack_size - bytecode_info[1] + bytecode_info[2]
+
+            if not lower_instr_num_bound < instr_number < upper_instr_num_bound:
+                continue
 
 
-        original_code_with_ids, length = self.parse_original_instr(sfs_block["original_instrs"], sfs_block["user_instrs"], sfs_block["src_ws"], sfs_block["tgt_ws"])
+            if (stack_size < min_stack_size):
+                min_stack_size = stack_size 
+                min_stacks = [instr_number]
+
+            elif stack_size == min_stack_size:
+                min_stack_size = stack_size 
+                min_stacks.append(instr_number)
+
+        min_distance_from_center = len(instrs)
+        for instr_number in min_stacks:
+            dist = abs(len(instrs)/2 - instr_number) 
+            
+            if split_first:
+                store_stack = dist < min_distance_from_center 
+            else:
+                store_stack = dist <= min_distance_from_center 
+
+            if store_stack:
+                min_distance_from_center = dist
+                min_instr_number = instr_number
 
 
-        if length < 10:
-            return
-
-        if original_code_with_ids == []:
-            print("no dag")
-            min_stack_size, min_instr_number = self.get_minstack_split(len(sfs_block["src_ws"]), sfs_block["init_progr_len"], [instr for instr in sfs_block["original_instrs"].split() if not is_hex(instr)], split_first)
-            return min_stack_size, min_instr_number
+        return min_stack_size, min_instr_number
 
 
-        dag = DAG(sfs_block["instr_dependencies"], original_code_with_ids, length, extended=True)
+    def get_minstack_split_dag(self, dag, length:int, split_first:bool):
 
-        #split the block in the last minimum stack found in the inverse dag
         id_to_pos = dag.id_to_pos
 
         quart = length/3
         min_pos_block = quart
         max_pos_block = quart * 2
+
 
         min_stack_size = 1024
         min_instr_number = 0
@@ -102,7 +129,92 @@ class Split_calculator:
                 min_instr_number = id_to_pos[instr][0]
                 min_stack_size = id_to_pos[instr][1]
 
+        return min_stack_size, min_instr_number
+
+    def get_minstack_split_middle_dag(self, dag, length:int, split_first: bool):
+
+        id_to_pos = dag.id_to_pos
+
+        quart = length/3
+        min_pos_block = quart
+        max_pos_block = quart * 2
+
+
+        min_stack_size = 1024
+        min_instr_number = 0
+        min_stacks = []
+
+
+        for pos, instr in enumerate(dag.reverse):
+            if not min_pos_block < id_to_pos[instr][0] < max_pos_block:
+                continue
+
+            if (id_to_pos[instr][1] < min_stack_size):
+                min_stack_size = id_to_pos[instr][1] 
+                min_stacks = [(pos, id_to_pos[instr][0])]
+
+
+            elif id_to_pos[instr][1] == min_stack_size:
+                min_stack_size = id_to_pos[instr][1] 
+                min_stacks.append((pos, id_to_pos[instr][0]))
+
+        min_distance_from_center = len(dag.reverse)
+        for (dag_pos, instr_number) in min_stacks:
+            dist = abs(len(dag.reverse)/2 - dag_pos) 
+            
+            if split_first:
+                store_stack = dist < min_distance_from_center 
+            else:
+                store_stack = dist <= min_distance_from_center 
+
+            if store_stack:
+                min_distance_from_center = dist
+                min_instr_number = instr_number
+
+        return min_stack_size, min_instr_number
+
+
+    def calculate_minstack_split(self, block:AsmBlock, split_first: bool, split_middle: bool):
+        if split_middle:
+            return self.get_minstack_split_middle(block.source_stack, block.length + 2, [instr.disasm for instr in block.instructions], split_first)
+        else:
+            return self.get_minstack_split(block.source_stack, block.length + 2, [instr.disasm for instr in block.instructions], split_first)
+
+
+
+    def calculate_extended_dag_split(self, sfs_block: Dict, split_first: bool, split_middle:bool) -> None:
+
+
+        original_code_with_ids, length = self.parse_original_instr(sfs_block["original_instrs"], sfs_block["user_instrs"], sfs_block["src_ws"], sfs_block["tgt_ws"])
+
+        print("SFS")
+        print(sfs_block)
+
+        if length < 10:
+            return
+
+        if original_code_with_ids == []:
+            print("no dag")
+            min_stack_size, min_instr_number = self.get_minstack_split(len(sfs_block["src_ws"]), sfs_block["init_progr_len"], [instr for instr in sfs_block["original_instrs"].split() if not is_hex(instr)], split_first)
+            return min_stack_size, min_instr_number
+
+
+        dag = DAG(sfs_block["instr_dependencies"], original_code_with_ids, length, extended=True)
+
+        print("reverse", dag.reverse[::-1])
+
+        if split_middle:
+            return self.get_minstack_split_middle_dag(dag, sfs_block["init_progr_len"] + 2, split_first)
+        else:
+            return self.get_minstack_split_dag(dag, sfs_block["init_progr_len"] + 2, split_first)
+
+        
+
         #dag.render_graph(min_stack_size, min_instr_number, sfs_block["user_instrs"])
+
+        _, first_minstack = self.get_minstack_split(len(sfs_block["src_ws"]), sfs_block["init_progr_len"], [instr for instr in sfs_block["original_instrs"].split() if not is_hex(instr)], True)
+
+        _, last_minstack = self.get_minstack_split(len(sfs_block["src_ws"]), sfs_block["init_progr_len"], [instr for instr in sfs_block["original_instrs"].split() if not is_hex(instr)], False)
 
         return min_stack_size, min_instr_number
 

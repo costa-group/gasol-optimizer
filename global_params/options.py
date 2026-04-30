@@ -127,6 +127,7 @@ class OptimizationParams:
         self.no_simp = True
         self.debug_flag = False
         self.dzn = False
+        self.sdg = False
 
         self.length_bound = False
         self.gcc_bounds = False
@@ -190,7 +191,10 @@ class OptimizationParams:
         self.split_storage = parsed_args.storage
         self.split_partition = parsed_args.partition
         self.split_first = parsed_args.split_first
-        self.ml_aggressive = parsed_args.ml_aggressive
+        self.split_middle = parsed_args.split_middle
+        self.dag = parsed_args.dag
+        self.sdg = parsed_args.sdg
+        self.compiler_version = parsed_args.compiler_version
 
         # Hard constraints
         self.memory_encoding = parsed_args.memory_encoding

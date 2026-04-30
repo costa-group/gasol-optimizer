@@ -500,7 +500,11 @@ def translateOpcodes30(opcode, value, index_variables):
         instr = v1+" = extcodehash("+v1+")"  
         
     elif opcode == "MCOPY":
-        raise NotImplementedError
+        v0, updated_variables = get_consume_variable(index_variables)
+        v1, updated_variables = get_consume_variable(updated_variables)
+        v2, updated_variables = get_consume_variable(updated_variables)
+
+        instr = "mcopy("+v0+","+v1+","+v2+")"  
     else:
         instr = "Error opcodes30: "+opcode
         updated_variables = index_variables

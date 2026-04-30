@@ -3074,6 +3074,7 @@ def check_inputs(instr_name,args_aux):
     return -1
 
 def split_blocks(rule,opt = False,new_instr = []):
+    print("splitteando")
     blocks = []
     
     ins_block = []

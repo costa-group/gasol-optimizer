@@ -17,6 +17,7 @@ from pandas.core.internals.managers import blockwise_all
 import greedy
 from ml_model import opcodes
 from split_stack_calculator.split_calculator import Split_calculator
+from ai_optimizer.sdg import Sdg
 
 sys.path.append(os.path.dirname(os.path.realpath(__file__)) + "/gasol_ml")
 
@@ -689,8 +690,10 @@ def optimize_isolated_asm_block(params: OptimizationParams):
         instructions = f.read()
 
     if params.split_block == "ml":
-        predicted = predict_split_mode_random_forest(instructions, params.ml_aggressive)
+        #predicted = predict_optimization_mode(instructions)
+        predicted = predict_optimization_mode(instructions, params.compiler_version)
 
+        params.dag = True
         if predicted == "original-cp":
             params.dzn = True 
             params.split_block = "none"
@@ -699,30 +702,65 @@ def optimize_isolated_asm_block(params: OptimizationParams):
             params.split_block = "none"
             params.sat_solver = True
 
-        elif predicted == "simple-cp":
-            params.split_block = "complete"
-            params.sat_solver = False 
-            params.split_first = True
         elif predicted == "simple-sat":
             params.split_block = "complete"
             params.sat_solver = True
-            params.split_first = False 
-
-        elif predicted == "minimal-cp":
-            params.split_block = "ordered"
-            params.sat_solver = False 
+            params.split_middle = True
+        elif predicted == "simple-cp":
+            params.split_block = "complete"
+            params.sat_solver = False
             params.split_first = True
         elif predicted == "minimal-sat":
             params.split_block = "ordered"
             params.sat_solver = True 
+            params.split_first = True
+            params.dag = False 
+        elif predicted == "minimal-cp":
+            params.split_block = "ordered"
+            params.sat_solver = False
+            params.split_middle = True
+
+        '''
+        if "first" in predicted:
+            params.split_first = True
+        else:
             params.split_first = False 
 
+        if "original" in predicted:
+            params.split_block = "none"
+        elif "minimal" in predicted:
+            params.split_block = "ordered"
         else:
             params.split_block = "complete"
+        
+        if "sat" in predicted:
+            params.sat_solver = True 
+        else:
             params.sat_solver = False 
-            params.split_first = True
 
+        else:
+            params.dag = True
+            if predicted == "original-cp":
+                params.dzn = True 
+                params.split_block = "none"
+                params.sat_solver = False 
+            elif predicted == "original-sat":
+                params.split_block = "none"
+                params.sat_solver = True
 
+            if "original" in predicted:
+                params.split_block = "none"
+            elif "minimal" in predicted:
+                params.split_block = "ordered"
+            else:
+                params.split_block = "complete"
+            
+            if "sat" in predicted:
+                params.sat_solver = True 
+            else:
+                params.sat_solver = False 
+
+            '''
 
     blocks: List[AsmBlock] = parse_blocks_from_plain_instructions(instructions, params.block_name, params.block_name_prefix)
     asm_blocks = []
@@ -925,7 +963,7 @@ def optimize_asm_block_asm_format(block: AsmBlock, params: OptimizationParams) -
         try:
             if params.split_block != "none":
 
-                split_mode = "dag"
+                split_mode = "min_stack"
 
                 contracts_dict = {}
                 syrup_contract = {}
@@ -934,19 +972,21 @@ def optimize_asm_block_asm_format(block: AsmBlock, params: OptimizationParams) -
                 #split block
                 split_calculator = Split_calculator()
 
-                if split_mode == "min_stack":
-                    min_stack, instr_num = split_calculator.calculate_minstack_split(block, params.split_first)
+                if not params.dag:
+                    print("min")
+                    min_stack, instr_num = split_calculator.calculate_minstack_split(block, params.split_first, params.split_middle)
 
-                if split_mode == "dag":
+                if params.dag:
+                    print("dag")
                     contracts_dict_aux, _ = compute_original_sfs_with_simplifications(block, params)
 
                     sfs_block = contracts_dict_aux["syrup_contract"]["isolated_block_0_0"]
 
                     sfs_block = extended_json_with_minlength(extended_json_with_instr_dep_and_bounds(sfs_block))
+                    
+                    min_stack, instr_num = split_calculator.calculate_extended_dag_split(sfs_block, params.split_first, params.split_middle)
 
-                    min_stack, instr_num = split_calculator.calculate_extended_dao_split(sfs_block, params.split_first)
-
-                #print(f"splittocsv: {min_stack};{instr_num}")
+                print(f"split_point {instr_num}")
 
 
                 #create new contracts_dict with the subblocks
@@ -957,6 +997,18 @@ def optimize_asm_block_asm_format(block: AsmBlock, params: OptimizationParams) -
                     sub_block_list.extend(partial_sub_block_list)
 
                 contracts_dict["syrup_contract"] = syrup_contract
+            
+            elif params.sdg:
+                file = f"{"_".join(params.blocks_file.split('_')[:-2])}_sdg.json"
+                contracts_dict, sub_block_list = compute_original_sfs_with_simplifications(block, params)
+
+                sfs_block = contracts_dict["syrup_contract"]["isolated_block_0_0"]
+                sfs_block = extended_json_with_minlength(extended_json_with_instr_dep_and_bounds(sfs_block))
+                sdg = Sdg(sfs_block)
+                sdg.render_graph()
+                sdg.generate_json(file)
+                print("SFS")
+                print(sfs_block)
 
             else:
                 contracts_dict, sub_block_list = compute_original_sfs_with_simplifications(block, params)
@@ -974,7 +1026,6 @@ def optimize_asm_block_asm_format(block: AsmBlock, params: OptimizationParams) -
 
     for sub_block, optimization_outcome, solver_time, optimized_asm, chosen_tag, tout, initial_solver_bound, rules, optimized_log_rep in optimize_block(
             sfs_dict, params):
-
         optimal_block = AsmBlock('optimized', sub_block.block_id, sub_block.block_name, sub_block.is_init_block)
         optimal_block.instructions = optimized_asm
 
@@ -1440,8 +1491,12 @@ def options_gasol(ap: ArgumentParser) -> None:
         action='store_const', const='ml')
 
     s_o.add_argument( "-sptfst", "--split-first", help="split the block in the first minimal stack of the middle third", action='store_true')
+    s_o.add_argument( "-sptmid", "--split-middle", help="split the block in the first minimal stack of the middle third", action='store_true')
+    s_o.add_argument( "-dag", "--dag", help="dag", action='store_true')
 
-    s_o.add_argument( "-mlagr", "--ml-aggressive", help="use the aggressive ml mode", action='store_true')
+    s_o.add_argument( "--compiler", help="Specify the compiler version", default=None, dest='compiler_version')
+
+    input.add_argument( "-sdg", "--sdg", help="sdg generation", action='store_true')
 
 
 def parse_encoding_args(ap: ArgumentParser):
@@ -1520,11 +1575,12 @@ def predict_split_mode(text):
 
 def predict_split_mode_random_forest(X:str, aggressive: bool = False):
 
+    return predict_optimization_mode(X)
+
     if aggressive:
         model_type = "aggressive"
     else: 
         model_type = "conservative"
-
 
     X = [X]
 
@@ -1555,7 +1611,13 @@ def predict_split_mode_random_forest(X:str, aggressive: bool = False):
     # Get the most probable label per sample
     best_indices = np.argmax(proba_matrix, axis=1)
 
-    all_labels = ['original-sat', 'original-cp', 'simple-sat', 'simple-cp', 'minimal-sat', 'minimal-cp']
+    #all_labels = ['original-sat', 'original-cp', 'simple-sat', 'simple-cp', 'minimal-sat', 'minimal-cp']
+    #all_labels = [ 'original-sat', 'original-cp', 'simple-sat-last', 'simple-cp-last', 'minimal-sat-last', 'minimal-cp-last', 'simple-sat-first', 'simple-cp-first', 'minimal-sat-first', 'minimal-cp-first', ]
+
+    if aggressive:
+        all_labels = ['original-cp', 'simple-sat', 'simple-cp', 'minimal-sat', 'minimal-cp']
+    else: 
+        all_labels = ['original-sat', 'original-cp', 'simple-sat', 'simple-cp', 'minimal-sat', 'minimal-cp']
 
     predictions = [(all_labels[i],)[0] for i in best_indices][0]
 
@@ -1564,6 +1626,56 @@ def predict_split_mode_random_forest(X:str, aggressive: bool = False):
     print("predicted class: ", predictions)
     print("Execution time: {:.4f} seconds".format(et - st))
     return predictions
+
+
+
+def predict_optimization_mode(instruction_string: str, compiler: str = "0_8_24") -> str:
+    import joblib
+    import os
+    """
+    Loads the necessary preprocessing tools and the  model
+    and predicts the optimization mode for a given bytecode instruction string.
+
+    Args:
+        instruction_string (str): A single string containing bytecode instructions.
+
+    Returns:
+        str: The predicted optimization mode as a string.
+        Raises an exception if models or tools cannot be loaded.
+    """
+
+    instruction_string = parse_block(instruction_string)
+
+    BASE_DIR = Path(__file__).resolve().parent
+    drive_path = f'{BASE_DIR}/ml_model/{compiler}'
+    try:
+        loaded_count_vectorizer = joblib.load(os.path.join(drive_path, 'vectorizer.joblib'))
+        loaded_label_encoder = joblib.load(os.path.join(drive_path, 'label_encoder.joblib'))
+
+        loaded_model = joblib.load(os.path.join(drive_path, 'model.joblib'))
+
+    except FileNotFoundError as e:
+        print(f"Error loading required files. Please ensure all .joblib files are in {drive_path}")
+        raise e
+    except Exception as e:
+        print(f"An unexpected error occurred during file loading: {e}")
+        raise e
+
+
+    instruction_string = " ".join(instruction_string)
+
+    # Preprocess the input instruction string
+    X_new = loaded_count_vectorizer.transform([instruction_string])
+
+    # Make prediction
+    prediction_numerical = loaded_model.predict(X_new)
+
+    # Inverse transform to get the human-readable label
+    predicted_mode = loaded_label_encoder.inverse_transform(prediction_numerical)[0]
+
+    print("Using gradiengt boosting model")
+    print("predicted class: ", predicted_mode)
+    return predicted_mode
 
 def execute_gasol(params: OptimizationParams):
     global previous_gas
