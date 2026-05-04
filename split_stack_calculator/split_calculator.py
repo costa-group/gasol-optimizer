@@ -187,21 +187,19 @@ class Split_calculator:
 
         original_code_with_ids, length = self.parse_original_instr(sfs_block["original_instrs"], sfs_block["user_instrs"], sfs_block["src_ws"], sfs_block["tgt_ws"])
 
-        print("SFS")
-        print(sfs_block)
-
         if length < 10:
             return
 
         if original_code_with_ids == []:
             print("no dag")
-            min_stack_size, min_instr_number = self.get_minstack_split(len(sfs_block["src_ws"]), sfs_block["init_progr_len"], [instr for instr in sfs_block["original_instrs"].split() if not is_hex(instr)], split_first)
+            if split_middle:
+                min_stack_size, min_instr_number = self.get_minstack_split_middle(len(sfs_block["src_ws"]), sfs_block["init_progr_len"], [instr for instr in sfs_block["original_instrs"].split() if not is_hex(instr)], split_first)
+            else:
+                min_stack_size, min_instr_number = self.get_minstack_split(len(sfs_block["src_ws"]), sfs_block["init_progr_len"], [instr for instr in sfs_block["original_instrs"].split() if not is_hex(instr)], split_first)
             return min_stack_size, min_instr_number
 
 
         dag = DAG(sfs_block["instr_dependencies"], original_code_with_ids, length, extended=True)
-
-        print("reverse", dag.reverse[::-1])
 
         if split_middle:
             return self.get_minstack_split_middle_dag(dag, sfs_block["init_progr_len"] + 2, split_first)
@@ -230,8 +228,10 @@ class Split_calculator:
             user_instr_dict[instr["disasm"]].append(instr)
 
         for i, word in enumerate(original_instr_splitted):
-            if word[0].isdigit():
+            if i > 0 and original_instr_splitted[i-1].startswith("PUSH") or word[0].isdigit():
                 continue
+
+
 
             if word.startswith("PUSH0"):
                 if "PUSH0" in user_instr_dict.keys():
@@ -247,7 +247,6 @@ class Split_calculator:
                     if push["value"][0] == value:
                         code_with_ids_and_pos_size.append((push["id"], pos, len(stack)))
                         stack = push["outpt_sk"] + stack
-
 
             elif word.startswith("PUSH") and "data" in original_instr_splitted[i + 1]: # [tag] or any of its derivated values ([$], #[$]...)
                 value = int(original_instr_splitted[i + 2], 16)
@@ -311,7 +310,7 @@ class Split_calculator:
                         stack = kw["outpt_sk"] + stack
 
 
-                        backtracking, pos = self.parse_original_instr(original_instr[len(" ".join(original_instr_splitted[0:i + 1])) + 1:],user_instr, stack, final_stack, code_with_ids_and_pos_size, pos)
+                        backtracking, pos = self.parse_original_instr(original_instr[len(" ".join(original_instr_splitted[0:i + 1])) + 1:],user_instr, stack, final_stack, code_with_ids_and_pos_size, pos + 1)
 
 
                         if len(backtracking) != 0:
