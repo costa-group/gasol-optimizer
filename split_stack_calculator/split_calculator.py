@@ -136,8 +136,8 @@ class Split_calculator:
         id_to_pos = dag.id_to_pos
 
         quart = length/3
-        min_pos_block = quart
-        max_pos_block = quart * 2
+        min_pos_block = quart + 1
+        max_pos_block = quart * 2 - 1
 
 
         min_stack_size = 1024
@@ -158,6 +158,7 @@ class Split_calculator:
                 min_stack_size = id_to_pos[instr][1] 
                 min_stacks.append((pos, id_to_pos[instr][0]))
 
+        print(min_stacks)
         min_distance_from_center = len(dag.reverse)
         for (dag_pos, instr_number) in min_stacks:
             dist = abs(len(dag.reverse)/2 - dag_pos) 
@@ -186,6 +187,7 @@ class Split_calculator:
 
 
         original_code_with_ids, length = self.parse_original_instr(sfs_block["original_instrs"], sfs_block["user_instrs"], sfs_block["src_ws"], sfs_block["tgt_ws"])
+        print(original_code_with_ids)
 
         if length < 10:
             return
@@ -236,8 +238,8 @@ class Split_calculator:
             if word.startswith("PUSH0"):
                 if "PUSH0" in user_instr_dict.keys():
                     push0 = user_instr_dict["PUSH0"][0]
-                    code_with_ids_and_pos_size.append((push0["id"], pos, len(stack)))
                     stack = push0["outpt_sk"] + stack
+                    code_with_ids_and_pos_size.append((push0["id"], pos, len(stack)))
                 else:
                     stack = ["none"] + stack
 
@@ -245,15 +247,15 @@ class Split_calculator:
                 value = int(original_instr_splitted[i + 2], 10)
                 for push in user_instr_dict[f"PUSH {original_instr_splitted[i + 1]}"]:
                     if push["value"][0] == value:
-                        code_with_ids_and_pos_size.append((push["id"], pos, len(stack)))
                         stack = push["outpt_sk"] + stack
+                        code_with_ids_and_pos_size.append((push["id"], pos, len(stack)))
 
             elif word.startswith("PUSH") and "data" in original_instr_splitted[i + 1]: # [tag] or any of its derivated values ([$], #[$]...)
                 value = int(original_instr_splitted[i + 2], 16)
                 for push in user_instr_dict[f"PUSH {original_instr_splitted[i + 1]}"]:
                     if push["value"][0] == value:
-                        code_with_ids_and_pos_size.append((push["id"], pos, len(stack)))
                         stack = push["outpt_sk"] + stack
+                        code_with_ids_and_pos_size.append((push["id"], pos, len(stack)))
 
             elif word.startswith("PUSH") and len(word) < 8:
                 value = int(original_instr_splitted[i + 1], 16)
@@ -263,8 +265,8 @@ class Split_calculator:
                 
                 for push in user_instr_dict["PUSH"]:
                     if push["value"][0] == value:
-                        code_with_ids_and_pos_size.append((push["id"], pos, len(stack)))
                         stack = push["outpt_sk"] + stack
+                        code_with_ids_and_pos_size.append((push["id"], pos, len(stack)))
 
 
             elif word.startswith("KECCAK256"):
@@ -278,9 +280,9 @@ class Split_calculator:
                         original_stack = stack.copy()
 
 
-                        code_with_ids_and_pos_size.append((kw["id"], pos, len(stack)))
                         stack = stack[len(kw["inpt_sk"]):]
                         stack = kw["outpt_sk"] + stack
+                        code_with_ids_and_pos_size.append((kw["id"], pos, len(stack)))
 
 
                         backtracking, pos = self.parse_original_instr(original_instr[len(" ".join(original_instr_splitted[0:i + 1])) + 1:],user_instr, stack, final_stack, code_with_ids_and_pos_size, pos)
@@ -305,9 +307,9 @@ class Split_calculator:
                         original_stack = stack.copy()
 
 
-                        code_with_ids_and_pos_size.append((kw["id"], pos, len(stack)))
                         stack = stack[len(kw["inpt_sk"]):]
                         stack = kw["outpt_sk"] + stack
+                        code_with_ids_and_pos_size.append((kw["id"], pos, len(stack)))
 
 
                         backtracking, pos = self.parse_original_instr(original_instr[len(" ".join(original_instr_splitted[0:i + 1])) + 1:],user_instr, stack, final_stack, code_with_ids_and_pos_size, pos + 1)
@@ -344,9 +346,9 @@ class Split_calculator:
                         st_input = stack[:len(kw["inpt_sk"])]
 
                     if kw_input == st_input:
-                        code_with_ids_and_pos_size.append((kw["id"], pos, len(temp_stack)))
                         temp_stack = temp_stack[len(kw["inpt_sk"]):]
                         temp_stack = kw["outpt_sk"] + temp_stack
+                        code_with_ids_and_pos_size.append((kw["id"], pos, len(temp_stack)))
 
                 stack = temp_stack
 
