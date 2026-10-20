@@ -34,9 +34,6 @@ def are_equals(json_orig, json_opt):
     dep_orig = json_orig["memory_dependences"]
     dep_opt = json_opt["memory_dependences"]
 
-    print("dep_orig: ", dep_orig)
-    print("dep_opt: ", dep_opt)
-    
     same_dep_mem = compare_dependences(dep_orig,dep_opt,src_orig,src_opt,userdef_orig,userdef_opt,"memory")
 
     if not same_dep_mem:

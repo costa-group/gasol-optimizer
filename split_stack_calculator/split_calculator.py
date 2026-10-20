@@ -158,7 +158,6 @@ class Split_calculator:
                 min_stack_size = id_to_pos[instr][1] 
                 min_stacks.append((pos, id_to_pos[instr][0]))
 
-        print(min_stacks)
         min_distance_from_center = len(dag.reverse)
         for (dag_pos, instr_number) in min_stacks:
             dist = abs(len(dag.reverse)/2 - dag_pos) 
@@ -190,7 +189,7 @@ class Split_calculator:
         print(original_code_with_ids)
 
         if length < 10:
-            return
+            return None, None
 
         if original_code_with_ids == []:
             print("no dag")
@@ -208,16 +207,6 @@ class Split_calculator:
         else:
             return self.get_minstack_split_dag(dag, sfs_block["init_progr_len"] + 2, split_first)
 
-        
-
-        #dag.render_graph(min_stack_size, min_instr_number, sfs_block["user_instrs"])
-
-        _, first_minstack = self.get_minstack_split(len(sfs_block["src_ws"]), sfs_block["init_progr_len"], [instr for instr in sfs_block["original_instrs"].split() if not is_hex(instr)], True)
-
-        _, last_minstack = self.get_minstack_split(len(sfs_block["src_ws"]), sfs_block["init_progr_len"], [instr for instr in sfs_block["original_instrs"].split() if not is_hex(instr)], False)
-
-        return min_stack_size, min_instr_number
-
     def parse_original_instr(self, original_instr: str, user_instr: List[Dict], stack: List[str], final_stack: List[str], code_with_ids_and_pos_size=[], pos=0) -> Tuple[List[Tuple[str, int, int]], int]:
 
 
@@ -231,7 +220,8 @@ class Split_calculator:
 
         for i, word in enumerate(original_instr_splitted):
             if i > 0 and original_instr_splitted[i-1].startswith("PUSH") or word[0].isdigit():
-                continue
+                if not original_instr_splitted[i-1] == "PUSH0":
+                    continue
 
 
 
