@@ -37,7 +37,10 @@ from sfs_generator.asm_contract import AsmContract
 from smt_encoding.block_optimizer import BlockOptimizer, OptimizeOutcome
 from solution_generation.ids2asm import asm_from_ids
 from verification.forves_verification import compare_forves
-from statistics.statistics_from_asm_block import csv_from_asm_block
+try:
+    from statistics.statistics_from_asm_block import csv_from_asm_block
+except ImportError:
+    from .statistics.statistics_from_asm_block import csv_from_asm_block
 from global_params.options import OptimizationParams
 from greedy.block_generation import greedy_from_json, greedy_standalone
 from smt_encoding.json_with_dependencies import extended_json_with_instr_dep_and_bounds, extended_json_with_minlength, generate_dot_graph_from_sms
